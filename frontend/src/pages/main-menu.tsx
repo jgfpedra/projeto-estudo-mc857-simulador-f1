@@ -78,7 +78,7 @@ export function MainMenu() {
       </div>
 
       <div className="pointer-events-none absolute bottom-0 right-0 hidden select-none lg:block">
-        <span className="text-[18rem] font-black italic leading-none text-white/[0.02]">
+        <span className="text-[18rem] font-black italic leading-none text-white/2">
           01
         </span>
       </div>

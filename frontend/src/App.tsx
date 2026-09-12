@@ -1,4 +1,4 @@
-import { MainMenu } from "@/components/main-menu"
+import { MainMenu } from "@/pages/main-menu"
 
 function App() {
   return <MainMenu />
