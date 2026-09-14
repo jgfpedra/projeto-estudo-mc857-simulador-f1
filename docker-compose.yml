@@ -12,5 +12,26 @@ services:
       ollama pull llama3.2 &&
       wait"
 
+  backend:
+    build: ./backend
+    volumes:
+      - ./data:/app/data:ro
+    depends_on:
+      - llama
+
+  ai:
+    build: ./ai
+    volumes:
+      - ./data:/app/data:ro
+    depends_on:
+      - llama
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
 volumes:
   ollama_data:
