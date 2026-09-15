@@ -1,0 +1,84 @@
+Ergast
+
+==> circuits.csv <==
+circuitId,circuitRef,name,location,country,lat,lng,alt,url
+
+==> constructor_results.csv <==
+constructorResultsId,raceId,constructorId,points,status
+
+==> constructors.csv <==
+constructorId,constructorRef,name,nationality,url
+
+==> constructor_standings.csv <==
+constructorStandingsId,raceId,constructorId,points,position,positionText,wins
+
+==> drivers.csv <==
+driverId,driverRef,number,code,forename,surname,dob,nationality,url
+
+==> driver_standings.csv <==
+driverStandingsId,raceId,driverId,points,position,positionText,wins
+
+==> lap_times.csv <==
+raceId,driverId,lap,position,time,milliseconds
+
+==> pit_stops.csv <==
+raceId,driverId,stop,lap,time,duration,milliseconds
+
+==> qualifying.csv <==
+qualifyId,raceId,driverId,constructorId,number,position,q1,q2,q3
+
+==> races.csv <==
+raceId,year,round,circuitId,name,date,time,url,fp1_date,fp1_time,fp2_date,fp2_time,fp3_date,fp3_time,quali_date,quali_time,sprint_date,sprint_time
+
+==> results.csv <==
+resultId,raceId,driverId,constructorId,number,grid,position,positionText,positionOrder,points,laps,time,milliseconds,fastestLap,rank,fastestLapTime,fastestLapSpeed,statusId
+
+==> seasons.csv <==
+year,url
+
+==> sprint_results.csv <==
+resultId,raceId,driverId,constructorId,number,grid,position,positionText,positionOrder,points,laps,time,milliseconds,fastestLap,fastestLapTime,statusId,rank
+
+==> status.csv <==
+statusId,status
+
+Telemetry
+
+==> Australian_Grand_Prix.csv <==
+DriverNumber,Driver,LapNumber,Compound,TyreLife,Sector1Time,Sector2Time,Sector3Time,LapTime
+
+==> GP.csv <==
+ID,Name,Year,Location,Country,EventDate
+
+==> pilotos.csv <==
+ID,DriverNumber,FullName,Abbreviation
+
+Tyres
+
+==> cleaned_driver_2024.csv <==
+Time,Driver,DriverNumber,LapTime,LapNumber,Stint,Sector1Time,Sector2Time,Sector3Time,Compound,TyreLife,FreshTyre,Team,Position,RoundNumber,GP,Session,Date
+
+==> cleaned_weather_2024.csv <==
+Time,AirTemp,Humidity,Pressure,Rainfall,TrackTemp,WindDirection,WindSpeed,RoundNumber,EventName,Session,Date
+
+==> final_merged_2024_data.csv <==
+DriverTime,Driver,DriverNumber,LapTime,LapNumber,Stint,Sector1Time,Sector2Time,Sector3Time,Compound,TyreLife,FreshTyre,Team,Position,WeatherTime,AirTemp,Humidity,Pressure,Rainfall,TrackTemp,WindDirection,WindSpeed,GP,SessionType,RoundNumber,Date
+
+==> stints_2024.csv <==
+GP,Driver,Stint,Compound,StintLength
+
+==> stints_2024_weather.csv <==
+GP,Driver,Stint,Compound,StintLength,AirTemp,TrackTemp
+
+Events
+==> fatal_accidents_drivers.csv <==
+Driver,Age,Date Of Accident,Event,Car,Session
+
+==> fatal_accidents_marshalls.csv <==
+Name,Age,Date Of Accident,Event
+
+==> red_flags.csv <==
+Race,Lap,Resumed,Incident,Excluded
+
+==> safety_cars.csv <==
+Race,Cause,Deployed,Retreated,FullLaps

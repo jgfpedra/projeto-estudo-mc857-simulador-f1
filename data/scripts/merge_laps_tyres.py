@@ -5,17 +5,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 RAW = BASE_DIR / "raw"
 
 
-def merge_laps_and_tyres(driver_map, race_matches):
+def merge_laps_and_tyres(driver_map, race_matches, year: int = 2024):
     """
-    Usa cleaned_driver_2024.csv como fonte principal de voltas (já traz
-    setores, composto e tyre life por volta, para todas as corridas),
-    casando raceId via RoundNumber e driverId via código do piloto.
+    final_merged_{year}_data.csv já traz voltas + pneus + clima juntos,
+    então esse merge fica só responsável por anexar raceId e driverId.
     """
-    laps = pd.read_csv(RAW / "tyres" / "cleaned_driver_2024.csv")
+    laps = pd.read_csv(RAW / "tyres" / f"final_merged_{year}_data.csv")
     laps["Driver"] = laps["Driver"].str.strip().str.upper()
 
-    # confirmar o valor exato usado pra sessão de corrida (ex: "R") antes de travar isso
-    laps_race = laps[laps["Session"] == "R"].copy()
+    laps_race = laps[laps["SessionType"] == "R"].copy()
 
     laps_race = laps_race.merge(
         race_matches[["raceId", "round"]],
@@ -34,11 +32,12 @@ def merge_laps_and_tyres(driver_map, race_matches):
     sem_raceid = laps_race["raceId"].isna().sum()
     sem_driverid = laps_race["driverId"].isna().sum()
     if sem_raceid > 0:
-        print(f"[merge_laps_tyres] AVISO: {
-              sem_raceid} linhas sem raceId (RoundNumber sem match)")
+        print(f"[merge_laps_tyres] AVISO: {sem_raceid} linhas sem raceId")
     if sem_driverid > 0:
-        print(f"[merge_laps_tyres] AVISO: {
-              sem_driverid} linhas sem driverId (código sem match)")
+        print(f"[merge_laps_tyres] AVISO: {sem_driverid} linhas sem driverId")
+
+    sem_match = laps_race[laps_race["driverId"].isna()]
+    print(sem_match["Driver"].unique())
 
     return laps_race
 

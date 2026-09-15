@@ -13,21 +13,26 @@ def build_driver_map():
     pilotos["Abbreviation"] = pilotos["Abbreviation"].str.strip().str.upper()
 
     driver_map = drivers_ergast.merge(
-        pilotos,
-        left_on="code",
-        right_on="Abbreviation",
-        how="inner"
+        pilotos, left_on="code", right_on="Abbreviation", how="inner"
     )
+    driver_map = driver_map.sort_values("driverId").drop_duplicates(
+        subset="Abbreviation", keep="last")
 
-    print(f"[driver_map] {len(driver_map)}/{len(pilotos)
-                                            } pilotos casados via código de 3 letras")
+    driver_map = driver_map[["driverId", "code",
+                             "Abbreviation", "DriverNumber", "forename", "surname"]]
 
-    if len(driver_map) < len(pilotos):
-        nao_casados = pilotos[~pilotos["Abbreviation"].isin(driver_map["Abbreviation"])]
-        print("[driver_map] Não casados (revisar manualmente):")
-        print(nao_casados[["Abbreviation", "FullName"]])
+    MANUAL_DRIVER_OVERRIDES = [
+        {"driverId": 862, "code": "DOO", "Abbreviation": "DOO", "DriverNumber": 61,
+         "forename": "Jack", "surname": "Doohan"},
+    ]
+    for override in MANUAL_DRIVER_OVERRIDES:
+        if override["Abbreviation"] not in driver_map["Abbreviation"].values:
+            driver_map = pd.concat(
+                [driver_map, pd.DataFrame([override])], ignore_index=True)
+            print(f"[driver_map] override manual aplicado: {override['Abbreviation']}")
 
-    return driver_map[["driverId", "code", "Abbreviation", "DriverNumber", "forename", "surname"]]
+    print(f"[driver_map] {len(driver_map)} pilotos mapeados (incluindo overrides)")
+    return driver_map
 
 
 if __name__ == "__main__":
