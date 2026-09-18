@@ -222,3 +222,8 @@ data/raw
 
 #Tmux
 tmux.sh
+
+# Simulation logs
+*.jsonl
+backend/download/
+
