@@ -3,12 +3,14 @@ import { Play, Settings, Trophy } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { SettingsDialog } from "@/components/settings-dialog"
+import { useNavigate } from "react-router-dom"
 
 export function MainMenu() {
+  const navigate = useNavigate()
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   function handleStart() {
-    // navigate("/circuit-selection")
+    navigate("/circuit-selection")
   }
 
   return (
