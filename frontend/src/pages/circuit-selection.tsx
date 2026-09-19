@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
+import { CircuitTrackPreview } from "@/components/circuit-track-preview"
 import type { Circuit } from "@/data/circuits"
 import { circuits } from "@/data/circuits"
 
@@ -261,33 +262,12 @@ export function CircuitSelection() {
                   <div className="absolute left-1/2 top-1/2 h-full w-px -translate-y-1/2 bg-border" />
                 </div>
 
-                {selectedVariant.layoutImage ? (
-                  <div className="relative z-10 flex h-full w-full items-center justify-center">
-                    <img
-                      src={selectedVariant.layoutImage}
-                      alt={`Traçado de ${selectedCircuit.name} — ${selectedVariant.name}`}
-                      className="max-h-full max-w-full object-contain"
-                    />
-                  </div>
-                ) : (
-                  <div className="relative z-10 flex h-full items-center justify-center text-center">
-                    <div>
-                      <div className="mb-6 text-[8rem] font-black italic leading-none tracking-tighter text-foreground/[0.025] sm:text-[12rem]">
-                        {selectedCircuit.countryCode}
-                      </div>
-
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div>
-                          <div className="mx-auto mb-4 h-20 w-32 rounded-[50%] border-2 border-dashed border-primary/40 sm:h-28 sm:w-48" />
-
-                          <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                            Preview do traçado
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <div className="relative z-10 flex h-full w-full items-center justify-center p-8">
+                  <CircuitTrackPreview
+                    waypoints={selectedVariant.waypoints}
+                    className="h-full w-full max-h-[360px] max-w-[720px]"
+                  />
+                </div>
               </div>
 
               {/* Configuration */}
