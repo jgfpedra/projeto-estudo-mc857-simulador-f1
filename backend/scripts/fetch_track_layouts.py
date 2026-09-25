@@ -69,12 +69,22 @@ def extract_layout_number(layout_id: str) -> int:
 
 
 def find_database_path(candidate_path: Optional[str] = None) -> Path:
-    """Locate the f1db SQLite database file or extract it from f1db-sqlite.zip."""
+    """Locate the F1DB SQLite database or download and extract it if missing."""
+
+    F1DB_SQLITE_URL = (
+        "https://github.com/f1db/f1db/releases/download/"
+        "v2026.14.1/f1db-sqlite.zip"
+    )
+
     if candidate_path:
         path = Path(candidate_path)
+
         if path.exists():
             return path
-        raise FileNotFoundError(f"Specified database not found: {candidate_path}")
+
+        raise FileNotFoundError(
+            f"Specified database not found: {candidate_path}"
+        )
 
     # Default search locations
     repo_root = Path(__file__).resolve().parent.parent.parent
@@ -91,7 +101,7 @@ def find_database_path(candidate_path: Optional[str] = None) -> Path:
         if loc.exists() and loc.stat().st_size > 0:
             return loc
 
-    # Check for f1db-sqlite.zip to extract if database not yet unpacked
+    # Check for a local f1db-sqlite.zip
     zip_locations = [
         backend_dir / "f1db-sqlite.zip",
         repo_root / "f1db-sqlite.zip",
@@ -100,18 +110,67 @@ def find_database_path(candidate_path: Optional[str] = None) -> Path:
 
     for zip_loc in zip_locations:
         if zip_loc.exists():
-            logger.info("Found database archive %s, extracting f1db.db...", zip_loc)
+            logger.info(
+                "Found database archive %s, extracting f1db.db...",
+                zip_loc,
+            )
+
             with zipfile.ZipFile(zip_loc, "r") as z:
                 for name in z.namelist():
                     if name.endswith("f1db.db"):
                         dest = backend_dir / "f1db.db"
+
                         with z.open(name) as src_file, open(dest, "wb") as dst_file:
                             dst_file.write(src_file.read())
+
                         logger.info("Extracted database to %s", dest)
                         return dest
 
+    # Database and local archive not found: download from F1DB
+    logger.info(
+        "F1DB database not found. Downloading from %s...",
+        F1DB_SQLITE_URL,
+    )
+
+    zip_path = backend_dir / "f1db-sqlite.zip"
+
+    try:
+        from urllib.request import urlopen
+        from shutil import copyfileobj
+
+        backend_dir.mkdir(parents=True, exist_ok=True)
+
+        with urlopen(F1DB_SQLITE_URL) as response, open(zip_path, "wb") as dst_file:
+            copyfileobj(response, dst_file)
+
+        logger.info("Downloaded database archive to %s", zip_path)
+
+        with zipfile.ZipFile(zip_path, "r") as z:
+            for name in z.namelist():
+                if name.endswith("f1db.db"):
+                    dest = backend_dir / "f1db.db"
+
+                    with z.open(name) as src_file, open(dest, "wb") as dst_file:
+                        copyfileobj(src_file, dst_file)
+
+                    logger.info("Extracted database to %s", dest)
+
+                    # Remove downloaded archive after extraction
+                    zip_path.unlink()
+
+                    return dest
+
+    except Exception as exc:
+        # Avoid leaving a potentially incomplete archive
+        if zip_path.exists():
+            zip_path.unlink()
+
+        raise RuntimeError(
+            f"Failed to download F1DB database from {F1DB_SQLITE_URL}"
+        ) from exc
+
     raise FileNotFoundError(
-        "Could not find 'f1db.db' or 'f1db-sqlite.zip'. Please provide --db-path."
+        "The downloaded archive does not contain 'f1db.db'."
     )
 
 

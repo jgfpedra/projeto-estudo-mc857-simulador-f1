@@ -227,3 +227,7 @@ tmux.sh
 *.jsonl
 backend/download/
 
+backend/f1db.db
+backend/f1db-sqlite.zip
+backend/data/circuit_layouts_evolution.json
+backend/cache
