@@ -186,16 +186,7 @@ export function DriverTeamSelection() {
 
         <div className="container mx-auto flex min-h-0 flex-1 px-6 py-5 lg:px-12 lg:py-7">
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden border border-border bg-card/40">
-            <div className="flex shrink-0 flex-col gap-4 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between lg:p-5">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
-                  Configuração do grid
-                </span>
-                <h2 className="mt-1 text-xl font-black uppercase italic">
-                  {mode === "custom" ? "Modo personalizado" : "Grid aleatório"}
-                </h2>
-              </div>
-
+            <div className="flex shrink-0 flex-col gap-3 border-b border-border p-4 lg:flex-row lg:items-center lg:justify-between lg:p-5">
               <div className="grid grid-cols-2 border border-border bg-background">
                 <button
                   type="button"
@@ -207,8 +198,8 @@ export function DriverTeamSelection() {
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   ].join(" ")}
                 >
-                  <Users className="h-4 w-4" />
-                  Personalizado
+                  <Users className="h-4 w-4 hidden sm:inline" />
+                  <span className="inline">Personalizado</span>
                 </button>
                 <button
                   type="button"
@@ -220,21 +211,13 @@ export function DriverTeamSelection() {
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   ].join(" ")}
                 >
-                  <Dices className="h-4 w-4" />
-                  Aleatório
+                  <Dices className="h-4 w-4 hidden sm:inline" />
+                  <span className="inline">Aleatório</span>
                 </button>
-              </div>
-            </div>
-
-            <div className="flex shrink-0 flex-col gap-3 border-b border-border bg-background px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-5">
-              <div>
-                <h2 className="mt-1 text-xl font-black uppercase italic">
-                  Temporada
-                </h2>
               </div>
 
               <Select value={season} onValueChange={handleSeasonChange}>
-                <SelectTrigger className="h-10 w-full rounded-none border-border bg-background sm:w-40">
+                <SelectTrigger className="h-10 w-full rounded-none border-border bg-background lg:w-40">
                   <SelectValue placeholder="Temporada" />
                 </SelectTrigger>
                 <SelectContent className="rounded-none border-border">
@@ -246,53 +229,6 @@ export function DriverTeamSelection() {
                 </SelectContent>
               </Select>
             </div>
-
-            {mode === "random" ? (
-              <div className="flex shrink-0 items-center justify-between border-b border-border bg-primary/5 px-5 py-3">
-                <p className="text-xs text-muted-foreground">
-                  Os 20 pilotos são embaralhados automaticamente. Cada piloto permanece vinculado à sua equipe original.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={generateRandomGrid}
-                  className="ml-4 shrink-0 rounded-none border-border bg-transparent uppercase"
-                >
-                  <Dices className="mr-2 h-4 w-4" />
-                  Sortear novamente
-                </Button>
-              </div>
-            ) : (
-              <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border bg-primary/5 px-5 py-3">
-                <p className="order-1 min-w-0 flex-1 text-xs text-muted-foreground max-sm:text-center">
-                  Preencha apenas as vagas vazias ou limpe todo o grid para começar de novo.
-                </p>
-
-                <div className="order-2 flex shrink-0 flex-wrap justify-center gap-2 max-sm:w-full">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={fillEmptySlotsRandomly}
-                    disabled={isComplete}
-                    className="rounded-none border-border bg-transparent uppercase"
-                  >
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Preencher vazias
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={clearGrid}
-                    disabled={selectedCount === 0}
-                    className="rounded-none border-border bg-transparent uppercase hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Limpar grid
-                  </Button>
-                </div>
-              </div>
-            )}
 
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
@@ -309,27 +245,66 @@ export function DriverTeamSelection() {
               </div>
             </div>
 
-            <div className="flex shrink-0 flex-col gap-3 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className={[
-                    "flex h-8 w-8 items-center justify-center",
-                    isComplete ? "bg-primary text-primary-foreground" : "bg-secondary",
-                  ].join(" ")}
-                >
-                  {isComplete ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <span className="text-xs font-black">{selectedCount}/20</span>
-                  )}
+            <div className="flex shrink-0 flex-col gap-3 border-t border-border p-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={[
+                      "flex h-8 w-8 items-center justify-center",
+                      isComplete ? "bg-primary text-primary-foreground" : "bg-secondary",
+                    ].join(" ")}
+                  >
+                    {isComplete ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <span className="text-xs font-black">{selectedCount}/20</span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="text-xs font-black uppercase">
+                      {isComplete ? "Grid completo" : "Grid incompleto"}
+                    </div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {selectedCount} pilotos selecionados · 20 necessários
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xs font-black uppercase">
-                    {isComplete ? "Grid completo" : "Grid incompleto"}
-                  </div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {selectedCount} pilotos selecionados · 20 necessários
-                  </div>
+
+                <div className="flex flex-wrap gap-2 lg:ml-3">
+                  {mode === "custom" ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={fillEmptySlotsRandomly}
+                        disabled={isComplete}
+                        className="rounded-none border-border bg-transparent uppercase"
+                      >
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                        Preencher vazias
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={clearGrid}
+                        disabled={selectedCount === 0}
+                        className="rounded-none border-border bg-transparent uppercase hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Limpar grid
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={generateRandomGrid}
+                      className="rounded-none border-border bg-transparent uppercase"
+                    >
+                      <Dices className="mr-2 h-4 w-4" />
+                      Sortear novamente
+                    </Button>
+                  )}
                 </div>
               </div>
 
