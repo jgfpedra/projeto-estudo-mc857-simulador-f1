@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { ChevronDown, Search, X } from "lucide-react"
+import { ArrowLeftRight, ChevronDown, Search, X } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,17 +38,26 @@ export function GridSlot({
   const normalizedSearch = search.trim().toLocaleLowerCase()
 
   const availableDrivers = useMemo(() => {
-    return drivers.filter((pilot) => {
-      const isAlreadySelected = selectedDriverIds.has(pilot.id)
-      const matchesSearch =
-        !normalizedSearch ||
-        pilot.name.toLocaleLowerCase().includes(normalizedSearch) ||
-        pilot.shortName.toLocaleLowerCase().includes(normalizedSearch) ||
-        pilot.teamName.toLocaleLowerCase().includes(normalizedSearch) ||
-        pilot.nationality.toLocaleLowerCase().includes(normalizedSearch)
+    return drivers
+      .filter((pilot) => {
+        const isCurrentDriver = pilot.id === slot.driverId
+        if (isCurrentDriver) return false
 
-      return !isAlreadySelected && matchesSearch
-    })
+        return (
+          !normalizedSearch ||
+          pilot.name.toLocaleLowerCase().includes(normalizedSearch) ||
+          pilot.shortName.toLocaleLowerCase().includes(normalizedSearch) ||
+          pilot.teamName.toLocaleLowerCase().includes(normalizedSearch) ||
+          pilot.nationality.toLocaleLowerCase().includes(normalizedSearch)
+        )
+      })
+      .sort((a, b) => {
+        const aSelected = selectedDriverIds.has(a.id)
+        const bSelected = selectedDriverIds.has(b.id)
+
+        if (aSelected !== bSelected) return aSelected ? 1 : -1
+        return a.name.localeCompare(b.name, "pt-BR")
+      })
   }, [drivers, normalizedSearch, selectedDriverIds, slot.driverId])
 
   const handleOpenChange = (open: boolean) => {
@@ -113,7 +122,7 @@ export function GridSlot({
               {!disabled && (
                 <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
               )}
-              
+
             </div>
           </button>
         </DropdownMenuTrigger>
@@ -175,18 +184,33 @@ export function GridSlot({
                 <DropdownMenuItem
                   key={pilot.id}
                   onSelect={() => onSelect(slot.position, pilot.id)}
-                  className="cursor-pointer rounded-none py-3"
+                  className={[
+                    "cursor-pointer rounded-none py-3",
+                    selectedDriverIds.has(pilot.id)
+                      ? "bg-muted/70 hover:bg-muted"
+                      : "",
+                  ].join(" ")}
                 >
                   <div className="flex min-w-0 w-full items-center gap-3">
                     <span className="text-lg leading-none">{flag(pilot.countryCode)}</span>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs font-black uppercase">{pilot.name}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="truncate text-xs font-black uppercase">{pilot.name}</div>
+                        {selectedDriverIds.has(pilot.id) && (
+                          <span className="shrink-0 text-[9px] font-black uppercase tracking-wider text-primary">
+                            Trocar
+                          </span>
+                        )}
+                      </div>
                       <div className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                         {pilot.teamName} · {pilot.nationality}
                       </div>
                     </div>
-                    <span className="ml-auto shrink-0 text-right text-xs font-black italic text-muted-foreground">
+                    <span className="ml-auto flex shrink-0 items-center gap-2 text-right text-xs font-black italic text-muted-foreground">
                       {pilot.number}
+                      {selectedDriverIds.has(pilot.id) && (
+                        <ArrowLeftRight className="h-3.5 w-3.5 text-primary" />
+                      )}
                     </span>
                   </div>
                 </DropdownMenuItem>

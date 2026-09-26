@@ -1,8 +1,15 @@
 import { useMemo, useState } from "react"
-import { ArrowLeft, Check, Dices, Users } from "lucide-react"
+import { ArrowLeft, Check, Dices, RotateCcw, Trash2, Users } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { GridSlot, type GridSlotValue } from "@/components/grid-slot"
 import { NULL_DRIVER_ID, pilots } from "@/data/pilots"
 
@@ -26,7 +33,11 @@ function shuffle<T>(items: T[]) {
 export function DriverTeamSelection() {
   const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>("custom")
+  const [season, setSeason] = useState("2025")
   const [grid, setGrid] = useState<GridSlotValue[]>(createEmptyGrid)
+
+  // Temporário: no futuro esta lista virá do backend.
+  const seasons = ["2025", "2024", "2023", "2022", "2021"]
 
   const selectedDriverIds = useMemo(
     () =>
@@ -42,11 +53,67 @@ export function DriverTeamSelection() {
   const isComplete = selectedCount === 20
 
   const updateSlot = (position: number, driverId: string) => {
-    setGrid((current) =>
-      current.map((slot) =>
-        slot.position === position ? { ...slot, driverId } : slot,
-      ),
-    )
+    setGrid((current) => {
+      const targetSlot = current.find((slot) => slot.position === position)
+      if (!targetSlot || targetSlot.driverId === driverId) return current
+
+      // Piloto nulo pode existir em várias posições. Nesse caso, apenas
+      // substituímos o conteúdo da posição escolhida.
+      if (driverId === NULL_DRIVER_ID) {
+        return current.map((slot) =>
+          slot.position === position
+            ? { ...slot, driverId: NULL_DRIVER_ID }
+            : slot,
+        )
+      }
+
+      // Se o piloto já estiver em outra posição, troca as duas posições.
+      const sourceSlot = current.find(
+        (slot) => slot.driverId === driverId && slot.position !== position,
+      )
+
+      if (!sourceSlot) {
+        return current.map((slot) =>
+          slot.position === position ? { ...slot, driverId } : slot,
+        )
+      }
+
+      return current.map((slot) => {
+        if (slot.position === position) {
+          return { ...slot, driverId }
+        }
+        if (slot.position === sourceSlot.position) {
+          return { ...slot, driverId: targetSlot.driverId }
+        }
+        return slot
+      })
+    })
+  }
+
+  const fillEmptySlotsRandomly = () => {
+    setGrid((current) => {
+      const selectedIds = new Set(
+        current
+          .map((slot) => slot.driverId)
+          .filter((driverId) => driverId !== NULL_DRIVER_ID),
+      )
+      const availablePilots = shuffle(
+        pilots.filter((pilot) => !selectedIds.has(pilot.id)),
+      )
+
+      let nextPilotIndex = 0
+
+      return current.map((slot) => {
+        if (slot.driverId !== NULL_DRIVER_ID) return slot
+
+        const pilot = availablePilots[nextPilotIndex++]
+        return pilot ? { ...slot, driverId: pilot.id } : slot
+      })
+    })
+  }
+
+  const clearGrid = () => {
+    setGrid(createEmptyGrid())
   }
 
   const generateRandomGrid = () => {
@@ -56,6 +123,12 @@ export function DriverTeamSelection() {
         driverId: pilot.id,
       })),
     )
+  }
+
+  const handleSeasonChange = (nextSeason: string) => {
+    if (nextSeason === season) return
+    setSeason(nextSeason)
+    setGrid(createEmptyGrid())
   }
 
   const handleModeChange = (nextMode: Mode) => {
@@ -153,7 +226,28 @@ export function DriverTeamSelection() {
               </div>
             </div>
 
-            {mode === "random" && (
+            <div className="flex shrink-0 flex-col gap-3 border-b border-border bg-background px-4 py-4 sm:flex-row sm:items-center sm:justify-between lg:px-5">
+              <div>
+                <h2 className="mt-1 text-xl font-black uppercase italic">
+                  Temporada
+                </h2>
+              </div>
+
+              <Select value={season} onValueChange={handleSeasonChange}>
+                <SelectTrigger className="h-10 w-full rounded-none border-border bg-background sm:w-40">
+                  <SelectValue placeholder="Temporada" />
+                </SelectTrigger>
+                <SelectContent className="rounded-none border-border">
+                  {seasons.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      Temporada {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {mode === "random" ? (
               <div className="flex shrink-0 items-center justify-between border-b border-border bg-primary/5 px-5 py-3">
                 <p className="text-xs text-muted-foreground">
                   Os 20 pilotos são embaralhados automaticamente. Cada piloto permanece vinculado à sua equipe original.
@@ -167,6 +261,36 @@ export function DriverTeamSelection() {
                   <Dices className="mr-2 h-4 w-4" />
                   Sortear novamente
                 </Button>
+              </div>
+            ) : (
+              <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border bg-primary/5 px-5 py-3">
+                <p className="order-1 min-w-0 flex-1 text-xs text-muted-foreground max-sm:text-center">
+                  Preencha apenas as vagas vazias ou limpe todo o grid para começar de novo.
+                </p>
+
+                <div className="order-2 flex shrink-0 flex-wrap justify-center gap-2 max-sm:w-full">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fillEmptySlotsRandomly}
+                    disabled={isComplete}
+                    className="rounded-none border-border bg-transparent uppercase"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Preencher vazias
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearGrid}
+                    disabled={selectedCount === 0}
+                    className="rounded-none border-border bg-transparent uppercase hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Limpar grid
+                  </Button>
+                </div>
               </div>
             )}
 
