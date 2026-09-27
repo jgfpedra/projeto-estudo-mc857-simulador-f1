@@ -5,6 +5,11 @@ from .circuit_db import (
     CircuitRepository,
     JSONCircuitRepository,
 )
+from .driver_db import (
+    DriverDatabase,
+    FastF1DriverDatabase,
+    InMemoryDriverDatabase,
+)
 
 __all__ = [
     "CircuitDatabase",
@@ -12,4 +17,9 @@ __all__ = [
     "InMemoryCircuitDatabase",
     "CircuitRepository",
     "JSONCircuitRepository",
+    "DriverDatabase",
+    "FastF1DriverDatabase",
+    "SQLiteDriverDatabase",
+    "InMemoryDriverDatabase",
+    "JSONDriverDatabase",
 ]
