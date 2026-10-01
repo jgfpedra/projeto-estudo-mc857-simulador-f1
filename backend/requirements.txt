@@ -2,3 +2,5 @@ numpy>=1.26
 pybullet>=3.2.6
 fastf1>=3.4.0
 pytest>=8.0
+fastapi>=0.115
+uvicorn[standard]>=0.30

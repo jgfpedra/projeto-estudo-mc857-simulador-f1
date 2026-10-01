@@ -216,6 +216,5 @@ class KeyboardPilot:
         scale = 1.0 - t * (1.0 - cfg.min_steer_frac)
         return full * scale
 
-
 __all__ = ["KeyboardPilot", "KeyboardPilotConfig", "KEY_IS_DOWN",
            "KEY_WAS_TRIGGERED", "KEY_WAS_RELEASED"]
