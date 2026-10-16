@@ -31,20 +31,13 @@ import { Section } from "@/components/section"
 import { useCircuitStore } from "@/stores/circuit-store"
 import { useDriverStore } from "@/stores/driver-store"
 import { isWeatherConfigValid, useWeatherStore } from "@/stores/weather-store"
-import { MAX_STINTS, isTireConfigValid, useTiresStore } from "@/stores/tires-store"
 import { useRaceLaunchStore } from "@/stores/race-launch-store"
+import { useRaceLapsStore } from "@/stores/race-laps-store"
+import { MAX_STINTS, getRemainingStintLaps, isTireConfigValid, useTiresStore } from "@/stores/tires-store"
 
 import type { Driver } from "@/types/driver"
-import {
-  WEATHER_CONDITIONS,
-  WEATHER_LABELS,
-  type WeatherCondition,
-} from "@/types/weather"
-import {
-  TIRE_COMPOUNDS,
-  TIRE_LABELS,
-  type TireCompound,
-} from "@/types/tires"
+import { WEATHER_CONDITIONS, WEATHER_LABELS, type WeatherCondition } from "@/types/weather"
+import { TIRE_COMPOUNDS, TIRE_LABELS, type TireCompound } from "@/types/tires"
 
 const GRID_SIZE = 20
 
@@ -117,9 +110,15 @@ export function WeatherTiresSelection() {
   const season = useDriverStore((state) => state.season)
   const drivers = useDriverStore((state) => state.drivers)
 
+  const totalLaps = useRaceLapsStore((state) => state.totalLaps)
+  const syncWithRaceLaps = useTiresStore((state) => state.syncWithRaceLaps)
+
   useEffect(() => {
     void fetchCircuits()
   }, [fetchCircuits])
+  useEffect(() => {
+    syncWithRaceLaps()
+  }, [totalLaps, syncWithRaceLaps])
 
   const selectedCircuit = circuits.find((circuit) => circuit.id === selectedCircuitId)
   const selectedLayout = selectedCircuit?.layouts.find((layout) => layout.id === selectedLayoutId)
@@ -142,7 +141,7 @@ export function WeatherTiresSelection() {
   }, [selectedCircuitId, isGridComplete, navigate])
 
   const isConfigValid =
-    isWeatherConfigValid(weatherConfig) && isTireConfigValid(tiresConfig)
+    isWeatherConfigValid(weatherConfig) && isTireConfigValid(tiresConfig, totalLaps)
   const canStart =
     Boolean(selectedCircuitId) && isGridComplete && isConfigValid && !isSubmitting
   const compoundWarning = getCompoundWarning(weatherConfig.weather, tiresConfig.initialCompound)
@@ -160,7 +159,7 @@ export function WeatherTiresSelection() {
       layoutId: selectedLayoutId ?? selectedCircuit?.layouts[0]?.id ?? "",
       grid: gridDrivers.map((driver) => driver.id),
       weather: weatherConfig,
-      tires: tiresConfig,
+      tires: tiresConfig, totalLaps
     })
 
     // TODO: definir a rota da corrida e navegar para ela.
@@ -369,6 +368,13 @@ export function WeatherTiresSelection() {
             >
               {tiresConfig.strategy.enabled ? (
                 <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Voltas planejadas:{" "}
+                    <span className="font-mono text-foreground">
+                      {totalLaps - getRemainingStintLaps(tiresConfig.strategy.stints, totalLaps)}
+                    </span>{" "}
+                    / {totalLaps}
+                  </p>
                   {tiresConfig.strategy.stints.map((stint, index) => {
                     const isFirst = index === 0
 
@@ -414,6 +420,7 @@ export function WeatherTiresSelection() {
                           <Input
                             type="number"
                             min={1}
+                            max={getRemainingStintLaps(tiresConfig.strategy.stints, totalLaps, stint.id)}
                             value={stint.laps}
                             onChange={(event) => updateStintLaps(stint.id, Number(event.target.value))}
                             aria-label={`Voltas do stint ${index + 1}`}
@@ -442,7 +449,10 @@ export function WeatherTiresSelection() {
                     variant="outline"
                     size="sm"
                     onClick={addStint}
-                    disabled={tiresConfig.strategy.stints.length >= MAX_STINTS}
+                    disabled={
+                      tiresConfig.strategy.stints.length >= MAX_STINTS ||
+                      getRemainingStintLaps(tiresConfig.strategy.stints, totalLaps) < 1
+                    }
                     className="rounded-none border-border bg-transparent uppercase"
                   >
                     <Plus className="mr-2 h-4 w-4" />

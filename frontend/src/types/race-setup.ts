@@ -6,6 +6,8 @@ export type RaceSetupPayload = {
   season: string
   circuitId: string
   layoutId: string
+  /** Total de voltas da corrida, entre 1 e 200. Vale para qualquer circuito. */
+  totalLaps: number
   /** IDs dos pilotos na ordem do grid de largada (posição 1 primeiro). */
   grid: string[]
   weather: WeatherConfig
