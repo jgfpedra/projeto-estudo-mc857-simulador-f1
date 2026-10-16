@@ -23,4 +23,9 @@ export const api = {
     if (USE_MOCKS) return driversBySeason[season] ?? []
     return getJson<Driver[]>(`/seasons/${season}/drivers`)
   },
+
+  async startRace(payload: any) {
+    if (USE_MOCKS) return { payload }
+    return getJson<any>(`/race`)
+  },
 }
