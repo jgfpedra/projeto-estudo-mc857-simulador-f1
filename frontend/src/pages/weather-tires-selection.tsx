@@ -24,6 +24,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
+import { SummaryRow } from "@/components/summary-row"
+import { ToggleButton } from "@/components/toggle-button"
+import { Section } from "@/components/section"
+
 import { useCircuitStore } from "@/stores/circuit-store"
 import { useDriverStore } from "@/stores/driver-store"
 import {
@@ -31,6 +35,7 @@ import {
   isWeatherTiresConfigValid,
   useWeatherTiresStore,
 } from "@/stores/weather-tires-store"
+
 import type { Driver } from "@/types/driver"
 import {
   TIRE_COMPOUNDS,
@@ -521,67 +526,5 @@ export function WeatherTiresSelection() {
         </div>
       </div>
     </main>
-  )
-}
-
-type SectionProps = {
-  step: string
-  title: string
-  description: string
-  action?: React.ReactNode
-  children: React.ReactNode
-}
-
-function Section({ step, title, description, action, children }: SectionProps) {
-  return (
-    <section className="border border-border bg-card/40">
-      <div className="flex items-start justify-between gap-4 border-b border-border p-5">
-        <div className="flex items-start gap-4">
-          <span className="text-2xl font-black italic text-muted-foreground/40">{step}</span>
-          <div>
-            <h2 className="text-lg font-black uppercase tracking-wide">{title}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-          </div>
-        </div>
-        {action}
-      </div>
-      <div className="p-5">{children}</div>
-    </section>
-  )
-}
-
-type ToggleButtonProps = {
-  active: boolean
-  onClick: () => void
-  labelOn: string
-  labelOff: string
-}
-
-function ToggleButton({ active, onClick, labelOn, labelOff }: ToggleButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={[
-        "shrink-0 border px-4 py-2 text-[11px] font-black uppercase tracking-wider transition-colors",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground",
-      ].join(" ")}
-    >
-      {active ? labelOn : labelOff}
-    </button>
-  )
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="px-5 py-4">
-      <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-        {label}
-      </div>
-      <div className="mt-1 text-sm font-bold uppercase">{value}</div>
-    </div>
   )
 }
