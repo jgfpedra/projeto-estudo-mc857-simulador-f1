@@ -59,6 +59,7 @@ from .controllers import (
     ManualController,
 )
 from .input_source import InputEntry, InputSource, InMemoryInputSource
+from .keyboard_pilot import KeyboardPilot
 
 
 # ---------------------------------------------------------------------------
@@ -132,6 +133,8 @@ class SimulationEngine:
         self.last_inputs: Dict[str, CarInput] = {}
         # Última vez que um input "fresco" foi recebido (para detectar stale)
         self.last_input_ts: Dict[str, float] = {}
+        # Estado do controle por teclado da janela GUI (driver[0])
+        self.keyboard_pilot = KeyboardPilot()
         self.sim_ts: float = 0.0
         self.current_lap: int = 0
         self.race_started: bool = False
@@ -150,6 +153,7 @@ class SimulationEngine:
 
     def setup(self) -> None:
         self.physics.init()
+        self.keyboard_pilot.reset()
             # Chão dimensionado pela pista: sempre necessário (física + visual),
         # independente de gui=True ou False. Sem isso, em pistas grandes o chão
         # default do PyBullet (~100x100) é menor que a pista e carros podem
@@ -370,7 +374,7 @@ class SimulationEngine:
         4. Empilha controle e avança a física.
         """
         if self.config.gui and self.drivers:
-            self._poll_gui_keyboard()
+            self._poll_gui_keyboard(dt)
 
         weather      = self.weather_model.current
         weather_kind = weather.kind
@@ -515,49 +519,36 @@ class SimulationEngine:
             brake=brake,
         )
 
-    def _poll_gui_keyboard(self) -> None:
-        """Lê teclas pressionadas diretamente na janela GUI do PyBullet."""
-        events = self.physics.get_keyboard_events()
-        if not events:
+    def _poll_gui_keyboard(self, dt: float) -> None:
+        """Lê teclas da janela GUI do PyBullet e publica o input do tick.
+
+        A lógica de "feel" (taxa de steering, auto-centralização, lock
+        sensível à velocidade, aceleração contínua) vive no
+        :class:`~engine.keyboard_pilot.KeyboardPilot`; aqui só lemos os
+        eventos e publicamos o resultado.
+
+        Publica enquanto há controle ativo (tecla mantida ou estado não-zero
+        do piloto), o que mantém o input "fresco" e evita que o fallback
+        stale freie o carro sozinho durante a pilotagem. Com o piloto em
+        repouso a engine publica nada, deixando a fonte externa (ex.:
+        ``scripts/publish_keyboard.py``) assumir o controle.
+        """
+        if not self.drivers:
             return
         drv_id = self.drivers[0].driver_id
-        last = self.last_inputs.get(drv_id) or CarInput.neutral()
-        speed = last.target_speed_mps
-        steer = last.steering_yaw_rad
-        brake = last.brake
-        changed = False
+        state = self.states.get(drv_id)
+        actual_speed = state.velocity_mps if state is not None else None
+        events = self.physics.get_keyboard_events()
+        car_input = self.keyboard_pilot.update(events, dt, speed_mps=actual_speed)
 
-        for key, state in events.items():
-            if not (state & 1 or state & 2):  # KEY_IS_DOWN or KEY_WAS_TRIGGERED
-                continue
-            char = chr(key).lower() if 0 <= key < 256 else ""
-            if char == "w" or key == 65297:  # W or UP arrow
-                speed = min(80.0, speed + 2.0)
-                brake = 0.0
-                changed = True
-            elif char == "s" or key == 65298:  # S or DOWN arrow
-                speed = max(0.0, speed - 2.0)
-                brake = 0.5 if speed == 0.0 else 0.0
-                changed = True
-            elif char == "a" or key == 65296:  # A or LEFT arrow
-                steer = max(-math.radians(25.0), steer - math.radians(2.0))
-                changed = True
-            elif char == "d" or key == 65299:  # D or RIGHT arrow
-                steer = min(math.radians(25.0), steer + math.radians(2.0))
-                changed = True
-            elif char == " " or key == 32:  # SPACE
-                speed = 0.0
-                brake = 1.0
-                changed = True
-            elif char == "r":
-                speed = 0.0
-                steer = 0.0
-                brake = 0.0
-                changed = True
-
-        if changed:
-            inp = CarInput(target_speed_mps=speed, steering_yaw_rad=steer, brake=brake)
-            self.input_source.update_last_input(drv_id, inp, source="pybullet_gui")
+        pilot_idle = (
+            not self.keyboard_pilot.held_keys
+            and car_input.target_speed_mps <= 0.0
+            and abs(car_input.steering_yaw_rad) <= 1e-9
+        )
+        if pilot_idle:
+            return
+        self.input_source.update_last_input(drv_id, car_input, source="pybullet_gui")
 
     # ------------------------------------------------------------------
     # (Cálculos de pace automático removidos — agora tudo vem do input externo)

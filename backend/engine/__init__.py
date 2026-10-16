@@ -38,6 +38,7 @@ from .input_source import (
     InMemoryInputSource,
     RedisInputSource,
 )
+from .keyboard_pilot import KeyboardPilot, KeyboardPilotConfig
 
 __all__ = [
     # Events
@@ -74,4 +75,7 @@ __all__ = [
     "InMemoryInputSource",
     "FileInputSource",
     "RedisInputSource",
+    # Keyboard control (GUI)
+    "KeyboardPilot",
+    "KeyboardPilotConfig",
 ]
