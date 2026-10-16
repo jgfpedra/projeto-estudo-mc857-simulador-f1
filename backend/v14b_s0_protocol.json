@@ -1,0 +1,160 @@
+{
+ "actor": "model_train/v14b_traffic/dagger_actor_best_s0_n0.keras",
+ "results": {
+  "interlagos": {
+   "track": "interlagos",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 110.5,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "Monza": {
+   "track": "Monza",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 124.0,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "Hungaroring": {
+   "track": "Hungaroring",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 120.5,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "Silverstone": {
+   "track": "Silverstone",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 141.70000000000002,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "Montreal": {
+   "track": "Montreal",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 110.30000000000001,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "Bahrain": {
+   "track": "Bahrain",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 135.0,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "Mexico": {
+   "track": "Mexico",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 112.80000000000001,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "procedural:101": {
+   "track": "procedural:101",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 78.30000000000001,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "procedural:103": {
+   "track": "procedural:103",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 82.4,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "procedural:107": {
+   "track": "procedural:107",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 93.2,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "procedural:201": {
+   "track": "procedural:201",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 52.400000000000006,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "procedural:203": {
+   "track": "procedural:203",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 52.1,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "procedural:301": {
+   "track": "procedural:301",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 78.5,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "Zandvoort": {
+   "track": "Zandvoort",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 118.10000000000001,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "Monaco": {
+   "track": "Monaco",
+   "n_traffic": 0,
+   "laps": 0,
+   "episodes": 3,
+   "time_med": null,
+   "contacts": 0,
+   "contacts_per_lap": null
+  },
+  "Suzuka": {
+   "track": "Suzuka",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 133.0,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  },
+  "Spa": {
+   "track": "Spa",
+   "n_traffic": 0,
+   "laps": 3,
+   "episodes": 3,
+   "time_med": 124.4,
+   "contacts": 0,
+   "contacts_per_lap": 0.0
+  }
+ },
+ "total": "48/51",
+ "regressions": []
+}
