@@ -30,22 +30,21 @@ import { Section } from "@/components/section"
 
 import { useCircuitStore } from "@/stores/circuit-store"
 import { useDriverStore } from "@/stores/driver-store"
-import {
-  MAX_STINTS,
-  isWeatherTiresConfigValid,
-  useWeatherTiresStore,
-} from "@/stores/weather-tires-store"
+import { isWeatherConfigValid, useWeatherStore } from "@/stores/weather-store"
+import { MAX_STINTS, isTireConfigValid, useTiresStore } from "@/stores/tires-store"
+import { useRaceLaunchStore } from "@/stores/race-launch-store"
 
 import type { Driver } from "@/types/driver"
 import {
-  TIRE_COMPOUNDS,
-  TIRE_LABELS,
   WEATHER_CONDITIONS,
   WEATHER_LABELS,
-  type RaceSetupPayload,
-  type TireCompound,
   type WeatherCondition,
-} from "@/types/weather-tires"
+} from "@/types/weather"
+import {
+  TIRE_COMPOUNDS,
+  TIRE_LABELS,
+  type TireCompound,
+} from "@/types/tires"
 
 const GRID_SIZE = 20
 
@@ -89,21 +88,26 @@ function getCompoundWarning(
 export function WeatherTiresSelection() {
   const navigate = useNavigate()
 
-  const config = useWeatherTiresStore((state) => state.config)
-  const isSubmitting = useWeatherTiresStore((state) => state.isSubmitting)
-  const submitError = useWeatherTiresStore((state) => state.submitError)
-  const setWeather = useWeatherTiresStore((state) => state.setWeather)
-  const setTransitionEnabled = useWeatherTiresStore((state) => state.setTransitionEnabled)
-  const setTransitionProbability = useWeatherTiresStore((state) => state.setTransitionProbability)
-  const toggleTransitionCondition = useWeatherTiresStore((state) => state.toggleTransitionCondition)
-  const setInitialCompound = useWeatherTiresStore((state) => state.setInitialCompound)
-  const setStrategyEnabled = useWeatherTiresStore((state) => state.setStrategyEnabled)
-  const addStint = useWeatherTiresStore((state) => state.addStint)
-  const removeStint = useWeatherTiresStore((state) => state.removeStint)
-  const updateStintCompound = useWeatherTiresStore((state) => state.updateStintCompound)
-  const updateStintLaps = useWeatherTiresStore((state) => state.updateStintLaps)
-  const resetConfig = useWeatherTiresStore((state) => state.resetConfig)
-  const startRace = useWeatherTiresStore((state) => state.startRace)
+  const weatherConfig = useWeatherStore((state) => state.config)
+  const setWeather = useWeatherStore((state) => state.setWeather)
+  const setTransitionEnabled = useWeatherStore((state) => state.setTransitionEnabled)
+  const setTransitionProbability = useWeatherStore((state) => state.setTransitionProbability)
+  const toggleTransitionCondition = useWeatherStore((state) => state.toggleTransitionCondition)
+  const resetWeather = useWeatherStore((state) => state.resetWeather)
+
+  const tiresConfig = useTiresStore((state) => state.config)
+  const setInitialCompound = useTiresStore((state) => state.setInitialCompound)
+  const setStrategyEnabled = useTiresStore((state) => state.setStrategyEnabled)
+  const addStint = useTiresStore((state) => state.addStint)
+  const removeStint = useTiresStore((state) => state.removeStint)
+  const updateStintCompound = useTiresStore((state) => state.updateStintCompound)
+  const updateStintLaps = useTiresStore((state) => state.updateStintLaps)
+  const resetTires = useTiresStore((state) => state.resetTires)
+
+  const isSubmitting = useRaceLaunchStore((state) => state.isSubmitting)
+  const submitError = useRaceLaunchStore((state) => state.submitError)
+  const startRace = useRaceLaunchStore((state) => state.startRace)
+  const clearSubmitError = useRaceLaunchStore((state) => state.clearSubmitError)
 
   const circuits = useCircuitStore((state) => state.circuits)
   const selectedCircuitId = useCircuitStore((state) => state.selectedCircuitId)
@@ -137,28 +141,36 @@ export function WeatherTiresSelection() {
     }
   }, [selectedCircuitId, isGridComplete, navigate])
 
-  const isConfigValid = isWeatherTiresConfigValid(config)
-  const canStart = Boolean(selectedCircuitId) && isGridComplete && isConfigValid && !isSubmitting
-  const compoundWarning = getCompoundWarning(config.weather, config.initialCompound)
+  const isConfigValid =
+    isWeatherConfigValid(weatherConfig) && isTireConfigValid(tiresConfig)
+  const canStart =
+    Boolean(selectedCircuitId) && isGridComplete && isConfigValid && !isSubmitting
+  const compoundWarning = getCompoundWarning(weatherConfig.weather, tiresConfig.initialCompound)
 
   const possibleTransitionConditions = WEATHER_CONDITIONS.filter(
-    (condition) => condition !== config.weather,
+    (condition) => condition !== weatherConfig.weather,
   )
 
   const handleStart = async () => {
     if (!canStart || !selectedCircuitId) return
 
-    const payload: RaceSetupPayload = {
+    const ok = await startRace({
       season,
       circuitId: selectedCircuitId,
       layoutId: selectedLayoutId ?? selectedCircuit?.layouts[0]?.id ?? "",
       grid: gridDrivers.map((driver) => driver.id),
-      config,
-    }
+      weather: weatherConfig,
+      tires: tiresConfig,
+    })
 
-    const ok = await startRace(payload)
     // TODO: definir a rota da corrida e navegar para ela.
     if (ok) navigate("/")
+  }
+
+  const handleReset = () => {
+    resetWeather()
+    resetTires()
+    clearSubmitError()
   }
 
   return (
@@ -210,7 +222,7 @@ export function WeatherTiresSelection() {
               <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-5">
                 {WEATHER_CONDITIONS.map((condition) => {
                   const Icon = WEATHER_ICONS[condition]
-                  const isActive = config.weather === condition
+                  const isActive = weatherConfig.weather === condition
 
                   return (
                     <button
@@ -244,24 +256,24 @@ export function WeatherTiresSelection() {
                     <div className="mt-1 text-xs text-muted-foreground">Opcional</div>
                   </div>
                   <ToggleButton
-                    active={config.transition.enabled}
-                    onClick={() => setTransitionEnabled(!config.transition.enabled)}
+                    active={weatherConfig.transition.enabled}
+                    onClick={() => setTransitionEnabled(!weatherConfig.transition.enabled)}
                     labelOn="Ativado"
                     labelOff="Desativado"
                   />
                 </div>
 
-                {config.transition.enabled && (
+                {weatherConfig.transition.enabled && (
                   <div className="space-y-5">
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <Label>Probabilidade de mudança</Label>
                         <span className="font-mono text-sm text-muted-foreground">
-                          {config.transition.probability}%
+                          {weatherConfig.transition.probability}%
                         </span>
                       </div>
                       <Slider
-                        value={[config.transition.probability]}
+                        value={[weatherConfig.transition.probability]}
                         min={0}
                         max={100}
                         step={5}
@@ -273,7 +285,7 @@ export function WeatherTiresSelection() {
                       <Label>Condições possíveis</Label>
                       <div className="flex flex-wrap gap-2">
                         {possibleTransitionConditions.map((condition) => {
-                          const isSelected = config.transition.possibleConditions.includes(condition)
+                          const isSelected = weatherConfig.transition.possibleConditions.includes(condition)
 
                           return (
                             <button
@@ -293,7 +305,7 @@ export function WeatherTiresSelection() {
                           )
                         })}
                       </div>
-                      {config.transition.possibleConditions.length === 0 && (
+                      {weatherConfig.transition.possibleConditions.length === 0 && (
                         <p className="text-xs text-primary">Selecione ao menos uma condição.</p>
                       )}
                     </div>
@@ -306,7 +318,7 @@ export function WeatherTiresSelection() {
             <Section step="02" title="Pneu inicial" description="Composto usado na largada.">
               <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-5">
                 {TIRE_COMPOUNDS.map((compound) => {
-                  const isActive = config.initialCompound === compound
+                  const isActive = tiresConfig.initialCompound === compound
 
                   return (
                     <button
@@ -348,16 +360,16 @@ export function WeatherTiresSelection() {
               description="Planeje as trocas de pneu antes da corrida. Opcional."
               action={
                 <ToggleButton
-                  active={config.strategy.enabled}
-                  onClick={() => setStrategyEnabled(!config.strategy.enabled)}
+                  active={tiresConfig.strategy.enabled}
+                  onClick={() => setStrategyEnabled(!tiresConfig.strategy.enabled)}
                   labelOn="Definida"
                   labelOff="Não definida"
                 />
               }
             >
-              {config.strategy.enabled ? (
+              {tiresConfig.strategy.enabled ? (
                 <div className="space-y-3">
-                  {config.strategy.stints.map((stint, index) => {
+                  {tiresConfig.strategy.stints.map((stint, index) => {
                     const isFirst = index === 0
 
                     return (
@@ -416,7 +428,7 @@ export function WeatherTiresSelection() {
                           variant="outline"
                           size="icon"
                           onClick={() => removeStint(stint.id)}
-                          disabled={config.strategy.stints.length <= 1}
+                          disabled={tiresConfig.strategy.stints.length <= 1}
                           aria-label={`Remover stint ${index + 1}`}
                           className="h-10 w-10 rounded-none border-border bg-transparent hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
                         >
@@ -430,7 +442,7 @@ export function WeatherTiresSelection() {
                     variant="outline"
                     size="sm"
                     onClick={addStint}
-                    disabled={config.strategy.stints.length >= MAX_STINTS}
+                    disabled={tiresConfig.strategy.stints.length >= MAX_STINTS}
                     className="rounded-none border-border bg-transparent uppercase"
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -464,14 +476,14 @@ export function WeatherTiresSelection() {
                 label="Grid"
                 value={`${gridDrivers.length}/${GRID_SIZE} pilotos · Temporada ${season}`}
               />
-              <SummaryRow label="Clima inicial" value={WEATHER_LABELS[config.weather]} />
+              <SummaryRow label="Clima inicial" value={WEATHER_LABELS[weatherConfig.weather]} />
               <SummaryRow
                 label="Mudança de clima"
                 value={
-                  config.transition.enabled
-                    ? `${config.transition.probability}% · ${
-                        config.transition.possibleConditions.length > 0
-                          ? config.transition.possibleConditions.map((c) => WEATHER_LABELS[c]).join(", ")
+                  weatherConfig.transition.enabled
+                    ? `${weatherConfig.transition.probability}% · ${
+                        weatherConfig.transition.possibleConditions.length > 0
+                          ? weatherConfig.transition.possibleConditions.map((c) => WEATHER_LABELS[c]).join(", ")
                           : "sem condições"
                       }`
                     : "Desativada"
@@ -479,13 +491,13 @@ export function WeatherTiresSelection() {
               />
               <SummaryRow
                 label="Pneu inicial"
-                value={`${config.initialCompound} · ${TIRE_LABELS[config.initialCompound]}`}
+                value={`${tiresConfig.initialCompound} · ${TIRE_LABELS[tiresConfig.initialCompound]}`}
               />
               <SummaryRow
                 label="Estratégia"
                 value={
-                  config.strategy.enabled
-                    ? config.strategy.stints
+                  tiresConfig.strategy.enabled
+                    ? tiresConfig.strategy.stints
                         .map((stint) => `${stint.compound} ${stint.laps}v`)
                         .join(" → ")
                     : "Não definida"
@@ -504,7 +516,7 @@ export function WeatherTiresSelection() {
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  onClick={resetConfig}
+                  onClick={handleReset}
                   disabled={isSubmitting}
                   className="h-12 rounded-none border-border bg-transparent uppercase"
                 >
