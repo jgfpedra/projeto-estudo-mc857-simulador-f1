@@ -38,6 +38,7 @@ import { MAX_STINTS, getRemainingStintLaps, isTireConfigValid, useTiresStore } f
 import type { Driver } from "@/types/driver"
 import { WEATHER_CONDITIONS, WEATHER_LABELS, type WeatherCondition } from "@/types/weather"
 import { TIRE_COMPOUNDS, TIRE_LABELS, type TireCompound } from "@/types/tires"
+import { LapsStepper } from "@/components/laps-stepper"
 
 const GRID_SIZE = 20
 
@@ -381,7 +382,7 @@ export function WeatherTiresSelection() {
                     return (
                       <div
                         key={stint.id}
-                        className="grid grid-cols-[auto_1fr_96px_auto] items-center gap-3 border border-border bg-background p-3"
+                        className="grid grid-cols-[auto_1fr_128px_auto] items-center gap-2 border border-border bg-background p-3 sm:grid-cols-[auto_1fr_170px_auto] sm:gap-3"
                       >
                         <span className="flex h-10 w-10 items-center justify-center bg-card text-xs font-black italic">
                           {index + 1}
@@ -390,8 +391,11 @@ export function WeatherTiresSelection() {
                         {isFirst ? (
                           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider">
                             <span className={`h-3 w-3 rounded-full ${TIRE_DOT[stint.compound]}`} />
-                            {stint.compound}
-                            <span className="font-normal text-muted-foreground">· pneu inicial</span>
+                            <div className="min-w-0">
+                              <div className="truncate text-xs font-black uppercase tracking-wider">
+                                {stint.compound}
+                              </div>
+                            </div>
                           </div>
                         ) : (
                           <Select
@@ -400,7 +404,7 @@ export function WeatherTiresSelection() {
                               updateStintCompound(stint.id, value as TireCompound)
                             }
                           >
-                            <SelectTrigger className="h-10 w-full rounded-none border-border bg-card uppercase">
+                            <SelectTrigger className="h-10 w-full rounded-none border-border bg-card uppercase truncate">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -416,28 +420,22 @@ export function WeatherTiresSelection() {
                           </Select>
                         )}
 
-                        <div className="relative">
-                          <Input
-                            type="number"
-                            min={1}
-                            max={getRemainingStintLaps(tiresConfig.strategy.stints, totalLaps, stint.id)}
-                            value={stint.laps}
-                            onChange={(event) => updateStintLaps(stint.id, Number(event.target.value))}
-                            aria-label={`Voltas do stint ${index + 1}`}
-                            className="h-10 rounded-none border-border bg-card pr-10 text-right"
-                          />
-                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] uppercase text-muted-foreground">
-                            voltas
-                          </span>
-                        </div>
+                        <LapsStepper
+                          value={stint.laps}
+                          min={1}
+                          max={getRemainingStintLaps(tiresConfig.strategy.stints, totalLaps, stint.id)}
+                          onChange={(laps) => updateStintLaps(stint.id, laps)}
+                          ariaLabel={`voltas do stint ${index + 1}`}
+                          className="h-10"
+                        />
 
                         <Button
                           variant="outline"
                           size="icon"
                           onClick={() => removeStint(stint.id)}
-                          disabled={tiresConfig.strategy.stints.length <= 1}
+                          disabled={isFirst || tiresConfig.strategy.stints.length <= 1}
                           aria-label={`Remover stint ${index + 1}`}
-                          className="h-10 w-10 rounded-none border-border bg-transparent hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          className="h-10 w-10 shrink-0 rounded-none border-border bg-transparent hover:border-destructive hover:bg-destructive hover:text-destructive-foreground disabled:opacity-30"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

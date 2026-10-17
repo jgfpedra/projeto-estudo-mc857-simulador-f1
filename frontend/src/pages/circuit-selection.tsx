@@ -290,7 +290,7 @@ export function CircuitSelection() {
                           </Select>
 
                           <p className="mt-2 text-xs text-muted-foreground">
-                            Selecione uma versão histórica para utilizar o traçado correspondente.
+                            Layouts históricos ou atuais.
                           </p>
                         </div>
 

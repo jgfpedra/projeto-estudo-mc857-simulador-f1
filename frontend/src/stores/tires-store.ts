@@ -157,7 +157,10 @@ export const useTiresStore = create<TiresStore>()(
       removeStint: (id) =>
         set((state) => {
           const { stints } = state.config.strategy
-          if (stints.length <= 1) return state
+          const index = stints.findIndex((stint) => stint.id === id)
+
+          // O primeiro stint é o pneu escolhido na largada: não pode ser removido.
+          if (index <= 0 || stints.length <= 1) return state
 
           return {
             config: {
