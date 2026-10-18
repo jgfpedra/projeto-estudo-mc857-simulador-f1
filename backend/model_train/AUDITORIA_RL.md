@@ -1144,3 +1144,38 @@ limpo do DAgger). O teto do stack é o DAgger: **~108s**.
 - **aluno DAgger (v11b)**: **108s** (herda o teto do professor sf=0.90)
 - Meta C 91.2s: exigiria **racing line ou MPC** no professor (fora do
   escopo do PPO/DAgger — é uma mudança de controlador, não de otimização)
+
+
+---
+
+## R7b→R13 — CADEIA CAUSAL ÚNICA FECHADA (out/2026, ciclo v15 completo)
+
+Diagnóstico por fases, cada uma fechando um elo com instrumento canônico
+(frozen v2 SF729, clima semeado, variância semeada, sequencial-puro, contato
+solver-side v3):
+
+1. **R7b**: física lateral SÃ (scripted: círculo estável até v_allow;
+   understeer 1,45× calibrado). Saídas = comando da política ~24× a
+   necessidade cinemática (slip 16,8° mediano; a_lat 3,9-5 vs 10,4 m/s²).
+   B3.1 histórico rotulado pré-canônico (commit FASE-4 não roda).
+2. **R8**: cap κ-cinemático REFUTADO no piloto (clipa 88-92% dos ticks
+   normais; nenhum k_comp viável).
+3. **R9**: slip-cap MORTO (slip alto = regime NORMAL, 91-98% dos ticks);
+   rate-limiter MORTO (offset sustentado, 0,2% yank). Família camada
+   ENCERRADA.
+4. **R11/R12**: paradas = 100% RECUP-OFF (subproduto de excursões);
+   hesitações = 57% REJOIN-DIP + 25% CORNER-CRAWL; retreino BC offline
+   16d (r12b) VERMELHO no piloto (skew: tráfego vivo nunca visto) —
+   research-negativo, trilha encerrada.
+5. **R13 (gate out-of-sample, 20 corridas seeds 10-19)**: composite FAIL
+   (3/10; adverso 0/4) por CONTATO no retorno (28-44% das amostras com
+   carro fora) e hesitação REJOIN-DIP — o critério de pista (fora)
+   passou em TODAS. Vantagem de segurança consistente (1,5-3,5× menos
+   contatos em 10/10). Veredito R10 PERMANENTE.
+
+**Conclusão**: uma única frente — excursões da política → contatos no
+retorno → hesitação pós-rejoin → paradas. Alavancas futuras: percepção de
+tráfego no rejoin; weave/slide com tráfego VIVO (dados agora logados no
+CSV v3.3). Instrumentos deixados prontos: contato solver-side, clima
+semeado, variância semeada, protocolo sequencial, gate mecânico por
+clima com re-ancoragem por quantis.

@@ -467,7 +467,8 @@ class F1MultiContextEnv(gym.Env):
         # Interlagos cai na Descida do Lago). Detectamos a maior reta (menor
         # curvatura à frente) e colocamos a largada no meio dela, garantindo
         # bastante espaço antes da próxima curva.
-        best_start = self._find_best_start_waypoint()
+        # v15 R2 S4: usa a função PURA (fonte única com o runner)
+        best_start = find_best_start_waypoint(self.track.waypoints)
         if best_start is not None and best_start != self.track.start_finish_waypoint:
             print(f"[F1MultiContextEnv] Start/finish ajustado do wp "
                   f"{self.track.start_finish_waypoint} -> {best_start} (melhor reta)")
@@ -1278,3 +1279,164 @@ class F1MultiContextEnv(gym.Env):
     def close(self):
         if hasattr(self, 'engine') and self.engine is not None and hasattr(self.engine, 'physics'):
             self.engine.physics.close()
+
+# --- v15 FASE R: fonte de pista FROZEN (fail-fast, sem fallback) -----------
+# Regra do incidente 9099235: FastF1 é OPCIONAL (só nomes/cores); a geometria
+# vem SEMPRE da pista congelada quando disponível. Fallback silencioso para
+# preset procedural ("último recurso") é PROIBIDO no runner — pista errada
+# = carros burros + largada em cima da curva. Se a frozen não existe ou o
+# hash diverge: ERRO DURO + aborto.
+
+FROZEN_TRACKS_DIR = MODEL_DIR / 'tracks_frozen'
+
+
+def load_track_frozen(name: str, strict: bool = True):
+    """Carrega a pista congelada v1 pelo nome. VERIFICA sha256.
+
+    Args:
+      name: alias amigável (interlagos, Monza, ...) — resolve o arquivo
+            <name>_v1.json em tracks_frozen/.
+      strict: se True (runner) — hash errado ou arquivo ausente = ERRO.
+              se False — retorna None silenciosamente (para uso opcional).
+
+    NUNCA faz fallback: se não tem frozen, o chamador decide (o runner
+    deve abortar; scripts de investigação podem usar resolve_track).
+    """
+    import hashlib
+    import json as _json
+    alias = name.strip().lower()
+    _alias_map = {
+        'interlagos': 'interlagos', 'são paulo': 'interlagos',
+        'sao paulo': 'interlagos', 'sao-paulo': 'interlagos',
+        'brazil': 'interlagos', 'default': 'interlagos', 'none': 'interlagos',
+    }
+    key = _alias_map.get(alias, name.strip())
+    # v15 R2 S4: v2 (SF corrigido) tem prioridade sobre v1 (SF original)
+    path = FROZEN_TRACKS_DIR / f'{key}_v2.json'
+    if not path.exists():
+        path = FROZEN_TRACKS_DIR / f'{key}_v1.json'
+    if not path.exists():
+        if strict:
+            raise FileNotFoundError(
+                f"PISTA FROZEN AUSENTE: {path}. O runner REJEITA corridas em "
+                f"pistas não congeladas (incidente 9099235: fallback silencioso "
+                f"para preset procedural produziu carros burros). Congele a "
+                f"pista primeiro ou use --track com uma frozen existente.")
+        return None
+    data = _json.loads(path.read_text())
+    # verifica sha256 do conteúdo ORIGINAL (sem o campo sha256 em si)
+    data_check = {k: v for k, v in data.items() if k != 'sha256'}
+    raw = _json.dumps(data_check, sort_keys=True).encode()
+    actual = hashlib.sha256(raw).hexdigest()[:16]
+    if actual != data['sha256']:
+        if strict:
+            raise ValueError(
+                f"PISTA FROZEN CORROMPIDA: {path.name} sha256 esperado "
+                f"{data['sha256']} mas calculado {actual}. ABORTO — pista "
+                f"adulterada.")
+        return None
+    wps = [(float(x), float(y)) for x, y in data['waypoints']]
+    from backend.domain import Track
+    t = Track.from_waypoints(
+        name=data['name'],
+        waypoints=wps,
+        width_m=float(data.get('width_m', 12.0)),
+    )
+    # v15 R2 S6: o sf_idx do ARQUIVO FROZEN é AUTORITATIVO. A função pura
+    # find_best_start_waypoint foi a FERRAMENTA que gerou o valor de v2
+    # (registrado em sf_method no json); no load, o json é a fonte única.
+    # O override em runtime (herança do FASE R) fez B3.1-v2 ignorar o
+    # sf_idx do arquivo e rodar SEMPRE com a função pura — medido:
+    # SF 929 (sweeper) = largada VERMELHA (1352 contatos, 68% fora);
+    # toda a base verde (B3.1 223, v14, B3.3c) foi medida com SF 729.
+    t.start_finish_waypoint = int(data['sf_idx'])
+    # v15 R5a: sha256 do arquivo frozen visível ao runner (FONTE em todo log)
+    t.frozen_sha256 = str(data['sha256'])
+    return t
+
+
+# ============================================================================
+# v15 FASE R2 S1: função PURA de ajuste de SF (fonte única para env+runner)
+# ============================================================================
+
+def find_best_start_waypoint(waypoints, min_straight_m=150.0):
+    """Acha o waypoint no MEIO da melhor reta para a largada/chegada.
+
+    EXTRAÇÃO DO ENV (FASE R2 S1): o mesmo algoritmo de
+    F1MultiContextEnv._find_best_start_waypoint, mas como FUNÇÃO PURA que
+    recebe apenas os waypoints — sem estado de env, sem tabelas internas.
+    É a FONTE ÚNICA: o env chama esta função no construtor, e o
+    load_track_frozen também chama (nunca mais divergem).
+
+    Estratégia: encontra todas as retas (zonas de baixa curvatura à frente
+    no horizonte KAPPA_AHEAD_M=150) e, entre as 3 mais longas, escolhe a
+    cuja próxima curva é menos fechada.
+
+    Args:
+      waypoints: lista [(x, y)] ou array (N, 2) — polilinha FECHADA.
+      min_straight_m: comprimento mínimo da reta candidata (150 m).
+
+    Returns:
+      int: índice do waypoint no MEIO da melhor reta.
+    """
+    import math as _math
+    wps = np.asarray(waypoints, dtype=np.float64)
+    n = len(wps)
+    if n < 3:
+        return 0
+
+    d = np.roll(wps, -1, axis=0) - wps
+    seg = np.hypot(d[:, 0], d[:, 1])
+    cum = np.concatenate([[0.0], np.cumsum(seg)])[:-1]
+    total = float(seg.sum())
+    heading = np.arctan2(d[:, 1], d[:, 0])
+
+    KAPPA_AHEAD_M = 150.0
+
+    def _heading_at(s_val):
+        s_val = s_val % total
+        j = int(np.searchsorted(cum, s_val, side='right') - 1)
+        return float(heading[min(max(j, 0), n - 1)])
+
+    def _kappa_ahead(s_val, horizon_m):
+        ns = max(2, int(horizon_m // 10.0) + 1)
+        ds = horizon_m / (ns - 1)
+        prev_h = _heading_at(s_val)
+        k = 0.0
+        for kk in range(1, ns):
+            h = _heading_at(s_val + kk * ds)
+            k = max(k, abs((h - prev_h + _math.pi) % (2 * _math.pi) - _math.pi) / ds)
+            prev_h = h
+        return k
+
+    kappas = np.array([_kappa_ahead(float(cum[i]), KAPPA_AHEAD_M)
+                       for i in range(n)], dtype=np.float64)
+    kmax = float(kappas.max())
+    if kmax <= 0.0:
+        return 0
+    is_straight = kappas < 0.30 * kmax
+
+    segments = []
+    i = 0
+    while i < n:
+        if not is_straight[i]:
+            i += 1
+            continue
+        j = i
+        while j < n and is_straight[j]:
+            j += 1
+        length = float(cum[min(j, n - 1)] - cum[i])
+        mid = (i + j - 1) // 2
+        s_end = float(cum[min(j, n - 1)])
+        k_next = _kappa_ahead(s_end + 50.0, 250.0)
+        segments.append((length, mid, k_next))
+        i = j
+
+    if not segments:
+        return 0
+    segments.sort(key=lambda t: -t[0])
+    candidates = [s for s in segments if s[0] >= min_straight_m][:3]
+    if not candidates:
+        return 0
+    best = min(candidates, key=lambda t: t[2])
+    return int(best[1])
