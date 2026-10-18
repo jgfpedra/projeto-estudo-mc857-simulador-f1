@@ -65,6 +65,15 @@ voltas, fora ≤25%, 0 wanderers.
   de contato têm um carro fora) — a alavanca futura é percepção de
   tráfego no rejoin (alvo quantificado no PROJECT_STATE).
 
+## Bootstrap de dados (uma vez)
+
+O endpoint de circuitos precisa do `data/circuit_layouts_evolution.json`,
+extraído do `f1db.db` (banco F1DB, **regenerável** — não está no git):
+
+```bash
+cd backend && .venv/bin/python scripts/fetch_track_layouts.py
+```
+
 ## Testes
 
 ```bash
