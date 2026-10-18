@@ -24,6 +24,7 @@ repo_manifest.csv
 skills-lock.json
 teste.py
 
+<<<<<<< Updated upstream
 # Checkpoints ML (binários grandes — usar model_train/tracks_frozen para dados)
 archive/checkpoints/**/*.keras
 archive/checkpoints/**/*.npz
@@ -39,7 +40,19 @@ model_train/*.pkl
 model_train/cache_fastf1/
 f1db.db
 download/
-data/
 # Scalers/mappings (artefatos de treino)
 model_train/scaler_*.pkl
 model_train/mappings.pkl
+=======
+
+# FASE 0.5 (v15): caches, artefatos e rastreio
+cache*/
+model_train/cache_fastf1/
+__pycache__/
+*.log
+mlruns/
+mlflow.db
+archive/
+experiments/
+repo_manifest.csv
+>>>>>>> Stashed changes
