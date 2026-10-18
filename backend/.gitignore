@@ -1,0 +1,40 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+
+# --- Caches / bancos pesados ---
+cache/
+model_train/cache_fastf1/
+mlruns/
+mlflow.db
+f1db.db
+backend/mlruns/
+backend/mlflow.db
+backend/f1db.db
+
+# --- FastF1 raw cache (evidência em experiments/, fora do git) ---
+backend/model_train/cache_fastf1/
+
+# --- Evidência bruta (R2-R13) — fica em experiments/, fora do git ---
+backend/race_diag_*.csv
+backend/race_diag_*.log
+backend/r*_*.csv
+backend/m0a_*.csv
+backend/experiments/**
+!backend/experiments/README.md
+!backend/experiments/**/README.md
+
+# --- Archive (movido p/ experiments/archive-scripts) ---
+backend/archive/
+
+# --- Treino ---
+backend/model_train/**/*.log
+
+# --- Scalers/mappings: MANTIDOS no git (consumidos por código vivo, pequenos) ---
+
+# --- OS / IDE ---
+.DS_Store
+*.swp
+.kilo/
+download/
