@@ -280,12 +280,19 @@ class Track:
                 best_idx = i
         return math.sqrt(best_dist2), best_idx
 
-    def distance_to_centerline(self, x: float, y: float) -> float:
-        """Fallback O(W) — use só em testes/APIs externas sem hint disponível."""
+    def nearest_segment(self, x: float, y: float) -> Tuple[float, int]:
+        """Busca completa O(W): (distância à linha central, índice do segmento).
+
+        O índice retornado é o waypoint de INÍCIO do segmento mais próximo —
+        o mesmo formato de hint que ``distance_to_centerline_near`` consome.
+        Use após teleports/largada, quando não existe hint válido (stale =>
+        fator de grama no asfalto); no hot path prefira a versão com janela.
+        """
         n = len(self.waypoints)
         if n < 2:
-            return 0.0
+            return 0.0, 0
         best_dist2 = float("inf")
+        best_idx = 0
         for i in range(n):
             ax, ay = self.waypoints[i]
             bx, by = self.waypoints[(i + 1) % n]
@@ -298,7 +305,13 @@ class Track:
             dist2 = (x - cx) ** 2 + (y - cy) ** 2
             if dist2 < best_dist2:
                 best_dist2 = dist2
-        return math.sqrt(best_dist2)
+                best_idx = i
+        return math.sqrt(best_dist2), best_idx
+
+    def distance_to_centerline(self, x: float, y: float) -> float:
+        """Fallback O(W) — use só em testes/APIs externas sem hint disponível."""
+        dist, _ = self.nearest_segment(x, y)
+        return dist
 
     # ------------------------------------------------------------------
     # Superfície: versões com e sem distância pré-calculada

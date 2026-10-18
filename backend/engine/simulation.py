@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 import time
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 
@@ -145,6 +145,10 @@ class SimulationEngine:
         self.cum_dist_m: Dict[str, float] = {}
         self.last_pos: Dict[str, Tuple[float, float]] = {}
         self.last_tyre_warn_pct: Dict[str, float] = {}
+        # FASE 2 (v14 tráfego): drivers que acumulam distância mas NÃO
+        # completam voltas — fantasmas não geram evento de volta, não
+        # degradam pneu/combustível e não avançam o clima.
+        self._no_lap_drivers: Set[str] = set()
         self.last_weather_kind: WeatherKind = self.weather_model.current.kind
 
     # ------------------------------------------------------------------
@@ -595,6 +599,11 @@ class SimulationEngine:
             if step_dist < 100.0:
                 self.cum_dist_m[drv.driver_id] += step_dist
             self.last_pos[drv.driver_id] = (curr_x, curr_y)
+
+            # FASE 2 (v14 tráfego): fantasma acumula progresso (a recuperação
+            # por movimento continua válida) mas NÃO dispara _complete_lap.
+            if drv.driver_id in self._no_lap_drivers:
+                continue
 
             # Detecta volta: cum_dist >= (lap_atual + 1) * track_length_m
             target_dist = (state.lap + 1) * self.track.length_m

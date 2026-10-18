@@ -107,6 +107,13 @@ class PyBulletPhysics:
         self._plane_id: Optional[int] = None
         self._cars: Dict[str, PhysicsCarHandle] = {}
         self._initialised = False
+        # v15 FASE R5a: instrumento de contato AUTORITATIVO (opt-in).
+        # contact_collector != None liga a colheita de eventos chassis×chassis
+        # por SUB-STEP (ver _harvest_contacts). Leitura pura — desligado,
+        # zero custo; o runner valida a não-contaminação com a guarda
+        # bit-idêntica (re-run s0 == R4).
+        self.contact_collector: Optional[list] = None
+        self._contact_sub_counter: int = 0
         # Estado de câmera
         self._camera_follow_handle: Optional[PhysicsCarHandle] = None
         self._camera_overview_set: bool = False
@@ -892,6 +899,11 @@ class PyBulletPhysics:
         cid = self._client_id
         for _ in range(sub_steps):
             p.stepSimulation(physicsClientId=cid)
+            # v15 FASE R5a: colheita opt-in também no step puro (o teste de
+            # colisão scriptada roda SEM as forças analíticas; no runner só
+            # step_with_control é usado — o contador é o mesmo).
+            if self.contact_collector is not None:
+                self._harvest_contacts()
 
     def step_with_control(
         self,
@@ -927,6 +939,61 @@ class PyBulletPhysics:
                         handle, target_speed, steering, grip, brake=brake, throttle=throttle
                     )
             p.stepSimulation(physicsClientId=cid)
+            # v15 FASE R5a: verdade do solver por sub-step (opt-in).
+            if self.contact_collector is not None:
+                self._harvest_contacts()
+
+    # ------------------------------------------------------------------
+    # v15 FASE R5a: colheita de contatos (verdade do solver)
+    # ------------------------------------------------------------------
+
+    def _harvest_contacts(self) -> None:
+        """Loga o que o solver REALMENTE aplicou, por evento de sub-step.
+
+        Query pura (getContactPoints/getBasePositionAndOrientation) depois de
+        cada stepSimulation — NÃO altera a física. O flag cc 5Hz do runner
+        amostra o MESMO getContactPoints só no tick de log; impulsos que
+        nascem e morrem entre ticks somem (R4: 70% das raízes de excursão
+        têm assinatura de impulso sem flag).
+
+        Por PONTO DE CONTATO chassis×chassis com força normal > 0:
+          sub       — contador global de sub-steps (tick = sub // sub_steps)
+          drv_a/b   — ids dos pilotos; body_a/b — chassis ids
+          cx, cy    — posição do contato; nx, ny — normal (sobre B)
+          f_n       — força normal do solver (c[9], N)
+          j_n       — impulso = f_n · time_step_s (N·s)
+          dv_a/dv_b — |Δv| normal aplicado = j_n / massa de cada corpo
+                      (3ª lei: MESMO j_n para ambos — dv_a·m_a == dv_b·m_b)
+          ax/ay/bx/by — XY dos chassis no evento
+        Agregação por (sub, par) e por tick fica na análise — aqui é o CRU.
+        """
+        chassis = {h.chassis_id: h for h in self._cars.values()}
+        for c in p.getContactPoints(physicsClientId=self._client_id):
+            if len(c) < 10:
+                continue
+            a, b = c[1], c[2]
+            if a not in chassis or b not in chassis:
+                continue        # solo/chão: fora do instrumento carro-carro
+            f_n = abs(float(c[9]))
+            if f_n <= 0.0:
+                continue
+            ha, hb = chassis[a], chassis[b]
+            j_n = f_n * self.time_step_s
+            pos_a = p.getBasePositionAndOrientation(a, physicsClientId=self._client_id)[0]
+            pos_b = p.getBasePositionAndOrientation(b, physicsClientId=self._client_id)[0]
+            self.contact_collector.append({
+                'sub': self._contact_sub_counter,
+                'drv_a': ha.driver_id, 'drv_b': hb.driver_id,
+                'body_a': int(a), 'body_b': int(b),
+                'cx': float(c[5][0]), 'cy': float(c[5][1]),
+                'nx': float(c[7][0]), 'ny': float(c[7][1]),
+                'f_n': f_n, 'j_n': j_n,
+                'dv_a': j_n / max(ha.mass_kg, 1.0),
+                'dv_b': j_n / max(hb.mass_kg, 1.0),
+                'ax': float(pos_a[0]), 'ay': float(pos_a[1]),
+                'bx': float(pos_b[0]), 'by': float(pos_b[1]),
+            })
+        self._contact_sub_counter += 1
 
     # ------------------------------------------------------------------
     # Leitura de estado

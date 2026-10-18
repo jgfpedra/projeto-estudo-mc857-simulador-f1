@@ -141,6 +141,22 @@ class WeatherTransitionConfig:
         )
 
 
+def weather_rng_from_seed(run_seed: int) -> random.Random:
+    """v15 FASE R6: RNG DEDICADO do clima, derivado do seed da corrida.
+
+    sha256("<run_seed>//weather") -> int -> random.Random(int). Documentado
+    e estável entre processos/sessões; NUNCA compartilha stream com outro
+    RNG (instância própria). O mecanismo estocástico é PRESERVADO — a
+    entropia vira função do seed (transições continuam; mesmas transições
+    para o mesmo seed). Antes disto o rng era random.Random() NÃO semeado:
+    cada processo sorteava seu clima e divergia a realização inteira a
+    partir da primeira transição real (R5a: onsets t=97,2s/137,2s medidos).
+    """
+    import hashlib
+    digest = hashlib.sha256(f"{int(run_seed)}//weather".encode()).digest()
+    return random.Random(int.from_bytes(digest[:8], "big"))
+
+
 class WeatherModel:
     """Máquina de estados do clima ao longo da corrida.
 
