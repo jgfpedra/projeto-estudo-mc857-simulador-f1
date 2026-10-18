@@ -345,10 +345,15 @@ class NeuralRaceController:
     LIDAR_WINDOW_SEGS = 30
 
     def __init__(self, weights_path: Path, mappings_path: Optional[Path] = None,
-                 track=None, obs_mode: str = "legacy") -> None:
+                 track=None, obs_mode: str = "legacy",
+                 steer_gov: str = "off") -> None:
         print(f"[Model] Carregando pesos neurais (NumPy Engine) de: {weights_path.name}")
         self.actor = NumpyNeuralActor(weights_path)
         self.obs_mode = obs_mode
+        # v15 R8: 'off' (default, bit-reproduzível) | 'cap' (clip por κ_preview)
+        self.steer_gov = steer_gov
+        self._steergov_clips = {}   # drv -> n de ticks clipados (instrumento)
+        self.last_steergov = {}     # drv -> 1/0 no tick corrente (coluna CSV)
 
         # VALIDAÇÃO DE SHAPE: entradas totais por modo (tel + 2 ctx + 8 emb
         # + 4 emb): legacy=37, edge=48, traffic=60 (ator v14). Erro EXPLÍCITO
@@ -392,6 +397,8 @@ class NeuralRaceController:
         # v15 FASE 4: composite (solo congelado + residual gated)
         self._composite_np = None   # NumpyCompositeActor (set externamente)
         self._res_prev = {}          # drv -> (prev_steer, prev_long) p/ o residual
+        # v15 R13-FECHAMENTO: residual input 16d por tick (logging ADITIVO v3.3)
+        self._res_in_last = {}       # drv -> res_in[i] (16d) do tick corrente
         self._res_gate = {}          # drv -> último gate (instrumento)
         self._res_norm = {}          # drv -> último |r| (instrumento)
 
@@ -489,6 +496,22 @@ class NeuralRaceController:
     OFFTRACK_FACTOR   = 1.0
     REJOIN_TARGET_MPS = 8.0    # velocidade alvo fora da pista (retorno seguro)
     REJOIN_THROTTLE   = 0.35  # torque moderado para crawlar de volta
+    # v15 FASE R3 (fix do ABSORVEDOR): o rejoin antigo comandava um VALOR
+    # fixo de esterço (saturado a |lat|>20 m) — na grama o carro crawl a
+    # ~1,5 m/s e esterço constante = ORBITAS de ~3 m sem rumo à pista
+    # (PER: lat 20-78 m por 500+s; NOR: 861 m de excursão). Agora o alvo
+    # é uma DIREÇÃO: bearing ao ponto de re-entrada (projeção + AHEAD m
+    # na linha central) — o carro anda RETO até o asfalto.
+    REJOIN_AHEAD_M    = 10.0  # ponto de re-entrada: projeção + 10 m à frente
+    REJOIN_BEARING_GAIN = 2.0  # steer = clip(ganho * erro de bearing)
+    # v15 R8 — STEER-GOVERNOR (OPT-IN, default off): a física lateral é sã
+    # (R7b scripted: círculo estável até v_allow) mas a política comanda
+    # esterço ~24× a necessidade cinemática nas saídas (weave/caça). Cap:
+    # |δ| ≤ k_comp×atan(L×κ@10m) sobre o comando da POLÍTICA, antes da
+    # composição — rejoin bearing (R3) sobrescreve depois e é ISENTO;
+    # recovery/blocked não tocam esterço; professor não é afetado.
+    STEER_GOV_K_COMP = 2.0
+    STEER_GOV_WHEELBASE_M = 3.4
     BLOCKED_THROTTLE  = 0.25  # carro parado em contato com outro: empurrão leve
 
     # Anti-stall (ver correção no corpo de predict_batch)
@@ -605,6 +628,8 @@ class NeuralRaceController:
         # de tráfego (compute_traffic_features) no obs_mode='traffic'
         drv_signed = np.zeros(n_drivers, dtype=np.float64)
         drv_v      = np.zeros(n_drivers, dtype=np.float64)
+        drv_proj_x = np.zeros(n_drivers, dtype=np.float64)
+        drv_proj_y = np.zeros(n_drivers, dtype=np.float64)
 
         A, AB, L = self._A, self._AB, self._seg_len
         for i, drv in enumerate(drivers):
@@ -627,6 +652,9 @@ class NeuralRaceController:
             drv_s[i]   = s
             drv_lat[i] = float(d[idx])   # distância absoluta à linha central
             drv_signed[i] = signed       # lateral COM SINAL (+ = esquerda)
+            # v15 FASE R3: projeção física na linha central (alvo do rejoin)
+            drv_proj_x[i] = float(proj_x[idx])
+            drv_proj_y[i] = float(proj_y[idx])
             drv_v[i] = phys["speed_mps"]
 
             heading_err = self._wrap(phys["heading_rad"] - float(self._seg_heading[idx]))
@@ -708,6 +736,7 @@ class NeuralRaceController:
                 kap_ahead = float(tels[i, 11]) / 25.0  # obs10 = κ@10m × 25
                 ps, pl = self._res_prev.get(drv.driver_id, (0.0, 0.0))
                 res_in[i] = build_residual_input(tf_feats, v_ego, kap_ahead, ps, pl)
+                self._res_in_last[drv.driver_id] = res_in[i].copy()
                 gates[i] = g
             # residual forward (NumPy)
             r = self._composite_np.residual_forward_only(res_in)
@@ -720,13 +749,32 @@ class NeuralRaceController:
                                                    float(np.clip(a[i, 1], -1, 1)))
             preds = a  # substitui o forward solo pela ação composite
         else:
-            preds = self.actor.forward(tels, ctxs, t_ids, c_ids)
+            # Solo puro: trunca a telemetria ao que o ator espera
+            # (input_dim − ctx 2 − emb 12). Ex.: race sem residual NPZ roda
+            # o v10 edge (48d) sobre as 34d de edge da obs traffic — o mesmo
+            # slice que o composite faz no m_solo.
+            tel_dim = self.actor.input_dim - 14
+            preds = self.actor.forward(tels[:, :tel_dim], ctxs, t_ids, c_ids)
 
         actions = []
         for i in range(n_drivers):
             phys   = engine.physics.get_state(engine.handles[drivers[i].driver_id])
             speed  = phys["speed_mps"]
             th, brk, steer_rad = self._action_to_controls(preds[i], speed)
+            # v15 R8 — steer-governor: cap do COMANDO da política por κ@10m
+            # (tels[i,10] = κ@10m × 25). Atua ANTES da composição — o rejoin
+            # bearing sobrescreve steer_rad quando off-track (ISENTO), e
+            # recovery/blocked não tocam esterço.
+            if self.steer_gov == "cap":
+                k_prev = max(0.0, float(tels[i, 10])) / 25.0
+                cap = self.STEER_GOV_K_COMP * math.atan(
+                    self.STEER_GOV_WHEELBASE_M * k_prev)
+                clipped = abs(steer_rad) > cap
+                self.last_steergov[drivers[i].driver_id] = int(clipped)
+                if clipped:
+                    self._steergov_clips[drivers[i].driver_id] = \
+                        self._steergov_clips.get(drivers[i].driver_id, 0) + 1
+                    steer_rad = float(np.clip(steer_rad, -cap, cap))
             # registra ação anterior p/ a próxima observação (obs v2)
             a = np.asarray(preds[i], dtype=np.float64).ravel()
             if a.size >= 3:
@@ -780,10 +828,18 @@ class NeuralRaceController:
 
             # ---- 3. rejoin (fora do asfalto) ----------------------------------
             if offtrack:
-                signed_lat = float(tels[i, 4]) * self._half_width  # obs v2: idx 4 = lat assinado
-                correction = -float(np.sign(signed_lat)) * min(self.STEER_MAX_RAD,
-                                                               0.3 + lat_dist / 40.0)
-                steer_rad = correction
+                # v15 FASE R3: esterço por BEARING ao ponto de re-entrada
+                # (projeção + REJOIN_AHEAD_M ao longo da linha central).
+                # Quadro FÍSICO (x, y, heading do mundo) — imune às
+                # convenções de sinal da obs. Esterço + = virar à esquerda
+                # (Y local = esquerda na física), logo steer = ganho·berr.
+                h_track = self._heading_at(float(drv_s[i]))
+                tx = drv_proj_x[i] + self.REJOIN_AHEAD_M * math.cos(h_track)
+                ty = drv_proj_y[i] + self.REJOIN_AHEAD_M * math.sin(h_track)
+                bearing = math.atan2(ty - phys["y"], tx - phys["x"])
+                berr = self._wrap(bearing - float(phys["heading_rad"]))
+                steer_rad = float(np.clip(self.REJOIN_BEARING_GAIN * berr,
+                                          -self.STEER_MAX_RAD, self.STEER_MAX_RAD))
                 if speed > self.REJOIN_TARGET_MPS * 1.2:
                     excess = (speed - self.REJOIN_TARGET_MPS) / 6.0
                     th, brk = 0.0, max(brk, float(np.clip(excess, 0.3, 1.0)))
@@ -1010,11 +1066,20 @@ def place_grid(engine, track, drivers, spacing_m=9.0, lateral_m=1.9):
             break
         straight = float(L)
 
+    MIN_GRID_STRAIGHT_M = 40.0  # v15 FASE R: abaixo disso = pista errada
     grid_len = 4.0 * spacing_m + 6.0
     if straight < grid_len:
         spacing_m = max(6.0, (straight - 6.0) / 4.0)
-        print(f"[Grid] aviso: reta antes da SF curta ({straight:.0f} m); "
-              f"espacamento reduzido para {spacing_m:.1f} m")
+        # v15 FASE R: reta < mínimo = PISTA ERRADA, não um problema de
+        # espaçamento. No Interlagos frozen existe a reta oposta (~100+ m
+        # antes da SF). 0 m ou < 40 m = o runner carregou uma pista
+        # procedural/preset ou o SF está no meio de uma curva — ABORTO
+        # (incidente 9099235: "largada em cima da curva").
+        raise RuntimeError(
+            f"ABORTO: reta antes da SF = {straight:.0f} m (< {MIN_GRID_STRAIGHT_M} m). "
+            f"Isto é sinal de PISTA ERRADA (fallback procedural ou SF mal "
+            f"posicionado), não um problema de espaçamento. Verifique a fonte "
+            f"da pista e o start_finish_waypoint.")
     print(f"[Grid] reta antes da SF: {straight:.0f} m | grid ocupa {4.0*spacing_m+6.0:.0f} m")
 
     for i, drv in enumerate(drivers):
@@ -1039,6 +1104,13 @@ def run_race():
     parser.add_argument("--laps", type=int, default=5, help="Número de voltas da corrida (default: 5)")
     parser.add_argument("--camera", type=str, default="follow", choices=["follow", "overview"], help="Modo inicial de câmera")
     parser.add_argument("--follow-driver", type=str, default="VER", help="Piloto a seguir na câmera inicial (ex: VER, NOR, LEC)")
+    parser.add_argument("--variance", type=str, default="off",
+                        help="v15 R7a: variância semeada opt-in (csv grid,compound)")
+    parser.add_argument("--steer-gov", type=str, default="off", choices=["off", "cap"],
+                        help="v15 R8: steer-governor opt-in — cap do esterço da "
+                             "política em 2,0×atan(L·κ@10m) (rejoin/recovery isentos)")
+    parser.add_argument("--seed", type=int, default=0,
+                        help="Seed da corrida (alimenta as streams de variância e do clima)")
     parser.add_argument("--track", type=str, default="interlagos", help="Evento FastF1 (ex: 'interlagos', 'Monaco', 'Silverstone')")
     parser.add_argument("--year", type=int, default=2024, help="Ano da sessão FastF1")
     parser.add_argument("--session", type=str, default="R", help="Sessão FastF1 (R, Q, ...)")
@@ -1091,8 +1163,32 @@ def run_race():
     # Pista REAL via FastF1 (padrão: GP de São Paulo/Interlagos), com fallback
     # automático (evento pedido -> São Paulo -> preset local).
     print("[Setup] Carregando circuito via FastF1 (fallback: Interlagos)...")
-    track = resolve_track(track=args.track, year=args.year, session=args.session)
+    # v15 FASE R: pista SEMPRE da fonte frozen (fail-fast)
+    from backend.model_train.f1_env import load_track_frozen
+    track = load_track_frozen(args.track, strict=True)
+    print(f"[Setup] pista FROZEN: {track.name} | {len(track.waypoints)} wp | "
+          f"SF wp {track.start_finish_waypoint}")
     drivers = build_grid_drivers()
+    # v15 R7a: variância semeada opt-in (cenário, nunca física) — mesmo
+    # mecanismo/streams do race_diagnostic (domínio racevar).
+    if getattr(args, 'variance', 'off') not in ('off', 'none', '0', ''):
+        from backend.domain.racevar import (parse_variance,
+                                             variance_rng_from_seed,
+                                             assign_compounds, shuffled_order)
+        vd = parse_variance(args.variance)
+        if 'compound' in vd:
+            pool = [d.starting_tyre_compound for d in drivers]
+            cmap = assign_compounds(variance_rng_from_seed(args.seed, 'compound'),
+                                    [d.driver_id for d in drivers], pool)
+            for d in drivers:
+                d.starting_tyre_compound = cmap[d.driver_id]
+            print(f"[Setup] VARIÂNCIA compound: "
+                  f"{ {k: v.value for k, v in cmap.items()} }")
+        if 'grid' in vd:
+            order = shuffled_order(variance_rng_from_seed(args.seed, 'grid'),
+                                   len(drivers))
+            drivers = [drivers[k] for k in order]
+            print(f"[Setup] VARIÂNCIA grid: {[d.driver_id for d in drivers]}")
 
     # 2. Configura a Engine de Simulação
     sim_config = SimulationConfig(
@@ -1121,11 +1217,22 @@ def run_race():
     npz_path = ensure_npz_weights_exist(actor_keras, actor_npz)
     print(f"[Model] Ator: {actor_keras}")
     controller = NeuralRaceController(
+        steer_gov=getattr(args, "steer_gov", "off"),
         weights_path=npz_path,
         mappings_path=DEFAULT_MAPPINGS_PATH,
         track=track,   # passa a pista: evita rebuild das tabelas a cada predict_batch
         obs_mode=obs_mode,   # do --profile (ou --obs-mode explícito)
     )
+    # v15 FASE 4: quando o profile declara residual_npz (race/composite),
+    # conecta o NumpyCompositeActor — a ação vem de tanh(m_solo + g·r), não
+    # do forward solo. Sem isso o else de predict_batch alimenta a obs traffic
+    # (60d) no ator edge (48d) e o 1º tick quebra.
+    if prof.get("residual_npz"):
+        from backend.model_train.residual_gated import NumpyCompositeActor
+        controller._composite_np = NumpyCompositeActor(str(npz_path),
+                                                       str(prof["residual_npz"]))
+        print(f"[Model] composite: residual={prof['residual_npz'].name} "
+              f"(solo congelado + residual gated)")
     # v15 FASE 1 (ADOTADO): fix da camada de corrida — o governor histórico
     # (A_LAT_MAX=14 sem downforce, SEM distância de frenagem) custava ~34s de
     # volta (137,1 -> 103,4s). O teto v_plan usa a MESMA fórmula do professor.
