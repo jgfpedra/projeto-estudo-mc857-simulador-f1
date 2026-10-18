@@ -1221,3 +1221,501 @@ Monaco v2, SF Interlagos, Spa v2, G3 Suzuka ficam como próxima fase — as
 Monaco v2 3/3 → re-declarar B' em v2; 0/3 hairpin → limite real;
 SF comprimento muda → investigar; Spa prof <20/20 → loop ≤2;
 G3 salto → UMA variável janela arc-local → regressão.
+
+---
+
+# v15 FASE R3 — PRÉ-REGISTRO (2026-10-17T12:54:27Z, ANTES de qualquer código/corrida)
+
+## M0 — hipótese única (verificada nos CSVs R2, seeds 0/1/2)
+**O rejoin tem ALVO DE VALOR, não ALVO DE DIREÇÃO.** Fora do asfalto ele comanda
+esterço FIXO `correction = -sign(lat)·min(STEER_MAX, 0.3+|lat|/40)` — a |lat|>20m
+sempre saturado (±0,79 rad). Na grama o crawl equilibra em v≈1,45-1,5 m/s
+(th 0,35 × resistência) e esterço constante no máximo produz ÓRBITAS de ~3 m de
+raio: heading varre 360° (sin(herr): −1,0→+1,0), sem rumo travado em direção à
+pista. Evidência: PER (lat oscila 20,7↔78,1 m por 500+s, steer −0,79 constante);
+NOR (excursão de 861 m de s, lat 20↔81,6 m); HAM (idem). A recovery não
+re-engata porque a saída exige v≥3,0 m/s — secundário: quem dirige é o rejoin.
+
+## F1 — fix (UMA variável: a LEI DE ESTERÇO do rejoin)
+Substituir o valor fixo por **esterço por BEARING ao ponto de re-entrada**:
+alvo = projeção na linha central + 10 m à frente ao longo da pista;
+`steer = clip(2.0·wrap(bearing_alvo − heading), ±STEER_MAX)`.
+Tudo o mais INALTERADO (th 0,35, teto 8 m/s, máquina de recovery, gate, governor).
+TESTE SINTÉTICO: carro a ~40 m fora, v=0, heading tangencial; exigir volta ao
+asfalto em <60 s, v≥3 após, zero contato, progresso para frente pós-reengate.
+
+## ÁRVORE DE DECISÃO (pré-registrada 2026-10-17T12:54:27Z)
+- Teste sintético PASS → V1 (3 seeds 600s frozen v2 SF729 composite vplan).
+- Teste sintético FAIL → inspecionar trace (bearing travou? velocidade?) →
+  ajustar UM parâmetro (ganho/offset) → re-testar UMA vez. Segundo FAIL → PARE.
+- V1: TODAS as seeds com 0 presos + 0 paradas ≥3 s + hesit ≤3 E MEDIANA com
+  contatos <1576, pós-largada ≤100, fora-pilotagem ≤1,5%, voltas ≥10/10,
+  rolante ≤115 s → **GATE VERDE → promoção EM VIGOR** (PROJECT_STATE com a
+  tabela multi-seed como base de produto).
+- V1 quebra qualquer critério → VERMELHO: diagnóstico dirigido pela
+  decomposição (fora-pilotagem vs fora-preso vs contatos) e **PARE sem especular**.
+
+## GATE MULTI-REALIZAÇÃO (critérios FIXOS, ≥3 seeds)
+- Por seed (TODAS devem passar): 0 carros-preso (|lat|>20 m OU progresso <5 m
+  em janela >30 s), 0 paradas ≥3 s, hesitações ≤3.
+- Mediana das seeds: contatos <1576; pós-largada ≤100; fora ≤1,5% decomposto em
+  FORA-PILOTAGEM (lat>6 m com progresso) — FORA-PRESO deve ser 0 por construção;
+  voltas ≥10/10; rolante ≤115 s.
+- Métrica "fora" do CSV = off-track sample; presença de preso por seed avaliada
+  por janelas de 30 s sobre (lat, cum_dist) do CSV (instrumento, sem mudança de
+  comportamento).
+
+---
+
+# v15 FASE R4 — PRÉ-REGISTRO (2026-10-17T14:04:42Z, ANTES de M0/C1)
+
+## Objeto: a DOENÇA VISÍVEL — pilotagem do composite em campo denso
+Regra: M0 é SÓ LEITURA dos CSVs v3. A suspeita "residual OOD" é HIPÓTESE a
+falsificar. O contato 5 Hz SUBCONTA (empurrões curtos escapam) — proxy de
+impulso OBRIGATÓRIO antes de atribuir excursão à pilotagem pura.
+
+## M0a — decomposição de TODAS as excursões (3 seeds)
+(i) **proxy de impulso**: |Δv| > 2 m/s em ≤2 ticks no início da excursão, sem
+    contato registrado → reclassificar CONTATO-NÃO-AMOSTRADO.
+(ii) restantes: g_gate no 1º tick, |g·r| = g×r_norm, brk/th/steer no 1º tick,
+    obs10 (κ@10m), v, d_min reconstruído dos s de todos os carros, setor.
+(iii) taxa exata por carro/volta.
+
+## M0b — hesitações: d_min, g, r_norm, v_ahead na micro-parada; o modo
+freio-forte do residual está presente (g>0,6 + freio alto sem contato)?
+
+## M0c — rejoin-gerador: dos contatos pós-60s, quantos envolvem carro
+re-entrado <10 s antes?
+
+## C1 — CONTROLE v10-cego (profile race-blind), 3 seeds, frozen v2, gov vplan
+— denominador de produto; NÃO afrouxa gate.
+
+## CRITÉRIO "PRESO" NOVO (vale para TODOS os gates futuros)
+Preso = episódio off-track com duração > T=60 s sem retorno ao asfalto
+(alinhado ao teste sintético R3). Episódios ≤60 s contam como pilotagem.
+O critério "lat>20" fica DESATIVADO para preso (obsoleto pós-fix R3).
+
+## ÁRVORE PRÉ-REGISTRADA (limite fixado antes de medir)
+| achado dominante nas excursões | ação |
+|---|---|
+| ≥60% com g>0 E \|g·r\|>0,3 (residual manda mal) | proposta de fix de CAMADA no gate (1 variável: ex. cap de \|g·r\| em freio, ou abertura mais conservadora) + re-gates disciplina (p95 n=0=0), G1, G2, multi-seed — implementar SÓ na R5 com pré-registro próprio |
+| ≥60% com g≈0 (solo puro erra — contradiz 48/51) | PARE + investigação de física (empurrão não-amostrado, estado pós-rejoin, v degradada) |
+| rejoin-gerador ≥30% dos pós-60s | proposta: rejoin com percepção (re-entrar só com gap) — 1 variável, R5 |
+| residual dominante E camada insuficiente | proposta de retreino com distribuição deploy-realista — NÃO executar; PARE p/ aprovação (pré-gate do professor obrigatório) |
+| contato-não-amostrado domina o proxy | corrigir o INSTRUMENTO de contato (amostragem física) antes de qualquer interpretação |
+
+Decisão = ramo dominante por FRAÇÃO DE EXCURSÕES (excursões = total −
+contato-não-amostrado), medido sobre as 3 seeds somadas.
+
+---
+
+# v15 FASE R5a — PRÉ-REGISTRO (2026-10-17T14:55:45Z, ANTES de qualquer run)
+
+## OBJETO: instrumento de contato AUTORITATIVO no nível do solver
+O pybullet É o solver (stepSimulation resolve colisões com impulsos reais;
+get_state lê de volta pos/vel do corpo). O flag cc 5Hz amostra
+getContactPoints só no tick de log — impulsos inter-tick somem.
+INSTRUMENTO: colher getContactPoints após CADA sub-step (1/240 s), filtrar
+chassis×chassis, logar por EVENTO: contador global de sub-step, par (ids),
+posição de contato, normal, força normal (c[9]), impulso J=F·dt,
+|Δv|=J/m por corpo (componente normal), XY de ambos. Coletor OPT-IN
+(desligado por padrão: env/tests intocados). ZERO mudança de comportamento
+— a física não lê nada do coletor.
+
+## HIPÓTESES (a falsificar com a re-medida)
+H1: cc-verdadeiro/cc-5Hz ≥ 1,5 no composite (subcontagem confirmada).
+H2: dos 190 proxies raiz "contato-não-amostrado", os 95 brk>0,3 se dividem
+    em empurrões reais (impulso presente) vs. frenagem própria (sem impulso).
+H3: a razão de correção é MAIOR no cego (campo de contato constante) que no
+    composite.
+H4: wanderers (T=60s) têm impulso nos 10 s anteriores (vítimas de fling)
+    e/ou salto de projeção (alvo de re-entrada >50 m de s num tick).
+
+## CRITÉRIOS CANÔNICOS VIGENTES
+- PRESO = episódio off-track >60 s sem retorno (R4; vigora).
+- Multi-seed ≥3, mediana para número comparativo (permanente).
+- Excursão: RAIZ vs ECO (gap ≤10 s do mesmo carro; sensibilidade 5/10/20 s).
+- Flag 5Hz deve ser SUBCONJUNTO dos eventos (±1 tick) — se não for,
+  falsos positivos do flag: resolver semântica antes de interpretar.
+
+## ÁRVORE (versão final, pré-registrada antes de medir)
+| resultado | ação |
+|---|---|
+| razão cc-verdadeiro/cc-5Hz ≥ 1,5 (composite, mediana) | subcontagem confirmada; v3 = instrumento canônico; TODOS os números da R4 re-pinados |
+| razão ∈ [1,1; 1,5) | correção moderada; relatório por par e por regime de velocidade; v3 canônico com fatores |
+| razão < 1,1 | o PROXY era o artefato; RETRATAR "70% contato-não-amostrado"; reabrir ramo pilotagem com dados do solver |
+| flag 5Hz com eventos sem impulso na janela | falsos positivos do flag; resolver semântica antes de interpretar |
+| guarda bit-idêntica falhar (1.3) | BUG do instrumento; corrigir ANTES de qualquer medição |
+| eventos de impulso SEM flag 5Hz em quantidade | quantificar: é a subcontagem (esperado); separar por duração do evento |
+
+## MÉTRICA DE EVENTO vs FLAG
+- "evento" = contato chassis×chassis com força normal >0 em um sub-step.
+- "cc-verdadeiro" (por tick) = nº de pares com ≥1 evento no tick;
+  (por run) = nº de pares-tick. O relatório dá AMBOS os regimes
+  (ticks e pares) e a sensibilidade do limiar de força (>0 e >10 N).
+
+## GUARDA DE DETERMINISMO (1.3 — PRIMEIRO, antes da re-medida)
+Re-run composite seed 0 com coletor LIGADO: CSV de dados BIT-IDÊNTICO ao
+race_diag_b31_v3_seed0.csv da R4 (todas as colunas preservadas; o cabeçalho
+de versão não conta). Divergência = instrumento contamina física = BUG.
+
+## RE-MEDIDA (6 runs, mesmo protocolo R4)
+composite + cego × seeds 0,1,2. Tabelas (i)-(vi) do enunciado.
+R5b/R5c: pré-registros PRÓPRIOS, DEPOIS dos números da R5a.
+
+---
+
+# v15 FASE R6 — PRÉ-REGISTRO (2026-10-17T16:56:39Z, ANTES de qualquer run)
+
+## ÚNICA mudança autorizada: semear o RNG do clima + logging aditivo
+- Derivação do seed do clima: `sha256("<run_seed>//weather")` → int →
+  `random.Random(int)` DEDICADO (nunca compartilha stream com outro RNG).
+  Mecanismo estocástico PRESERVADO (transições continuam; entropia vira
+  função do seed). Knob `--weather fixed` = prob de transição 0 (kind
+  travado no nominal) — braço de controle.
+- CSV v3.1 (aditivo): `w_kind`, `w_grip`, `w_trans` por tick +
+  `tyre_life`/`tyre_grip` por carro-tick + weather_seed e log de transições
+  na linha FONTE (ao lado do sha256 da pista).
+
+## JANELAS E LIMIARES (fixados antes de medir)
+- Atribuição de saída-raiz: clima nos ±10 s do início (sens. ±30 s);
+  impulso do solver: lookback 10 s (padrão v3 da R5a); late-race = lap≥6
+  com degradação alta (tyre_grip < limiar medido do campo); resto =
+  pilotagem verdadeira. Limiar de domínio climático: **30%** das raízes.
+- Margem de overdrive: v0 > v_allow(κ, grip, degradação) + **10%**.
+
+## ÁRVORE DE ATRIBUIÇÃO (final, pré-registrada)
+| resultado | ação |
+|---|---|
+| clima ≥30% das saídas race-speed | frente vira ENV: transição agressiva p/ produto? --weather fixed como candidato a modo de gate; pilotagem re-quantificada no resíduo |
+| clima <30% E v0 > v_allow+10% | PILOTAGEM REAL confirmada (overdrive): caracterizar por banda κ e propor fix na PRÓXIMA fase; NÃO implementar agora |
+| v0 ≈ v_allow (margem) e sai mesmo assim | problema físico-dinâmico (pneu/fase) → auditoria de FÍSICA, não policy |
+| degradação late-race domina | frente vira estratégia/degradação — separar da frente de segurança |
+| braço fixed ≈ braço seeded em tudo | clima é menor; variância = caos puro; mediana multi-seed basta |
+
+## VALIDAÇÃO 1.4 (árvore de aceitação da semeadura)
+- mesmo seed ×2, 600 s completos → BIT-IDÊNTICOS (fecha a guarda literal);
+- pure vs instrumentado (coletor OFF via env RACE_DIAG_NO_CONTACT_LOG=1),
+  mesmo seed, 600 s → bit-idênticos (guarda DEFINITIVA do instrumento);
+- seeds 0/1/2 → históricos de clima diferentes (seeder vivo; unit-test
+  das streams + transições dos runs);
+- suite verde; falhas pré-existentes documentadas (as 2 da R3/R4).
+
+## ARQUEOLOGIA 1.5 (pergunta a responder no relatório)
+Por que os gates v14 eram determinísticos ENTRE processos se este RNG já
+existia? (quando o modelo caiu no código de CORRIDA; prob real de transição
+por run; por que pares R2/R3 deram agregados iguais).
+
+## RE-MEDIDA (9 runs, 600 s, --gov vplan, frozen v2 SF729)
+comp s0-2 seeded; cego s0-2 seeded; comp s0-2 --weather fixed.
+Tabelas (i)-(vi) do enunciado. C1 re-pinada seeded = PROVISÓRIA (N=3);
+gate N≥10 fica para a fase de gate. PARE ao final.
+
+---
+
+# v15 FASE R7a — PRÉ-REGISTRO (antes de qualquer run)
+
+## TAREFA: variância de corrida INTENCIONAL e SEMEADA (opt-in)
+Domínios AUTORIZADOS (cenário, NUNCA física):
+- D1 GRID: ordem de largada embaralhada por stream dedicada
+  (o --shuffle-grid existente passa a consumir a stream do domínio quando
+  --variance grid está ativo).
+- D2 COMPOSTO: atribuição HARD/MEDIUM/SOFT por carro por stream dedicada
+  (a DISTRIBUIÇÃO atual por piloto permanece como pool; só QUAL carro
+  recebe qual composto vira sorteio semeado).
+- D3 CLIMA: já semeado (R6), inalterado.
+
+FORA DE ESCOPO (recusa explícita): qualquer jitter de grip/sf/massa/pneu,
+qualquer parâmetro físico. Se o gate futuro pedir mais variância, nova
+proposta ao revisor.
+
+MODO OPT-IN: `--variance` (lista csv, ex.: `grid,compound`); DEFAULT
+DESLIGADO — comandos e deploys atuais permanecem válidos e bit-reproduzíveis.
+Streams: helper ÚNICO no padrão do weather seeder:
+sha256("<seed>//<domain>") → random.Random(int) DEDICADO por domínio.
+np.random global NUNCA é consumidor.
+
+## PROTOCOLO DE MEDIÇÃO (endurecimento obrigatório)
+1. PINNING: OMP_NUM_THREADS=1 (+ OPENBLAS/MKL/NUMEXPR =1), 2 processos
+   PARALELOS ×1 thread → bit-estáveis entre si E vs gêmeo sequencial?
+2. CARGA: sequencial default-threads ×2 SOB carga artificial de CPU
+   (ex.: 4 workers estressando) → bit-idêntico?
+3. VEREDICTO documentado: paralelismo-com-pinning AUTORIZADO ou
+   sequencial-puro com threads fixadas.
+
+## VALIDAÇÃO (sequencial; paralelo só se pinning PASSAR)
+a) NÃO-INVASÃO: R7a seed 0 --variance OFF ≡ R6 SEQ (comp SECA)
+   bit-idêntico — prova de zero mudança de física.
+b) mesma seed ×2 --variance ON → bit-idênticos (cenário completo).
+c) 10 seeds composite sequenciais --variance ON: tabela de dispersão
+   cc/fora/rolante/preso + prova de realizações DISTINTAS. O gate N≥10
+   (dois braços) NÃO roda aqui.
+
+## LOGGING ADITIVO (obrigatório ANTES de interpretar)
+Cenário sorteado (ordem do grid, mapa de compostos, weather_seed, estado
+da --variance) no cabeçalho CSV/linha FONTE. Smoke-test do harness
+(parâmetros aparecem nos logs) ANTES de qualquer cadeia longa.
+
+## LIMITAÇÕES (declarar no relatório)
+Variância semeada NÃO cobre: máquinas distintas, versões de BLAS/drivers,
+diferenças de pybullet build. A reprodutibilidade é intra-ambiente.
+
+---
+
+# v15 FASE R7b — PRÉ-REGISTRO (2026-10-17T21:36:39Z, antes de qualquer execução/análise)
+
+## HIPÓTESES EM DISPUTA
+H1 (física): o modelo lateral quebra em estados que o policy entra e o
+professor não (slip combinado, transferência, superfície).
+H2 (plano/entrada): v_allow otimista em banda de κ OU entrada com erro de
+heading/posição — o esterço 5× é o policy CAÇANDO um escorregamento JÁ
+iniciado; a margem do professor seria o sf adaptativo (decai em κ>0,10),
+que o neural não tem.
+
+## PREDIÇÃO DE HOTSPOT (ANTES dos dados do 1.3/2)
+P1: saídas concentram em κ@saída ∈ [0,008; 0,020] com v0/v_allow ∈ [0,7; 0,95].
+P2: no tick de saída o SLIP (heading − direção da velocidade) já é >10° na
+maioria — assinatura de policy CAÇANDO (H2), não fronteira estourada (H1).
+P3: a_lat efetiva no tick de saída DENTRO de R_max(v) na maioria (>60%);
+se estourar na maioria, H1 vence.
+P4 (biseção): o run FASE-4(9099235)+frozen dá fora% ALTO (~20-30%), NÃO
+~0,17% — o gap B3.1→R6 é majoritariamente INSTRUMENTO (live→frozen +
+clima/contenção não controlados na era), não regressão pós-R2.
+
+## ÁRVORES
+0.2: divergência antes da 1ª excursão → wiring/track/plano; só após →
+rejoin (não explica fora). Culpado não-intencional → proposta SEM aplicar.
+1.3/2: física segura 0,81·v_allow com entrada suave → H1 refutada nos
+estados suaves → frente volta a POLICY com mapa de hotspots. Física quebra
+→ H1 confirmada → localizar mecanismo e registrar. Veredito POR BANDA de κ.
+
+## MÉTODO
+0.1: comparabilidade zero-runs (definição offtrack por era + recompute de
+CSV legacy verde; o CSV do B3.1 NÃO existe — gap documentado; mais próximo:
+prof_gate_s0 all-professor 0,36%).
+0.2: worktrees sequenciais — (i) 9099235+frozen-CSV+patch SF729 1-linha
+(instrumentação documentada); (ii) f06f2c4+variante sf729 (loader da era
+sobrepõe p/ função pura→929; variante dá 729); (iii) 2b4e195 (v2 SF729
+nativo); (iv) atual = R6-SEQ referência.
+1.1-1.3: offline (proveniência 0,788/0,80; tabela κ; re-análise dos 10
+CSVs R7a — ZERO runs). 2: skidpad scripted no hotspot + controle.
+
+FORA DE ESCOPO: R5c; qualquer mudança de física/plano/policy.
+
+---
+
+# v15 FASE R12-CANÁRIAS — PRÉ-REGISTO EMENDADO (antes de qualquer run de canária)
+
+## CHECAGENS 0.C-0.F (executadas, zero runs — working tree limpo p/ os scripts)
+- 0.C SKEW: r12b treinou com 12d de tráfego = ZEROS; runner serve valores
+  VIVOS. SKEW CONHECIDO — avaliação comportamental decide (canárias/piloto).
+- 0.D |r_pred| nas janelas: p50 0,057 | p90 0,879 | p95 1,245 | p99 1,597 rad
+  — p95 ≥ 0,15: o modelo NÃO colapsou na média (a cauda carrega correções
+  fortes). Documentado ANTES do piloto; não bloqueia.
+- 0.E PRESET: causa raiz da H5-env confirmada ('preset local de Interlagos',
+  SF 109, no log da canária baseline 0/3).
+- 0.F GRADE completa registrada (canto estrito 38% = NO-GO — fragilidade).
+
+## CANÁRIAS VIA RUNNER FROZEN (instrumento (a) — aprovado pela revisão)
+Definição: race_diagnostic, 1 CARRO (build_grid_drivers()[:1]), perfil
+composite, 600s, Interlagos frozen (sha 164876…, SF 729, gov vplan,
+variance grid,compound), seeds 0 e 1 (secos; pinados). Mapeamento: campo
+de 1 carro = solo funcional do stack (composite ativa com tráfego próprio
+inexistente; g=0 em campo de 1 — o residual NÃO atua; a canária mede o
+STACK, e a diferença r12b vs r2 só existiria se o wiring quebrasse).
+- H5' (substituta da H5-env): MESMO protocolo nos MESMOS seeds; o candidato
+  r12b NÃO piora o controle positivo: voltas completas iguais; |fora%|
+  diferença ≤ 2 pp; wanderers = 0; rolante dentro de ±5 s.
+- LIMIARES DO CONTROLE POSITIVO (r2 primeiro — instrumento só vale se r2
+  PASSAR): ≥2 voltas completas em 600s; fora ≤ 10%; wanderers 0.
+- ORDEM: (1) r2 seed 0; (2) r2 seed 1; (3) r12b seed 0; (4) r12b seed 1.
+  Sequencial-puro. RAMO: r2 falha → problema de protocolo/stack → PARE+autópsia.
+- IMPLEMENTAÇÃO permitida (pré-registrada aqui): flag --n-cars N no
+  race_diagnostic (1 linha: fatiar build_grid_drivers()[:N]) — instrumento
+  mínimo p/ canária de 1 carro; commitada antes dos runs.
+
+## PILOTO {0, 8, 9} (canárias verdes → smoke identidade → piloto)
+- ESCLARECIMENTO 1: H1-H4 no piloto = leitura POR-SEED do seed 0 (surrogato
+  de campo denso); o teste mediano REAL de H1-H4 é no N=10. Declarado.
+- ESCLARECIMENTO 2: seed extra do ramo MISTO = seed 20 (FORA do pool 10-19
+  do R13; protege o confirmatório).
+- Árvore VERDE/MISTO/VERMELHO como pinada em b1a852c. N=10 condicional vs
+  braços EXISTENTES (proibido re-rodar). Paradas pelo CSV (0.B).
+- KIT DE AUTÓPSIA: grade 0.F, perda 16d, r_win med −0,058, |r_pred| 0.D, skew 0.C.
+
+---
+
+# v15 FASE R12-CANÁRIAS — RESULTADO + PARE (2026-10-18, após runs commitados b53687c/d4c8f14)
+
+## CHECAGENS 0.C-0.F (zero runs, executadas antes)
+- 0.C SKEW: r12b treinou com 12d tráfego=ZEROS; runner serve vivos (conhecido).
+- 0.D |r_pred| janelas: p50 0,057 / p90 0,879 / p95 1,245 / p99 1,597 — p95 ≥ 0,15
+  (não colapsou na média; cauda carrega correção forte).
+- 0.E preset: causa raiz H5-env confirmada.
+- 0.F grade 9 valores registrada (canto estrito 38% = NO-GO; fragilidade).
+
+## CANÁRIAS (instrumento (a): runner frozen, 1 carro, 600s, seeds 0-1)
+r2 s0/s1 e r12b s0/s1: **4 runs BIT-IDÊNTICOS entre si** (5 voltas, fora 18,4%,
+wanderers 0, rolante 132s) — PROVA de wiring são: em campo de 1 carro g=0
+sempre, o residual NUNCA atua, r2≡r12b por construção. O stack carrega 5
+voltas limpas de 600s no frozen.
+
+## CONTROLE POSITIVO: FAIL no LIMIAR de fora (18,4% > 10% pinado)
+Autópsia: o LIMIAR foi calibrado às cegas para "solo limpo"; o v10 solo+frozen
+real é ~18% fora (regime do braço A seco 25-32% em campo 10; solo menos denso,
+off em s 1800-2400 e wrap). O stack NÃO está quebrado (bit-idênticos; 5 voltas;
+wanderers 0) — o que falhou foi o NÚMERO do limiar, não o instrumento nem o
+candidato. RAMO EXECUTADO: PARE conforme prereg. A emenda do limiar (ex. fora
+≤ 25% p/ 1 carro + voltas ≥ 2 + wanderers 0) seria RE-PINAGEM pós-número —
+proibida nesta fase; a revisão decide.
+
+## H5' (avaliada sob os fatos): r12b NÃO piora o stack — voltas iguais (5=5),
+|Δfora| 0,0 ≤ 2pp, wanderers 0=0, rolante 132=132s — PASS ESTRITO. Mas o gate
+formal do controle positivo falhou no limiar pinado; o protocolo manda PARE.
+
+## PILOTO {0,8,9}: NÃO EXECUTADO (árvore: controle positivo falha → PARE).
+
+---
+
+# v15 FASE R12-PILOTO — PREREG-ERRATA #2 (canária 1-carro; commitado ANTES de qualquer run)
+
+## ESCOPO FECHADO: vale SÓ para a canária 1-carro (instrumento detector de
+## falha grosseira do stack). A árvore VERDE/MISTO/VERMELHO do piloto e os
+## limiares do N=10 permanecem INTOCADOS — qualquer ajuste ali = PARE.
+
+## LIMIARES RE-PINADOS (derivação registrada)
+- voltas ≥ 2 | fora ≤ 25% | wanderers 0
+- Derivação: baseline v10 solo+frozen medido = 18,4% fora no instrumento
+  canônico (4 CSVs bit-idênticos); margem de política 1,36× → 25%.
+- Papel: detector de falha GROSSEIRA do stack, NÃO gate de qualidade.
+- Aplicação SIMÉTRICA: controle r2 e candidato r12b sob os mesmos limiares.
+
+## F2 — FECHAMENTO ARITMÉTICO (auditoria da definição de volta, zero runs)
+A canária reportou "5 voltas × 132s = 660s > 600s" — auditoria do CSV:
+conforme contrato de instrumento (R2/R3), tempos por wrap usam VALOR de
+tick × 0,1s (5 Hz de amostragem — índices NÃO servem). Auditoria a
+publicar com números do CSV antes do piloto. [resultado abaixo]
+
+## A.4 — CONFIRMAÇÕES (já registradas no prereg b1a852c; reafirmadas)
+- H1-H4 no piloto = leitura POR-SEED do seed 0 (surrogato; teste mediano
+  real é no N=10).
+- Seed extra do ramo MISTO = seed 20 (FORA do pool 10-19 do R13).
+
+## A.5 — RE-AVALIAÇÃO do ponto de decisão com os 4 CSVs EXISTENTES
+Controle r2 sob limiares emendados → H5' → piloto destravado (se PASS).
+
+## A.1-A.5 — EXECUÇÃO (zero runs)
+- A.2(b) smoke offline COM tráfego vivo: |r2−r12b| mediana 0,079/max 0,089
+  rad → override end-to-end CONFIRMADO (em campo-1 nunca exercitado).
+- A.2(c) g≡0 nos 4 CSVs (composite_active=0) — bit-identidade DOCUMENTADA.
+- A.2(a) runner agora loga sha256 do residual carregado (r12b b77adc68caef742a;
+  r2 6a2dbf53a69fcac7) — fallback silencioso morto.
+- A.3 FECHAMENTO ARITMÉTICO: 5 "voltas" = 5 CRUZAMENTOS incl. a LARGADA
+  (1º em t=1,4s) → 4 voltas COMPLETAS × 131,5s = 526s ≤ 600s — FECHA.
+  Correção na ERRATA: a contagem do sumário contava cruzamentos; voltas
+  completas = cruzamentos − 1 (corrigido na métrica A.5; contrato R2/R3
+  — valor de tick ×0,1s — respeitado).
+- A.5 RE-AVALIAÇÃO sob ERRATA #2: r2 s0/s1 PASS (4 voltas completas,
+  18,4% ≤ 25%, wand 0); r12b idem bit-a-bit → H5' PASS → PILOTO DESTRAVADO.
+
+---
+
+# v15 FASE R13-GATE — PRÉ-REGISTO (commitado ANTES de qualquer run; seeds 10-19)
+
+## CONTEXTO: trilha de retreino ENCERRADA (rota 1 adotada) — r12b = research-negativo
+(não deploya); valor registrado (hesit −54% s0; pós-60s −64 s9). Backlog: rota 2
+(pré-cond: justificar BC offline vs covariate shift ou ir online); rota 3
+(pré-cond: endereçar OOD E r_win/ruído). O R13 julga o COMPOSITE ORIGINAL
+(v10 solo congelado ac2504e5 + r2 residual_best 6a2dbf53a69fcac7).
+
+## 0.2a — LIMIARES MECÂNICOS (quantis PINADOS do braço A seeds 0-9, CSV; método:
+## fora ≤ p75(A); rolante ≤ med(A)+10s; hesit ≤ p75(A); cc ≤ p75(A); paradas:
+## 0 no seco / ≤ T-adv; wanderers ≤ med(A)+2; floor: 10/10 completam)
+- SECO (n=7): fora ≤ 30,4% | rolante ≤ 164s | hesit ≤ 17 | cc ≤ 545 |
+  paradas = 0 | wanderers ≤ 2
+- ADVERSO (n=3): fora ≤ 50,1% | rolante ≤ 184s | hesit ≤ 12 | cc ≤ 430 |
+  T-adv PINADO = 8 (p75=7 arredondado para o máximo observado — n pequeno;
+  escolha DOCUMENTADA: p75 com n=3 = o valor entre 7 e 8; pinamos 8 para
+  não reprovar por 1 episódio de excursão RECUP-OFF, já que paradas são
+  100% subproduto de excursões — R12-0.1) | wanderers ≤ 12
+- JUSTIFICATIVA da re-ancoragem: o gate R10 usou critérios pré-canônicos
+  (fora ≤1,5%, rolante ≤115s) 3-7× mais estritos que TODO o corpus legítimo
+  de 20 corridas (R12-0.6), ancorados no B3.1 que a R7b provou
+  não-reproduzível; o D1-R10 (paradas=0 enquanto o incumbente tinha 14)
+  penalizava o candidato por clima adverso onde ele era 15× melhor; a
+  ERRATA #2 estabeleceu o precedente de calibrar limiares no baseline REAL.
+
+## 0.2b — TOLERÂNCIA DE PACE ADVERSO PRÉ-ARGUMENTADA
+A spec é completion-first (Meta D): a percepção de tráfego compra campo
+sobrevivente em clima adverso (s8: contatos 336 vs 5138 do cego; paradas
+6 vs 14) ao custo do resíduo de pace s8 (+70,9s/volta medido na
+decomposição R11-0.2 — o gap adverso vem do envelope/estado, não do
+fora). O limiar adverso de rolante (184s = med+10) E o de fora (50,1%)
+refletem isso: aceita-se pace adverso menor pelo valor de segurança.
+
+## 0.2c — RÓTULO DE CLIMA MECÂNICO (do próprio CSV do run)
+ADVERSO = (w_trans==1) em QUALQUER tick do run (onset de transição real
+de kind dentro do run — coluna do CSV v3.1); SECO = caso contrário.
+ZERO seed-shopping: seeds 10-19 fixos; o mix climático é o que vier;
+se não houver seed adverso, o ramo adverso fica report-only com ressalva.
+
+## 0.2d — DESFECHOS PRÉ-DECLARADOS
+- PASS por clima (seco E adverso dentro dos limiares; adverso
+  report-only se não ocorrer) → PROPOSTA DE PROMOÇÃO (decisão FINAL da
+  revisão).
+- FAIL em qualquer critério → veredito R10 PERMANENTE (manutenção do
+  v10) com confirmação out-of-sample.
+- Árvore avaliada SÓ após os 10 runs do braço A (sem early-stop);
+  working tree limpo no script de decisão; paradas do CSV (regra s9);
+  SEM re-run cirúrgico de seed falho (crash de instrumento excetua).
+
+## COMANDOS (braço A; B = trocar APENAS --actor/--obs-mode)
+.venv/bin/python model_train/race_diagnostic.py --profile composite --ticks 6000 \
+  --laps 99 --track interlagos --seed {10..19} --gov vplan --variance grid,compound \
+  --out race_diag_r13_a_s{N}.csv
+Braço B: --actor model_train/v10_dagger/dagger_actor_best.keras --obs-mode edge (idem resto).
+
+---
+
+# v15 FASE R13-FECHAMENTO — apêndice auditável + erratas E1-E5 (zero runs)
+
+## E4 (manchete): a tabela real dá ratio cc_B/cc_A ∈ **1,5× a 3,5×** (mediana
+## 2,2×; Δ −479 a −994) — a manchete "3-13×" estava ERRADA (confundia ratio
+## com recíproco de Δ). Corrigida em docs.
+
+## E1: cc-fail = {s10:601, s11:600, s12:613, s13:781, s19:877} — range
+## 600-877 correto (limiar p75 seco 545 / adverso 430).
+
+## E2 (por seed, denominador = AMOSTRAS de contato do solver): s10 44%,
+## s11 39%, s12 39%, s13 43%, s14 40%, s15 39%, s16 28%, s17 43%, s18 42%,
+## s19 44%. Range 28-44% (o texto "39-44%" era dos cc-fail apenas; correto
+## geral: 28-44%).
+
+## E3 (denominadores): hesit on-track totais s11=21, s12=16, s13=14, s14=16,
+## s15=20 — os 14-21 do texto são os TOTAIS por run; classes somam o total
+## (ex. s11: REJOIN 13 + TRAF 0 + CRAWL 6 + OUTRO 2 = 21 ✓).
+
+## E5 (adversos 0-9 pela regra w_trans MECÂNICA): **{2, 8, 9} (n=3)** — igual
+## ao usado na derivação do prereg (n=3) — NENHUM quantil muda; vereditos
+## por seed inalterados linha a linha (robustez confirmada).
+
+## Identity smoke 20 runs: ator ✓, gov vplan ✓, pista sha 164876 ✓, SF 729 ✓,
+## CSV v3.x ✓ em TODOS. Residual r2: sha do arquivo VERIFICADO hoje
+## (6a2dbf53a69fcac7) mas NÃO logado nos runs A (o sha-log só dispara com
+## --residual-override) — GAP documentado: identidade do braço A é IMPLÍCITA
+## via PROFILES; o logging universal vira parte do PASSO 2 (v3.3).
+
+---
+
+# v15 FASE R13-FECHAMENTO — PASSO 4: prereg LEVE do dossiê da alavanca (antes da análise, zero runs)
+Corpus: 20 CSVs R13 (A+B) + braço A 0-9. Perguntas PINADAS:
+(i) taxa de EXCURSÕES que terminam em contato no retorno (denominador =
+excursões; numerador = excursões com contato do dono ≤30s pós-reentrada);
+(ii) janela temporal reentrada→contato (distribuição; define a latência
+útil de percepção de um futuro rejoin-com-gap);
+(iii) fração de contatos pós-rejoin vs pilotagem limpa (denominador =
+contatos; já medido como 28-44% envolvendo carro FORA — aqui separado por
+causa: retorno vs erro limpo);
+(iv) latência de re-aceleração pós-reentrada (distribuição do tempo da
+REJOIN-DIP até v>5 m/s).
+RAMO: corpus insuficiente para (ii)/(iv) por carro → reportar o que houver.
