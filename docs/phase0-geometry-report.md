@@ -196,10 +196,35 @@ our `d` are not just sign-flipped copies of each other.
 **Our São Paulo extraction is blocked, not tuned.** `extract_track.py` is now
 parameterised by circuit (references only; every pipeline parameter is
 unchanged, and the window stays 43 m via `--n-resample 1500`). But **F1's
-live-timing archive answers HTTP 401** to every unauthenticated request,
-including the Monza 2024 session we already hold in cache. FastF1 3.4.4 can't
-load São Paulo, and no FastF1 cache exists on this machine. So there is **no
-Interlagos telemetry centreline of ours**.
+live-timing archive answers HTTP 401** to every unauthenticated request. That
+includes the Monza 2024 URLs: our `monza.json` still builds only because
+`.fastf1-cache/` holds that session, downloaded 2026-09-18, both as FastF1
+pickles and as raw HTTP responses in `fastf1_http_cache.sqlite`. That cache
+contains **no São Paulo session**, and no other FastF1 cache exists on this
+machine (the group repo's included). So there is **no Interlagos telemetry
+centreline of ours**.
+
+Retried on 2026-11-05 with the **latest FastF1, 3.9.2** (in place of the
+pinned 3.4.4), against an empty cache, for both Monza 2024 and São Paulo 2024
+Race. It is still blocked; only the failure mode differs:
+
+- 3.9.2 first tries to sign in to an F1 account and logs: `Failed to
+  authenticate with Formula 1 account, continuing without authentication: No
+  F1 account credentials available. Set the environment variables F1_USERNAME
+  and F1_PASSWORD.`
+- `livetiming.formula1.com/static/2024/…/SessionInfo.jsonStream` (and every
+  other feed) then returns `requests.exceptions.HTTPError: 401 Client Error:
+  Unauthorized`.
+- 3.9.2 falls back to its own mirror, `livetiming-mirror.fastf1.dev`, which
+  returns **HTTP 404** for both sessions. FastF1 raises
+  `SessionNotAvailableError: No data for this session!`, and `session.laps`
+  then raises `DataNotLoadedError`.
+
+Unblocking it would take an F1 account's credentials in those environment
+variables. Separately, 3.9.2 does not reproduce `monza.json` from the same
+cached raw data: the centreline moves by up to 2.75 m and the corners by
+about 2.5 m (T1 888.9 → 891.4 m). So the venv was returned to the pinned 3.4.4,
+which reproduces `monza.json` exactly.
 
 The overlay instead uses **MultiViewer's recorded lap** (driver 3, 2021 FP1
 lap 2, 283 points, 13.9 m median step, max 38.6 m). It is labelled as a stand-in
