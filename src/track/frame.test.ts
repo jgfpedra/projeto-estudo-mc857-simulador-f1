@@ -13,8 +13,8 @@ import type { TrackJson } from './types'
  * circle would not have the one property under test, which is that the seam
  * between the last sample and sample 0 behaves like every other segment.
  */
-function loadMonza(): TrackFrame {
-  const url = new URL('../../public/tracks/monza.json', import.meta.url)
+function loadTrack(file: string): TrackFrame {
+  const url = new URL(`../../public/tracks/${file}`, import.meta.url)
   const raw = JSON.parse(readFileSync(fileURLToPath(url), 'utf8')) as TrackJson
   return buildFrame(parseTrack(raw))
 }
@@ -83,35 +83,42 @@ const worstBy = (steps: Step[], key: 'posError' | 'tanSwing') =>
  *
  * `sampleAt` is the path a moving car takes. A mistake here shows up as a jump
  * or a flick of heading once per lap, at the most visible point on track.
+ *
+ * Every committed track, not just ours: the engine tracks are rolled so their
+ * `sf_idx` becomes sample 0 (scripts/convert_frozen_track.py), which puts the
+ * seam somewhere new on a loop with non-uniform 2-4 m spacing.
  */
-describe('sampleAt across the start/finish seam', () => {
-  const frame = loadMonza()
-  const steps = sweepSeam(frame)
+describe.each(['monza.json', 'monza_v1.json', 'interlagos_v2.json'])(
+  'sampleAt across the start/finish seam: %s',
+  (file) => {
+    const frame = loadTrack(file)
+    const steps = sweepSeam(frame)
 
-  it('sweeps the whole span', () => {
-    expect(steps).toHaveLength(Math.round((2 * SPAN_M) / STEP_M))
-  })
+    it('sweeps the whole span', () => {
+      expect(steps).toHaveLength(Math.round((2 * SPAN_M) / STEP_M))
+    })
 
-  it('advances a constant distance per step', () => {
-    const worst = worstBy(steps, 'posError')
-    expect(
-      worst.posError,
-      `worst step error ${(worst.posError * 1000).toFixed(3)} mm at s=${worst.s.toFixed(2)}`,
-    ).toBeLessThanOrEqual(POS_TOL_M)
-  })
+    it('advances a constant distance per step', () => {
+      const worst = worstBy(steps, 'posError')
+      expect(
+        worst.posError,
+        `worst step error ${(worst.posError * 1000).toFixed(3)} mm at s=${worst.s.toFixed(2)}`,
+      ).toBeLessThanOrEqual(POS_TOL_M)
+    })
 
-  it('does not kink the tangent', () => {
-    const worst = worstBy(steps, 'tanSwing')
-    expect(
-      worst.tanSwing,
-      `worst tangent swing ${worst.tanSwing.toFixed(4)} deg at s=${worst.s.toFixed(2)}`,
-    ).toBeLessThanOrEqual(TAN_TOL_DEG)
-  })
+    it('does not kink the tangent', () => {
+      const worst = worstBy(steps, 'tanSwing')
+      expect(
+        worst.tanSwing,
+        `worst tangent swing ${worst.tanSwing.toFixed(4)} deg at s=${worst.s.toFixed(2)}`,
+      ).toBeLessThanOrEqual(TAN_TOL_DEG)
+    })
 
-  it('crosses the seam rather than stopping short of it', () => {
-    // Guards the test itself: if the sweep never wrapped past s = 0 the three
-    // assertions above would pass without having looked at the seam at all.
-    expect(steps.some((step) => step.s < SPAN_M)).toBe(true)
-    expect(steps.some((step) => step.s > frame.lengthM - SPAN_M)).toBe(true)
-  })
-})
+    it('crosses the seam rather than stopping short of it', () => {
+      // Guards the test itself: if the sweep never wrapped past s = 0 the three
+      // assertions above would pass without having looked at the seam at all.
+      expect(steps.some((step) => step.s < SPAN_M)).toBe(true)
+      expect(steps.some((step) => step.s > frame.lengthM - SPAN_M)).toBe(true)
+    })
+  },
+)

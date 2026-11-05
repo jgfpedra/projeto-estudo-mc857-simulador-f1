@@ -22,7 +22,23 @@ FastF1 position telemetry for the 2024 Italian Grand Prix, extracted
 2026-09-18. FastF1 itself is MIT-licensed. Corner marker positions come via
 FastF1's `get_circuit_info()`, sourced from MultiViewer
 (https://multiviewer.app/). Corner *names* are written by hand in
-`CORNER_NAMES` and are descriptive geographic names, not F1 marks.
+`CircuitRef.corner_names` and are descriptive geographic names, not F1 marks.
+
+Phase 0 (docs/phase0-geometry-report.md) added two more:
+
+- `public/tracks/monza_v1.json` and `public/tracks/interlagos_v2.json` are
+  converted by `scripts/convert_frozen_track.py` from the simulation engine's
+  frozen tracks in the group repo (`backend/model_train/tracks_frozen/`, branch
+  `feat/bot-ai`, commit `cf6529f863`), converted 2026-11-04. That is the group's
+  own data, not third-party. Each file's `source` block records the commit, git
+  blob and both hashes. The frozen tracks are themselves splines through
+  FastF1/MultiViewer corner markers (report §3).
+- The plots in `docs/phase0/` draw MultiViewer's corner markers and one recorded
+  lap outline per circuit, fetched from `api.multiviewer.app` (the service
+  FastF1's `get_circuit_info()` uses) on 2026-11-04. No licence is stated for
+  that API, so the **raw responses are not committed**. They are cached under
+  `.cache/multiviewer/` (gitignored), the same rule as `.fastf1-cache/`, and
+  only derived plots and numbers are in the repo.
 
 ## 3D models
 

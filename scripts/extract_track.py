@@ -42,33 +42,85 @@ from centreline import frame_from_three, project_global  # noqa: E402
 # Reference constants
 # --------------------------------------------------------------------------
 
-#: Published Monza lap length, metres. Check A compares against this.
-MONZA_LENGTH_M = 5793.0
+@dataclass(frozen=True)
+class CircuitRef:
+    """Independently-sourced facts about one circuit, for the sanity checks.
 
-#: Corner names are annotation only - FastF1's circuit_info supplies corner
-#: numbers and positions but no names. Keyed by event name -> corner number.
-CORNER_NAMES: dict[str, dict[int, str]] = {
-    "Monza": {
-        1: "Variante del Rettifilo (1)",
-        2: "Variante del Rettifilo (2)",
-        3: "Curva Grande",
-        4: "Variante della Roggia (1)",
-        5: "Variante della Roggia (2)",
-        6: "Curva di Lesmo 1",
-        7: "Curva di Lesmo 2",
-        8: "Variante Ascari (1)",
-        9: "Variante Ascari (2)",
-        10: "Variante Ascari (3)",
-        11: "Curva Parabolica",
-    }
+    The Python counterpart of `src/track/reference.ts`, and under the same
+    rule: nothing here is derived from the extraction it checks. Fields left
+    `None` have no sourced value, and the checks that need them report
+    "skipped" rather than passing - a check with nothing external to compare
+    against proves nothing.
+
+    These are *references*, not tuning. Every pipeline parameter (laps, grid,
+    smoothing window, spacing) stays a CLI argument with one default for all
+    circuits.
+    """
+
+    #: Display name written to the JSON, and the FastF1 event to load.
+    name: str
+    event: str
+    #: Published lap length, metres. Check A compares against this.
+    length_m: float
+    #: Expected sign of the (x, z) shoelace area in Three.js space: +1 for a
+    #: clockwise circuit. Viewed down +y with x right and z toward the viewer,
+    #: clockwise is positive - confirmed against the matplotlib plot for Monza
+    #: rather than trusted from reasoning, because a sign convention derived on
+    #: paper can quietly invert itself.
+    area_sign: float
+    #: Numbered corners on the official map, or None if not sourced.
+    corner_count: int | None = None
+    #: Window the first corner after start/finish must land in, metres.
+    first_corner_s: tuple[float, float] | None = None
+    first_corner_name: str | None = None
+    #: Corner names are annotation only - circuit_info supplies numbers and
+    #: positions but no names. Missing names are written as "T<n>".
+    corner_names: dict[int, str] | None = None
+    #: Where `length_m` and `area_sign` come from.
+    source: str = ""
+
+
+#: Keyed by circuit id - the same ids as `src/track/reference.ts`.
+CIRCUITS: dict[str, CircuitRef] = {
+    "monza": CircuitRef(
+        name="Monza",
+        event="Monza",
+        length_m=5793.0,
+        area_sign=1.0,
+        corner_count=11,
+        first_corner_s=(700.0, 1100.0),
+        first_corner_name="Variante del Rettifilo",
+        corner_names={
+            1: "Variante del Rettifilo (1)",
+            2: "Variante del Rettifilo (2)",
+            3: "Curva Grande",
+            4: "Variante della Roggia (1)",
+            5: "Variante della Roggia (2)",
+            6: "Curva di Lesmo 1",
+            7: "Curva di Lesmo 2",
+            8: "Variante Ascari (1)",
+            9: "Variante Ascari (2)",
+            10: "Variante Ascari (3)",
+            11: "Curva Parabolica",
+        },
+        source="published circuit length 5.793 km; clockwise",
+    ),
+    # Only the two facts phase 0 sourced (docs/phase0-geometry-report.md):
+    # 4.309 km for the 1999-present layout and anticlockwise running, from
+    # en.wikipedia.org/wiki/Interlagos_Circuit and ferrari.com/hypercar/sao-paulo.
+    # No corner count, first-corner window or names, so B and D are skipped.
+    "interlagos": CircuitRef(
+        name="Interlagos",
+        event="São Paulo",
+        length_m=4309.0,
+        area_sign=-1.0,
+        source="4.309 km (Wikipedia 'Interlagos Circuit', 1999-present "
+               "layout); anticlockwise (Wikipedia; Ferrari circuit page)",
+    ),
 }
 
-#: Expected sign of the signed area of the (x, z) loop in Three.js space.
-#: Monza runs clockwise; viewed down the +y axis with x right and z toward the
-#: viewer, a clockwise loop has positive shoelace area. See check E - this is
-#: confirmed against the matplotlib plot rather than trusted from reasoning
-#: alone, because a sign convention derived on paper can quietly invert itself.
-EXPECTED_AREA_SIGN = 1.0
+#: Kept for importers (`plot_track.py`); the checks read `CircuitRef`.
+MONZA_LENGTH_M = CIRCUITS["monza"].length_m
 
 
 # --------------------------------------------------------------------------
@@ -427,7 +479,7 @@ def apply_elevation(pts: np.ndarray, mode: str = "zero",
 # --------------------------------------------------------------------------
 
 def corner_arclengths(circuit_info, centreline: np.ndarray,
-                      event: str | None = None) -> list[dict]:
+                      names: dict[int, str] | None = None) -> list[dict]:
     """Step 10. Project each corner marker onto the centreline to get its `s`.
 
     `centreline` is the FastF1-space (N, 3) loop about to be written. The
@@ -447,8 +499,8 @@ def corner_arclengths(circuit_info, centreline: np.ndarray,
     Its `Distance` column is carried through as a cross-check where present;
     it is derived from car telemetry and is not always populated.
     """
-    names = CORNER_NAMES.get(event or "", {})
-    frame = frame_from_three(np.round(to_three(centreline), 3))
+    names = names or {}
+    frame =frame_from_three(np.round(to_three(centreline), 3))
     corners = []
     for _, row in circuit_info.corners.iterrows():
         ff1 = np.array([[row["X"], row["Y"], 0.0]], dtype=float) / 10.0
@@ -460,7 +512,7 @@ def corner_arclengths(circuit_info, centreline: np.ndarray,
         corners.append({
             "number": number,
             "letter": str(row["Letter"] or "") if "Letter" in row.index else "",
-            "name": names.get(number),
+            "name": names.get(number, "T%d" % number),
             "s": round(s, 1),
             "_offsetM": round(offset, 1),
             "_fastf1DistanceM": (None if ref is None or not np.isfinite(ref)
@@ -475,7 +527,7 @@ def corner_arclengths(circuit_info, centreline: np.ndarray,
 # --------------------------------------------------------------------------
 
 def build_doc(centreline_ff1: np.ndarray, corners: list[dict], *,
-              name: str, year: int, width: float,
+              circuit: str, name: str, year: int, width: float,
               rotation_deg: float) -> dict:
     """Step 11. Schema per section 5 of the design doc.
 
@@ -489,6 +541,7 @@ def build_doc(centreline_ff1: np.ndarray, corners: list[dict], *,
     three = to_three(centreline_ff1)
     length = polyline_length(ground(three, "three"), closed=True)
     return {
+        "circuit": circuit,
         "name": name,
         "year": year,
         "lengthM": round(length, 1),
@@ -519,7 +572,7 @@ class CheckFailure(AssertionError):
     """Raised when one or more sanity checks fail."""
 
 
-def check_a_length(centreline: np.ndarray, expected: float = MONZA_LENGTH_M,
+def check_a_length(centreline: np.ndarray, expected: float,
                    tol: float = 0.02) -> str:
     length = polyline_length(centreline, closed=True)
     err = abs(length - expected) / expected
@@ -532,10 +585,12 @@ def check_a_length(centreline: np.ndarray, expected: float = MONZA_LENGTH_M,
         length - expected) / expected * 100, expected)
 
 
-def check_b_corner_count(corners: list[dict], expected: int = 11) -> str:
+def check_b_corner_count(corners: list[dict], expected: int | None) -> str:
     n = len(corners)
+    if expected is None:
+        return "skipped - no sourced corner count (%d from circuit_info)" % n
     assert n == expected, (
-        "[B] Got %d corners from circuit_info, expected %d for Monza. Suspect "
+        "[B] Got %d corners from circuit_info, expected %d. Suspect "
         "the wrong event was loaded, or circuit_info is unavailable for this "
         "session." % (n, expected))
     return "%d corners" % n
@@ -558,8 +613,9 @@ def check_c_corner_monotonic(corners: list[dict]) -> str:
         numbers[0], numbers[-1])
 
 
-def check_d_first_corner(corners: list[dict], lo: float = 700.0,
-                         hi: float = 1100.0) -> str:
+def check_d_first_corner(corners: list[dict],
+                         window: tuple[float, float] | None,
+                         expected_name: str | None = None) -> str:
     """The first corner after start/finish must be the Rettifilo chicane.
 
     The window brackets ~875 m, which is where FastF1's own telemetry-derived
@@ -568,17 +624,20 @@ def check_d_first_corner(corners: list[dict], lo: float = 700.0,
     Parabolica sits at ~5180 m, so a reversed lap misses this by a mile.
     """
     first = min(corners, key=lambda c: c["s"])
+    if window is None:
+        return "skipped - no sourced first-corner window (T%d at %.1f m)" % (
+            first["number"], first["s"])
+    lo, hi = window
     assert lo <= first["s"] <= hi, (
         "[D] The first corner after start/finish is at s = %.1f m, outside "
-        "the expected %.0f-%.0f m for the Rettifilo chicane. Near 5200 m you "
-        "are looking at Parabolica, which means the lap runs backwards "
-        "(CLAUDE.md: 'the corner sequence runs backwards')."
-        % (first["s"], lo, hi))
+        "the expected %.0f-%.0f m for %s. A corner from the far end of the "
+        "lap means the lap runs backwards (CLAUDE.md: 'the corner sequence "
+        "runs backwards')." % (first["s"], lo, hi, expected_name))
     return "first corner at s = %.1f m (%s)" % (first["s"], first["name"])
 
 
 def check_k_corner_cross_reference(corners: list[dict], length: float,
-                                   expected: float = MONZA_LENGTH_M,
+                                   expected: float,
                                    tol: float = 0.02) -> str:
     """Cross-check every corner against FastF1's own `Distance` column.
 
@@ -603,13 +662,14 @@ def check_k_corner_cross_reference(corners: list[dict], length: float,
             "(worst: corner %d)" % (len(pairs), worst * 100, number))
 
 
-def check_e_handedness(plan_three: np.ndarray) -> str:
+def check_e_handedness(plan_three: np.ndarray, expected_sign: float) -> str:
     area = signed_area(plan_three)
     sense = "clockwise" if area > 0 else "counter-clockwise"
-    assert np.sign(area) == EXPECTED_AREA_SIGN, (
-        "[E] The (x, z) loop is %s (signed area %.0f m^2), but Monza runs "
-        "clockwise. The track is MIRRORED - check the minus sign in "
-        "to_three(): three.z must be -ff1.Y, not +ff1.Y." % (sense, area))
+    want = "clockwise" if expected_sign > 0 else "counter-clockwise"
+    assert np.sign(area) == expected_sign, (
+        "[E] The (x, z) loop is %s (signed area %.0f m^2), but the circuit "
+        "runs %s. The track is MIRRORED - check the minus sign in "
+        "to_three(): three.z must be -ff1.Y, not +ff1.Y." % (sense, area, want))
     return "%s, signed area %.3f km^2" % (sense, area / 1e6)
 
 
@@ -668,7 +728,7 @@ def check_j_elevation(centreline: np.ndarray, mode: str) -> str:
         assert bad == 0, (
             "[J] Elevation mode is 'zero' but %d points have non-zero height. "
             "Suspect step 9." % bad)
-        return "y = 0 everywhere (Monza is flat; telemetry path retained)"
+        return "y = 0 everywhere (elevation stubbed; telemetry path retained)"
     span = float(centreline[:, 1].max() - centreline[:, 1].min())
     return "elevation from telemetry, range %.2f m" % span
 
@@ -703,12 +763,14 @@ def run_checks(checks: Sequence[tuple[str, Callable[[], str]]]) -> bool:
 
 def run_pipeline(args) -> dict:
     stages = StageWriter(args.stage_dir)
+    ref = CIRCUITS[args.circuit]
+    event = args.event or ref.event
 
     enable_cache(args.cache)
     print("  cache      %s" % args.cache)
     print("  loading    %d %s %s (slow on a cache miss)..."
-          % (args.year, args.event, args.session))
-    session = load_session(args.year, args.event, args.session)
+          % (args.year, event, args.session))
+    session = load_session(args.year, event, args.session)
 
     laps = pick_laps(session, max_laps=args.max_laps,
                      per_driver=args.per_driver)
@@ -727,11 +789,11 @@ def run_pipeline(args) -> dict:
     print("  step 3     %d usable laps, %d-%d samples each "
           "(~%.1f m between samples)"
           % (len(raw), min(counts), max(counts),
-             MONZA_LENGTH_M / float(np.mean(counts))))
+             ref.length_m / float(np.mean(counts))))
 
     normalised = np.stack([resample_relative(x, args.n_resample) for x in raw])
     stages.array("04_normalised", normalised)
-    grid = MONZA_LENGTH_M / args.n_resample
+    grid = ref.length_m / args.n_resample
     print("  step 4     resampled to %d points (~%.2f m grid)"
           % (args.n_resample, grid))
 
@@ -765,13 +827,14 @@ def run_pipeline(args) -> dict:
     if circuit_info is None:
         raise RuntimeError("circuit_info unavailable for this session.")
     realised = polyline_length(final, closed=True) / len(final)
-    corners = corner_arclengths(circuit_info, final, event=args.event)
+    corners = corner_arclengths(circuit_info, final, names=ref.corner_names)
     stages.doc("10_corners", corners)
     print("  step 10    %d corners, max projection offset %.1f m"
           % (len(corners), max(c["_offsetM"] for c in corners)))
 
     rotation = getattr(circuit_info, "rotation", 0.0) or 0.0
-    doc = build_doc(final, corners, name=args.event, year=args.year,
+    doc = build_doc(final, corners, circuit=args.circuit, name=ref.name,
+                    year=args.year,
                     width=args.width, rotation_deg=rotation)
     # Checks run on the Three.js-space output - the artefact that actually
     # ships - not on the ff1-space intermediate, so a mistake in to_three()
@@ -780,18 +843,20 @@ def run_pipeline(args) -> dict:
     plan = ground(three, "three")
 
     run_checks([
-        ("A length", lambda: check_a_length(plan)),
-        ("B corner count", lambda: check_b_corner_count(corners)),
+        ("A length", lambda: check_a_length(plan, ref.length_m)),
+        ("B corner count", lambda: check_b_corner_count(
+            corners, ref.corner_count)),
         ("C corner order", lambda: check_c_corner_monotonic(corners)),
-        ("D first corner", lambda: check_d_first_corner(corners)),
-        ("E handedness", lambda: check_e_handedness(plan)),
+        ("D first corner", lambda: check_d_first_corner(
+            corners, ref.first_corner_s, ref.first_corner_name)),
+        ("E handedness", lambda: check_e_handedness(plan, ref.area_sign)),
         ("F uniform spacing", lambda: check_f_uniform_spacing(plan)),
         ("G seam tangent", lambda: check_g_seam_tangent(seam)),
         ("H well formed", lambda: check_h_well_formed(plan, realised)),
         ("I lap agreement", lambda: check_i_lap_agreement(devs)),
         ("J elevation", lambda: check_j_elevation(three, args.elevation)),
         ("K corner cross-ref", lambda: check_k_corner_cross_reference(
-            corners, polyline_length(plan, closed=True))),
+            corners, polyline_length(plan, closed=True), ref.length_m)),
     ])
     return doc
 
@@ -800,7 +865,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description="Extract a track centreline from FastF1 position data.")
     p.add_argument("--year", type=int, default=2024)
-    p.add_argument("--event", default="Monza")
+    p.add_argument("--circuit", default="monza", choices=sorted(CIRCUITS),
+                   help="circuit id: selects the reference facts the checks "
+                        "use and the FastF1 event, never pipeline parameters")
+    p.add_argument("--event", default=None,
+                   help="FastF1 event name; defaults to the circuit's")
     p.add_argument("--session", default="R")
     p.add_argument("--out", default="public/tracks/monza.json")
     p.add_argument("--cache", default=".fastf1-cache")
@@ -822,7 +891,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
 
-    print("\n  extract_track  %s %d (%s)" % (args.event, args.year, args.session))
+    print("\n  extract_track  %s %d (%s)" % (args.circuit, args.year, args.session))
     print("  " + "=" * 74)
     try:
         doc = run_pipeline(args)

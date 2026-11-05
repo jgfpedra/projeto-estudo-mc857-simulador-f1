@@ -10,6 +10,14 @@
  *
  * Sources are named per field. Where a published figure and our measurement
  * legitimately differ, the tolerance says why.
+ *
+ * Keyed by **circuit id** (`TrackJson.circuit`), never by display name: the
+ * engine's frozen `Monza_v1` is the same circuit as our telemetry centreline
+ * and is checked against exactly the same facts.
+ *
+ * Every corner-related field is optional. A circuit gets only the facts that
+ * were actually sourced; a check whose reference is missing is reported as
+ * *not run* by `verify.ts`, never as passed.
  */
 export interface CircuitReference {
   /**
@@ -25,11 +33,11 @@ export interface CircuitReference {
   /** Tolerance on the above, as a fraction. Generous: see `lengthM`. */
   lengthTol: number
   /** Number of numbered corners on the official circuit map. */
-  cornerCount: number
+  cornerCount?: number
   /** Window, in metres of arc length, the first corner must fall inside. */
-  firstCornerS: [number, number]
+  firstCornerS?: [number, number]
   /** What the first corner should be, for the failure message. */
-  firstCornerName: string
+  firstCornerName?: string
   /**
    * Direction of travel seen from above: +1 clockwise, −1 anti-clockwise.
    * This is the sign of the shoelace area of the loop on the Three.js ground
@@ -37,7 +45,9 @@ export interface CircuitReference {
    */
   sense: 1 | -1
   /** Which way each numbered corner turns, in the direction of travel. */
-  handedness: Record<number, 'R' | 'L'>
+  handedness?: Record<number, 'R' | 'L'>
+  /** Where `lengthM` and `sense` come from, shown in failure details. */
+  source: string
 }
 
 const MONZA: CircuitReference = {
@@ -70,10 +80,34 @@ const MONZA: CircuitReference = {
     10: 'L', // Ascari 3
     11: 'R', // Parabolica
   },
+  source: 'published 5.793 km; clockwise',
 }
 
-const REFERENCES: Record<string, CircuitReference> = { Monza: MONZA }
+/**
+ * Autódromo José Carlos Pace. Only the two facts phase 0 sourced
+ * (docs/phase0-geometry-report.md):
+ *
+ * - 4.309 km, the 1999–present Grand Prix layout: Wikipedia, "Interlagos
+ *   Circuit" (en.wikipedia.org/wiki/Interlagos_Circuit), and Ferrari's
+ *   circuit page (ferrari.com/hypercar/sao-paulo).
+ * - Anticlockwise: both of the above.
+ *
+ * Deliberately no corner count, first-corner window or handedness: nothing
+ * was sourced for them, so checks B, D and G are reported as not run.
+ */
+const INTERLAGOS: CircuitReference = {
+  lengthM: 4309.0,
+  lengthTol: 0.02,
+  sense: -1,
+  source: '4.309 km and anticlockwise (Wikipedia "Interlagos Circuit"; Ferrari circuit page)',
+}
 
-export function referenceFor(name: string): CircuitReference | null {
-  return REFERENCES[name] ?? null
+const REFERENCES: Record<string, CircuitReference> = {
+  monza: MONZA,
+  interlagos: INTERLAGOS,
+}
+
+/** Reference facts for a circuit id (`TrackJson.circuit`). */
+export function referenceFor(circuit: string): CircuitReference | null {
+  return REFERENCES[circuit] ?? null
 }

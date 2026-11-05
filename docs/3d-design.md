@@ -218,6 +218,7 @@ Values below are the ones actually produced for Monza 2024, not illustrations.
 
 ```jsonc
 {
+  "circuit": "monza",          // id; reference.ts is keyed by this, not by name
   "name": "Monza",
   "year": 2024,
   "lengthM": 5756.9,           // measured; the published figure is 5793
@@ -234,6 +235,13 @@ Values below are the ones actually produced for Monza 2024, not illustrations.
   "startFinishS": 0.0
 }
 ```
+
+`circuit` was added in phase 0 (docs/phase0-geometry-report.md), when the
+engine's frozen `Monza_v1` had to be checked against the same Monza facts under
+a different name. Converted engine tracks also carry `variant`, `year: null`,
+`uniformSpacing: false` with `spacingMinM` / `spacingMaxM` (their vertices are
+kept verbatim at 2-4 m, and `frame.ts` never assumed uniform spacing), and a
+`source` provenance block.
 
 1151 points at 5.0017 m spacing, 54 KB. Well under 200 KB; fine to commit and
 fine to parse at load. If it ever matters, switch to flat `Float32Array` in a
@@ -553,7 +561,8 @@ passed unconditionally: one script wrote every number in the file in one pass,
 so the file always agrees with itself. A JSON scaled by 1.1 throughout — wrong
 geometry, perfectly self-consistent — sailed through.
 
-Everything the checks expect now lives in `src/track/reference.ts`: published
+Everything the checks expect now lives in `src/track/reference.ts`, keyed by
+the JSON's `circuit` id (never its display name): published
 circuit length, corner count, the window the first corner falls in, the sense
 of rotation, per-corner handedness. Nothing in that file is derived from
 `monza.json`. A check may still assert a *property* against the artifact alone
@@ -929,6 +938,7 @@ geometry is right.
 | M4 | Full grid | 20 instanced cars from the real glTF model with wheels, distinct colours, per-car offsets, no z-fighting | done |
 | M5 | Cameras | Orbit / chase / onboard switchable, damped follow | done |
 | M6 | Telemetry replay | Real 2024 Italian GP positions projected to `(s, d)` and replayed | done |
+| Phase 0 | Engine geometry | The engine's frozen tracks converted, checked, overlaid and rendered beside ours; see docs/phase0-geometry-report.md | done |
 
 M0–M3 is the core of the spike. M4–M6 is where it starts looking like something.
 
@@ -955,7 +965,11 @@ Recorded so the decisions aren't re-litigated, explicitly **not** in scope now:
 
 ## 10. Data sources
 
-- **FastF1** — position and car telemetry from 2018 onward; `X`, `Y`, `Z` in
+- **FastF1** — *as of 2026-11-04, F1's live-timing archive answers HTTP 401 to
+  unauthenticated requests*, so FastF1 3.4.4 can no longer download sessions
+  that are not already cached; Monza 2024 works only from `.fastf1-cache/`
+  (docs/phase0-geometry-report.md section 6). Position and car telemetry from
+  2018 onward; `X`, `Y`, `Z` in
   1/10 m plus an `OnTrack`/`OffTrack` status flag. `get_circuit_info()` supplies
   corner, marshal light and marshal sector positions and the track rotation
   angle (manually created, approximate, adequate for annotation).

@@ -32,6 +32,10 @@ export function parseTrack(raw: TrackJson): Track {
   if (points[0].distanceTo(points[points.length - 1]) < 1e-6) {
     fail('centerline duplicates its first point; the loop should be open')
   }
+  if (typeof raw.circuit !== 'string' || raw.circuit === '') {
+    fail('circuit id missing: reference.ts is keyed by it, not by the display name')
+  }
+  if (raw.year !== null && !Number.isFinite(raw.year)) fail('year must be a number or null')
   if (!Number.isFinite(raw.lengthM) || raw.lengthM <= 0) fail('lengthM invalid')
   if (!Number.isFinite(raw.widthM) || raw.widthM <= 0) fail('widthM invalid')
 
@@ -42,7 +46,9 @@ export function parseTrack(raw: TrackJson): Track {
   }))
 
   return {
+    circuit: raw.circuit,
     name: raw.name,
+    variant: raw.variant ?? null,
     year: raw.year,
     lengthM: raw.lengthM,
     spacingM: raw.spacingM,

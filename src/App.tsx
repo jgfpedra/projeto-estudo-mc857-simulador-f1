@@ -23,10 +23,18 @@ import { RACE_CAR_RED } from './cars/model'
 import { logChecks, verifyOrientation } from './track/verify'
 import type { CheckResult } from './track/verify'
 import type { Track } from './track/types'
+import { trackTitle } from './track/types'
+import { TRACKS, selectedTrack, urlForTrack } from './track/registry'
 import { PROBE_ENABLED, Probe } from './probe'
 
-const TRACK_URL = '/tracks/monza.json'
-const REPLAY_URL = '/replays/monza-2024-race.json'
+/**
+ * Which track, from `?track=` (src/track/registry.ts). Read once: switching
+ * track navigates to a new URL rather than swapping state in place. A reload is
+ * the one reset that cannot miss anything - the clock, the replay, the fitted
+ * camera and `OrbitControls`' saved home pose all depend on the track, and the
+ * last of those has already cost time once (docs/3d-design.md section 7).
+ */
+const { entry: TRACK, unknown: UNKNOWN_TRACK } = selectedTrack(window.location.search)
 
 const FOV_DEG = 45
 /**
@@ -112,7 +120,7 @@ export default function App() {
   )
 
   useEffect(() => {
-    loadTrack(TRACK_URL).then(setTrack, (e: Error) => setError(e.message))
+    loadTrack(TRACK.url).then(setTrack, (e: Error) => setError(e.message))
   }, [])
 
 
@@ -135,7 +143,13 @@ export default function App() {
   // timeline shows why the replay button is disabled.
   useEffect(() => {
     if (!scene) return
-    loadReplay(REPLAY_URL, scene.frame.lengthM).then(setReplay, (e: Error) =>
+    if (!TRACK.replayUrl) {
+      setReplayError(
+        'none for this track - the 2024 replay was projected onto our Monza centreline',
+      )
+      return
+    }
+    loadReplay(TRACK.replayUrl, scene.frame.lengthM).then(setReplay, (e: Error) =>
       setReplayError(e.message),
     )
   }, [scene])
@@ -241,8 +255,8 @@ export default function App() {
     logChecks(track, scene.checks)
   }, [track, scene])
 
-  if (error) return <Overlay>Failed to load {TRACK_URL}: {error}</Overlay>
-  if (!track || !scene || !motion) return <Overlay>Loading {TRACK_URL}…</Overlay>
+  if (error) return <Overlay>Failed to load {TRACK.url}: {error}</Overlay>
+  if (!track || !scene || !motion) return <Overlay>Loading {TRACK.url}…</Overlay>
 
   const { frame, checks, camera } = scene
   const { source, lapOf } = motion
@@ -320,7 +334,9 @@ export default function App() {
 
 function ChecksPanel({ track, checks }: { track: Track; checks: CheckResult[] }) {
   const [open, setOpen] = useState(true)
-  const failed = checks.filter((c) => !c.pass).length
+  const ran = checks.filter((c) => !c.skipped)
+  const failed = ran.filter((c) => !c.pass).length
+  const skipped = checks.length - ran.length
   const colour = failed === 0 ? '#3ecf5a' : '#ff5252'
   return (
     <div
@@ -349,17 +365,21 @@ function ChecksPanel({ track, checks }: { track: Track; checks: CheckResult[] })
           font: 'inherit',
         }}
       >
-        {open ? '▾' : '▸'} {track.name} {track.year} · {track.points.length} pts ·{' '}
+        {open ? '▾' : '▸'} {trackTitle(track)} · {track.points.length} pts ·{' '}
         {track.lengthM.toFixed(1)} m · {track.widthM.toFixed(1)} m wide ·{' '}
         <span style={{ color: colour }}>
-          {checks.length - failed}/{checks.length} checks
+          {ran.length - failed}/{ran.length} checks
+          {skipped > 0 && <span style={{ color: '#9a9aa8' }}> · {skipped} not run</span>}
         </span>
       </button>
+      <TrackPicker />
       {open && (
         <div style={{ marginTop: 6 }}>
           {checks.map((c) => (
             <div key={c.id} style={{ display: 'flex', gap: 6 }}>
-              <span style={{ color: c.pass ? '#3ecf5a' : '#ff5252' }}>{c.pass ? '✓' : '✗'}</span>
+              <span style={{ color: c.skipped ? '#9a9aa8' : c.pass ? '#3ecf5a' : '#ff5252' }}>
+                {c.skipped ? '–' : c.pass ? '✓' : '✗'}
+              </span>
               <span>
                 <span style={{ color: '#fff' }}>{c.label}</span>
                 <br />
@@ -368,10 +388,49 @@ function ChecksPanel({ track, checks }: { track: Track; checks: CheckResult[] })
             </div>
           ))}
           <div style={{ marginTop: 6, color: colour }}>
-            {failed === 0 ? 'all checks pass' : `${failed} check(s) FAILED`}
+            {failed === 0 ? 'all checks that ran pass' : `${failed} check(s) FAILED`}
+            {skipped > 0 && (
+              <span style={{ color: '#9a9aa8' }}> · {skipped} not run: no sourced reference</span>
+            )}
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * One link per registered track. Plain links rather than state: see `TRACK`
+ * above for why switching reloads. `?probe` and anything else survive.
+ */
+function TrackPicker() {
+  const search = window.location.search
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+      {UNKNOWN_TRACK && (
+        <span style={{ color: '#ff8a5f', width: '100%' }}>
+          unknown track "{UNKNOWN_TRACK}", showing {TRACK.id}
+        </span>
+      )}
+      {TRACKS.map((t) => {
+        const current = t.id === TRACK.id
+        return (
+          <a
+            key={t.id}
+            href={urlForTrack(t.id, search)}
+            aria-current={current ? 'page' : undefined}
+            style={{
+              padding: '1px 6px',
+              border: `1px solid ${current ? '#d8d8e0' : '#3a3a48'}`,
+              borderRadius: 3,
+              color: current ? '#fff' : '#9a9aa8',
+              textDecoration: 'none',
+            }}
+          >
+            {t.label}
+          </a>
+        )
+      })}
     </div>
   )
 }

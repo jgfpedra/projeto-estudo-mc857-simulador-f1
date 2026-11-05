@@ -21,7 +21,9 @@ not to this spike:
 - "Key moment" cinematic triggers (overtakes, pit stops, incidents)
 - Collision physics or crash animation
 - The Ollama race-engineer agent
-- More than one circuit
+- More than one circuit (phase 0's `interlagos_v2` was explicitly requested as
+  evidence for the geometry-source decision; it is not a second supported
+  circuit)
 
 If a task seems to need one of these, say so and propose the smallest stub that
 unblocks the current milestone instead.
@@ -48,7 +50,12 @@ npm run snapshot     # build, then render-verify in headless Chromium (see below
 # Track extraction (run once per circuit, output is committed)
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python scripts/extract_track.py --year 2024 --event Monza --out public/tracks/monza.json
+python scripts/extract_track.py --circuit monza --year 2024 --out public/tracks/monza.json
+
+# Phase 0: the engine's frozen tracks (group repo, read-only) - see
+# docs/phase0-geometry-report.md for the full commands
+python scripts/convert_frozen_track.py --circuit monza --frozen <frozen>/Monza_v1.json     --corners-from public/tracks/monza.json --out public/tracks/monza_v1.json
+python scripts/overlay_frozen.py --frozen-dir <frozen>   # docs/phase0/ plots + metrics
 ```
 
 ## Conventions
@@ -145,6 +152,16 @@ shots into a single colour and the run exits 1. First run needs
 - **Monza is deliberately flat.** Keep the elevation code path in place and feed
   it `Z = 0` for now. Don't delete it; the next circuits need it.
 - **Monaco is off the table** for this spike — GPS drops in the tunnel.
+- **F1's live-timing archive returns 401** (since at least 2026-11-04), so
+  FastF1 cannot download sessions that are not already in `.fastf1-cache/`.
+  Monza 2024 is cached; São Paulo is not, which is why phase 0 has no
+  Interlagos centreline of ours.
+- **Engine tracks are marker splines, not centrelines.** `Monza_v1` /
+  `interlagos_v2` are centripetal Catmull-Rom through FastF1's corner markers
+  (reproduced to 1e-12 m). Their known check failures are pinned in
+  `src/track/expected-verdicts.json`; don't "fix" them by loosening a check.
+- **Engine lateral is +left**: `d_ours = -d_engine`, and the engine measures it
+  against the segment normal (our `project_naive`), not the refined projector.
 
 ## Layout
 
@@ -152,12 +169,16 @@ shots into a single colour and the run exits 1. First run needs
 scripts/extract_track.py   # FastF1 → track JSON (offline, run rarely)
 scripts/extract_replay.py  # FastF1 → (s, d) replay JSON
 scripts/centreline.py      # the one (s, d) <-> world projector, shared by both
+scripts/convert_frozen_track.py  # engine frozen track -> our JSON (phase 0)
+scripts/overlay_frozen.py  # phase 0 overlay metrics + plots -> docs/phase0/
+scripts/multiviewer.py     # MultiViewer corner markers / lap outline, cached
 scripts/snapshot.mjs       # headless render verification (npm run snapshot)
 public/tracks/*.json       # committed track geometry
-src/track/                 # spline, Frenet frame, ribbon geometry
+src/track/                 # spline, frame, ribbon, checks, ?track= registry
 src/cars/                  # car model loading, instancing, (s,d) placement
 src/cameras/               # orbit / chase / onboard
 src/App.tsx
 docs/3d-design.md          # design rationale and milestones
+docs/phase0-geometry-report.md  # engine frozen tracks vs ours: the evidence
 ASSETS.md                  # third-party asset licences
 ```

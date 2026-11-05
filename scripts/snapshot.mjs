@@ -16,19 +16,29 @@
  *      mounts `src/probe.tsx` and exposes the WebGL frame counter.
  *   2. Waits until at least 60 frames have been drawn. A counter stuck at zero
  *      fails, and so does any later step that does not advance it.
- *   3. Requires the viewer's own 7 orientation checks and check J to log PASS.
- *   4. Screenshots every camera mode under both motion sources, and fails any
- *      shot whose canvas is (nearly) a single flat colour. The DOM panels are
- *      hidden for that measurement, so they cannot make a blank canvas pass.
- *   5. Wheel check, at 0.25x: steps the clock one 0.25x frame at a time beside
- *      a front wheel with the debug markers on, checks every step's spin
- *      against distance travelled, then scrubs the timeline backwards and
- *      requires the marker to come back to exactly where it was.
+ *   3. Requires the viewer's own 7 orientation checks to log the verdicts in
+ *      `src/track/expected-verdicts.json`, and check J to log PASS. For our
+ *      Monza that is all seven PASS. The engine's frozen tracks (phase 0,
+ *      docs/phase0-geometry-report.md) have known failures; those are pinned
+ *      there and print as XFAIL with the measured value, and a verdict that
+ *      changes in *either* direction fails the run.
+ *   4. Screenshots every camera mode under every motion source the track has,
+ *      and fails any shot whose canvas is (nearly) a single flat colour. The
+ *      DOM panels are hidden for that measurement, so they cannot make a blank
+ *      canvas pass.
+ *   5. Wheel check, at 0.25x, on our Monza (it needs the replay): steps the
+ *      clock one 0.25x frame at a time beside a front wheel with the debug
+ *      markers on, checks every step's spin against distance travelled, then
+ *      scrubs the timeline backwards and requires the marker to come back to
+ *      exactly where it was.
+ *   6. Then moves to each engine track by clicking its link in the viewer's
+ *      own track picker, so the selector is exercised rather than bypassed,
+ *      and repeats 2-4 with the synthetic field (no replay exists for them).
  *
  * Output: `.cache/snapshots/*.png` (gitignored). Exit code 1 on any failure.
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { preview } from 'vite'
@@ -57,7 +67,18 @@ const MODES = [
   { key: '2', name: 'chase' },
   { key: '3', name: 'onboard' },
 ]
-const SOURCES = ['synthetic', 'replay']
+/**
+ * One run per track, in this order. The first is loaded by URL; each later one
+ * is reached by clicking the previous page's track-picker link.
+ */
+const RUNS = [
+  { track: 'monza', sources: ['synthetic', 'replay'], wheel: true },
+  { track: 'monza_v1', sources: ['synthetic'], wheel: false },
+  { track: 'interlagos_v2', sources: ['synthetic'], wheel: false },
+]
+
+/** The one list of known check failures, shared with src/track/tracks.test.ts. */
+const EXPECTED = JSON.parse(readFileSync(join(ROOT, 'src', 'track', 'expected-verdicts.json'), 'utf8'))
 
 /** Wheel check: how many 0.25x frames to step, and at what frame rate. */
 const WHEEL_RATE = 0.25
@@ -71,6 +92,7 @@ const fail = (msg) => {
   console.log(`  FAIL  ${msg}`)
 }
 const pass = (msg) => console.log(`  PASS  ${msg}`)
+const note = (tag, msg) => console.log(`  ${tag.padEnd(5)} ${msg}`)
 
 // ---------------------------------------------------------------------------
 // page helpers
@@ -336,6 +358,104 @@ async function wheelCheck(page) {
 // main
 // ---------------------------------------------------------------------------
 
+/**
+ * Compare the logged orientation checks with `expected-verdicts.json`.
+ * Matching PASS prints PASS; a matching pinned FAIL or SKIP prints XFAIL / SKIP
+ * with the viewer's own detail, so the measured value is in every run's output.
+ */
+function compareVerdicts(track, logs) {
+  const summary = logs.map((l) => l.match(/(\d+)\/(\d+) orientation checks passed/)).find(Boolean)
+  if (!summary) {
+    fail(`${track}: orientation checks were never logged`)
+    return
+  }
+  const want = EXPECTED[track]?.verdicts
+  if (!want) {
+    fail(`${track}: no entry in src/track/expected-verdicts.json`)
+    return
+  }
+  const got = {}
+  for (const l of logs) {
+    // A-G only: the viewer logs other lettered lines ([I], [J]) that are not
+    // orientation checks. tracks.test.ts asserts the exact set of ids.
+    const m = l.match(/^(PASS|FAIL|SKIP) {2}\[([A-G])\] (.*)$/)
+    if (m) got[m[2]] = { verdict: m[1], text: m[3] }
+  }
+  let ok = 0
+  for (const id of Object.keys(want)) {
+    const g = got[id]
+    if (!g) fail(`${track} [${id}]: never logged`)
+    else if (g.verdict !== want[id])
+      fail(`${track} [${id}]: logged ${g.verdict}, expected-verdicts.json pins ${want[id]} - ${g.text}`)
+    else if (g.verdict === 'PASS') ok++
+    else note(g.verdict === 'FAIL' ? 'XFAIL' : 'SKIP', `${track} [${id}] ${g.text}`)
+  }
+  const extra = Object.keys(got).filter((id) => !(id in want))
+  if (extra.length) fail(`${track}: checks ${extra.join(', ')} logged but not pinned`)
+  pass(`${track}: orientation checks ${summary[1]}/${summary[2]} passed, verdicts as pinned (${ok} PASS)`)
+}
+
+async function runTrack(page, run, url, logs) {
+  console.log(`\n  track ${run.track}`)
+  try {
+    await page.waitForFunction(() => !!window.__viewer, null, { timeout: TIMEOUT_MS })
+  } catch {
+    fail(`${run.track}: probe never mounted: the app did not reach the Canvas (load error?)`)
+    return
+  }
+  const current = new URL(page.url()).searchParams.get('track') ?? 'monza'
+  if (current !== run.track) fail(`${run.track}: page is showing track "${current}"`)
+  if (!(await waitFrames(page, 0, MIN_FRAMES, `${run.track} startup`))) return
+  pass(`${run.track}: render loop: ${await frames(page)} frames drawn`)
+
+  compareVerdicts(run.track, logs)
+
+  if (run.sources.includes('replay')) {
+    try {
+      await page.waitForFunction(
+        () => [...document.querySelectorAll('button')].some((b) => b.textContent === 'replay' && !b.disabled),
+        null,
+        { timeout: TIMEOUT_MS },
+      )
+    } catch {
+      fail(`${run.track}: replay never loaded, so its button stayed disabled`)
+    }
+  }
+
+  const rows = []
+  for (const source of run.sources) {
+    await selectSource(page, source)
+    for (const mode of MODES) {
+      await pressKey(page, mode.key)
+      const from = await frames(page)
+      const ok = await waitFrames(page, from, SETTLE_FRAMES, `${run.track}/${source}/${mode.name}`)
+      const m = await measureCanvas(page)
+      const file = `${run.track}-${source}-${mode.name}.png`
+      await page.screenshot({ path: join(OUT, file) })
+      const flat = m.nonBackground < MIN_NON_BACKGROUND
+      rows.push({ source, mode: mode.name, ok: ok && !flat, ...m, drawn: (await frames(page)) - from, file })
+      if (flat)
+        fail(
+          `${run.track}/${source}/${mode.name}: canvas is a flat colour - ` +
+            `${(m.nonBackground * 100).toFixed(3)}% non-background, ${m.colours} colours`,
+        )
+    }
+    const j = logs.find((l) => l.includes('[J]') && l.includes(`${source} source`))
+    if (!j) fail(`${run.track}: check J never logged for the ${source} source`)
+    else if (!j.startsWith('PASS')) fail(`${run.track}: check J: ${j}`)
+  }
+
+  console.log('\n  source     mode      frames  non-bg %  colours  file')
+  for (const r of rows) {
+    console.log(
+      `  ${r.ok ? ' ' : '!'}${r.source.padEnd(10)}${r.mode.padEnd(10)}${String(r.drawn).padStart(6)}` +
+        `${(r.nonBackground * 100).toFixed(2).padStart(10)}${String(r.colours).padStart(9)}  ${r.file}`,
+    )
+  }
+
+  if (run.wheel) await wheelCheck(page)
+}
+
 async function main() {
   mkdirSync(OUT, { recursive: true })
   const server = await preview({ root: ROOT, logLevel: 'warn', preview: { port: 4319 } })
@@ -347,70 +467,32 @@ async function main() {
   })
   try {
     const page = await browser.newPage({ viewport: VIEWPORT, deviceScaleFactor: 1 })
-    const logs = []
+    // Reset on every navigation, so one track's check lines cannot satisfy the
+    // next track's comparison.
+    let logs = []
     page.on('console', (m) => logs.push(m.text()))
     page.on('pageerror', (e) => fail(`page error: ${e.message}`))
 
     console.log(`\n  snapshot  ${url}?probe`)
     console.log('  ' + '-'.repeat(74))
-    await page.goto(`${url}?probe`)
-    try {
-      await page.waitForFunction(() => !!window.__viewer, null, { timeout: TIMEOUT_MS })
-    } catch {
-      fail('probe never mounted: the app did not reach the Canvas (load error?)')
-      return
-    }
-    if (!(await waitFrames(page, 0, MIN_FRAMES, 'startup'))) return
-    pass(`render loop: ${await frames(page)} frames drawn`)
-
-    // The viewer's own orientation checks, logged once at load.
-    const orient = logs.map((l) => l.match(/(\d+)\/(\d+) orientation checks passed/)).find(Boolean)
-    if (!orient) fail('orientation checks were never logged')
-    else if (orient[1] !== orient[2]) fail(`orientation checks: ${orient[1]}/${orient[2]} passed`)
-    else pass(`orientation checks: ${orient[1]}/${orient[2]} passed`)
-
-    try {
-      await page.waitForFunction(
-        () => [...document.querySelectorAll('button')].some((b) => b.textContent === 'replay' && !b.disabled),
-        null,
-        { timeout: TIMEOUT_MS },
-      )
-    } catch {
-      fail('replay never loaded, so its button stayed disabled')
-    }
-
-    const rows = []
-    for (const source of SOURCES) {
-      await selectSource(page, source)
-      for (const mode of MODES) {
-        await pressKey(page, mode.key)
-        const from = await frames(page)
-        const ok = await waitFrames(page, from, SETTLE_FRAMES, `${source}/${mode.name}`)
-        const m = await measureCanvas(page)
-        const file = `${source}-${mode.name}.png`
-        await page.screenshot({ path: join(OUT, file) })
-        const flat = m.nonBackground < MIN_NON_BACKGROUND
-        rows.push({ source, mode: mode.name, ok: ok && !flat, ...m, drawn: (await frames(page)) - from, file })
-        if (flat)
-          fail(
-            `${source}/${mode.name}: canvas is a flat colour - ` +
-              `${(m.nonBackground * 100).toFixed(3)}% non-background, ${m.colours} colours`,
-          )
+    for (const [k, run] of RUNS.entries()) {
+      logs = []
+      if (k === 0) {
+        await page.goto(`${url}?probe&track=${run.track}`)
+      } else {
+        // Through the viewer's own picker: the link must keep `probe`.
+        const link = page.locator(`a[href*="track=${run.track}"]`)
+        const href = await link.getAttribute('href').catch(() => null)
+        if (!href) {
+          fail(`track picker has no link to ${run.track}`)
+          continue
+        }
+        if (!new URLSearchParams(href.replace(/^\?/, '')).has('probe'))
+          fail(`track picker link to ${run.track} drops ?probe: ${href}`)
+        await Promise.all([page.waitForURL(`**track=${run.track}**`), link.click()])
       }
-      const j = logs.find((l) => l.includes('[J]') && l.includes(`${source} source`))
-      if (!j) fail(`check J never logged for the ${source} source`)
-      else if (!j.startsWith('PASS')) fail(`check J: ${j}`)
+      await runTrack(page, run, url, logs)
     }
-
-    console.log('\n  source     mode      frames  non-bg %  colours  file')
-    for (const r of rows) {
-      console.log(
-        `  ${r.ok ? ' ' : '!'}${r.source.padEnd(10)}${r.mode.padEnd(10)}${String(r.drawn).padStart(6)}` +
-          `${(r.nonBackground * 100).toFixed(2).padStart(10)}${String(r.colours).padStart(9)}  ${r.file}`,
-      )
-    }
-
-    await wheelCheck(page)
   } finally {
     await browser.close()
     await new Promise((r) => server.httpServer.close(r))
