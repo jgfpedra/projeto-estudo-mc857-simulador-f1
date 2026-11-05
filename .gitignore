@@ -231,3 +231,19 @@ backend/f1db.db
 backend/f1db-sqlite.zip
 backend/data/circuit_layouts_evolution.json
 backend/cache
+
+# viz3d (3D visualisation spike, see viz3d/CLAUDE.md)
+viz3d/node_modules/
+viz3d/dist/
+viz3d/.cache/
+# Python virtualenvs anywhere in the tree
+.venv/
+venv/
+# FastF1 HTTP/session cache and any backup copy of it - never commit
+.fastf1-cache/
+.fastf1-cache*/
+fastf1-cache-backup*/
+# Playwright output
+test-results/
+playwright-report/
+playwright/.cache/

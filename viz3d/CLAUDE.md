@@ -1,11 +1,14 @@
 # CLAUDE.md
 
-## What this repo is
+## What this is
 
-A standalone spike for the 3D visualisation layer of an F1 race simulator
-(MC857, group "F1maça"). **This is not the group project repo.** The goal is to
-get one circuit — Monza, 2024 — rendering in Three.js with cars moving along it,
-and to get familiar with the toolchain before any of this is integrated.
+The 3D visualisation spike for the F1 race simulator (MC857, group "F1maça").
+It now lives inside the group repo at `viz3d/` (brought in with
+`git subtree`, history kept), but it is **still a separate app**: own
+`package.json`, own `requirements.txt`, no imports from `frontend/` or
+`backend/`, and nothing in it may read files outside `viz3d/`. Run every
+command below from `viz3d/`. The goal is unchanged: one circuit — Monza,
+2024 — rendering in Three.js with cars moving along it.
 
 Design rationale, data pipeline details and the milestone list live in
 `docs/3d-design.md`. Read it before making architectural changes.
@@ -52,10 +55,10 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python scripts/extract_track.py --circuit monza --year 2024 --out public/tracks/monza.json
 
-# Phase 0: the engine's frozen tracks (group repo, read-only) - see
-# docs/phase0-geometry-report.md for the full commands
-python scripts/convert_frozen_track.py --circuit monza --frozen <frozen>/Monza_v1.json     --corners-from public/tracks/monza.json --out public/tracks/monza_v1.json
-python scripts/overlay_frozen.py --frozen-dir <frozen>   # docs/phase0/ plots + metrics
+# Phase 0: the engine's frozen tracks, vendored read-only in vendor/tracks_frozen/
+# (see PROVENANCE.md there) - docs/phase0-geometry-report.md has the full commands
+python scripts/convert_frozen_track.py --circuit monza --frozen vendor/tracks_frozen/Monza_v1.json --corners-from public/tracks/monza.json --out public/tracks/monza_v1.json
+python scripts/overlay_frozen.py --frozen-dir vendor/tracks_frozen   # docs/phase0/ plots + metrics
 ```
 
 ## Conventions
@@ -174,6 +177,7 @@ scripts/overlay_frozen.py  # phase 0 overlay metrics + plots -> docs/phase0/
 scripts/multiviewer.py     # MultiViewer corner markers / lap outline, cached
 scripts/snapshot.mjs       # headless render verification (npm run snapshot)
 public/tracks/*.json       # committed track geometry
+vendor/tracks_frozen/      # engine frozen tracks, copied byte-exact from feat/bot-ai
 src/track/                 # spline, frame, ribbon, checks, ?track= registry
 src/cars/                  # car model loading, instancing, (s,d) placement
 src/cameras/               # orbit / chase / onboard

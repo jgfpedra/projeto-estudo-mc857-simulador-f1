@@ -2,16 +2,17 @@
 
 Phase 0 of evaluating the simulation engine's frozen tracks as the single
 geometry source (docs/phase0-geometry-report.md). The input is one of the
-group repo's `backend/model_train/tracks_frozen/*.json`, read and never
+`backend/model_train/tracks_frozen/*.json` (feat/bot-ai), vendored under
+`vendor/tracks_frozen/`, read and never
 written:
 
     python scripts/convert_frozen_track.py --circuit monza \\
-        --frozen <group-repo>/backend/model_train/tracks_frozen/Monza_v1.json \\
+        --frozen vendor/tracks_frozen/Monza_v1.json \\
         --corners-from public/tracks/monza.json \\
         --out public/tracks/monza_v1.json
 
     python scripts/convert_frozen_track.py --circuit interlagos \\
-        --frozen <group-repo>/backend/model_train/tracks_frozen/interlagos_v2.json \\
+        --frozen vendor/tracks_frozen/interlagos_v2.json \\
         --corners-from-multiviewer --out public/tracks/interlagos_v2.json
 
 What it does, and deliberately does not do

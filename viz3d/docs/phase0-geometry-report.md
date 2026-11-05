@@ -13,19 +13,32 @@ markers. Monza_v1's Hausdorff distance to our centreline is **105.5 m**. The
 viewer renders them without code changes, but it renders their shape faithfully,
 and that shape is not Monza.
 
-Everything below is reproducible:
+Everything below is reproducible. Run it from `viz3d/` (Python env:
+`requirements.txt`; npm deps: `npm ci`):
 
 ```bash
-python scripts/convert_frozen_track.py --circuit monza --frozen <frozen>/Monza_v1.json \
+python scripts/convert_frozen_track.py --circuit monza --frozen vendor/tracks_frozen/Monza_v1.json \
     --corners-from public/tracks/monza.json --out public/tracks/monza_v1.json
-python scripts/convert_frozen_track.py --circuit interlagos --frozen <frozen>/interlagos_v2.json \
+python scripts/convert_frozen_track.py --circuit interlagos --frozen vendor/tracks_frozen/interlagos_v2.json \
     --corners-from-multiviewer --out public/tracks/interlagos_v2.json
-python scripts/overlay_frozen.py --frozen-dir <frozen>      # -> docs/phase0/metrics.json + plots
-npm test && npm run snapshot
+python scripts/overlay_frozen.py --frozen-dir vendor/tracks_frozen   # -> docs/phase0/metrics.json + plots
+npm run typecheck && npm test && npm run snapshot
 ```
 
-`<frozen>` is `<group-repo>/backend/model_train/tracks_frozen`. Commit
-`cf6529f863` is on `feat/bot-ai`, with both files clean in its working tree.
+`vendor/tracks_frozen/` holds byte-exact copies of
+`backend/model_train/tracks_frozen/{Monza_v1,interlagos_v2}.json` from this
+repo's branch `feat/bot-ai`, commit `cf6529f863`. Their blob ids and hashes are
+in `vendor/tracks_frozen/PROVENANCE.md`. The two `--corners-from-multiviewer` /
+overlay steps fetch MultiViewer's circuit data on first run and cache it under
+`.cache/multiviewer/` (not committed; see ASSETS.md).
+
+Re-run from the vendored copies on 2026-11-04: geometry, corners and
+`docs/phase0/` (metrics and plots) came out byte-identical. The only part of the
+two track JSONs that changes is the `source` block's git provenance
+(`repo`/`branch`/`commit`/`path`/`gitBlob`/`dirty` now describe the vendored
+copy, not `feat/bot-ai`), and for interlagos_v2 `fileSha256`, because the
+committed value was hashed from a CRLF checkout (PROVENANCE.md explains). So keep
+the committed `source` blocks: they record the true origin.
 
 ---
 

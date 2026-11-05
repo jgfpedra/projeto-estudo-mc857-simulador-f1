@@ -24,6 +24,18 @@ FastF1's `get_circuit_info()`, sourced from MultiViewer
 (https://multiviewer.app/). Corner *names* are written by hand in
 `CircuitRef.corner_names` and are descriptive geographic names, not F1 marks.
 
+The same FastF1 session (2024 Italian GP, race, position telemetry, MIT-licensed
+library, data from F1 live timing via FastF1's cache) is also the source of:
+
+- `public/replays/monza-2024-race.json`: 388 KB, the (s, d) replay, made by
+  `scripts/extract_replay.py`. The viewer's replay source and
+  `src/replay/source.test.ts` need it.
+- `scripts/fixtures/roundtrip-monza-2024.json`: 22 KB, sampled FastF1
+  positions with their projected (s, d). `src/replay/roundtrip.test.ts` needs it.
+
+The raw FastF1 cache (`.fastf1-cache/`, ~85 MB) and any copy of it are never
+committed.
+
 Phase 0 (docs/phase0-geometry-report.md) added two more:
 
 - `public/tracks/monza_v1.json` and `public/tracks/interlagos_v2.json` are
@@ -32,7 +44,9 @@ Phase 0 (docs/phase0-geometry-report.md) added two more:
   `feat/bot-ai`, commit `cf6529f863`), converted 2026-11-04. That is the group's
   own data, not third-party. Each file's `source` block records the commit, git
   blob and both hashes. The frozen tracks are themselves splines through
-  FastF1/MultiViewer corner markers (report §3).
+  FastF1/MultiViewer corner markers (report §3). The two source files are
+  vendored byte-exact under `vendor/tracks_frozen/` (origin and hashes in its
+  `PROVENANCE.md`), so the reproduction doesn't need `feat/bot-ai`.
 - The plots in `docs/phase0/` draw MultiViewer's corner markers and one recorded
   lap outline per circuit, fetched from `api.multiviewer.app` (the service
   FastF1's `get_circuit_info()` uses) on 2026-11-04. No licence is stated for

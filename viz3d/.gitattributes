@@ -1,0 +1,3 @@
+# Vendored engine tracks must stay byte-exact (their sha256 is recorded in
+# vendor/tracks_frozen/PROVENANCE.md): no line-ending conversion on checkout.
+vendor/tracks_frozen/*.json -text

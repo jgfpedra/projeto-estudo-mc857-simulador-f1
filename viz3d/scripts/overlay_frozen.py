@@ -2,7 +2,7 @@
 
 Produces every number and plot in docs/phase0-geometry-report.md:
 
-    python scripts/overlay_frozen.py --frozen-dir <group-repo>/backend/model_train/tracks_frozen
+    python scripts/overlay_frozen.py --frozen-dir vendor/tracks_frozen
 
 writes `docs/phase0/metrics.json` and `docs/phase0/*.png`. Reads
 `public/tracks/{monza,monza_v1,interlagos_v2}.json`, the original frozen files
