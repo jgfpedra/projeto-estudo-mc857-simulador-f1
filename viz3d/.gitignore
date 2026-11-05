@@ -1,0 +1,31 @@
+# node
+node_modules/
+dist/
+*.local
+
+# python
+.venv/
+__pycache__/
+*.py[cod]
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# FastF1 cache and raw session data - never commit (CLAUDE.md)
+.fastf1-cache/
+
+# pipeline intermediates (stage dumps, plots for review) and
+# npm run snapshot screenshots (.cache/snapshots/)
+.cache/
+test-results/
+playwright-report/
+
+# secrets
+.env
+.env.*
+
+# editor / os
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
