@@ -27,11 +27,11 @@ def apply_event(state: LiveRaceState, event: dict) -> List[str]:
     eventos = []
     event_type = event.get("type")
 
-    if event_type == "position_update" or event_type == "tick":
+    if event_type in ("position_update", "tick"):
         state.lap = event.get("lap", state.lap)
         if event.get("weather"):
             state.weather = event["weather"]
-
+        state.positions = event.get("positions", state.positions)
         new_positions = event.get("positions", [])
         # detecta mudança de posição por piloto
         current_by_driver = {p["driver_id"]: idx + 1 for idx, p in enumerate(
@@ -46,6 +46,7 @@ def apply_event(state: LiveRaceState, event: dict) -> List[str]:
         state.positions = new_positions
 
     elif event_type == "pit_stop":
+        state.lap = event.get("lap", state.lap)
         driver_id = event.get("driver_id")
         state.recent_pit_stops.append(driver_id)
         eventos.append(f"Pit stop: piloto {driver_id} trocou para {
@@ -58,11 +59,13 @@ def apply_event(state: LiveRaceState, event: dict) -> List[str]:
                        event.get('tyre_life_pct')}% de vida)")
 
     elif event_type == "weather_changed":
+        state.lap = event.get("lap", state.lap)
         state.weather = event.get("current", state.weather)
-        state.weather_changed_recently = True
-        prev_kind = event.get("previous", {}).get("kind", "?")
-        new_kind = event.get("current", {}).get("kind", "?")
-        eventos.append(f"Clima mudou: {prev_kind} -> {new_kind}")
+        prev_kind = event.get("previous", {}).get("kind")
+        new_kind = event.get("current", {}).get("kind")
+        if prev_kind != new_kind:
+            state.weather_changed_recently = True
+            eventos.append(f"Clima mudou: {prev_kind} -> {new_kind}")
 
     return eventos
 

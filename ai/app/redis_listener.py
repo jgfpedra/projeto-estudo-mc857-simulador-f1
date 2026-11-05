@@ -32,6 +32,10 @@ def build_live_prompt(context_text: str) -> str:
   "urgencia": "baixa" | "media" | "alta"
 }}
 
+Você só enxerga posições, combustível, pneus e clima.
+Não dê instruções de pilotagem (direção, curvas, aceleração).
+Se nada exige ação, diga que está tudo sob controle e use urgência baixa.
+
 === ESTADO ATUAL DA CORRIDA ===
 {context_text}
 """
@@ -47,7 +51,7 @@ def run_listener(race_id: str, followed_driver_id: str):
     warm_up()
 
     state = LiveRaceState(race_id=race_id)
-
+    last_periodic_sim_ts = 0.0
     for message in pubsub.listen():
         if message["type"] != "message":
             continue
@@ -60,6 +64,12 @@ def run_listener(race_id: str, followed_driver_id: str):
 
         eventos = apply_event(state, event)
 
+        if event.get("type") == "tick":
+            sim_ts = event.get("sim_ts", 0.0)
+            if sim_ts - last_periodic_sim_ts >= 30.0:
+                last_periodic_sim_ts = sim_ts
+                eventos.append(f"Atualização periódica (t={sim_ts:.0f}s de simulação)")
+
         if not should_trigger_live(eventos):
             continue
 
@@ -67,6 +77,7 @@ def run_listener(race_id: str, followed_driver_id: str):
               state.lap}: eventos detectados, acionando agente...")
         context_text = format_live_context(state, followed_driver_id, eventos)
         prompt = build_live_prompt(context_text)
+        print(f"[DEBUG] contexto enviado ao modelo:\n{context_text}\n")
 
         model_result = call_model(prompt)
         if not model_result["ok"]:
