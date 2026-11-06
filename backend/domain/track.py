@@ -196,7 +196,7 @@ class Track:
             raise ValueError("track has no waypoints")
         return self.waypoints[idx % len(self.waypoints)]
 
-    def initial_position(self, index: int = 0) -> Point2D:        
+    def initial_position(self, index: int = 0) -> Point2D:
         """Retorna a posição inicial (x, y) no grid de largada para o carro de índice `index`.
         Se o índice estiver além das posições pré-calculadas em `initial_positions`,
         computa o slot dinamicamente mantendo o espaçamento e padrão do grid."""
@@ -280,12 +280,18 @@ class Track:
                 best_idx = i
         return math.sqrt(best_dist2), best_idx
 
-    def distance_to_centerline(self, x: float, y: float) -> float:
-        """Fallback O(W) — use só em testes/APIs externas sem hint disponível."""
+    def nearest_segment(self, x: float, y: float) -> Tuple[float, int]:
+        """Busca completa pelo segmento mais próximo.
+
+        Retorna (distância, índice do waypoint inicial do segmento).
+        O índice é o mesmo hint usado por `distance_to_centerline_near`.
+        """
         n = len(self.waypoints)
         if n < 2:
-            return 0.0
+            return 0.0, 0
+
         best_dist2 = float("inf")
+        best_idx = 0
         for i in range(n):
             ax, ay = self.waypoints[i]
             bx, by = self.waypoints[(i + 1) % n]
@@ -293,12 +299,19 @@ class Track:
             seg_len2 = abx * abx + aby * aby
             if seg_len2 < 1e-9:
                 continue
+
             t = max(0.0, min(1.0, ((x - ax) * abx + (y - ay) * aby) / seg_len2))
             cx, cy = ax + t * abx, ay + t * aby
             dist2 = (x - cx) ** 2 + (y - cy) ** 2
             if dist2 < best_dist2:
                 best_dist2 = dist2
-        return math.sqrt(best_dist2)
+                best_idx = i
+
+        return math.sqrt(best_dist2), best_idx
+
+    def distance_to_centerline(self, x: float, y: float) -> float:
+        dist, _ = self.nearest_segment(x, y)
+        return dist
 
     # ------------------------------------------------------------------
     # Superfície: versões com e sem distância pré-calculada
@@ -389,7 +402,8 @@ def compute_grid_slot(
     nx, ny = -fy, fx
 
     dist_back = first_slot_dist_m + slot_index * slot_spacing_m
-    lateral_offset = min(2.5, max(1.0, width_m * 0.22)) * (1.0 if slot_index % 2 == 0 else -1.0)
+    lateral_offset = min(2.5, max(1.0, width_m * 0.22)) * \
+        (1.0 if slot_index % 2 == 0 else -1.0)
     px = p_curr[0] - dist_back * fx + lateral_offset * nx
     py = p_curr[1] - dist_back * fy + lateral_offset * ny
     return (float(px), float(py))
@@ -411,6 +425,7 @@ def compute_grid_positions(
         )
         for i in range(max(1, num_slots))
     ]
+
 
 def _catmull_rom_spline(
     points: Sequence[Point2D],
