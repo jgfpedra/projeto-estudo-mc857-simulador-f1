@@ -985,6 +985,16 @@ class PyBulletPhysics:
     def all_handles(self) -> List[PhysicsCarHandle]:
         return list(self._cars.values())
 
+    def get_contact_points(self) -> list:
+        """Contatos do último passo de física (tuplas cruas de 14 campos do PyBullet).
+
+        Inclui TODOS os pares de corpos (carro×carro, carro×chão). O filtro e a
+        agregação por par de carros ficam em ``engine.collisions``.
+        """
+        if not self._initialised:
+            return []
+        return list(p.getContactPoints(physicsClientId=self._client_id))
+
     def draw_track_surface(
         self,
         waypoints: Sequence[Tuple[float, float]],

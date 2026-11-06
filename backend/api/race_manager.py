@@ -95,6 +95,7 @@ class RaceManager:
             num_laps=laps,
             gui=False,      # sem janela do PyBullet: isso roda num servidor
             realtime=True,  # pacing em tempo real, pro front acompanhar "ao vivo"
+            collision_events=True,  # publica CollisionEvent (só aviso, sem consequência)
         )
 
         drivers = list(DEFAULT_DRIVERS)
