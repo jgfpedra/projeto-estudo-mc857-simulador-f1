@@ -37,7 +37,9 @@ from domain import (
     WeatherTransitionConfig,
     BASE_CONDITIONS,
 )
+from .collisions import CollisionTracker, car_contacts_from_raw
 from .events import (
+    CollisionEvent,
     Event,
     LapCompletedEvent,
     PitStopEvent,
@@ -86,6 +88,13 @@ class SimulationConfig:
     input_source_type: str = "memory"  # "memory" | "redis"
     input_fallback: str = "brake"       # "brake" (freia aos poucos) | "neutral" (parado)
     input_stale_after_s: float = 1.0    # input sem atualização há mais de N segundos → fallback
+    # Aviso de colisão carro×carro (só detecta e publica CollisionEvent; não altera
+    # a física nem aplica consequência). DESLIGADO por padrão: o treino de RL
+    # chama _step_tick em laço quente e não precisa do custo extra.
+    collision_events: bool = False
+    collision_force_threshold_n: float = 1.0  # força normal mínima por ponto de contato
+    collision_penetration_m: float = 0.001    # OU penetração mínima (0 desliga); ver engine/collisions.py
+    collision_release_s: float = 0.5          # s sem contato para o par ser dado como separado
 
 
 # ---------------------------------------------------------------------------
@@ -146,6 +155,7 @@ class SimulationEngine:
         self.last_pos: Dict[str, Tuple[float, float]] = {}
         self.last_tyre_warn_pct: Dict[str, float] = {}
         self.last_weather_kind: WeatherKind = self.weather_model.current.kind
+        self.collision_tracker = CollisionTracker(release_after_s=config.collision_release_s)
 
     # ------------------------------------------------------------------
     # Setup
@@ -421,6 +431,7 @@ class SimulationEngine:
         self.physics.step_with_control(controls, sub_steps)
         self.sim_ts += dt
 
+        self._detect_collisions()
         self._check_lap_completion()
         self._publish_tick()
 
@@ -780,6 +791,37 @@ class SimulationEngine:
             lap=lap,
             positions=positions,
         ))
+
+    def _detect_collisions(self) -> None:
+        """Publica um CollisionEvent quando dois carros COMEÇAM a se tocar.
+
+        Só avisa: a física do choque já foi resolvida pelo PyBullet no passo
+        anterior e nada aqui a altera. Ver ``engine/collisions.py``.
+        """
+        if not self.config.collision_events:
+            return
+        chassis_to_driver = {h.chassis_id: drv_id for drv_id, h in self.handles.items()}
+        contacts = car_contacts_from_raw(
+            self.physics.get_contact_points(),
+            chassis_to_driver,
+            self.config.collision_force_threshold_n,
+            self.config.collision_penetration_m,
+        )
+        names = {d.driver_id: d.name for d in self.drivers}
+        for c in self.collision_tracker.update(contacts, self.sim_ts):
+            lap_a = self.states[c.driver_a_id].lap if c.driver_a_id in self.states else 0
+            lap_b = self.states[c.driver_b_id].lap if c.driver_b_id in self.states else 0
+            self.publisher.publish(CollisionEvent(
+                sim_ts=self.sim_ts,
+                lap=max(lap_a, lap_b),
+                driver_a_id=c.driver_a_id,
+                driver_a_name=names.get(c.driver_a_id, ""),
+                driver_b_id=c.driver_b_id,
+                driver_b_name=names.get(c.driver_b_id, ""),
+                position_xy=[round(c.position_xy[0], 2), round(c.position_xy[1], 2)],
+                impact_force_n=round(c.normal_force_n, 1),
+                penetration_m=round(c.penetration_m, 3),
+            ))
 
     def _publish_tick(self) -> None:
         positions = [self._snapshot_position(d) for d in self.drivers]
