@@ -102,6 +102,39 @@ def apply_event(state: LiveRaceState, event: dict,
             state.weather_changed_recently = True
             eventos.append(f"Clima mudou: {prev_kind} -> {new_kind}")
 
+    elif event_type == "lap_completed":
+        state.lap = event.get("lap", state.lap)
+        driver_id = event.get("driver_id")
+        if _is_relevant(state, driver_id, followed_driver_id):
+            eventos.append(
+                f"Volta completada: piloto {driver_id} na volta "
+                f"{event.get('lap')} ({event.get('lap_time_s')}s)")
+
+    elif event_type == "off_track":
+        driver_id = event.get("driver_id")
+        state.lap = event.get("lap", state.lap)
+        nome = event.get("driver_name", driver_id)
+        quem = "Você" if driver_id == followed_driver_id else f"O rival {nome}"
+        eventos.append(
+            f"{quem} saiu da pista ({event.get('side')}, "
+            f"{event.get('distance_m')} m além da borda, "
+            f"{event.get('speed_mps')} m/s) na volta {event.get('lap')}"
+        )
+
+    elif event_type == "on_track":
+        driver_id = event.get("driver_id")
+        nome = event.get("driver_name", driver_id)
+        quem = "Você" if driver_id == followed_driver_id else f"O rival {nome}"
+        eventos.append(
+            f"{quem} voltou para a pista após {event.get('duration_s')}s"
+        )
+
+    elif event_type == "race_start":
+        eventos.append("Corrida iniciada")
+
+    elif event_type == "race_end":
+        eventos.append("Corrida encerrada")
+
     return eventos
 
 

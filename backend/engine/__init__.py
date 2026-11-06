@@ -14,6 +14,8 @@ from .events import (
     TickEvent,
     TyreWornEvent,
     WeatherChangedEvent,
+    OffTrackEvent,
+    OnTrackEvent
 )
 from .publisher import (
     JSONLPublisher,
@@ -38,6 +40,7 @@ from .input_source import (
     InMemoryInputSource,
     RedisInputSource,
 )
+from .keyboard_pilot import KeyboardPilot, KeyboardPilotConfig
 
 __all__ = [
     # Events
@@ -50,6 +53,8 @@ __all__ = [
     "PitStopEvent",
     "PositionUpdateEvent",
     "TickEvent",
+    "OnTrackEvent",
+    "OffTrackEvent",
     # Publishers
     "Publisher",
     "JSONLPublisher",
@@ -74,4 +79,7 @@ __all__ = [
     "InMemoryInputSource",
     "FileInputSource",
     "RedisInputSource",
+    # Keyboard control (GUI)
+    "KeyboardPilot",
+    "KeyboardPilotConfig",
 ]

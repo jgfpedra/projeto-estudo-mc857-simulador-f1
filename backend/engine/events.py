@@ -33,6 +33,26 @@ class RaceStartEvent(Event):
     num_drivers: int = 0
     config: Dict[str, Any] = field(default_factory=dict)
 
+@dataclass
+class OffTrackEvent(Event):
+    type: str = "off_track"
+    driver_id: str = ""
+    driver_name: str = ""
+    lap: int = 0
+    side: str = ""              # "esquerda" | "direita"
+    distance_m: float = 0.0     # metros além da borda
+    speed_mps: float = 0.0
+    severity: str = "leve"      # "leve" | "grave"
+
+
+@dataclass
+class OnTrackEvent(Event):
+    type: str = "on_track"
+    driver_id: str = ""
+    driver_name: str = ""
+    lap: int = 0
+    duration_s: float = 0.0
+
 
 @dataclass
 class RaceEndEvent(Event):

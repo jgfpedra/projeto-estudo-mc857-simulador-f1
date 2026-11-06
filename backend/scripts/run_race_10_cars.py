@@ -33,8 +33,6 @@ MODEL_DIR = BACKEND_DIR / "model_train"
 for p_dir in [str(PROJECT_ROOT), str(BACKEND_DIR), str(MODEL_DIR)]:
     if p_dir not in sys.path:
         sys.path.insert(0, p_dir)
-from backend.engine import SimulationEngine, SimulationConfig, RedisPublisher
-from backend.model_train.f1_env import resolve_track
 from backend.domain import (
     CarSpecs,
     Driver,
@@ -43,6 +41,11 @@ from backend.domain import (
     WeatherModel,
     WeatherKind,
     BASE_CONDITIONS,
+)
+from backend.model_train.f1_env import resolve_track
+from backend.engine import (
+    SimulationEngine, SimulationConfig, RedisPublisher,
+    TyreWornEvent, PitStopEvent, PositionUpdateEvent,
 )
 # Garante inclusão da raiz do projeto e de backend no sys.path
 # CORREÇÃO (investigação v2-vs-v4): era `BACKEND_DIR / "model_train" / "v2"` —
@@ -184,7 +187,6 @@ GRID_DRIVERS_CONFIG = [
 
 
 def ensure_npz_weights_exist(keras_path: Path, npz_path: Path) -> Path:
-    """Extrai pesos do modelo Keras para formato NPZ semântico via subprocesso isolado se necessário."""
     need_export = False
     if not npz_path.exists():
         need_export = True
@@ -408,6 +410,8 @@ class NeuralRaceController:
         self._res_prev = {}          # drv -> (prev_steer, prev_long) p/ o residual
         self._res_gate = {}          # drv -> último gate (instrumento)
         self._res_norm = {}          # drv -> último |r| (instrumento)
+        self._offtrack = {}
+        self._offtrack_since = {}
 
     def _build_tables(self, A: np.ndarray, half_width: float) -> None:
         B = np.roll(A, -1, axis=0)
@@ -775,6 +779,10 @@ class NeuralRaceController:
             # ==================================================================
             lat_dist = float(drv_lat[i])
             offtrack = lat_dist > self._half_width * self.OFFTRACK_FACTOR
+            self._publish_track_status(
+                engine, drivers[i], offtrack, lat_dist,
+                float(drv_signed[i]), speed,
+            )
             gov_braked = False
 
             # ---- 4. governor --------------------------------------------------
@@ -840,6 +848,37 @@ class NeuralRaceController:
             self.last_authority[drivers[i].driver_id] = authority
             actions.append((th, brk, steer_rad))
         return actions
+
+    def _publish_track_status(self, engine, drv, offtrack,
+                              lat_dist, signed_lat, speed):
+        from backend.engine import OffTrackEvent, OnTrackEvent
+        was_off = self._offtrack.get(drv.driver_id, False)
+
+        if offtrack and not was_off:
+            self._offtrack_since[drv.driver_id] = engine.sim_ts
+            excess = max(0.0, lat_dist - self._half_width)
+            engine.publisher.publish(OffTrackEvent(
+                sim_ts=engine.sim_ts,
+                driver_id=drv.driver_id,
+                driver_name=drv.name,
+                lap=engine.states[drv.driver_id].lap,
+                side="esquerda" if signed_lat > 0 else "direita",
+                distance_m=round(excess, 2),
+                speed_mps=round(speed, 2),
+                severity="grave" if excess > 3.0 else "leve",
+            ))
+
+        elif was_off and not offtrack:
+            since = self._offtrack_since.pop(drv.driver_id, engine.sim_ts)
+            engine.publisher.publish(OnTrackEvent(
+                sim_ts=engine.sim_ts,
+                driver_id=drv.driver_id,
+                driver_name=drv.name,
+                lap=engine.states[drv.driver_id].lap,
+                duration_s=round(engine.sim_ts - since, 2),
+            ))
+
+        self._offtrack[drv.driver_id] = offtrack
 
     def _v_gov_active(self, s, speed):
         """(diagnóstico) o governador está freando neste estado?"""
@@ -1105,6 +1144,9 @@ def run_race():
                              "histórico | off = sem governor")
     parser.add_argument("--n-cars", type=int, default=10,
                         help="Quantos carros do grid usar (1-10)")
+    parser.add_argument("--debug-cars", action="store_true",
+                        help="""Imprime velocidade/distância/autoridade
+                        por carro a cada 1s""")
     parser.add_argument("--redis", action="store_true",
                         help="Publica eventos no Redis para o listener da IA")
     parser.add_argument("--race-id", default="f1_10_cars_race",
@@ -1113,6 +1155,9 @@ def run_race():
                         help="Host do Redis (default: localhost)")
     parser.add_argument("--redis-port", type=int, default=6379,
                         help="Porta do Redis (default: 6379)")
+    parser.add_argument("--demo-events", action="store_true",
+                        help="Injeta tyre/pit/position events a cada N segundos")
+    parser.add_argument("--event-every-s", type=float, default=10.0)
     args = parser.parse_args()
 
     prof = PROFILES[args.profile]
@@ -1227,6 +1272,10 @@ def run_race():
     dt = 1.0 / sim_config.logic_step_hz
     last_ui_print = 0.0
 
+    last_demo_event_ts = 0.0
+    demo_event_idx = 0
+    last_debug_ts = 0.0
+
     print("\n🏁 TUDO PRONTO! CORRIDA DE 10 CARROS INICIADA! 🏁\n")
     engine.race_started = True
 
@@ -1307,6 +1356,37 @@ def run_race():
             # 3. Avança um tick físico
             engine._step_tick(dt, sim_config.physics_sub_steps)
 
+            if publisher is not None and args.demo_events:
+                if engine.sim_ts - last_demo_event_ts >= args.event_every_s:
+                    last_demo_event_ts = engine.sim_ts
+                    drv = drivers[demo_event_idx % len(drivers)]
+                    state = engine.states[drv.driver_id]
+
+                    if demo_event_idx % 2 == 0:
+                        engine.publisher.publish(TyreWornEvent(
+                            sim_ts=engine.sim_ts,
+                            driver_id=drv.driver_id,
+                            driver_name=drv.name,
+                            compound=state.tyre.model.compound.value,
+                            tyre_life_pct=18.0,
+                            age_laps=state.tyre.age_laps,
+                        ))
+                        print(f"[DemoEvents] tyre_worn: {drv.driver_id}")
+                    else:
+                        engine.publisher.publish(PitStopEvent(
+                            sim_ts=engine.sim_ts,
+                            driver_id=drv.driver_id,
+                            driver_name=drv.name,
+                            lap=state.lap,
+                            new_compound="MEDIUM",
+                            fuel_added_kg=30.0,
+                            pit_time_s=22.0,
+                        ))
+                        print(f"[DemoEvents] pit_stop: {drv.driver_id}")
+
+                    engine._publish_position_update(state.lap)
+                    demo_event_idx += 1
+
             # 4. Atualiza câmera e HUD 3D
             if not args.no_gui:
                 if camera_mode == "follow":
@@ -1318,6 +1398,21 @@ def run_race():
             if engine.sim_ts - last_ui_print >= 0.5:
                 print_leaderboard(engine, drivers, engine.sim_ts)
                 last_ui_print = engine.sim_ts
+
+            # 5.1 Debug por carro
+            if args.debug_cars and engine.sim_ts - last_debug_ts >= 1.0:
+                last_debug_ts = engine.sim_ts
+                print(f"\n[debug-cars] sim_ts={engine.sim_ts:.1f}s")
+                for drv in drivers:
+                    st = engine.states[drv.driver_id]
+                    print(
+                        f"  {drv.driver_id}: "
+                        f"v={st.velocity_mps * 3.6:6.1f} km/h | "
+                        f"dist={engine.cum_dist_m.get(drv.driver_id, 0.0):8.1f} m | "
+                        f"authority={controller.last_authority.get(
+                            drv.driver_id, '?'):15s} | "
+                        f"x={st.position_x:8.1f} y={st.position_y:8.1f}"
+                    )
 
             # 6. Sincronização em tempo real
             if args.realtime:
@@ -1338,6 +1433,7 @@ def run_race():
 
         engine.physics.close()
         print("Simulação concluída com sucesso.")
+
 
 if __name__ == "__main__":
     run_race()
