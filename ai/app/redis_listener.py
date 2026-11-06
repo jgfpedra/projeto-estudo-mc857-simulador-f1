@@ -41,7 +41,7 @@ Se nada exige ação, diga que está tudo sob controle e use urgência baixa.
 """
 
 
-def run_listener(race_id: str, followed_driver_id: str):
+def run_listener(race_id: str, followed_driver_id: str, periodic_s: float = 10.0):
     r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
     pubsub = r.pubsub()
     events_channel = f"race:{race_id}:events"
@@ -62,13 +62,21 @@ def run_listener(race_id: str, followed_driver_id: str):
             print("[ai_listener] evento não é JSON válido, ignorando")
             continue
 
-        eventos = apply_event(state, event)
+        if event.get("type") == "tick":
+            sim_ts = event.get("sim_ts", 0.0)
+            if int(sim_ts * 10) % 50 == 0:
+                print(f"[ai_listener] tick recebido: lap={event.get('lap')} "
+                      f"sim_ts={sim_ts:.1f}s")
+
+        eventos = apply_event(state, event, followed_driver_id)
 
         if event.get("type") == "tick":
             sim_ts = event.get("sim_ts", 0.0)
-            if sim_ts - last_periodic_sim_ts >= 30.0:
+            if sim_ts - last_periodic_sim_ts >= periodic_s:
                 last_periodic_sim_ts = sim_ts
-                eventos.append(f"Atualização periódica (t={sim_ts:.0f}s de simulação)")
+                eventos.append(
+                    f"Atualização periódica (t={sim_ts:.0f}s de simulação)")
+                print(f"[ai_listener] gatilho periódico em t={sim_ts:.1f}s")
 
         if not should_trigger_live(eventos):
             continue
@@ -99,4 +107,5 @@ if __name__ == "__main__":
     import sys
     race_id = sys.argv[1] if len(sys.argv) > 1 else "race_001"
     driver_id = sys.argv[2] if len(sys.argv) > 2 else "drv_01"
-    run_listener(race_id, driver_id)
+    interval = float(sys.argv[3]) if len(sys.argv) > 3 else 10.0
+    run_listener(race_id, driver_id, periodic_s=interval)

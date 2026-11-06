@@ -1,5 +1,9 @@
+import math
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Set
+
+NEARBY_RADIUS_M = 100.0   # raio para considerar um rival "próximo"
+FILTER_MIN_CARS = 4
 
 
 @dataclass
@@ -19,7 +23,35 @@ class LiveRaceState:
         default_factory=dict)  # para detectar mudança
 
 
-def apply_event(state: LiveRaceState, event: dict) -> List[str]:
+def nearby_driver_ids(state: "LiveRaceState",
+                      followed_driver_id: str,
+                      radius_m: float = NEARBY_RADIUS_M) -> Set[str]:
+    """IDs dos pilotos a até radius_m do piloto acompanhado (inclui ele mesmo)."""
+    followed = next((p for p in state.positions
+                     if p.get("driver_id") == followed_driver_id), None)
+    if followed is None:
+        return {followed_driver_id}
+
+    fx, fy = followed["position_xy"]
+    ids = {followed_driver_id}
+    for p in state.positions:
+        px, py = p["position_xy"]
+        if math.hypot(px - fx, py - fy) <= radius_m:
+            ids.add(p["driver_id"])
+    return ids
+
+
+def _is_relevant(state: "LiveRaceState",
+                 driver_id: str,
+                 followed_driver_id: Optional[str]) -> bool:
+    """Evento de um piloto só importa se for o acompanhado ou um rival próximo."""
+    if followed_driver_id is None or len(state.positions) < FILTER_MIN_CARS:
+        return True
+    return driver_id in nearby_driver_ids(state, followed_driver_id)
+
+
+def apply_event(state: LiveRaceState, event: dict,
+                followed_driver_id: Optional[str] = None) -> List[str]:
     """
     Atualiza o LiveRaceState com o evento recebido e retorna a lista de
     'eventos detectados' nessa atualização (mesmo formato usado no #20).
@@ -49,14 +81,17 @@ def apply_event(state: LiveRaceState, event: dict) -> List[str]:
         state.lap = event.get("lap", state.lap)
         driver_id = event.get("driver_id")
         state.recent_pit_stops.append(driver_id)
-        eventos.append(f"Pit stop: piloto {driver_id} trocou para {
-                       event.get('new_compound')}")
+        if _is_relevant(state, driver_id, followed_driver_id):
+            eventos.append(
+                f"Pit stop: piloto {driver_id} trocou para {event.get('new_compound')}")
 
     elif event_type == "tyre_worn":
         driver_id = event.get("driver_id")
         state.recent_tyre_warnings.append(driver_id)
-        eventos.append(f"Pneu crítico: piloto {driver_id} ({
-                       event.get('tyre_life_pct')}% de vida)")
+        if _is_relevant(state, driver_id, followed_driver_id):
+            eventos.append(
+                f"""Pneu crítico: piloto {driver_id}
+                ({event.get('tyre_life_pct')}% de vida)""")
 
     elif event_type == "weather_changed":
         state.lap = event.get("lap", state.lap)
