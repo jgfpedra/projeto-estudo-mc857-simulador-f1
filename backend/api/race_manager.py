@@ -30,9 +30,11 @@ _BACKEND_ROOT = os.path.dirname(_HERE)
 if _BACKEND_ROOT not in sys.path:
     sys.path.insert(0, _BACKEND_ROOT)
 
-from config import DEFAULT_DRIVERS, DEFAULT_INTERLAGOS_CONFIG, CircuitLoadError, load_track
+from config import DEFAULT_INTERLAGOS_CONFIG
 from engine import InMemoryInputSource, NullPublisher, Publisher, SimulationEngine
 from engine.events import Event
+
+from .race_setup import RaceSetup
 
 
 class BroadcastPublisher(Publisher):
@@ -64,6 +66,10 @@ class RaceHandle:
         self.engine = engine
         self.thread = thread
         self.subscribers: Set[asyncio.Queue] = set()
+        # O motor começa a simular assim que o POST responde, ANTES de o front abrir
+        # o WebSocket: o race_start seria perdido. Guardamos para entregar a quem
+        # se inscreve depois (ver subscribe/broadcast).
+        self.race_start: Optional[dict] = None
 
 
 class RaceManager:
@@ -82,30 +88,29 @@ class RaceManager:
     # Criação da corrida
     # ------------------------------------------------------------------
 
-    def create_race(self, laps: int, track: Optional[str], year: Optional[int]):
+    def create_race(self, setup: RaceSetup) -> str:
+        """Cria e inicia (em thread própria) uma corrida a partir de um ``RaceSetup``."""
         if self.loop is None:
             raise RuntimeError("RaceManager.bind_loop() precisa ser chamado no startup")
-
-        track_obj = load_track(track_name=track, year=year)
 
         race_id = f"race_{uuid.uuid4().hex[:8]}"
         config = replace(
             DEFAULT_INTERLAGOS_CONFIG,
             race_id=race_id,
-            num_laps=laps,
+            num_laps=setup.num_laps,
             gui=False,      # sem janela do PyBullet: isso roda num servidor
             realtime=True,  # pacing em tempo real, pro front acompanhar "ao vivo"
             collision_events=True,  # publica CollisionEvent (só aviso, sem consequência)
         )
 
-        drivers = list(DEFAULT_DRIVERS)
         input_source = InMemoryInputSource(fallback_race_id=race_id)
         publisher = BroadcastPublisher(race_id, self, self.loop)
 
         engine = SimulationEngine(
             config=config,
-            track=track_obj,
-            drivers=drivers,
+            track=setup.track,
+            drivers=setup.drivers,
+            weather_model=setup.weather_model,
             publisher=publisher,
             input_source=input_source,
         )
@@ -116,7 +121,7 @@ class RaceManager:
             self._races[race_id] = RaceHandle(engine=engine, thread=thread)
 
         thread.start()
-        return race_id, track_obj, config
+        return race_id
 
     @staticmethod
     def _run_engine(engine: SimulationEngine) -> None:
@@ -136,7 +141,10 @@ class RaceManager:
     def subscribe(self, race_id: str) -> asyncio.Queue:
         queue: asyncio.Queue = asyncio.Queue(maxsize=200)
         with self._lock:
-            self._races[race_id].subscribers.add(queue)
+            handle = self._races[race_id]
+            if handle.race_start is not None:
+                queue.put_nowait(handle.race_start)  # assinante tardio recebe o race_start
+            handle.subscribers.add(queue)
         return queue
 
     def unsubscribe(self, race_id: str, queue: asyncio.Queue) -> None:
@@ -146,8 +154,13 @@ class RaceManager:
                 handle.subscribers.discard(queue)
 
     async def broadcast(self, race_id: str, payload: dict) -> None:
+        # Guardar o race_start e tirar o snapshot dos assinantes no MESMO lock do
+        # subscribe() garante: ou o assinante já estava inscrito (recebe aqui) ou
+        # entra depois (recebe pelo handle.race_start) — nunca perde nem duplica.
         with self._lock:
             handle = self._races.get(race_id)
+            if handle is not None and payload.get("type") == "race_start":
+                handle.race_start = payload
             subscribers = set(handle.subscribers) if handle else set()
         for queue in subscribers:
             try:
