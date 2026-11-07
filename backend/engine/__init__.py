@@ -4,7 +4,9 @@ PyBullet physics + orchestration. Consumes :mod:`racing_sim.domain` and
 publishes state/events.
 """
 
+from .collisions import CarContact, CollisionTracker, car_contacts_from_raw
 from .events import (
+    CollisionEvent,
     Event,
     LapCompletedEvent,
     PitStopEvent,
@@ -51,6 +53,11 @@ __all__ = [
     "PitStopEvent",
     "PositionUpdateEvent",
     "TickEvent",
+    "CollisionEvent",
+    # Collision detection
+    "CarContact",
+    "CollisionTracker",
+    "car_contacts_from_raw",
     # Publishers
     "Publisher",
     "JSONLPublisher",

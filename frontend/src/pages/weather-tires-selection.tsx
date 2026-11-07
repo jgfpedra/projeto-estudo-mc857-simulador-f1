@@ -30,15 +30,18 @@ import { Section } from "@/components/section"
 
 import { useCircuitStore } from "@/stores/circuit-store"
 import { useDriverStore } from "@/stores/driver-store"
-import { isWeatherConfigValid, useWeatherStore } from "@/stores/weather-store"
-import { useRaceLaunchStore } from "@/stores/race-launch-store"
+import { useWeatherStore } from "@/stores/weather-store"
 import { useRaceLapsStore } from "@/stores/race-laps-store"
-import { MAX_STINTS, getRemainingStintLaps, isTireConfigValid, useTiresStore } from "@/stores/tires-store"
+import { MAX_STINTS, getRemainingStintLaps, useTiresStore } from "@/stores/tires-store"
+import { useRaceLaunchStore } from "@/stores/race-launch-store"
 
 import type { Driver } from "@/types/driver"
 import { WEATHER_CONDITIONS, WEATHER_LABELS, type WeatherCondition } from "@/types/weather"
 import { TIRE_COMPOUNDS, TIRE_LABELS, type TireCompound } from "@/types/tires"
 import { LapsStepper } from "@/components/laps-stepper"
+
+import { layoutLabel, resolveLayout } from "@/helpers/circuit-layout"
+import { validateRaceSetup, type RaceSetup } from "@/helpers/race-request"
 
 const GRID_SIZE = 20
 
@@ -122,7 +125,7 @@ export function WeatherTiresSelection() {
   }, [totalLaps, syncWithRaceLaps])
 
   const selectedCircuit = circuits.find((circuit) => circuit.id === selectedCircuitId)
-  const selectedLayout = selectedCircuit?.layouts.find((layout) => layout.id === selectedLayoutId)
+  const selectedLayout = resolveLayout(selectedCircuit, selectedLayoutId)
 
   const gridDrivers = useMemo(
     () => drivers.filter((driver): driver is Driver => driver !== null),
@@ -141,10 +144,23 @@ export function WeatherTiresSelection() {
     }
   }, [selectedCircuitId, isGridComplete, navigate])
 
-  const isConfigValid =
-    isWeatherConfigValid(weatherConfig) && isTireConfigValid(tiresConfig, totalLaps)
-  const canStart =
-    Boolean(selectedCircuitId) && isGridComplete && isConfigValid && !isSubmitting
+  const setup: RaceSetup | null =
+  selectedCircuitId && selectedLayout
+    ? {
+        circuitId: selectedCircuitId,
+        layoutId: selectedLayout.id,
+        laps: totalLaps,
+        grid: gridDrivers.map((driver) => driver.id),
+        weather: weatherConfig,
+        tires: tiresConfig,
+      }
+    : null
+
+  const setupError = setup
+    ? validateRaceSetup(setup)
+    : "Selecione um circuito com traçado simulável."
+
+  const canStart = !setupError && !isSubmitting
   const compoundWarning = getCompoundWarning(weatherConfig.weather, tiresConfig.initialCompound)
 
   const possibleTransitionConditions = WEATHER_CONDITIONS.filter(
@@ -152,19 +168,11 @@ export function WeatherTiresSelection() {
   )
 
   const handleStart = async () => {
-    if (!canStart || !selectedCircuitId) return
+    if (!setup || setupError) return
 
-    const ok = await startRace({
-      season,
-      circuitId: selectedCircuitId,
-      layoutId: selectedLayoutId ?? selectedCircuit?.layouts[0]?.id ?? "",
-      grid: gridDrivers.map((driver) => driver.id),
-      weather: weatherConfig,
-      tires: tiresConfig, totalLaps
-    })
-
-    // TODO: definir a rota da corrida e navegar para ela.
-    if (ok) navigate("/")
+    const race = await startRace(setup)
+    // A tela de simulação ainda será ajustada. Ela recebe race_id, ws_path e warnings pelo state.
+    if (race) navigate("/race-simulation", { state: race })
   }
 
   const handleReset = () => {
@@ -476,7 +484,7 @@ export function WeatherTiresSelection() {
                 label="Circuito"
                 value={
                   selectedCircuit
-                    ? `${selectedCircuit.name}${selectedLayout ? ` · ${selectedLayout.name}` : ""}`
+                    ? `${selectedCircuit.fullName}${selectedLayout ? ` · ${layoutLabel(selectedLayout)}` : ""}`
                     : "Carregando..."
                 }
               />
@@ -514,12 +522,15 @@ export function WeatherTiresSelection() {
             </div>
 
             <div className="space-y-3 border-t border-border p-5">
-              {!isConfigValid && (
-                <p className="text-xs text-primary">
-                  Revise a configuração: há campos incompletos.
-                </p>
+              {setupError && !submitError && (
+                <p className="text-xs text-primary">{setupError}</p>
               )}
               {submitError && <p className="text-xs text-primary">{submitError}</p>}
+              {isSubmitting && (
+                <p className="text-xs text-muted-foreground">
+                  Preparando os dados do circuito. A primeira corrida em cada circuito pode demorar.
+                </p>
+              )}
 
               <div className="flex gap-2">
                 <Button

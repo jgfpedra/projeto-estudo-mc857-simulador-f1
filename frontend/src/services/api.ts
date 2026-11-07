@@ -1,39 +1,53 @@
-import { circuits } from "@/data/circuits"
-import { driversBySeason } from "@/data/drivers"
 import { env } from "@/config/env"
-import type { Circuit } from "@/types/circuit"
+import type { ApiCircuit, ApiDriver, ApiLayout, ApiRaceRequest, ApiRaceResponse } from "@/types/api"
+import type { Circuit, CircuitLayout } from "@/types/circuit"
 import type { Driver } from "@/types/driver"
-import type { RaceSetupPayload } from "@/types/race-setup"
-import { MAX_RACE_LAPS, MIN_RACE_LAPS } from "@/stores/race-laps-store"
 
 export type RaceStartResponse = {
   raceId: string
+  wsPath: string
+  grid: string[]
+  initialWeather: string
+  warnings: string[]
 }
 
-const API_BASE_URL = env.apiUrl || "/api"
-const USE_MOCKS = true
-const GRID_SIZE = 20
+const API_BASE_URL = (env.apiUrl ?? "").replace(/\/$/, "")
 
-type RequestOptions = {
-  method?: "GET" | "POST"
-  body?: unknown
+function defaultWsBase(): string {
+  if (API_BASE_URL) return API_BASE_URL.replace(/^http/, "ws")
+  const scheme = window.location.protocol === "https:" ? "wss" : "ws"
+  return `${scheme}://${window.location.host}`
+}
+
+/** URL completa do websocket de uma corrida, a partir do ws_path devolvido pelo POST. */
+export function raceSocketUrl(wsPath: string): string {
+  const base = (env.wsUrl ?? defaultWsBase()).replace(/\/$/, "")
+  return `${base}${wsPath}`
 }
 
 async function readErrorMessage(response: Response): Promise<string> {
   try {
-    const data = (await response.json()) as { message?: unknown }
-    if (typeof data.message === "string" && data.message) return data.message
+    const body = (await response.json()) as { detail?: unknown }
+    if (typeof body.detail === "string") return body.detail
+    if (Array.isArray(body.detail)) {
+      // Erros de validação do FastAPI (422) vêm como lista de { msg, loc, ... }.
+      return body.detail
+        .map((item: { msg?: unknown }) => (typeof item.msg === "string" ? item.msg : ""))
+        .filter(Boolean)
+        .join("; ")
+    }
   } catch {
-    // Corpo de erro que não é JSON: usa a mensagem padrão abaixo.
+    // Corpo que não é JSON: usa a mensagem padrão abaixo.
   }
-
   return `Erro ao consultar API (${response.status})`
 }
 
 async function request<T>(
   path: string,
-  { method = "GET", body }: RequestOptions = {},
+  init: { method?: "GET" | "POST"; body?: unknown } = {},
 ): Promise<T> {
+  const { method = "GET", body } = init
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers: {
@@ -44,66 +58,76 @@ async function request<T>(
   })
 
   if (!response.ok) throw new Error(await readErrorMessage(response))
-
-  return response.json() as Promise<T>
+  return (await response.json()) as T
 }
 
-/** Valida o payload antes do envio, para não depender só da resposta do backend. */
+const pickSvg = (svg: Record<string, string | null> | null | undefined): string | null =>
+  svg?.["white-outline"] ?? svg?.["white"] ?? svg?.["black-outline"] ?? svg?.["black"] ?? null
 
-function assertValidRaceSetup(payload: RaceSetupPayload): void {
-  if (payload.grid.length !== GRID_SIZE) {
-    throw new Error(`O grid precisa ter ${GRID_SIZE} pilotos.`)
-  }
-
-  if (new Set(payload.grid).size !== payload.grid.length) {
-    throw new Error("O grid contém pilotos repetidos.")
-  }
-
-  if (payload.tires.strategy.enabled && payload.tires.strategy.stints.length === 0) {
-    throw new Error("A estratégia precisa ter ao menos um stint.")
-  }
-
-  if (
-    !Number.isInteger(payload.totalLaps) ||
-    payload.totalLaps < MIN_RACE_LAPS ||
-    payload.totalLaps > MAX_RACE_LAPS
-  ) {
-    throw new Error(`O número de voltas precisa estar entre ${MIN_RACE_LAPS} e ${MAX_RACE_LAPS}.`)
-  }
-
-  if (payload.tires.strategy.enabled) {
-    const planned = payload.tires.strategy.stints.reduce((sum, stint) => sum + stint.laps, 0)
-    if (planned > payload.totalLaps) {
-      throw new Error("A estratégia ultrapassa o total de voltas da corrida.")
-    }
+function mapLayout(l: ApiLayout): CircuitLayout {
+  return {
+    id: l.id,
+    periods: l.years,
+    firstYear: l.first_year,
+    lastYear: l.last_year,
+    lengthKm: l.length_km,
+    turns: l.turns,
+    svgUrl: pickSvg(l.svg),
+    isCurrent: l.is_current,
+    simulable: l.simulable,
   }
 }
 
-const mockDelay = () => new Promise((resolve) => setTimeout(resolve, 400))
+function mapCircuit(c: ApiCircuit): Circuit {
+  return {
+    id: c.id,
+    name: c.name ?? c.full_name ?? c.id,
+    fullName: c.full_name ?? c.name ?? c.id,
+    city: c.city,
+    country: c.country.name,
+    countryCode: c.country.code,
+    simulable: c.simulable,
+    layouts: c.layouts.map(mapLayout),
+  }
+}
+
+function mapDriver(d: ApiDriver): Driver {
+  return {
+    id: d.id,
+    name: d.name ?? d.id,
+    shortName: d.abbreviation ?? d.id,
+    number: d.number ?? 0,
+    country: d.country.name ?? "",
+    countryCode: d.country.code ?? "",
+    teamId: d.team_id ?? "",
+    teamName: d.team ?? "",
+    teamShortName: d.team ?? "",
+  }
+}
 
 export const api = {
   async getCircuits(): Promise<Circuit[]> {
-    if (USE_MOCKS) return circuits
-    return request<Circuit[]>("/circuits")
+    const data = await request<ApiCircuit[]>("/circuits")
+    return data.map(mapCircuit)
   },
 
-  async getDriversBySeason(season: number): Promise<Driver[]> {
-    if (USE_MOCKS) return driversBySeason[season] ?? []
-    return request<Driver[]>(`/seasons/${season}/drivers`)
+  getSeasons(): Promise<number[]> {
+    return request<number[]>("/seasons")
   },
 
-  async startRace(payload: RaceSetupPayload): Promise<RaceStartResponse> {
-    assertValidRaceSetup(payload)
+  async getDrivers(season: number): Promise<Driver[]> {
+    const data = await request<ApiDriver[]>(`/seasons/${season}/drivers`)
+    return data.map(mapDriver)
+  },
 
-    if (USE_MOCKS) {
-      await mockDelay()
-      console.info("[mock] startRace", payload)
-      return { raceId: crypto.randomUUID() }
+  async startRace(body: ApiRaceRequest): Promise<RaceStartResponse> {
+    const data = await request<ApiRaceResponse>("/races", { method: "POST", body })
+    return {
+      raceId: data.race_id,
+      wsPath: data.ws_path,
+      grid: data.grid,
+      initialWeather: data.initial_weather,
+      warnings: data.warnings,
     }
-
-    return request<RaceStartResponse>("/races", {
-      method: "POST",
-      body: payload,
-    })
   },
 }

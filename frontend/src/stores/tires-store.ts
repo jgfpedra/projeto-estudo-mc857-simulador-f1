@@ -76,7 +76,7 @@ export function isTireConfigValid(config: TireConfig, totalLaps: number): boolea
     (stint) => Number.isInteger(stint.laps) && stint.laps >= 1,
   )
 
-  return everyStintValid && getRemainingStintLaps(stints, totalLaps) >= 0
+  return everyStintValid && getRemainingStintLaps(stints, totalLaps) === 0
 }
 
 type TiresStore = {

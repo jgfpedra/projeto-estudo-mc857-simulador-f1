@@ -48,8 +48,14 @@ export const useDriverStore = create<DriverStore>()(
       setMode: (mode) => set({ mode }),
 
       setAvailableDrivers: (availableDrivers) =>
-        set({ availableDrivers: [...availableDrivers] }),
-
+        set((state) => ({
+          availableDrivers,
+          // Dados persistidos podem vir do mock ou de outra temporada: mantém só os pilotos da lista atual.
+          drivers: state.drivers.map((driver) =>
+            driver ? (availableDrivers.find((item) => item.id === driver.id) ?? null) : null,
+          ),
+        })),
+        
       setDrivers: (drivers) => set({ drivers: [...drivers] }),
 
       updateDriverAtPosition: (index, driver) => {
