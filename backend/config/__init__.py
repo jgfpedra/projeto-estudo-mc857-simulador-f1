@@ -59,7 +59,6 @@ DEFAULT_INTERLAGOS_CONFIG = SimulationConfig(
     tyre_life_threshold=35.0,   # pneu com <35% de vida faz pit
     gui=False,
     random_seed=42,
-    protagonist_autopilot=True,
 )
 
 

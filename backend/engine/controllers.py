@@ -295,69 +295,6 @@ def _angle_diff(a: float, b: float) -> float:
     return d
 
 
-# ---------------------------------------------------------------------------
-# WaypointFollowerController — controller determinístico (pilotos rivais)
-# ---------------------------------------------------------------------------
-
-class WaypointFollowerController(CarController):
-    """Segue a racing line da pista de forma determinística.
-
-    Usado para preencher o grid com pilotos "rivais" (não controlados pelo
-    usuário/IA). Não usa rede neural — apenas persegue waypoints, com
-    velocidade e leve desvio lateral parametrizáveis por piloto, para dar
-    variação sem precisar de ML.
-    """
-
-    def __init__(
-        self,
-        track: Any,
-        aggressiveness: float = 1.0,
-        lookahead: int = 3,
-        reached_radius_m: float = 8.0,
-        lateral_offset_m: float = 0.0,
-        base_speed_mps: float = 20.0,
-        max_steer_rad: float = math.radians(25.0),
-    ) -> None:
-        self.track = track
-        self.aggressiveness = aggressiveness
-        self.lookahead = lookahead
-        self.reached_radius_m = reached_radius_m
-        self.lateral_offset_m = lateral_offset_m
-        self.base_speed_mps = base_speed_mps
-        self.max_steer_rad = max_steer_rad
-        self._current_wp_idx = 0
-
-    def compute_input(self, env: EnvironmentState, driver_state: Any) -> CarInput:
-        car_x = driver_state.position_x
-        car_y = driver_state.position_y
-        heading = driver_state.heading_rad
-
-        wps = self.track.waypoints
-        n = len(wps)
-
-        base_x, base_y = wps[self._current_wp_idx % n]
-        if math.hypot(base_x - car_x, base_y - car_y) < self.reached_radius_m:
-            self._current_wp_idx += 1
-
-        target_idx = (self._current_wp_idx + self.lookahead) % n
-        tx, ty = wps[target_idx]
-
-        desired_heading = math.atan2(ty - car_y, tx - car_x)
-        steer = _angle_diff(desired_heading, heading)
-        steer = max(-self.max_steer_rad, min(self.max_steer_rad, steer))
-
-        speed = self.base_speed_mps * self.aggressiveness
-
-        return CarInput(
-            target_speed_mps=speed,
-            steering_yaw_rad=steer,
-            brake=0.0,
-        )
-
-    def reset(self) -> None:
-        self._current_wp_idx = 0
-
-
 __all__ = [
     "CarInput",
     "EnvironmentState",
@@ -365,5 +302,4 @@ __all__ = [
     "ManualController",
     "ExternalController",
     "InputSourceController",
-    "WaypointFollowerController",
 ]

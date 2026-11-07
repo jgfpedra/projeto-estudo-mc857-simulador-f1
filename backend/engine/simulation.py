@@ -57,9 +57,9 @@ from .controllers import (
     ExternalController,
     InputSourceController,
     ManualController,
-    WaypointFollowerController,
 )
 from .input_source import InputEntry, InputSource, InMemoryInputSource
+from .keyboard_pilot import KeyboardPilot
 
 
 # ---------------------------------------------------------------------------
@@ -70,10 +70,9 @@ from .input_source import InputEntry, InputSource, InMemoryInputSource
 class SimulationConfig:
     race_id: str = "race_001"
     num_laps: int = 10
-    protagonist_driver_id: str = "drv_01"
     physics_sub_steps: int = 8        # sub-passos PyBullet por step de lógica
     logic_step_hz: float = 10.0        # frequência do loop de lógica (Hz)
-    position_update_every_lap: int = 1  # snapshot por volta
+    position_update_every_lap: int = 1 # snapshot por volta
     pit_time_s: float = 22.0          # tempo médio de pit (reabastecimento + troca)
     fuel_threshold_kg: float = 6.0
     tyre_life_threshold: float = 18.0
@@ -85,10 +84,8 @@ class SimulationConfig:
     realtime: bool = False            # pausa para sincronizar com tempo real
     # Opções de input externo
     input_source_type: str = "memory"  # "memory" | "redis"
-    # "brake" (freia aos poucos) | "neutral" (parado)
-    input_fallback: str = "brake"
+    input_fallback: str = "brake"       # "brake" (freia aos poucos) | "neutral" (parado)
     input_stale_after_s: float = 1.0    # input sem atualização há mais de N segundos → fallback
-    protagonist_autopilot: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +133,8 @@ class SimulationEngine:
         self.last_inputs: Dict[str, CarInput] = {}
         # Última vez que um input "fresco" foi recebido (para detectar stale)
         self.last_input_ts: Dict[str, float] = {}
+        # Estado do controle por teclado da janela GUI (driver[0])
+        self.keyboard_pilot = KeyboardPilot()
         self.sim_ts: float = 0.0
         self.current_lap: int = 0
         self.race_started: bool = False
@@ -154,15 +153,15 @@ class SimulationEngine:
 
     def setup(self) -> None:
         self.physics.init()
-        # Chão dimensionado pela pista: sempre necessário (física + visual),
+        self.keyboard_pilot.reset()
+            # Chão dimensionado pela pista: sempre necessário (física + visual),
         # independente de gui=True ou False. Sem isso, em pistas grandes o chão
         # default do PyBullet (~100x100) é menor que a pista e carros podem
         # "cair" fora da área de colisão em modo headless.
         self.physics.create_ground_plane(waypoints=self.track.waypoints, margin_m=500.0)
         # Posiciona carros um pouco atrás da linha de largada, lado a lado
         sf_wp = self.track.waypoints[self.track.start_finish_waypoint]
-        next_wp = self.track.waypoints[self.track.next_waypoint(
-            self.track.start_finish_waypoint, 1)]
+        next_wp = self.track.waypoints[self.track.next_waypoint(self.track.start_finish_waypoint, 1)]
         # heading inicial = direção do waypoint 0 → 1
         dx = next_wp[0] - sf_wp[0]
         dy = next_wp[1] - sf_wp[1]
@@ -190,20 +189,14 @@ class SimulationEngine:
             self.cum_dist_m[drv.driver_id] = 0.0
             self.last_pos[drv.driver_id] = (px, py)
             self.last_tyre_warn_pct[drv.driver_id] = 100.0
+            # Cria InputSourceController para cada driver por default
             if drv.driver_id not in self.controllers:
-                is_protagonist = drv.driver_id == self.config.protagonist_driver_id
-                if is_protagonist and not self.config.protagonist_autopilot:
-                    self.controllers[drv.driver_id] = InputSourceController(
-                        driver_id=drv.driver_id,
-                        source=self.input_source,
-                        stale_after_s=self.config.input_stale_after_s,
-                    )
-                else:
-                    aggressiveness = drv.aggressive
-                    self.controllers[drv.driver_id] = WaypointFollowerController(
-                        track=self.track,
-                        aggressiveness=aggressiveness,
-                    )
+                self.controllers[drv.driver_id] = InputSourceController(
+                    driver_id=drv.driver_id,
+                    source=self.input_source,
+                    stale_after_s=self.config.input_stale_after_s,
+                )
+
         # Configura visualização (apenas GUI)
         self._setup_visualization()
 
@@ -275,7 +268,6 @@ class SimulationEngine:
         """Configura câmera inicial e desenha pista (modo GUI)."""
         if not self.config.gui:
             return
-
         # Calcula centro e raio da pista a partir dos waypoints
         xs = [w[0] for w in self.track.waypoints]
         ys = [w[1] for w in self.track.waypoints]
@@ -285,7 +277,10 @@ class SimulationEngine:
             max(xs) - min(xs),
             max(ys) - min(ys),
         ) / 2.0
+        self.physics.setup_overview_camera((cx, cy), radius)
         if self.config.draw_track:
+            print(f"[gui] desenhando pista ({len(self.track.waypoints)} wp)...",
+                  flush=True)
             self.physics.draw_track_surface(
                 self.track.waypoints,
                 track_width_m=self.track.width_m,
@@ -295,16 +290,17 @@ class SimulationEngine:
                 start_finish_waypoint=self.track.start_finish_waypoint,
                 track_width_m=self.track.width_m,
             )
+            print("[gui] pista desenhada", flush=True)
         if self.config.camera_mode == "overview":
             self.physics.setup_overview_camera((cx, cy), radius)
-            print(f"[gui] overview camera set at ({
-                  cx:.0f},{cy:.0f}) radius={radius:.0f}m")
+            print(f"[gui] overview camera set at ({cx:.0f},{cy:.0f}) radius={radius:.0f}m")
             print(f"[gui] racing line drawn ({len(self.track.waypoints)} waypoints)")
-            print(f"[gui] red line = start/finish")
+            print("[gui] red line = start/finish")
         elif self.config.camera_mode == "follow" and self.drivers:
-            target_id = self.config.protagonist_driver_id
-            self.physics.set_follow_target(self.handles[target_id])
-            print(f"[gui] follow camera active (following {target_id})")
+            # Segue o primeiro driver
+            handle = self.handles[self.drivers[0].driver_id]
+            self.physics.set_follow_target(handle)
+            print(f"[gui] follow camera active (following {self.drivers[0].name})")
 
     def _color_for_index(self, i: int) -> Tuple[float, float, float, float]:
         palette = [
@@ -335,15 +331,13 @@ class SimulationEngine:
         expected_sub_steps = max(1, int(round(logic_dt / self.physics.time_step_s)))
         if physics_sub_steps != expected_sub_steps:
             print(f"[warn] physics_sub_steps={physics_sub_steps} but expected "
-                  f"{expected_sub_steps} (logic_dt={logic_dt:.3f}s, time_step={
-                self.physics.time_step_s:.4f}s). "
-                f"sim_ts will desync from physics time.")
+                  f"{expected_sub_steps} (logic_dt={logic_dt:.3f}s, time_step={self.physics.time_step_s:.4f}s). "
+                  f"sim_ts will desync from physics time.")
             physics_sub_steps = expected_sub_steps
 
         # Etapa: dar start imediato em weather (avalia no início da volta 1)
         self.weather_model.step(lap=1)
-        self._publish_weather_changed(
-            prev_kind=self.last_weather_kind, new_kind=self.weather_model.current.kind, new_lap=1)
+        self._publish_weather_changed(prev_kind=self.last_weather_kind, new_kind=self.weather_model.current.kind, new_lap=1)
 
         # Cap de segurança: 3x o tempo esperado para a corrida
         # (~75s/volta * num_laps * 3 = generoso; evita corrida infinita)
@@ -383,11 +377,11 @@ class SimulationEngine:
         4. Empilha controle e avança a física.
         """
         if self.config.gui and self.drivers:
-            self._poll_gui_keyboard()
+            self._poll_gui_keyboard(dt)
 
-        weather = self.weather_model.current
+        weather      = self.weather_model.current
         weather_kind = weather.kind
-        track_temp = weather.track_temp
+        track_temp   = weather.track_temp
 
         env = EnvironmentState(
             sim_ts=self.sim_ts,
@@ -399,7 +393,7 @@ class SimulationEngine:
 
         controls = []
         for drv in self.drivers:
-            state = self.states[drv.driver_id]
+            state  = self.states[drv.driver_id]
             handle = self.handles[drv.driver_id]
 
             # 1 — sincroniza estado físico do PyBullet no driver state
@@ -415,8 +409,7 @@ class SimulationEngine:
             car_input = self._resolve_car_input(drv.driver_id, env, state)
 
             # 3 — calcula grip efectivo (pneu + clima + superfície)
-            grip = self._compute_grip(drv.driver_id, car_input,
-                                      state, weather_kind, track_temp)
+            grip = self._compute_grip(drv.driver_id, car_input, state, weather_kind, track_temp)
 
             controls.append((
                 handle,
@@ -441,8 +434,8 @@ class SimulationEngine:
     def _sync_driver_state(self, state, handle) -> None:
         """Sincroniza posição / velocidade / heading do PyBullet no driver state."""
         phys = self.physics.get_state(handle)
-        state.position_x = phys["x"]
-        state.position_y = phys["y"]
+        state.position_x  = phys["x"]
+        state.position_y  = phys["y"]
         state.heading_rad = phys["heading_rad"]
         state.velocity_mps = phys["speed_mps"]
 
@@ -452,7 +445,7 @@ class SimulationEngine:
         Atualiza ``last_inputs`` e ``last_input_ts`` como efeito colateral.
         """
         controller = self._get_controller(driver_id)
-        car_input = controller.compute_input(env, state)
+        car_input  = controller.compute_input(env, state)
 
         if car_input is None:
             car_input = self._fallback_input(driver_id)
@@ -511,8 +504,7 @@ class SimulationEngine:
 
         # Verifica se o último input está "stale" (sem atualização há muito tempo)
         last_ts = self.last_input_ts.get(driver_id, 0.0)
-        stale = (time.time() -
-                 last_ts) > self.config.input_stale_after_s if last_ts > 0 else True
+        stale = (time.time() - last_ts) > self.config.input_stale_after_s if last_ts > 0 else True
         if not stale:
             # Input ainda é fresco: usa como está
             return last_input
@@ -530,49 +522,36 @@ class SimulationEngine:
             brake=brake,
         )
 
-    def _poll_gui_keyboard(self) -> None:
-        """Lê teclas pressionadas diretamente na janela GUI do PyBullet."""
-        events = self.physics.get_keyboard_events()
-        if not events:
+    def _poll_gui_keyboard(self, dt: float) -> None:
+        """Lê teclas da janela GUI do PyBullet e publica o input do tick.
+
+        A lógica de "feel" (taxa de steering, auto-centralização, lock
+        sensível à velocidade, aceleração contínua) vive no
+        :class:`~engine.keyboard_pilot.KeyboardPilot`; aqui só lemos os
+        eventos e publicamos o resultado.
+
+        Publica enquanto há controle ativo (tecla mantida ou estado não-zero
+        do piloto), o que mantém o input "fresco" e evita que o fallback
+        stale freie o carro sozinho durante a pilotagem. Com o piloto em
+        repouso a engine publica nada, deixando a fonte externa (ex.:
+        ``scripts/publish_keyboard.py``) assumir o controle.
+        """
+        if not self.drivers:
             return
-        drv_id = self.config.protagonist_driver_id
-        last = self.last_inputs.get(drv_id) or CarInput.neutral()
-        speed = last.target_speed_mps
-        steer = last.steering_yaw_rad
-        brake = last.brake
-        changed = False
+        drv_id = self.drivers[0].driver_id
+        state = self.states.get(drv_id)
+        actual_speed = state.velocity_mps if state is not None else None
+        events = self.physics.get_keyboard_events()
+        car_input = self.keyboard_pilot.update(events, dt, speed_mps=actual_speed)
 
-        for key, state in events.items():
-            if not (state & 1 or state & 2):  # KEY_IS_DOWN or KEY_WAS_TRIGGERED
-                continue
-            char = chr(key).lower() if 0 <= key < 256 else ""
-            if char == "w" or key == 65297:  # W or UP arrow
-                speed = min(80.0, speed + 2.0)
-                brake = 0.0
-                changed = True
-            elif char == "s" or key == 65298:  # S or DOWN arrow
-                speed = max(0.0, speed - 2.0)
-                brake = 0.5 if speed == 0.0 else 0.0
-                changed = True
-            elif char == "a" or key == 65296:  # A or LEFT arrow
-                steer = max(-math.radians(25.0), steer - math.radians(2.0))
-                changed = True
-            elif char == "d" or key == 65299:  # D or RIGHT arrow
-                steer = min(math.radians(25.0), steer + math.radians(2.0))
-                changed = True
-            elif char == " " or key == 32:  # SPACE
-                speed = 0.0
-                brake = 1.0
-                changed = True
-            elif char == "r":
-                speed = 0.0
-                steer = 0.0
-                brake = 0.0
-                changed = True
-
-        if changed:
-            inp = CarInput(target_speed_mps=speed, steering_yaw_rad=steer, brake=brake)
-            self.input_source.update_last_input(drv_id, inp, source="pybullet_gui")
+        pilot_idle = (
+            not self.keyboard_pilot.held_keys
+            and car_input.target_speed_mps <= 0.0
+            and abs(car_input.steering_yaw_rad) <= 1e-9
+        )
+        if pilot_idle:
+            return
+        self.input_source.update_last_input(drv_id, car_input, source="pybullet_gui")
 
     # ------------------------------------------------------------------
     # (Cálculos de pace automático removidos — agora tudo vem do input externo)
@@ -662,8 +641,7 @@ class SimulationEngine:
             driver_name=driver.name,
             lap=state.lap,
             lap_time_s=lap_time,
-            best_lap_time_s=state.best_lap_time_s if state.best_lap_time_s != float(
-                "inf") else 0.0,
+            best_lap_time_s=state.best_lap_time_s if state.best_lap_time_s != float("inf") else 0.0,
             fuel_kg=state.car.fuel_kg,
             tyre=state.tyre.to_dict(),
         ))
@@ -684,8 +662,7 @@ class SimulationEngine:
         prev_kind = self.weather_model.current.kind
         new_weather = self.weather_model.step(lap=state.lap + 1)
         if new_weather.kind != prev_kind:
-            self._publish_weather_changed(
-                prev_kind=prev_kind, new_kind=new_weather.kind, new_lap=state.lap + 1)
+            self._publish_weather_changed(prev_kind=prev_kind, new_kind=new_weather.kind, new_lap=state.lap + 1)
             self.last_weather_kind = new_weather.kind
 
         # Decisão de pit stop

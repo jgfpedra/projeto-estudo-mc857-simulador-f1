@@ -32,7 +32,14 @@ def build_live_prompt(context_text: str) -> str:
   "urgencia": "baixa" | "media" | "alta"
 }}
 
-Você só enxerga posições, combustível, pneus e clima.
+Você acompanha posições, combustível, pneus, clima e status de pista
+(saídas/retornos da pista, voltas completadas e posições).
+
+Se houver evento de saída de pista, avise EXPLICITAMENTE no campo "aviso":
+- se foi VOCÊ quem saiu ou um RIVAL;
+- o lado (esquerda/direita);
+- se parece leve ou grave.
+
 Não dê instruções de pilotagem (direção, curvas, aceleração).
 Se nada exige ação, diga que está tudo sob controle e use urgência baixa.
 

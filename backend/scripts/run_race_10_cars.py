@@ -20,9 +20,11 @@ import pybullet as p
 import argparse
 import math
 import os
+import random
 import subprocess
 import sys
 import time
+import json
 from pathlib import Path
 from typing import Dict, List, Optional
 import numpy as np
@@ -30,6 +32,7 @@ import joblib
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 BACKEND_DIR = PROJECT_ROOT / "backend"
 MODEL_DIR = BACKEND_DIR / "model_train"
+FROZEN_TRACK_DIR = MODEL_DIR / "tracks_frozen"
 for p_dir in [str(PROJECT_ROOT), str(BACKEND_DIR), str(MODEL_DIR)]:
     if p_dir not in sys.path:
         sys.path.insert(0, p_dir)
@@ -45,7 +48,7 @@ from backend.domain import (
 from backend.model_train.f1_env import resolve_track
 from backend.engine import (
     SimulationEngine, SimulationConfig, RedisPublisher,
-    TyreWornEvent, PitStopEvent, PositionUpdateEvent,
+    TyreWornEvent, PitStopEvent, PositionUpdateEvent, WeatherChangedEvent,
 )
 # Garante inclusão da raiz do projeto e de backend no sys.path
 # CORREÇÃO (investigação v2-vs-v4): era `BACKEND_DIR / "model_train" / "v2"` —
@@ -184,6 +187,37 @@ GRID_DRIVERS_CONFIG = [
         "compound": TyreCompound.MEDIUM,
     },
 ]
+
+
+def find_frozen_track(name: str) -> Optional[Path]:
+    aliases = {
+        "interlagos": "interlagos_v1",
+        "sao paulo": "interlagos_v1",
+        "são paulo": "interlagos_v1",
+        "sao-paulo": "interlagos_v1",
+        "são-paulo": "interlagos_v1",
+        "brazil": "interlagos_v1",
+        "default": "interlagos_v1",
+        "none": "interlagos_v1",
+    }
+    wanted = aliases.get((name or "").strip().lower(),
+                         f"{(name or '').strip().lower()}_v1")
+    for p in FROZEN_TRACK_DIR.glob("*_v1.json"):
+        if p.stem.lower() == wanted:
+            return p
+    return None
+
+
+def load_frozen_track(path: Path) -> Track:
+    """Carrega uma pista congelada (mesma geometria usada no treino)."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return Track.from_waypoints(
+        name=data.get("name", Path(path).stem),
+        waypoints=data["waypoints"],
+        width_m=float(data.get("width_m", 12.0)),
+        start_finish_waypoint=int(data.get("sf_idx", 0)),
+        source=f"frozen:{Path(path).name}",
+    )
 
 
 def ensure_npz_weights_exist(keras_path: Path, npz_path: Path) -> Path:
@@ -412,6 +446,10 @@ class NeuralRaceController:
         self._res_norm = {}          # drv -> último |r| (instrumento)
         self._offtrack = {}
         self._offtrack_since = {}
+        self.last_s = {}
+        self.last_lat = {}
+        self.last_heading_err = {}
+        self.last_v_safe = {}
 
     def _build_tables(self, A: np.ndarray, half_width: float) -> None:
         B = np.roll(A, -1, axis=0)
@@ -421,6 +459,45 @@ class NeuralRaceController:
         self._seg_heading = np.arctan2(self._AB[:, 1], self._AB[:, 0])
         self._track_len_s = float(self._seg_len.sum())
         self._half_width = half_width
+        # ZONAS DE KINK BRUTO (sem suavização). A reamostragem do perfil de
+        # velocidade dilui kinks de 20-37° em 3-4 m; a política neural os
+        # contorna largo demais e o carro sai. Detecta pelo RAIO do giro
+        # entre segmentos consecutivos (|kappa| >= KINK_KAPPA, R <= ~12,5 m)
+        # e dilata ±HAIRPIN_ZONE_SEGS (~10 m) para cobrir entrada/saída.
+        # O alvo de velocidade de cada zona vem do raio local.
+        turn = ((np.roll(self._seg_heading, -1) - self._seg_heading
+                 + np.pi) % (2.0 * np.pi) - np.pi)
+        kappa_seg = turn / np.maximum(self._seg_len, 1e-9)
+        sharp = np.abs(kappa_seg) >= self.KINK_KAPPA
+        zone = np.zeros_like(sharp)
+        for k in range(-self.HAIRPIN_ZONE_SEGS, self.HAIRPIN_ZONE_SEGS + 1):
+            zone |= np.roll(sharp, k)
+        self._seg_hairpin_zone = zone
+
+        v_kink = np.clip(
+            np.sqrt(self.KINK_A_LAT / np.maximum(np.abs(kappa_seg), 1e-6)),
+            self.KINK_V_MIN, self.KINK_V_MAX)
+        # alvo da zona = kink mais lento dentro da janela (0 se não há)
+        self._seg_zone_v = np.zeros(len(sharp))
+        self._seg_zone_k = np.zeros(len(sharp))
+        for k in range(-self.HAIRPIN_ZONE_SEGS, self.HAIRPIN_ZONE_SEGS + 1):
+            hit = np.roll(sharp, k)
+            self._seg_zone_v = np.where(
+                hit, np.where(self._seg_zone_v > 0.0,
+                              np.minimum(self._seg_zone_v, np.roll(v_kink, k)),
+                              np.roll(v_kink, k)),
+                self._seg_zone_v)
+            self._seg_zone_k = np.maximum(
+                self._seg_zone_k,
+                np.where(hit, np.abs(np.roll(kappa_seg, k)), 0.0))
+        # Sinal do giro propagado para toda a zona (usado para deslocar o
+        # alvo do pure pursuit para o INSIDE da curva).
+        turn_sign = np.sign(turn)
+        self._seg_hairpin_turn = np.zeros(len(self._seg_len))
+        for k in range(-self.HAIRPIN_ZONE_SEGS, self.HAIRPIN_ZONE_SEGS + 1):
+            self._seg_hairpin_turn = np.where(
+                np.roll(sharp, k), np.roll(turn_sign, k),
+                self._seg_hairpin_turn)
         # Percepção de bordas (obs edge/traffic): pré-computa polilinhas L/R
         # ('traffic' INCLUI os 11 raios do edge — 34d base + 12d de tráfego)
         if getattr(self, "obs_mode", "legacy") in ("edge", "traffic"):
@@ -439,6 +516,24 @@ class NeuralRaceController:
         s = s % self._track_len_s
         j = int(np.searchsorted(self._seg_cum, s, side="right") - 1)
         return float(self._seg_heading[min(max(j, 0), len(self._seg_heading) - 1)])
+
+    def _point_at(self, s: float) -> tuple:
+        """Ponto da linha central em s (m), interpolação linear no segmento."""
+        s = s % self._track_len_s
+        j = int(np.searchsorted(self._seg_cum, s, side="right") - 1)
+        j = min(max(j, 0), len(self._seg_len) - 1)
+        t = (s - self._seg_cum[j]) / max(float(self._seg_len[j]), 1e-9)
+        return (float(self._A[j, 0] + t * self._AB[j, 0]),
+                float(self._A[j, 1] + t * self._AB[j, 1]))
+
+    def _hairpin_ahead(self, s: float, horizon_m: float) -> bool:
+        """True se a ZONA de hairpin aparece em [s, s+horizon_m]."""
+        j0 = int(np.searchsorted(self._seg_cum, s % self._track_len_s,
+                                 side="right") - 1)
+        step = max(1.0, float(np.median(self._seg_len)))
+        n = int(horizon_m / step) + 1
+        idx = np.arange(j0, j0 + n + 1) % len(self._seg_hairpin_zone)
+        return bool(self._seg_hairpin_zone[idx].any())
 
     def _kappa_signed(self, s: float, window_m: float = None) -> float:
         """Curvatura assinada local (+ = esquerda), idêntica ao f1_env v2.
@@ -505,8 +600,25 @@ class NeuralRaceController:
     # CORREÇÃO: era 2.0 (12 m) — o carro podia viajar 6 m pela grama sem
     # reação. Agora: 1.0 = reage quando o CENTRO atinge a borda do asfalto.
     OFFTRACK_FACTOR = 1.0
-    REJOIN_TARGET_MPS = 8.0    # velocidade alvo fora da pista (retorno seguro)
+    REJOIN_TARGET_MPS = 5.0    # era 8.0: a 8 m/s o raio mínimo excede a aderência
     REJOIN_THROTTLE = 0.35  # torque moderado para crawlar de volta
+    REJOIN_PP_LOOKAHEAD_M = 5.0
+
+    # Assist geométrico (pure pursuit) em KINKS BRUTOS.
+    # Detecção: |kappa| >= KINK_KAPPA (~R <= 12,5 m) no giro entre
+    # segmentos consecutivos. Após a correção de sinal, isso inclui o
+    # hairpin (-57° em 2,97 m) E os kinks de 37°/21° (s≈1927/2045/2787
+    # em interlagos_v1) que antes jogavam os carros para a grama.
+    # Dilatação de ±3 segmentos (~10 m) cobre entrada/saída.
+    KINK_KAPPA = 0.08
+    KINK_A_LAT = 5.3            # m/s² conservador p/ alvo = sqrt(a·R)
+    KINK_V_MIN = 4.0
+    KINK_V_MAX = 12.0
+    HAIRPIN_ZONE_SEGS = 3
+    HAIRPIN_LOOKAHEAD_M = 20.0  # detecta a zona com antecedência (frenagem)
+    HAIRPIN_TARGET_MPS = 4.0    # fallback (o alvo real vem do raio local)
+    HAIRPIN_PP_LOOKAHEAD_M = 4.5
+    HAIRPIN_CUT_M = 4.0         # desloca o alvo p/ o INSIDE no hairpin
     BLOCKED_THROTTLE = 0.25  # carro parado em contato com outro: empurrão leve
 
     # Anti-stall (ver correção no corpo de predict_batch)
@@ -653,6 +765,10 @@ class NeuralRaceController:
             heading_err = self._wrap(
                 phys["heading_rad"] - float(self._seg_heading[idx]))
 
+            self.last_s[drv.driver_id] = s
+            self.last_lat[drv.driver_id] = signed
+            self.last_heading_err[drv.driver_id] = heading_err
+
             # preview v2: por distância d, [delta_heading/π, kappa_assinada*25]
             h0 = self._heading_at(s)
             preview = []
@@ -784,6 +900,7 @@ class NeuralRaceController:
                 float(drv_signed[i]), speed,
             )
             gov_braked = False
+            hairpin_assist = False
 
             # ---- 4. governor --------------------------------------------------
             # v15 FASE 1: modos instrumentados (race_diagnostic --gov):
@@ -801,30 +918,114 @@ class NeuralRaceController:
                     v_safe = min(self.V_GOV_MAX,
                                  max(self.V_GOV_MIN,
                                      math.sqrt(self.A_LAT_MAX / max(kappa, 1e-4))))
+            if v_safe is not None:
+                self.last_v_safe[drivers[i].driver_id] = float(v_safe)
             if v_safe is not None and speed > v_safe * self.GOV_MARGIN:
                 excess_frac = (speed - v_safe) / max(v_safe, 1.0)
                 gov_brake = float(np.clip(excess_frac * 0.8, 0.15, 1.0))
                 th, brk, gov_braked = 0.0, max(brk, gov_brake), True
 
-            # ---- 3. rejoin (fora do asfalto) ----------------------------------
-            if offtrack:
-                # obs v2: idx 4 = lat assinado
-                signed_lat = float(tels[i, 4]) * self._half_width
-                correction = -float(np.sign(signed_lat)) * min(self.STEER_MAX_RAD,
-                                                               0.3 + lat_dist / 40.0)
-                steer_rad = correction
-                if speed > self.REJOIN_TARGET_MPS * 1.2:
-                    excess = (speed - self.REJOIN_TARGET_MPS) / 6.0
-                    th, brk = 0.0, max(brk, float(np.clip(excess, 0.3, 1.0)))
+            # ---- 4b. assist geométrico (hairpin) -------------------------------
+            # Só em KINK BRUTO extremo (giro >=45° num segmento — 57° em
+            # 2,97 m no hairpin de interlagos_v1). Troca o esterço por pure
+            # pursuit na linha central e impõe a velocidade do raio mínimo
+            # físico (wheelbase 3,4 m + esterço 45° -> R≈3,4 m). A política
+            # neural foi treinada com kappa suavizada e satura tarde: herr
+            # saltava +51° e o carro saía largo.
+            if not offtrack and self._hairpin_ahead(
+                    float(drv_s[i]), self.HAIRPIN_LOOKAHEAD_M):
+                pp_ld = self.HAIRPIN_PP_LOOKAHEAD_M
+                tx, ty = self._point_at(float(drv_s[i]) + pp_ld)
+                # "entrar curto": o raio mínimo físico (~3,4 m) é maior que o
+                # kink, então o carro SEMPRE derrapa para fora depois do
+                # ápice. Deslocar o alvo para o inside faz a saída cair
+                # perto da linha central em vez de na borda externa.
+                j0 = int(np.searchsorted(
+                    self._seg_cum, float(drv_s[i]) % self._track_len_s,
+                    side="right") - 1) % len(self._seg_len)
+                turn_dir = float(self._seg_hairpin_turn[j0]) or 1.0
+                h_t = self._heading_at(float(drv_s[i]) + pp_ld)
+                # O corte para o inside é proporcional à severidade do kink:
+                # 4 m só no hairpin (R≈3 m); nos kinks de R≈5-9 m ~1-2 m.
+                k_zone = float(self._seg_zone_k[j0])
+                cut = self.HAIRPIN_CUT_M * float(np.clip(
+                    (k_zone - self.KINK_KAPPA) / (0.30 - self.KINK_KAPPA),
+                    0.0, 1.0))
+                tx += turn_dir * (-math.sin(h_t)) * cut
+                ty += turn_dir * (math.cos(h_t)) * cut
+                alpha = self._wrap(
+                    math.atan2(ty - phys["y"], tx - phys["x"]) - phys["heading_rad"])
+                steer_rad = float(np.clip(
+                    math.atan2(2.0 * 3.4 * math.sin(alpha), pp_ld),
+                    -self.STEER_MAX_RAD, self.STEER_MAX_RAD))
+                if os.environ.get("DEBUG_HAIRPIN"):
+                    print(f"[HDEBUG] s={float(drv_s[i]):.1f} lat={float(drv_signed[i]):+.2f} "
+                          f"car=({phys['x']:.1f},{phys['y']:.1f}) hdg={math.degrees(phys['heading_rad']):.1f} "
+                          f"tgt=({tx:.1f},{ty:.1f}) turn={turn_dir:+.0f} cut={cut:.1f} "
+                          f"vz={self._seg_zone_v[j0]:.1f} alpha={math.degrees(alpha):+.1f} "
+                          f"steer={steer_rad:+.2f}", flush=True)
+                # SINGLE-FILE: se outro carro está ao lado (até 8 m à frente
+                # e <3,5 m de separação lateral), o de TRÁS cede. Sem isso,
+                # dois carros entram lado a lado no kink e o contato empurra
+                # o de fora para a grama (medido: VER lat +6,5 -> +10,4).
+                target_v = float(self._seg_zone_v[j0]) or self.HAIRPIN_TARGET_MPS
+                for j in range(n_drivers):
+                    if j == i:
+                        continue
+                    d_prog = (float(drv_s[j]) - float(drv_s[i])
+                              + 0.5 * self._track_len_s) % self._track_len_s \
+                             - 0.5 * self._track_len_s
+                    if 0.0 < d_prog < 8.0 and abs(
+                            float(drv_signed[j]) - float(drv_signed[i])) < 3.5:
+                        target_v = 1.5   # cede a vez no hairpin
+                        break
+                if speed > target_v:
+                    th, brk = 0.0, max(
+                        brk, float(np.clip(
+                            (speed - target_v) / 3.0, 0.25, 1.0)))
                 else:
-                    th, brk = self.REJOIN_THROTTLE, 0.0
+                    # throttle PRÓPRIO (não min com a policy: se a rede quer
+                    # 0, o carro trava parado no meio do hairpin)
+                    th = float(np.clip(
+                        (target_v - speed) / 5.0 + 0.2, 0.15, 0.5))
+                    brk = 0.0
+                hairpin_assist = True
+
+            # ---- 3. rejoin (fora do asfalto) ----------------------------------
+            # Pure pursuit falha quando o "pé" perpendicular fica ATRÁS do
+            # carro (alpha≈180° -> sin≈0 -> sem esterço) e o carro segue
+            # reto para fora. Controlador cross-track + heading, sempre
+            # apontando de volta para a linha. Sinal: + steer = esquerda.
+            if offtrack:
+                lat_n = float(np.clip(
+                    drv_signed[i] / max(self._half_width, 1.0), -2.0, 2.0))
+                head_n = float(np.clip(
+                    self.last_heading_err.get(drivers[i].driver_id, 0.0),
+                    -1.0, 1.0))
+                steer_rad = float(np.clip(
+                    -0.55 * lat_n - 0.65 * head_n,
+                    -self.STEER_MAX_RAD, self.STEER_MAX_RAD))
+                if speed > self.REJOIN_TARGET_MPS:
+                    th, brk = 0.0, max(
+                        brk, float(np.clip(
+                            (speed - self.REJOIN_TARGET_MPS) / 2.5, 0.3, 1.0)))
+                else:
+                    th, brk = 0.30, 0.0
 
             # ---- 2. recovery (imobilização) ------------------------------------
+            # O assist de hairpin freia de propósito até ~4 m/s; se o
+            # anti-stall disparasse aqui ele devolveria throttle e o carro
+            # entraria no kink a 50+ km/h (medido). Enquanto o assist está
+            # ativo, ele é a autoridade — recovery só volta fora da zona.
             rec = self._recovery_state.setdefault(drivers[i].driver_id, {})
             progress_m = float(engine.cum_dist_m.get(drivers[i].driver_id, 0.0))
-            th, brk, rec_active = self._recovery_step(rec, speed, th, brk,
-                                                      engine.sim_ts, progress_m,
-                                                      offtrack)
+            if hairpin_assist:
+                rec['active'] = False
+                rec['stall_since'] = engine.sim_ts
+                rec_active = False
+            else:
+                th, brk, rec_active = self._recovery_step(
+                    rec, speed, th, brk, engine.sim_ts, progress_m, offtrack)
 
             # ---- 1. blocked (segurança) ---------------------------------------
             blocked = speed < 2.0 and self._contact_with_other_car(engine, drivers, i)
@@ -840,6 +1041,8 @@ class NeuralRaceController:
                 authority = "recovery_rejoin" if offtrack else "recovery"
             elif offtrack:
                 authority = "rejoin"
+            elif hairpin_assist:
+                authority = "hairpin_assist"
             elif gov_braked:
                 authority = "governor"
             else:
@@ -1032,6 +1235,32 @@ def print_leaderboard(engine: SimulationEngine, drivers: List[Driver], elapsed_s
     print("=" * 80)
 
 
+def validate_grid_anchor(track: Track) -> None:
+    """Detecta kink/loop dobrado na região do grid (bug do 'fim = início')."""
+    w = np.array(track.waypoints, dtype=np.float64)
+    n = len(w)
+    AB = np.roll(w, -1, axis=0) - w
+    L = np.hypot(AB[:, 0], AB[:, 1])
+    cum = np.concatenate([[0.0], np.cumsum(L)])[:-1]
+    total = float(L.sum())
+    head = np.arctan2(AB[:, 1], AB[:, 0])
+
+    sf = track.start_finish_waypoint % n
+    front = (cum[sf] - 6.0) % total
+    j = int(np.searchsorted(cum, front, side="right") - 1) % n
+    kink = math.degrees(abs((head[(j + 1) % n] - head[j] + math.pi)
+                            % (2.0 * math.pi) - math.pi))
+
+    print(f"[Grid] sf_idx={sf} sf_s={cum[sf]:.1f} m | "
+          f"front_s={front:.1f} m | seg={j} | "
+          f"heading={math.degrees(head[j]):.1f}° | kink={kink:.1f}°")
+    if kink > 45.0:
+        print(f"[Grid][ERRO] kink de {kink:.0f}° perto da linha de chegada. "
+              f"O carro vai interpretar fim/início de volta errado. "
+              f"Use a pista congelada: --track-json "
+              f"{FROZEN_TRACK_DIR / 'interlagos_v1.json'}")
+
+
 def place_grid(engine, track, drivers, spacing_m=9.0, lateral_m=1.9):
     """Grid estilo F1 (5 fileiras x 2 colunas) ancorado na RETA mais longa que
     termina ANTES da linha de largada/chegada.
@@ -1103,6 +1332,67 @@ def place_grid(engine, track, drivers, spacing_m=9.0, lateral_m=1.9):
     print("[Grid] 10 carros no grid estilo F1 (5 fileiras x 2 colunas, NA RETA)")
 
 
+def publish_random_event(engine, drivers, rng, followed_id):
+    """Sorteia um evento relevante e publica no canal da IA.
+
+    O listener filtra eventos de pilotos a mais de 100 m do acompanhado
+    (``_is_relevant``). Por isso 60% das vezes o evento cai num vizinho,
+    para garantir que a IA realmente seja acionada.
+    """
+    followed = next((d for d in drivers if d.driver_id == followed_id),
+                    drivers[0])
+    fs = engine.cum_dist_m.get(followed.driver_id, 0.0)
+    total = float(engine.track.length_m)
+
+    def ring_dist(a, b):
+        d = abs(a - b) % total
+        return min(d, total - d)
+
+    nearby = [d for d in drivers if d is not followed
+              and ring_dist(engine.cum_dist_m.get(d.driver_id, 0.0), fs) <= 150.0]
+    if nearby and rng.random() < 0.60:
+        drv = rng.choice(nearby)
+    elif rng.random() < 0.50:
+        drv = followed
+    else:
+        drv = rng.choice(drivers)
+
+    state = engine.states[drv.driver_id]
+    kind = rng.choices(
+        ["tyre_worn", "pit_stop", "position_update", "weather_changed"],
+        weights=[40, 25, 25, 10], k=1)[0]
+
+    if kind == "tyre_worn":
+        engine.publisher.publish(TyreWornEvent(
+            sim_ts=engine.sim_ts, driver_id=drv.driver_id,
+            driver_name=drv.name,
+            compound=state.tyre.model.compound.value,
+            tyre_life_pct=round(rng.uniform(8.0, 25.0), 1),
+            age_laps=state.tyre.age_laps))
+    elif kind == "pit_stop":
+        engine.publisher.publish(PitStopEvent(
+            sim_ts=engine.sim_ts, driver_id=drv.driver_id,
+            driver_name=drv.name, lap=state.lap,
+            new_compound=rng.choice(["SOFT", "MEDIUM", "HARD"]),
+            fuel_added_kg=round(rng.uniform(15.0, 35.0), 1),
+            pit_time_s=round(rng.uniform(20.0, 26.0), 1)))
+    elif kind == "weather_changed":
+        # Muda o estado REAL do modelo (o grip acompanha), mas só DRY/CLOUDY
+        prev = engine.weather_model.current
+        choices = [k for k in (WeatherKind.DRY, WeatherKind.CLOUDY)
+                   if k != prev.kind]
+        engine.weather_model.current = BASE_CONDITIONS[rng.choice(choices)]
+        engine.publisher.publish(WeatherChangedEvent(
+            sim_ts=engine.sim_ts, lap=state.lap,
+            previous=prev.to_dict(),
+            current=engine.weather_model.current.to_dict()))
+    else:
+        kind = "position_update"
+
+    engine._publish_position_update(state.lap)
+    print(f"[RandomEvents] {kind}: {drv.driver_id} @ t={engine.sim_ts:.1f}s")
+
+
 def run_race():
     parser = argparse.ArgumentParser(
         description="Simulação de Corrida F1 com 10 Carros no PyBullet")
@@ -1114,6 +1404,8 @@ def run_race():
                         help="Piloto a seguir na câmera inicial (ex: VER, NOR, LEC)")
     parser.add_argument("--track", type=str, default="interlagos",
                         help="Evento FastF1 (ex: 'interlagos', 'Monaco', 'Silverstone')")
+    parser.add_argument("--track-json", default=None,
+                            help="Pista congelada explícita (tracks_frozen/*.json)")
     parser.add_argument("--year", type=int, default=2024, help="Ano da sessão FastF1")
     parser.add_argument("--session", type=str, default="R",
                         help="Sessão FastF1 (R, Q, ...)")
@@ -1121,6 +1413,8 @@ def run_race():
                         help="Rodar em modo headless sem janela 3D")
     parser.add_argument("--realtime", action="store_true",
                         default=True, help="Sincronizar com tempo real")
+    parser.add_argument("--no-realtime", action="store_true",
+                        help="Desliga a sincronização com tempo real (testes rápidos)")
     parser.add_argument("--hz", type=float, default=10.0,
                         help="Frequência de lógica em Hz (default: 10.0)")
     parser.add_argument("--sub-steps", type=int, default=24,
@@ -1156,9 +1450,17 @@ def run_race():
     parser.add_argument("--redis-port", type=int, default=6379,
                         help="Porta do Redis (default: 6379)")
     parser.add_argument("--demo-events", action="store_true",
-                        help="Injeta tyre/pit/position events a cada N segundos")
+                        help="Alias legado de --random-events")
+    parser.add_argument("--random-events", action="store_true",
+                        help="Publica eventos aleatórios (pneu/pit/clima/posição) "
+                             "para acionar a IA")
+    parser.add_argument("--event-seed", type=int, default=None,
+                        help="Semente do sorteio de eventos (reprodutibilidade)")
     parser.add_argument("--event-every-s", type=float, default=10.0)
     args = parser.parse_args()
+
+    if args.demo_events:
+        args.random_events = True
 
     prof = PROFILES[args.profile]
     actor_keras = Path(args.actor) if args.actor else prof["keras"]
@@ -1186,7 +1488,18 @@ def run_race():
     # Pista REAL via FastF1 (padrão: GP de São Paulo/Interlagos), com fallback
     # automático (evento pedido -> São Paulo -> preset local).
     print("[Setup] Carregando circuito via FastF1 (fallback: Interlagos)...")
-    track = resolve_track(track=args.track, year=args.year, session=args.session)
+    frozen_path = (Path(args.track_json) if args.track_json
+                   else find_frozen_track(args.track))
+    if frozen_path is not None and frozen_path.exists():
+        track = load_frozen_track(frozen_path)
+        print(f"[Setup] Pista congelada (treino): {frozen_path.name} | "
+              f"{len(track.waypoints)} wp | {track.length_m:.0f} m | "
+              f"sf_idx={track.start_finish_waypoint}")
+    else:
+        print("[Setup] Carregando circuito via FastF1...")
+        track = resolve_track(track=args.track, year=args.year,
+                              session=args.session)
+    validate_grid_anchor(track)
     drivers = build_grid_drivers()
     drivers = drivers[:args.n_cars]
 
@@ -1198,7 +1511,7 @@ def run_race():
         gui=not args.no_gui,
         camera_mode=args.camera,
         draw_track=True,
-        realtime=args.realtime,
+        realtime=not args.no_realtime,
         input_stale_after_s=300.0,  # Neural controller publica a cada tick — sem stale
     )
 
@@ -1250,7 +1563,8 @@ def run_race():
         from backend.model_train.velocity_profile import VelocityProfile
         controller._v_plan_cap = VelocityProfile(
             np.array(track.waypoints, dtype=np.float64), grip_mult=0.788,
-            sf=0.80, ds_target=4.0, smooth_window_m=20.0)
+            sf=0.80, ds_target=4.0, smooth_window_m=20.0,
+            raw_kappa_cap=True)
     print(f"[Model] governor: {args.gov}")
 
     # 4. Configuração de Câmera e Visualização
@@ -1263,6 +1577,7 @@ def run_race():
 
     if camera_mode == "follow" and not args.no_gui:
         engine.physics.set_follow_target(engine.handles[drivers[follow_idx].driver_id])
+        engine.physics.update_camera()
 
     label_ids: Dict[str, int] = {}
     show_labels = True
@@ -1272,9 +1587,11 @@ def run_race():
     dt = 1.0 / sim_config.logic_step_hz
     last_ui_print = 0.0
 
-    last_demo_event_ts = 0.0
-    demo_event_idx = 0
+    event_rng = random.Random(args.event_seed)
+    next_random_event_ts = 2.0
     last_debug_ts = 0.0
+    if args.random_events and publisher is None:
+        print("[RandomEvents] aviso: sem --redis os eventos não chegam à IA")
 
     print("\n🏁 TUDO PRONTO! CORRIDA DE 10 CARROS INICIADA! 🏁\n")
     engine.race_started = True
@@ -1356,36 +1673,12 @@ def run_race():
             # 3. Avança um tick físico
             engine._step_tick(dt, sim_config.physics_sub_steps)
 
-            if publisher is not None and args.demo_events:
-                if engine.sim_ts - last_demo_event_ts >= args.event_every_s:
-                    last_demo_event_ts = engine.sim_ts
-                    drv = drivers[demo_event_idx % len(drivers)]
-                    state = engine.states[drv.driver_id]
-
-                    if demo_event_idx % 2 == 0:
-                        engine.publisher.publish(TyreWornEvent(
-                            sim_ts=engine.sim_ts,
-                            driver_id=drv.driver_id,
-                            driver_name=drv.name,
-                            compound=state.tyre.model.compound.value,
-                            tyre_life_pct=18.0,
-                            age_laps=state.tyre.age_laps,
-                        ))
-                        print(f"[DemoEvents] tyre_worn: {drv.driver_id}")
-                    else:
-                        engine.publisher.publish(PitStopEvent(
-                            sim_ts=engine.sim_ts,
-                            driver_id=drv.driver_id,
-                            driver_name=drv.name,
-                            lap=state.lap,
-                            new_compound="MEDIUM",
-                            fuel_added_kg=30.0,
-                            pit_time_s=22.0,
-                        ))
-                        print(f"[DemoEvents] pit_stop: {drv.driver_id}")
-
-                    engine._publish_position_update(state.lap)
-                    demo_event_idx += 1
+            if args.random_events and publisher is not None:
+                if engine.sim_ts >= next_random_event_ts:
+                    publish_random_event(engine, drivers, event_rng,
+                                         args.follow_driver.upper())
+                    next_random_event_ts = engine.sim_ts + event_rng.uniform(
+                        args.event_every_s * 0.6, args.event_every_s * 1.4)
 
             # 4. Atualiza câmera e HUD 3D
             if not args.no_gui:
@@ -1404,18 +1697,24 @@ def run_race():
                 last_debug_ts = engine.sim_ts
                 print(f"\n[debug-cars] sim_ts={engine.sim_ts:.1f}s")
                 for drv in drivers:
-                    st = engine.states[drv.driver_id]
+                    did = drv.driver_id
+                    st = engine.states[did]
+                    herr = math.degrees(
+                        controller.last_heading_err.get(did, 0.0))
+                    v_safe = controller.last_v_safe.get(did)
                     print(
-                        f"  {drv.driver_id}: "
+                        f"  {did}: "
                         f"v={st.velocity_mps * 3.6:6.1f} km/h | "
-                        f"dist={engine.cum_dist_m.get(drv.driver_id, 0.0):8.1f} m | "
-                        f"authority={controller.last_authority.get(
-                            drv.driver_id, '?'):15s} | "
-                        f"x={st.position_x:8.1f} y={st.position_y:8.1f}"
+                        f"s={controller.last_s.get(did, 0.0):7.1f} m | "
+                        f"lat={controller.last_lat.get(did, 0.0):+5.2f} m | "
+                        f"herr={herr:+6.1f}° | "
+                        f"v_safe={v_safe if v_safe is not None else 0.0:5.1f} m/s | "
+                        f"dist={engine.cum_dist_m.get(did, 0.0):7.1f} m | "
+                        f"authority={controller.last_authority.get(did, '?'):15s}"
                     )
 
             # 6. Sincronização em tempo real
-            if args.realtime:
+            if not args.no_realtime:
                 elapsed = time.time() - t0
                 if elapsed < dt:
                     time.sleep(dt - elapsed)

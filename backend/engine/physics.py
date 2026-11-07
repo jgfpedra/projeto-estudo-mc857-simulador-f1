@@ -758,11 +758,14 @@ class PyBulletPhysics:
         start_finish_waypoint: int = 0,
         color: Tuple[float, float, float] = (0.2, 0.8, 0.2),
         track_width_m: float = 12.0,
+        max_debug_points: int = 220,
     ) -> None:
         """Desenha a linha central e a linha de chegada no PyBullet.
 
-        Só tem efeito em modo GUI. Os waypoints contêm apenas coordenadas 2D
-        ``(x, y)``; a terceira coordenada é sempre zero no mundo físico.
+        Pistas com milhares de waypoints (ex.: interlagos_v1 com 1131 wp)
+        estouram o GUI se desenharmos 1 addUserDebugLine por segmento
+        (1131 x 3 = 3393 chamadas) — no Mesa/Intel isso trava/crasha o
+        contexto GL. Por isso a polilinha é amostrada.
         """
         if not self.gui or self._client_id is None:
             return
@@ -770,15 +773,23 @@ class PyBulletPhysics:
         if n < 2:
             return
 
+        stride = max(1, int(math.ceil(n / float(max(1, max_debug_points)))))
+        sampled = list(waypoints[::stride])
+        if len(sampled) < 2:
+            sampled = list(waypoints[:2])
+
         def _draw_polyline(
             points: Sequence[Tuple[float, float]],
             line_color: Tuple[float, float, float],
             width: float,
             z: float,
         ) -> None:
-            for i in range(len(points)):
+            m = len(points)
+            for i in range(m):
                 x1, y1 = points[i]
-                x2, y2 = points[(i + 1) % len(points)]
+                x2, y2 = points[(i + 1) % m]
+                if x1 == x2 and y1 == y2:
+                    continue
                 try:
                     p.addUserDebugLine(
                         lineFromXYZ=[x1, y1, z],
@@ -791,25 +802,28 @@ class PyBulletPhysics:
                 except Exception:
                     pass
 
-        _draw_polyline(waypoints, color, 2.0, 0.05)
+        # Linha verde central: referência visual principal.
+        _draw_polyline(sampled, color, 2.0, 0.10)
 
-        # Bordas aproximadas pela largura da pista, deslocadas na normal local.
-        if track_width_m > 0.0:
+        # Bordas: só em pistas de baixa resolução. Nas pistas congeladas a
+        # malha de asfalto (draw_track_surface) já mostra as bordas.
+        if track_width_m > 0.0 and n <= 400:
             half_width = track_width_m / 2.0
             left_edge: List[Tuple[float, float]] = []
             right_edge: List[Tuple[float, float]] = []
-            for i in range(n):
-                prev_x, prev_y = waypoints[(i - 1) % n]
-                next_x, next_y = waypoints[(i + 1) % n]
+            m = len(sampled)
+            for i in range(m):
+                prev_x, prev_y = sampled[(i - 1) % m]
+                next_x, next_y = sampled[(i + 1) % m]
                 tx, ty = next_x - prev_x, next_y - prev_y
                 tangent_len = math.hypot(tx, ty) or 1.0
                 nx, ny = -ty / tangent_len, tx / tangent_len
-                x, y = waypoints[i]
+                x, y = sampled[i]
                 left_edge.append((x + nx * half_width, y + ny * half_width))
                 right_edge.append((x - nx * half_width, y - ny * half_width))
             border = (0.85, 0.85, 0.9)
-            _draw_polyline(left_edge, border, 1.5, 0.04)
-            _draw_polyline(right_edge, border, 1.5, 0.04)
+            _draw_polyline(left_edge, border, 1.5, 0.08)
+            _draw_polyline(right_edge, border, 1.5, 0.08)
 
         # A linha de chegada fica perpendicular à direção local da pista.
         sf_idx = start_finish_waypoint % n
@@ -829,12 +843,12 @@ class PyBulletPhysics:
                 lineFromXYZ=[
                     sf_x - normal_x * half_width,
                     sf_y - normal_y * half_width,
-                    0.1,
+                    0.12,
                 ],
                 lineToXYZ=[
                     sf_x + normal_x * half_width,
                     sf_y + normal_y * half_width,
-                    0.1,
+                    0.12,
                 ],
                 lineColorRGB=(1.0, 0.1, 0.1),
                 lineWidth=4.0,

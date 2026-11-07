@@ -1,0 +1,6 @@
+# Offline track-extraction toolchain. Not needed to run the viewer -
+# public/tracks/*.json is committed. See CLAUDE.md.
+fastf1==3.4.4
+numpy==1.26.4
+scipy==1.14.1
+matplotlib==3.9.2
