@@ -1,0 +1,78 @@
+{
+  "decision": null,
+  "error": "frame RMS 17.792229 m > 5.0 m",
+  "frame": {
+    "cyclic_shift": 1872,
+    "det": 0.9999999999999997,
+    "direct_rms_m": 318.2527032220529,
+    "method": "procrustes_rigid",
+    "rms_m": 17.79222891158198,
+    "year": 2022
+  },
+  "preflight": {
+    "pickle_data_opened": true,
+    "projection_performed": false,
+    "regression_tests": "45 passed, 2 skipped",
+    "synthetic_tests": "7 passed",
+    "v3_created": false
+  },
+  "processed_until_year": 2022,
+  "real_data_processed": false,
+  "schema": "c4-geometry-check-v1",
+  "source_hashes": {
+    "cache/2022/2022-11-13_S\u00e3o_Paulo_Grand_Prix/2022-11-13_Race/_extended_timing_data.ff1pkl": "92be7e1d21e1ada858e5eb4e1fc5e796e2918afc3130b82118ad848799356074",
+    "cache/2022/2022-11-13_S\u00e3o_Paulo_Grand_Prix/2022-11-13_Race/lap_count.ff1pkl": "8597b465126cda56c32c331ce8d6b8d4b05da3b7fb048a111a29eaa558d0a922",
+    "cache/2022/2022-11-13_S\u00e3o_Paulo_Grand_Prix/2022-11-13_Race/position_data.ff1pkl": "b254a8ea76e235603bde7128931ffa99652456ee0f00733d9506ba3ec8eb8fe9",
+    "cache/2022/2022-11-13_S\u00e3o_Paulo_Grand_Prix/2022-11-13_Race/track_status_data.ff1pkl": "9ec7f8299218aaa28b9d0c12a4bf3f3df054cbd0c367e36cc9c67e0624c2431a",
+    "cache/2022/2022-11-13_S\u00e3o_Paulo_Grand_Prix/2022-11-13_Race/weather_data.ff1pkl": "2fa6a19afe389dacf47bb2cfc7b74b52a1a33393403a0245e00da30cf3cc6ac2",
+    "cache/2023/2023-11-05_S\u00e3o_Paulo_Grand_Prix/2023-11-05_Race/_extended_timing_data.ff1pkl": "7b0bb638be91ffd63569dd1ffde28ed76a5eb967a37f27becfba1363a4b6761f",
+    "cache/2023/2023-11-05_S\u00e3o_Paulo_Grand_Prix/2023-11-05_Race/lap_count.ff1pkl": "d76eee0944b4d9445fb730aca3a7a9efe5bbda12b5f1fe4c4ed306308cab15a2",
+    "cache/2023/2023-11-05_S\u00e3o_Paulo_Grand_Prix/2023-11-05_Race/position_data.ff1pkl": "26e12de29988dfefe790cb4f17b56d4e78934e6ba090bd4c32c5d3177fb59b33",
+    "cache/2023/2023-11-05_S\u00e3o_Paulo_Grand_Prix/2023-11-05_Race/track_status_data.ff1pkl": "fbbaf596ceadefa9b6f865167802148d513cffd00d527ba4fcac25e8ccf52d6c",
+    "cache/2023/2023-11-05_S\u00e3o_Paulo_Grand_Prix/2023-11-05_Race/weather_data.ff1pkl": "326ab172affc4836951367efe9ac3ac24e146c79973f0ab93baf68c6fe7962d7",
+    "cache/2024/2024-11-03_S\u00e3o_Paulo_Grand_Prix/2024-11-03_Race/_extended_timing_data.ff1pkl": "adea1c4499a099247e491616c821eb6e6775a19757af2701c9fd05e888fe12f8",
+    "cache/2024/2024-11-03_S\u00e3o_Paulo_Grand_Prix/2024-11-03_Race/lap_count.ff1pkl": "1db85364a69bdd4ec6b52752012d7ec7f25084eae53ce436f32f160755a20e70",
+    "cache/2024/2024-11-03_S\u00e3o_Paulo_Grand_Prix/2024-11-03_Race/position_data.ff1pkl": "2b1667600c9f4afce8fa4e18295fcece90b04d182eb8017b51a5b79b82303897",
+    "cache/2024/2024-11-03_S\u00e3o_Paulo_Grand_Prix/2024-11-03_Race/track_status_data.ff1pkl": "1ad22c3fcd9c4621ce8f481c786c93eb53679952d3528311f8b93db62970d179",
+    "cache/2024/2024-11-03_S\u00e3o_Paulo_Grand_Prix/2024-11-03_Race/weather_data.ff1pkl": "2c409ddb7195b1f2c7981e86c7402443e5445d3601280c50a68d9e9ff3357e6f"
+  },
+  "status": "PARE",
+  "valid_laps": [
+    {
+      "rejected": {
+        "invalid_timing": 0,
+        "lap1": 18,
+        "missing_position": 0,
+        "pit": 88,
+        "rain": 0,
+        "status": 206
+      },
+      "valid": 944,
+      "year": 2022
+    },
+    {
+      "rejected": {
+        "invalid_timing": 0,
+        "lap1": 17,
+        "missing_position": 0,
+        "pit": 103,
+        "rain": 0,
+        "status": 0
+      },
+      "valid": 986,
+      "year": 2023
+    },
+    {
+      "rejected": {
+        "invalid_timing": 0,
+        "lap1": 18,
+        "missing_position": 0,
+        "pit": 67,
+        "rain": 759,
+        "status": 20
+      },
+      "valid": 269,
+      "year": 2024
+    }
+  ]
+}

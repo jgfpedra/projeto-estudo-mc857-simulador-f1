@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""Corrida de Fórmula 1 com 10 Carros no PyBullet controlados por Modelo Neural.
+"""Corrida de Fórmula 1 com 10 carros no PyBullet.
 
 Inicia uma simulação completa com 10 carros no grid de largada, interface 3D
 do PyBullet com asfalto renderizado, câmera dinâmica (Overview / Follow),
 rótulos de telemetria 3D sobre os carros e controle autônomo dos 10 pilotos
-utilizando o modelo de rede neural multi-contexto.
+por profile (regras Apex Formula por padrão ou modelos neurais).
 
-A inferência neural é executada via motor NumPy com pesos compilados do modelo Keras,
-eliminando conflitos de símbolos de LLVM/Mesa entre o TensorFlow e o OpenGL do PyBullet.
+O profile padrão funciona só com regras e não precisa de checkpoint. Os profiles
+neurais usam o motor NumPy com pesos compilados para evitar conflitos entre
+TensorFlow e OpenGL do PyBullet.
 
 Uso:
     python backend/scripts/run_race_10_cars.py --laps 5 --realtime
+    python backend/scripts/run_race_10_cars.py --profile race  # profile neural
     python backend/scripts/run_race_10_cars.py --camera follow --follow-driver VER
     python backend/scripts/run_race_10_cars.py --camera overview
 """
@@ -20,6 +22,7 @@ from __future__ import annotations
 import argparse
 import math
 import os
+import secrets
 import subprocess
 import sys
 import time
@@ -69,6 +72,10 @@ from backend.engine import SimulationEngine, SimulationConfig, CarInput
 # MTIME — com 3 checkpoints candidatos (v10/v11b/v14) ele carregaria
 # arbitrariamente o mais recente. Substituído por --profile EXPLÍCITO.
 PROFILES = {
+    "apex-rules": dict(
+        controller="apex-rules",
+        desc="pure pursuit, frenagem por horizonte, tráfego e variação semeada",
+    ),
     # v15 FASE 4b: PROMOÇÃO APLICADA — race default = composite (B3.1 verde)
     "race": dict(
         keras=MODEL_DIR / "v10_dagger" / "dagger_actor_best.keras",
@@ -97,10 +104,9 @@ PROFILES = {
         obs_mode="traffic",
         desc="v14 iter3 — obs de tráfego 60d (campo misto condicional; ver PROJECT_STATE.md)"),
 }
-# DEFAULT (v15 FASE 4b PROMOÇÃO APLICADA): 'race' = composite (solo v10
-# congelado + residual gated). B3.1 verde: 223 contatos, 0 pós-larg, 103,4s,
-# 0 hesit, 0,17% fora. race-blind preserva o v10 puro.
-DEFAULT_PROFILE = "race"
+# O profile de regras é o padrão da simulação visual de 10 carros; os profiles
+# neurais seguem disponíveis explicitamente via --profile race|quali|traffic.
+DEFAULT_PROFILE = "apex-rules"
 DEFAULT_MAPPINGS_PATH = MODEL_DIR / "mappings.pkl"
 DEFAULT_SCALER_Y_PATH = MODEL_DIR / "scaler_y_multi.pkl"
 
@@ -324,6 +330,33 @@ class NumpyNeuralActor:
         return x @ self.w5 + self.b5   # LINEAR, sem tanh
 
 
+class ProjectionAnchorGate:
+    """Keeps the last on-track projection and freezes one rejoin target."""
+
+    def __init__(self) -> None:
+        self._anchors: Dict[str, Dict[str, Any]] = {}
+
+    def remember_on_track(self, driver_id: str, pose_xy: Tuple[float, float],
+                          s: float, ns: int,
+                          projection_xy: Tuple[float, float]) -> None:
+        self._anchors[driver_id] = {
+            "pose_xy": (float(pose_xy[0]), float(pose_xy[1])),
+            "s": float(s),
+            "ns": int(ns),
+            "projection_xy": (float(projection_xy[0]), float(projection_xy[1])),
+            "target_xy": None,
+        }
+
+    def target_for(self, driver_id: str, build_target) -> Optional[Tuple[float, float]]:
+        anchor = self._anchors.get(driver_id)
+        if anchor is None:
+            return None
+        if anchor["target_xy"] is None:
+            target_x, target_y = build_target(anchor)
+            anchor["target_xy"] = (float(target_x), float(target_y))
+        return anchor["target_xy"]
+
+
 class NeuralRaceController:
     """Controlador neural — monta a observação IDÊNTICA ao f1_env.py v2
     (23 telemetria normalizada + 2 contexto) e ações v2 [steer, longitudinal]."""
@@ -336,6 +369,16 @@ class NeuralRaceController:
     KAPPA_WINDOW_M = 20.0
     N_OBS_TELEMETRY = 9 + 2 * len(PREVIEW_DISTS)   # 23
     STEER_MAX_RAD, STEER_MIN_RAD, STEER_V0 = math.radians(45.0), 0.04, 25.0
+    # REALISMO-1 C3-B: constantes congeladas do teto pós-reentrada.
+    REJOIN_RAMP_HOLD_S = 5.0
+    REJOIN_RAMP_V0_MPS = 8.0
+    REJOIN_RAMP_TARGET_FRACTION = 0.8
+    # REALISMO-1 C6-B: offsets frozen por slot; só obs4 policy-facing muda.
+    LAT_OFFSET_SLOTS_COMPOSITE = (0.273, -1.000, -0.693, 0.590, 1.000,
+                                   -0.784, 0.018, -0.902, 0.064, 1.000)
+    LAT_OFFSET_SLOTS_BLIND = (0.251, -0.003, -0.549, -0.042, -0.879,
+                              -0.518, 0.896, 0.142, 0.694, 0.180)
+    LAT_OFFSET_LIMIT_M = 1.0
 
     # Modos de observação
     EDGE_RAY_ANGLES_DEG = (-90.0, -72.0, -54.0, -36.0, -18.0, 0.0,
@@ -346,12 +389,106 @@ class NeuralRaceController:
 
     def __init__(self, weights_path: Path, mappings_path: Optional[Path] = None,
                  track=None, obs_mode: str = "legacy",
-                 steer_gov: str = "off") -> None:
+                 steer_gov: str = "off", rejoin_gap: float = 0.0,
+                 launch_cap: bool = False, launch_stagger: bool = False,
+                 launch_steer_mute: bool = False,
+                 rejoin_handoff: str = "off",
+                 rejoin_ramp: bool = False,
+                 c8_rejoin: bool = False,
+                 lat_offset_slots: bool = False,
+                 lat_offset_profile: str = "blind",
+                 pguard: bool = False,
+                 rejoin_mode: str = "bearing",
+                 anti_glue: bool = False,
+                 proj_gate: bool = False) -> None:
         print(f"[Model] Carregando pesos neurais (NumPy Engine) de: {weights_path.name}")
         self.actor = NumpyNeuralActor(weights_path)
         self.obs_mode = obs_mode
         # v15 R8: 'off' (default, bit-reproduzível) | 'cap' (clip por κ_preview)
         self.steer_gov = steer_gov
+        self.REJOIN_GAP_ENABLED = float(rejoin_gap)  # CICLO ALAVANCA: X em m; 0=off
+        # CICLO LARGADA L-1a: launch-cap (prereg a3b8ff0) — default OFF
+        self.LAUNCH_CAP_ENABLED = bool(launch_cap)
+        # CICLO LARGADA L-1b: launch-stagger (prereg cd3ca5e) — default OFF
+        self.LAUNCH_STAGGER_ENABLED = bool(launch_stagger)
+        # REALISMO-1 C1-B: default OFF = byte-idêntico; validação do SHA
+        # acontece no construtor para falhar antes de qualquer tick.
+        self.LAUNCH_STEER_MUTE_ENABLED = bool(launch_steer_mute)
+        self._launch_steer_mute_state = {}
+        self._launch_steer_mute_active = {}
+        self._launch_steer_mute_end_reason = {}
+        self._launch_steer_mute_s_end = None
+        if self.LAUNCH_STEER_MUTE_ENABLED:
+            frozen_sha = str(getattr(track, 'frozen_sha256', '?')) if track is not None else '?'
+            self._launch_steer_mute_s_end = self.LAUNCH_STEER_MUTE_S_END_BY_SHA.get(
+                frozen_sha)
+            if self._launch_steer_mute_s_end is None:
+                raise ValueError(
+                    "--launch-steer-mute requer pista frozen conhecida; "
+                    f"sha256 recebido={frozen_sha!r}")
+        self.REJOIN_HANDOFF_MODE = str(rejoin_handoff)
+        self.REJOIN_HANDOFF_ENABLED = self.REJOIN_HANDOFF_MODE == "align"
+        if self.REJOIN_HANDOFF_MODE not in ("off", "align"):
+            raise ValueError(f"rejoin_handoff inválido: {rejoin_handoff!r}")
+        self._rejoin_handoff_state = {}
+        self._rejoin_handoff_active = {}
+        self._rejoin_handoff_end_reason = {}
+        # REALISMO-1 C3-B: teto longitudinal pós-reentrada; default OFF.
+        # Estado por carro/episódio e contadores são inertes no caminho OFF.
+        self.REJOIN_RAMP_ENABLED = bool(rejoin_ramp)
+        self.C8_REJOIN_ENABLED = bool(c8_rejoin)
+        self.REJOIN_RAMP_HOLD_S = 5.0
+        self.REJOIN_RAMP_V0_MPS = 8.0
+        self.REJOIN_RAMP_TARGET_FRACTION = 0.8
+        self._rejoin_ramp_state = {}
+        self._rejoin_ramp_active = {}
+        self._rejoin_ramp_braked = {}
+        self._rejoin_ramp_end_reason = {}
+        self._rejoin_ramp_activation_count = 0
+        self._rejoin_ramp_brake_count = 0
+        self._rejoin_ramp_activation_by_driver = {}
+        self._rejoin_ramp_brake_by_driver = {}
+        self.LAT_OFFSET_SLOTS_ENABLED = bool(lat_offset_slots)
+        self.LAT_OFFSET_PROFILE = str(lat_offset_profile)
+        self._lat_offset_slots = None
+        if self.LAT_OFFSET_SLOTS_ENABLED:
+            if self.LAT_OFFSET_PROFILE not in ("composite", "blind"):
+                raise ValueError("--lat-offset-slots exige perfil composite ou blind")
+            offsets = (self.LAT_OFFSET_SLOTS_COMPOSITE
+                       if self.LAT_OFFSET_PROFILE == "composite"
+                       else self.LAT_OFFSET_SLOTS_BLIND)
+            if len(offsets) != 10 or any(
+                    not math.isfinite(float(v))
+                    or abs(float(v)) > self.LAT_OFFSET_LIMIT_M for v in offsets):
+                raise ValueError("--lat-offset-slots: tabela inválida")
+            self._lat_offset_slots = tuple(float(v) for v in offsets)
+        self._rejoin_handoff_s_end = None
+        if self.REJOIN_HANDOFF_ENABLED:
+            frozen_sha = str(getattr(track, 'frozen_sha256', '?')) if track is not None else '?'
+            self._rejoin_handoff_s_end = self.REJOIN_HANDOFF_S_END_BY_SHA.get(frozen_sha)
+            if self._rejoin_handoff_s_end is None:
+                raise ValueError(
+                    "--rejoin-handoff align requer pista frozen conhecida; "
+                    f"sha256 recebido={frozen_sha!r}")
+        # SANIDADE-0 NIT N1 (review ANTI-D3-1): o progress-guard foi REPROVADO
+        # no gate (hesit 12 vs 3; cc 752->1520; 9/10 disparos na LARGADA) e fica
+        # isolado atrás de --pguard, DEFAULT OFF. Off = comportamento
+        # pré-ANTI-D3-1 (bit-idêntico à F4v15) e instrumento carrega o gate
+        # NOMINAL (contrato do prereg 57a9342, violado na implementação).
+        self.PGUARD_ENABLED = bool(pguard)
+        # SANIDADE-0 M2 (prereg 1007636 §1): rejoin PERCEPTIVE — substitui o
+        # bearing quando ON (ângulo raso <=15°, cap por superfície, gap X=20
+        # via o gap-check reparado). Trigger é ESTADO (off-track), NUNCA fade
+        # por progresso (lição ANTI-D3-1). Default 'bearing' = bit-idêntico.
+        self.REJOIN_MODE = str(rejoin_mode)
+        # SANIDADE-0 M3 (prereg 1007636 §1): anti-glue — (ii) preventivo
+        # escopado a composite/professor; (iii) deadlock-breaker p/ todos.
+        # Default OFF = bit-idêntico (estado só é tocado sob a flag).
+        self.ANTI_GLUE_ENABLED = bool(anti_glue)
+        self._glue_state = {}   # drv_id -> dict(partner_id, ticks, breaking)
+        self.PROJ_GATE_ENABLED = bool(proj_gate)
+        self._projection_anchor_gate = (
+            ProjectionAnchorGate() if self.PROJ_GATE_ENABLED else None)
         self._steergov_clips = {}   # drv -> n de ticks clipados (instrumento)
         self.last_steergov = {}     # drv -> 1/0 no tick corrente (coluna CSV)
 
@@ -397,10 +534,239 @@ class NeuralRaceController:
         # v15 FASE 4: composite (solo congelado + residual gated)
         self._composite_np = None   # NumpyCompositeActor (set externamente)
         self._res_prev = {}          # drv -> (prev_steer, prev_long) p/ o residual
+        # ANTI-D3-1: estado do progress-guard (fade gate->base) por driver
+        self._pguard_state = {}
+        # CICLO ALAVANCA: estado do gap-check por driver
+        self._gapcheck_state = {}   # drv -> dict(tick0, hold, fb) ou None
+        # REPARO (amenda ALAVANCA): telemetria por carro EM FASE com a ação —
+        # o bloco usava 'drv' STALE do loop de observações (= último driver):
+        # UM estado compartilhado por todos os carros + flags só do último.
+        self._gap_hold = {}         # drv -> 1/0 no tick corrente (coluna CSV)
+        self._gap_fb = {}           # drv -> 1/0 SOMENTE no tick do fallback
+        self._was_offtrack = {}    # drv -> offtrack no tick ANTERIOR (transição off->on)
+        # CICLO LARGADA L-1a: telemetria do launch-cap por carro (lição stale-drv)
+        self._cap_active = {}      # drv -> 1/0 no tick corrente (coluna CSV)
+        # CICLO LARGADA L-1b: stagger — slots do run (o runner seta; fail-loud
+        # se a flag ligada sem ordem) e telemetria por carro
+        self._launch_grid_slots = None   # drv -> posição de largada (1..10)
+        self._stagger_held = {}          # drv -> 1/0 no tick corrente (coluna CSV)
         # v15 R13-FECHAMENTO: residual input 16d por tick (logging ADITIVO v3.3)
         self._res_in_last = {}       # drv -> res_in[i] (16d) do tick corrente
         self._res_gate = {}          # drv -> último gate (instrumento)
         self._res_norm = {}          # drv -> último |r| (instrumento)
+
+    def _rejoin_target_point(self, driver_id: str, s_live: float,
+                             projection_x_live: float,
+                             projection_y_live: float,
+                             ahead_m: float) -> Tuple[float, float]:
+        """Resolve a live target or the frozen target from the last anchor."""
+        if self.PROJ_GATE_ENABLED:
+            def from_anchor(anchor):
+                h_anchor = self._heading_at(anchor["s"])
+                px, py = anchor["projection_xy"]
+                return (px + ahead_m * math.cos(h_anchor),
+                        py + ahead_m * math.sin(h_anchor))
+
+            frozen = self._projection_anchor_gate.target_for(driver_id, from_anchor)
+            if frozen is not None:
+                return frozen
+
+        h_track = self._heading_at(float(s_live))
+        return (projection_x_live + ahead_m * math.cos(h_track),
+                projection_y_live + ahead_m * math.sin(h_track))
+
+    @staticmethod
+    def steer_limit_rad(speed_mps):
+        return max(NeuralRaceController.STEER_MIN_RAD,
+                   NeuralRaceController.STEER_MAX_RAD /
+                   (1.0 + (float(speed_mps) / NeuralRaceController.STEER_V0) ** 2))
+
+    @staticmethod
+    def _apply_launch_steer_mute(action, solo_action, active):
+        """Substitui apenas o eixo steer pelo solo durante D_L."""
+        out = np.asarray(action, dtype=np.float64).copy()
+        if active:
+            solo = np.asarray(solo_action, dtype=np.float64).ravel()
+            out[0] = math.tanh(float(solo[0]))
+        return out
+
+    def _launch_steer_mute_step(self, driver_id, s_live, lat_dist, sim_ts):
+        """Atualiza D_L por carro e retorna se o mute vale neste tick.
+
+        D_L é uso único: crossed/offtrack/deadline encerra o estado e o
+        motivo permanece disponível para o CSV ON. A posição é medida no
+        progresso circular desde o primeiro tick observado para o carro.
+        """
+        if not self.LAUNCH_STEER_MUTE_ENABLED:
+            return False
+        st = self._launch_steer_mute_state.setdefault(
+            driver_id, dict(start_s=float(s_live), ended=False, reason=None))
+        if st['ended']:
+            self._launch_steer_mute_active[driver_id] = 0
+            return False
+        if float(lat_dist) > self._half_width * self.OFFTRACK_FACTOR:
+            st.update(ended=True, reason='offtrack')
+            self._launch_steer_mute_active[driver_id] = 0
+            self._launch_steer_mute_end_reason[driver_id] = st['reason']
+            return False
+        if float(sim_ts) > self.LAUNCH_STEER_MUTE_TMAX_S:
+            st.update(ended=True, reason='deadline')
+            self._launch_steer_mute_active[driver_id] = 0
+            self._launch_steer_mute_end_reason[driver_id] = st['reason']
+            return False
+        delta_end = ((float(self._launch_steer_mute_s_end) - st['start_s'])
+                     % self._track_len_s)
+        delta_live = ((float(s_live) - st['start_s']) % self._track_len_s)
+        if delta_live >= delta_end:
+            st.update(ended=True, reason='crossed')
+            self._launch_steer_mute_active[driver_id] = 0
+            self._launch_steer_mute_end_reason[driver_id] = st['reason']
+            return False
+        self._launch_steer_mute_active[driver_id] = 1
+        return True
+
+    @classmethod
+    def rejoin_ramp_v_cap(cls, v_plan_mps: float, elapsed_s: float) -> float:
+        """C3-B: teto de velocidade congelado no prereg, em m/s."""
+        target = cls.REJOIN_RAMP_TARGET_FRACTION * float(v_plan_mps)
+        elapsed = float(elapsed_s)
+        return min(target, cls.REJOIN_RAMP_V0_MPS
+                   + max(target - cls.REJOIN_RAMP_V0_MPS, 0.0)
+                   * elapsed / cls.REJOIN_RAMP_HOLD_S)
+
+    def _rejoin_ramp_step(self, driver_id, *, was_offtrack, offtrack,
+                          s_live, speed, sim_ts, th, brk):
+        """Aplica o teto C3-B por carro/episódio e só altera th/brk.
+
+        A janela inclui elapsed=0 e elapsed=5,0 s; expira no primeiro tick
+        estritamente posterior a 5,0 s. Uma nova transição off->on cria novo
+        episódio. O v_plan é consultado na posição corrente, como pinado na
+        fórmula do C3-B.
+        """
+        if not self.REJOIN_RAMP_ENABLED:
+            return False, False, th, brk
+        st = self._rejoin_ramp_state.get(driver_id)
+        if was_offtrack and not offtrack and (st is None or st.get('ended')):
+            st = dict(active=True, ended=False, t0=float(sim_ts), reason=None)
+            self._rejoin_ramp_state[driver_id] = st
+            self._rejoin_ramp_activation_count += 1
+            self._rejoin_ramp_activation_by_driver[driver_id] = (
+                self._rejoin_ramp_activation_by_driver.get(driver_id, 0) + 1)
+        self._rejoin_ramp_active[driver_id] = 0
+        self._rejoin_ramp_braked[driver_id] = 0
+        if st is None or st.get('ended') or not st.get('active'):
+            return False, False, th, brk
+        if offtrack:
+            st.update(active=False, ended=True, reason='offtrack')
+            self._rejoin_ramp_end_reason[driver_id] = st['reason']
+            return False, False, th, brk
+        elapsed = float(sim_ts) - float(st['t0'])
+        if elapsed > self.REJOIN_RAMP_HOLD_S:
+            st.update(active=False, ended=True, reason='deadline')
+            self._rejoin_ramp_end_reason[driver_id] = st['reason']
+            return False, False, th, brk
+        v_plan = getattr(self, '_v_plan_cap', None)
+        if v_plan is None:
+            raise RuntimeError('--rejoin-ramp requer --gov vplan')
+        v_cap = self.rejoin_ramp_v_cap(
+            float(v_plan.at(float(s_live))), elapsed)
+        self._rejoin_ramp_active[driver_id] = 1
+        if float(speed) <= v_cap:
+            return True, False, th, brk
+        excess_frac = (float(speed) - v_cap) / max(v_cap, 1.0)
+        ramp_brake = float(np.clip(excess_frac * 0.8, 0.15, 1.0))
+        self._rejoin_ramp_brake_count += 1
+        self._rejoin_ramp_brake_by_driver[driver_id] = (
+            self._rejoin_ramp_brake_by_driver.get(driver_id, 0) + 1)
+        self._rejoin_ramp_braked[driver_id] = 1
+        # Mesma lei do governor: corta th e eleva brk sem tocar no esterço.
+        return True, True, 0.0, max(float(brk), ramp_brake)
+
+    def rejoin_ramp_summary(self):
+        """Resumo aditivo para auditoria, sem alterar o CSV OFF."""
+        return dict(
+            enabled=bool(self.REJOIN_RAMP_ENABLED),
+            activations=int(self._rejoin_ramp_activation_count),
+            brake_ticks=int(self._rejoin_ramp_brake_count),
+            activations_by_driver=dict(self._rejoin_ramp_activation_by_driver),
+            brake_ticks_by_driver=dict(self._rejoin_ramp_brake_by_driver),
+        )
+
+    @staticmethod
+    def c8_gap_blocked(s_live: float, other_s: tuple[float, ...],
+                       track_len_s: float, gap_m: float) -> bool:
+        """Return whether a car ahead is inside the C8 reentry gap."""
+        for peer_s in other_s:
+            gap = (float(peer_s) - float(s_live)) % float(track_len_s)
+            if gap > float(track_len_s) / 2.0:
+                gap -= float(track_len_s)
+            if 0.0 < gap < float(gap_m):
+                return True
+        return False
+
+    def _apply_lat_offset_slots(self, tels, drivers, drv_signed):
+        """C6-B: altera somente o canal obs4, nunca os arrays físicos."""
+        if not self.LAT_OFFSET_SLOTS_ENABLED:
+            return tels
+        if self._lat_offset_slots is None or not self._launch_grid_slots:
+            raise ValueError("--lat-offset-slots: tabela de slots ausente")
+        out = np.asarray(tels, dtype=np.float32).copy()
+        for i, drv in enumerate(drivers):
+            slot_one_based = self._launch_grid_slots.get(drv.driver_id)
+            if slot_one_based is None or not 1 <= int(slot_one_based) <= 10:
+                raise ValueError("--lat-offset-slots: slot fora de 1..10")
+            off = self._lat_offset_slots[int(slot_one_based) - 1]
+            out[i, 4] = (float(drv_signed[i]) - off) / self._half_width
+        return out
+
+    def _rejoin_handoff_step(self, driver_id, *, was_offtrack, offtrack,
+                              s_live, signed_lat, speed, heading_rad,
+                              live_x, live_y, projection_x, projection_y,
+                              sim_ts):
+        """Run one C2-B handoff step; returns (active, steer, reason).
+
+        The helper changes steering only. It never receives or writes th/brk,
+        so policy + governor longitudinal commands remain untouched.
+        """
+        if not self.REJOIN_HANDOFF_ENABLED:
+            return False, None, None
+        st = self._rejoin_handoff_state.get(driver_id)
+        if was_offtrack and not offtrack and (st is None or st.get('ended')):
+            st = dict(active=True, ended=False, t0=float(sim_ts), reason=None)
+            self._rejoin_handoff_state[driver_id] = st
+        if st is None or st.get('ended') or not st.get('active'):
+            self._rejoin_handoff_active[driver_id] = 0
+            return False, None, st.get('reason') if st else None
+        if offtrack:
+            st.update(active=False, ended=True, reason='offtrack')
+            self._rejoin_handoff_active[driver_id] = 0
+            self._rejoin_handoff_end_reason[driver_id] = st['reason']
+            return False, None, st['reason']
+        heading_err = self._wrap(
+            float(heading_rad) - self._heading_at(float(s_live)))
+        margin = self._half_width - abs(float(signed_lat))
+        elapsed = float(sim_ts) - st['t0']
+        if (abs(heading_err) <= self.REJOIN_HANDOFF_THETA_RAD
+                and margin >= self.REJOIN_HANDOFF_MARGIN_M):
+            st.update(active=False, ended=True, reason='aligned')
+            self._rejoin_handoff_active[driver_id] = 0
+            self._rejoin_handoff_end_reason[driver_id] = st['reason']
+            return False, None, st['reason']
+        if elapsed >= self.REJOIN_HANDOFF_TMAX_S:
+            st.update(active=False, ended=True, reason='timeout')
+            self._rejoin_handoff_active[driver_id] = 0
+            self._rejoin_handoff_end_reason[driver_id] = st['reason']
+            return False, None, st['reason']
+        tx, ty = self._rejoin_target_point(
+            driver_id, float(s_live), float(projection_x), float(projection_y),
+            self.REJOIN_AHEAD_M)
+        bearing = math.atan2(ty - float(live_y), tx - float(live_x))
+        berr = self._wrap(bearing - float(heading_rad))
+        steer_limit = self.steer_limit_rad(float(speed))
+        steer = float(np.clip(self.REJOIN_BEARING_GAIN * berr,
+                              -steer_limit, steer_limit))
+        self._rejoin_handoff_active[driver_id] = 1
+        return True, steer, None
 
     def _build_tables(self, A: np.ndarray, half_width: float) -> None:
         B = np.roll(A, -1, axis=0)
@@ -504,6 +870,67 @@ class NeuralRaceController:
     # na linha central) — o carro anda RETO até o asfalto.
     REJOIN_AHEAD_M    = 10.0  # ponto de re-entrada: projeção + 10 m à frente
     REJOIN_BEARING_GAIN = 2.0  # steer = clip(ganho * erro de bearing)
+    # CICLO ALAVANCA (prereg 1883d6d): gap-check no rejoin — UMA variável.
+    # Ao chegar à borda (on-track, |lat| < 1,5×meia-largura, saindo de
+    # off-track), segura em crawl 4 m/s até gap À FRENDE ≥ X ou T_max=10 s.
+    # Fallback T_max solta e registra (sem deadlock). Hold em crawl NÃO é
+    # parada ≥3 s (v≥1 > 0,5 — isenção documentada no prereg).
+    REJOIN_GAP_ENABLED = 0.0   # X em metros; 0 = desligado (default)
+    REJOIN_GAP_CRAWL_MPS = 4.0
+    REJOIN_GAP_TMAX_TICKS = 100  # 10 s a 10 Hz
+    # C8-B: constants frozen from C8-0 N=0; default OFF is byte-identical.
+    C8_GRASS_V_CAP_MPS = 6.0
+    C8_GAP_M = 20.0
+    C8_GAP_WINDOW_TICKS = 100
+    # CICLO LARGADA L-1a (prereg a3b8ff0): launch-cap — CONSTANTES PINADAS
+    LAUNCH_CAP_K = 0.8          # teto = k × v_plan(s)
+    LAUNCH_CAP_S_CUT = 2950.0   # janela: s < s_cut (cobre o cluster 2699,7-2814 + saída do S)
+    LAUNCH_CAP_TMAX_S = 30.0    # janela: t < T_max (≈5× a fase crítica, med 6,2 s)
+    # CICLO LARGADA L-1b (prereg cd3ca5e): launch-stagger — ÚNICA constante nova
+    LAUNCH_STAGGER_DT = 1.0     # s/slot: release(slot) = (pos-1)×Δt (P1→0; P10→9 s)
+    # REALISMO-1 C1-B (prereg v1.1): mute SOMENTE do esterço residual.
+    # S_L_END é indexado pelo SHA da pista frozen; SHA desconhecido = erro.
+    LAUNCH_STEER_MUTE_TMAX_S = 10.0
+    LAUNCH_STEER_MUTE_S_END_BY_SHA = {
+        '164876196eb12174': 2718.3,  # Interlagos v2
+        '67ca11dc211c8c78': 3331.2,  # Monaco v2
+    }
+    # REALISMO-1 C2-B (prereg): handoff alinhado pós-reentrada.
+    REJOIN_HANDOFF_THETA_RAD = 0.3490658503988659
+    REJOIN_HANDOFF_MARGIN_M = 0.5
+    REJOIN_HANDOFF_TMAX_S = 24.0
+    REJOIN_HANDOFF_S_END_BY_SHA = {
+        '164876196eb12174': 2718.3,
+        '67ca11dc211c8c78': 3331.2,
+    }
+    # SANIDADE-0 M2 (prereg 1007636 §1): rejoin PERCEPTIVE — PINADAS
+    REJOIN_PERCEPTIVE_ANGLE_DEG = 15.0    # ângulo raso de chegada (<=15°)
+    REJOIN_PERCEPTIVE_V_GRASS = 6.0        # cap na grama (< 8,0 do bearing)
+    REJOIN_PERCEPTIVE_AHEAD_MIN_M = 10.0   # nunca mais perto que o bearing
+    REJOIN_PERCEPTIVE_AHEAD_MAX_M = 120.0  # teto do braço longo (15° de 32 m)
+    # SANIDADE-0 M3 (prereg 1007636 §1): anti-glue — PINADAS
+    ANTI_GLUE_NEAR_LAT = 2.5      # |Δlat| de "colado" (base = LAT_CORRIDOR_M)
+    ANTI_GLUE_NEAR_DS = 10.0      # adjacência longitudinal do preventivo (ii)
+    ANTI_GLUE_OFFSET_STEER = 0.25 # esterço PARA FORA do preventivo (ii)
+    ANTI_GLUE_TH_CAP = 0.6        # teto de aceleração do par colado (ii)
+    ANTI_GLUE_BREAK_S = 3.0        # breaker: par colado > 3 s contíguos (iii)
+    ANTI_GLUE_BREAK_DS = 5.5       # adjacência do breaker (iii)
+    ANTI_GLUE_BREAK_STEER = 0.4    # offset máximo do breaker (iii)
+    ANTI_GLUE_RELEASE_LAT = 3.0   # solta quando |Δlat| > 3 m
+    ANTI_GLUE_RELEASE_DS = 8.0    # ...ou Δs wrap > 8 m
+    # SANIDADE-1b M3-v2 (prereg 87214c7 §2): TETOS POR-REALIZAÇÃO — o v1 é
+    # MORTO (FAIL por margens no SANIDADE-0; D4: preventivo crônico é o
+    # custo dominante; D5: breaker incompetente no regime crawl/borda).
+    # Tick lógico 0,1 s (10 Hz) em TODOS os pins abaixo.
+    ANTI_GLUE_PREV_MAX_EP_TICKS = 10    # preventivo: 1,0 s por episódio contíguo
+    ANTI_GLUE_PREV_COOLDOWN_TICKS = 20  # cooldown 2,0 s após o teto do episódio
+    ANTI_GLUE_PREV_MAX_EPS = 10          # máx episódios por PAR por corrida
+    ANTI_GLUE_PREV_DV_MAX = 8.0          # preventivo só com |Δv| < 8 m/s
+    ANTI_GLUE_BRK_MAX_EP_TICKS = 40     # breaker: 4,0 s por episódio -> DESISTE
+    ANTI_GLUE_BRK_V_FULL = 25.0          # abaixo: lift+0,4 (v1); acima: suave
+    ANTI_GLUE_BRK_STEER_SOFT = 0.15     # offset suave acima de BRK_V_FULL
+    ANTI_GLUE_BRK_TH_SOFT = 0.5          # th<=0,5 acima de BRK_V_FULL (sem lift)
+    ANTI_GLUE_BRK_MAX_EPS = 8            # máx episódios breaker por par/corrida
     # v15 R8 — STEER-GOVERNOR (OPT-IN, default off): a física lateral é sã
     # (R7b scripted: círculo estável até v_allow) mas a política comanda
     # esterço ~24× a necessidade cinemática nas saídas (weave/caça). Cap:
@@ -657,6 +1084,14 @@ class NeuralRaceController:
             drv_proj_y[i] = float(proj_y[idx])
             drv_v[i] = phys["speed_mps"]
 
+            if (self.PROJ_GATE_ENABLED
+                    and drv_lat[i] <= self._half_width * self.OFFTRACK_FACTOR):
+                # Keep the last valid state while off-track. The global `idx`
+                # above replaces it on the first on-track tick after rejoin.
+                self._projection_anchor_gate.remember_on_track(
+                    drv.driver_id, (x, y), s, idx,
+                    (float(proj_x[idx]), float(proj_y[idx])))
+
             heading_err = self._wrap(phys["heading_rad"] - float(self._seg_heading[idx]))
 
             # preview v2: por distância d, [delta_heading/π, kappa_assinada*25]
@@ -681,6 +1116,10 @@ class NeuralRaceController:
             ]
             ctxs[i] = [state.tyre.tyre_life / self.OBS_TYRE_LIFE,
                        state.car.fuel_kg / self.OBS_FUEL_KG]
+
+        # C6-B: policy-facing obs4 only; drv_signed/drv_lat/s/physical state
+        # above remain untouched and are used by rays, traffic and controls.
+        tels = self._apply_lat_offset_slots(tels, drivers, drv_signed)
 
         # mesmo clip do env (OBS_CLIP = 5)
         tels = np.clip(np.nan_to_num(tels, nan=0.0, posinf=5.0, neginf=-5.0), -5.0, 5.0)
@@ -711,6 +1150,11 @@ class NeuralRaceController:
                     self._track_len_s, others)
             tels = np.hstack([tels, traf])
 
+        # REALISMO-1 C1-B: a flag só existe no caminho composite.
+        if (self.LAUNCH_STEER_MUTE_ENABLED
+                and not (getattr(self, "_composite_np", None) is not None
+                         and self.obs_mode == "traffic")):
+            raise RuntimeError("--launch-steer-mute requer profile composite")
         # v15 FASE 4: COMPOSITE — quando o modo é traffic com composite ativo,
         # a ação = tanh(m_solo + g·r), NÃO o forward solo direto
         if (getattr(self, "_composite_np", None) is not None
@@ -733,6 +1177,38 @@ class NeuralRaceController:
                         if d_min is None or d < d_min:
                             d_min = d
                 g = gate_value(v_ego, d_min)
+                # SANIDADE-0 NIT N1 (review ANTI-D3-1): guard REPROVADO no gate
+                # (hesit 12 vs 3; cc 752->1520; 9/10 disparos na LARGADA) —
+                # isolado atrás de --pguard, DEFAULT OFF. Com a flag off este
+                # bloco NÃO roda: g segue NOMINAL (comportamento bit-idêntico
+                # à F4v15) e o instrumento volta a carregar o gate nominal.
+                if self.PGUARD_ENABLED:
+                    # ANTI-D3-1 (prereg 57a9342): PROGRESS-GUARD com fade
+                    # gate->base. g>0,01 + Δcum<0,5m por N=5 ticks (tick
+                    # lógico 0,1s = 0,5s) -> fade linear de g_eff a 0 em F=5;
+                    # retoma ao reprogredir >=0,5 m.
+                    pg = self._pguard_state.setdefault(
+                        drv.driver_id,
+                        dict(no_prog=0, fade=0.0, last_cum=None))
+                    cum = float(engine.cum_dist_m.get(drv.driver_id, 0.0))
+                    if pg['last_cum'] is None:
+                        pg['last_cum'] = cum
+                    delta = cum - pg['last_cum']
+                    pg['last_cum'] = cum
+                    if g > 0.01:
+                        if delta < 0.5:
+                            pg['no_prog'] += 1
+                        else:
+                            pg['no_prog'] = 0
+                            pg['fade'] = 0.0
+                        if pg['no_prog'] >= 5:
+                            pg['fade'] = min(1.0, pg['fade'] + 1.0 / 5.0)
+                        g_eff = g * (1.0 - pg['fade'])
+                    else:
+                        pg['no_prog'] = 0
+                        pg['fade'] = 0.0
+                        g_eff = g
+                    g = g_eff  # instrumento: g EFETIVO pós-fade (desvio divulgado)
                 kap_ahead = float(tels[i, 11]) / 25.0  # obs10 = κ@10m × 25
                 ps, pl = self._res_prev.get(drv.driver_id, (0.0, 0.0))
                 res_in[i] = build_residual_input(tf_feats, v_ego, kap_ahead, ps, pl)
@@ -741,6 +1217,14 @@ class NeuralRaceController:
             # residual forward (NumPy)
             r = self._composite_np.residual_forward_only(res_in)
             a = np.tanh(m_solo + gates[:, None] * r)
+            # REALISMO-1 C1-B: mute SOMENTE do steer dentro de D_L.
+            # O long continua exatamente m_solo_long + g·r_long.
+            if self.LAUNCH_STEER_MUTE_ENABLED:
+                for i, drv in enumerate(drivers):
+                    active = self._launch_steer_mute_step(
+                        drv.driver_id, drv_s[i], drv_lat[i], engine.sim_ts)
+                    a[i] = self._apply_launch_steer_mute(
+                        a[i], m_solo[i], active)
             # instrumento: registra gate e |r| por driver
             for i, drv in enumerate(drivers):
                 self._res_gate[drv.driver_id] = float(gates[i])
@@ -803,6 +1287,22 @@ class NeuralRaceController:
             # ==================================================================
             lat_dist = float(drv_lat[i])
             offtrack = lat_dist > self._half_width * self.OFFTRACK_FACTOR
+            was_offtrack = self._was_offtrack.get(drivers[i].driver_id, False)
+            handoff_active, handoff_steer, _handoff_reason = (
+                self._rejoin_handoff_step(
+                    drivers[i].driver_id,
+                    was_offtrack=was_offtrack,
+                    offtrack=offtrack,
+                    s_live=float(drv_s[i]),
+                    signed_lat=float(drv_signed[i]),
+                    speed=speed,
+                    heading_rad=float(phys["heading_rad"]),
+                    live_x=float(phys["x"]), live_y=float(phys["y"]),
+                    projection_x=float(drv_proj_x[i]),
+                    projection_y=float(drv_proj_y[i]),
+                    sim_ts=engine.sim_ts))
+            if handoff_active:
+                steer_rad = handoff_steer
             gov_braked = False
 
             # ---- 4. governor --------------------------------------------------
@@ -826,22 +1326,197 @@ class NeuralRaceController:
                 gov_brake   = float(np.clip(excess_frac * 0.8, 0.15, 1.0))
                 th, brk, gov_braked = 0.0, max(brk, gov_brake), True
 
+            # ---- 3a-bis. launch-cap (CICLO LARGADA L-1a; prereg a3b8ff0) ------
+            # Teto de CHEGADA na largada: v_ceiling = k×v_plan(s) enquanto
+            # t < T_max E s < s_cut (k=0,8; s_cut=2950; T_max=30 s — PINADOS).
+            # Mesma lei de freio do governor (zero constantes novas). Composição
+            # min() com o vplan: ceiling efetivo = min(v_plan×GOV_MARGIN,
+            # k×v_plan) = k×v_plan. NUNCA lê clima; default OFF = bit-idêntico.
+            cap_active = False
+            # (reparo do smoke: `not offtrack` — v_plan é plano ON-TRACK; carro
+            # fora é domínio do rejoin (teto 8 m/s), que SOBRESCREVE th/brk e
+            # deixava FLAG FANTASMA launch_cap_active=1 com authority rejoin —
+            # 3 violações de fase no smoke s0; mudança de comportamento ZERO)
+            if (self.LAUNCH_CAP_ENABLED and self._v_plan_cap is not None
+                    and not offtrack
+                    and engine.sim_ts < self.LAUNCH_CAP_TMAX_S
+                    and float(drv_s[i]) < self.LAUNCH_CAP_S_CUT):
+                v_ceiling = self.LAUNCH_CAP_K * float(self._v_plan_cap.at(float(drv_s[i])))
+                if speed > v_ceiling:
+                    excess_cap = (speed - v_ceiling) / max(v_ceiling, 1.0)
+                    th, brk = 0.0, max(brk, float(np.clip(excess_cap * 0.8, 0.15, 1.0)))
+                    cap_active = True
+            # telemetria EM FASE, keyed por carro (drivers[i] — lição stale-drv)
+            self._cap_active[drivers[i].driver_id] = int(cap_active)
+
+            # ---- 3a-bis2. anti-glue (SANIDADE-1b M3-v2; prereg 87214c7 §2) --
+            # TETOS POR-REALIZAÇÃO (v1 MORTO: FAIL por margens; D4 = o
+            # preventivo crônico era o custo dominante; D5 = breaker
+            # incompetente no crawl/borda). Lógica compartilhada em
+            # _anti_glue_step (neural E professor por herança). Default OFF
+            # = bit-idêntico (estado inerte). Δlat com SINAL via drv_signed.
+            drv_id = drivers[i].driver_id   # (o gap-check abaixo re-usa)
+            glue_breaking = False
+            if self.ANTI_GLUE_ENABLED and not offtrack:
+                partner = None
+                for j in range(n_drivers):
+                    if j == i:
+                        continue
+                    dsj = (float(drv_s[j]) - float(drv_s[i])) % self._track_len_s
+                    if dsj > self._track_len_s / 2.0:
+                        dsj -= self._track_len_s
+                    dlatj = float(drv_signed[j]) - float(drv_signed[i])
+                    if (abs(dlatj) < self.ANTI_GLUE_NEAR_LAT
+                            and abs(dsj) < self.ANTI_GLUE_NEAR_DS):
+                        partner = (drivers[j].driver_id, dsj, dlatj,
+                                   abs(float(drv_signed[j])), float(drv_v[j]))
+                        break
+                if partner is None:
+                    th, brk, steer_rad, glue_breaking = self._anti_glue_step(
+                        drv_id, None, 0.0, 0.0, speed, 0.0, 0.0, 0.0, True,
+                        th, brk, steer_rad, False)
+                else:
+                    hw_off = self._half_width * self.OFFTRACK_FACTOR
+                    th, brk, steer_rad, glue_breaking = self._anti_glue_step(
+                        drv_id, partner[0], partner[1], partner[2], speed,
+                        partner[4], abs(float(drv_signed[i])), partner[3],
+                        partner[3] > hw_off, th, brk, steer_rad,
+                        getattr(self, "_composite_np", None) is not None
+                        and self.obs_mode == "traffic")
+
+            # C2-B: handoff tem precedência sobre qualquer steering de gap/anti-glue.
+            if handoff_active:
+                steer_rad = handoff_steer
+
+            # ---- 3a. rejoin-gap-check (CICLO ALAVANCA; prereg §3) -----------
+            # Aplica-se quando o carro ESTÁ na borda on-track (saiu do off-track,
+            # |lat| < 1,5×meia-largura) e ainda teria gap < X à frente. Crawl 4 m/s
+            # mantendo o esterço de bearing ao ponto de reentrada. T_max=10s → solta.
+            gap_hold = False
+            fb_this_tick = False
+            # REPARO keying (amenda A.1-ii): chave por carro = drivers[i]
+            drv_id = drivers[i].driver_id
+            c8_gap_hold = False
+            if self.C8_REJOIN_ENABLED and not offtrack:
+                c8_st = self._gapcheck_state.get(drv_id)
+                near_edge = abs(lat_dist) < self._half_width * 1.5
+                if c8_st is None and self._was_offtrack.get(drv_id, False) and near_edge:
+                    c8_st = dict(tick0=int(engine.sim_ts * 10), hold=False, fb=False)
+                    self._gapcheck_state[drv_id] = c8_st
+                if c8_st is not None:
+                    age = int(engine.sim_ts * 10) - c8_st["tick0"]
+                    if age <= self.C8_GAP_WINDOW_TICKS:
+                        c8_st["hold"] = self.c8_gap_blocked(
+                            float(drv_s[i]),
+                            tuple(float(drv_s[j]) for j in range(n_drivers) if j != i),
+                            self._track_len_s,
+                            self.C8_GAP_M)
+                    else:
+                        c8_st["hold"] = False
+                        c8_st["fb"] = True
+                    c8_gap_hold = bool(c8_st["hold"])
+            if c8_gap_hold:
+                # C8 gap-check is the strictest post-return gate.
+                handoff_active, handoff_steer = False, None
+            if self.REJOIN_GAP_ENABLED > 0 and not offtrack and not handoff_active and not c8_gap_hold:
+                st = self._gapcheck_state.get(drv_id)
+                # drv_lat é distância ABSOLUTA à linha central (loop de obs):
+                # near_edge já é bilateral; abs() torna a intenção explícita.
+                near_edge = abs(lat_dist) < self._half_width * 1.5
+                # REPARO engate (amenda A.1-i): SÓ na transição off->on — o
+                # "estado rejoin criado pelo bearing pós-excursão" do prereg
+                # §3; a janela de 10 s é a histerese. _was_offtrack exige
+                # excursão prévia: NUNCA engaja na largada nem em tráfego comum.
+                if st is None and self._was_offtrack.get(drv_id, False) and near_edge:
+                    self._gapcheck_state[drv_id] = dict(tick0=int(engine.sim_ts * 10), hold=False, fb=False)
+                    st = self._gapcheck_state[drv_id]
+                if st is not None:
+                    age = int(engine.sim_ts * 10) - st['tick0']
+                    if age > self.REJOIN_GAP_TMAX_TICKS:
+                        if st['hold']:
+                            st['fb'] = True   # fallback T_max: solta (uma vez)
+                            st['hold'] = False
+                            fb_this_tick = True   # REPARO: telemetria = transição 0->1 no tick do evento
+                        # dentro da janela vencida: deixa o policy cuidar
+                    else:
+                        # gap à frente: menor Δs > 0 a qualquer outro carro
+                        s_me = float(drv_s[i])
+                        gap_f = None
+                        for j in range(n_drivers):
+                            if j == i:
+                                continue
+                            d = (float(drv_s[j]) - s_me) % self._track_len_s
+                            if d <= 0 or d > self._track_len_s / 2:
+                                d -= self._track_len_s if d > self._track_len_s / 2 else 0
+                            if 0 < d < 2 * self.REJOIN_AHEAD_M + self.REJOIN_GAP_ENABLED * 3:
+                                if gap_f is None or d < gap_f:
+                                    gap_f = d
+                        if gap_f is not None and gap_f < self.REJOIN_GAP_ENABLED:
+                            st['hold'] = True
+                            gap_hold = True
+                        elif st['hold'] and not st['fb']:
+                            # gap surgiu OU sem carro à frente → solta
+                            st['hold'] = False
+                    if st['hold']:
+                        # crawl 4 m/s: mantém bearing ao ponto de reentrada
+                        tx, ty = self._rejoin_target_point(
+                            drv_id, float(drv_s[i]), drv_proj_x[i], drv_proj_y[i],
+                            self.REJOIN_AHEAD_M)
+                        bearing = math.atan2(ty - phys["y"], tx - phys["x"])
+                        berr = self._wrap(bearing - float(phys["heading_rad"]))
+                        steer_rad = float(np.clip(self.REJOIN_BEARING_GAIN * berr,
+                                                  -self.STEER_MAX_RAD, self.STEER_MAX_RAD))
+                        if speed > self.REJOIN_GAP_CRAWL_MPS:
+                            th, brk = 0.0, max(brk, 0.4)
+                        else:
+                            th, brk = self.REJOIN_THROTTLE, 0.0
+            # expira o estado se a janela venceu sem hold
+            if self.REJOIN_GAP_ENABLED > 0 and not offtrack and not gap_hold:
+                st = self._gapcheck_state.get(drv_id)
+                if st is not None and (int(engine.sim_ts * 10) - st['tick0']) > self.REJOIN_GAP_TMAX_TICKS:
+                    self._gapcheck_state.pop(drv_id, None)
+            # REPARO telemetria (amenda A.1-ii): EM FASE com a ação DESTE carro
+            # NESTE tick, keyed por carro (todo tick — off-track incluído, hold=0).
+            self._gap_hold[drv_id] = int(gap_hold)
+            self._gap_fb[drv_id] = int(fb_this_tick)
+            self._was_offtrack[drv_id] = bool(offtrack)
+
             # ---- 3. rejoin (fora do asfalto) ----------------------------------
             if offtrack:
+                # estado do gap-check expira ao voltar para off-track (re-engata depois)
+                if self.REJOIN_GAP_ENABLED > 0:
+                    self._gapcheck_state.pop(drv_id, None)
+                # SANIDADE-0 M2 (prereg 1007636 §1): PERCEPTIVE substitui o
+                # bearing quando ON — alvo com ÂNGULO RASO (<=15°): ponto na
+                # linha central a |lat|/tan(15°) m da projeção (clip 10-120);
+                # cap de superfície: grama 6,0 m/s (asfalto = fim do
+                # off-track libera o policy). Trigger é ESTADO (off-track),
+                # NUNCA fade por progresso (lição ANTI-D3-1).
+                if self.REJOIN_MODE == 'perceptive':
+                    ahead_m = float(np.clip(
+                        abs(lat_dist) / math.tan(
+                            math.radians(self.REJOIN_PERCEPTIVE_ANGLE_DEG)),
+                        self.REJOIN_PERCEPTIVE_AHEAD_MIN_M,
+                        self.REJOIN_PERCEPTIVE_AHEAD_MAX_M))
+                    rejoin_cap = self.REJOIN_PERCEPTIVE_V_GRASS
+                else:
+                    ahead_m = self.REJOIN_AHEAD_M
+                    rejoin_cap = (
+                        self.C8_GRASS_V_CAP_MPS
+                        if self.C8_REJOIN_ENABLED else self.REJOIN_TARGET_MPS)
                 # v15 FASE R3: esterço por BEARING ao ponto de re-entrada
-                # (projeção + REJOIN_AHEAD_M ao longo da linha central).
+                # (projeção + ahead_m ao longo da linha central).
                 # Quadro FÍSICO (x, y, heading do mundo) — imune às
                 # convenções de sinal da obs. Esterço + = virar à esquerda
                 # (Y local = esquerda na física), logo steer = ganho·berr.
-                h_track = self._heading_at(float(drv_s[i]))
-                tx = drv_proj_x[i] + self.REJOIN_AHEAD_M * math.cos(h_track)
-                ty = drv_proj_y[i] + self.REJOIN_AHEAD_M * math.sin(h_track)
+                tx, ty = self._rejoin_target_point(
+                    drv_id, float(drv_s[i]), drv_proj_x[i], drv_proj_y[i], ahead_m)
                 bearing = math.atan2(ty - phys["y"], tx - phys["x"])
                 berr = self._wrap(bearing - float(phys["heading_rad"]))
                 steer_rad = float(np.clip(self.REJOIN_BEARING_GAIN * berr,
                                           -self.STEER_MAX_RAD, self.STEER_MAX_RAD))
-                if speed > self.REJOIN_TARGET_MPS * 1.2:
-                    excess = (speed - self.REJOIN_TARGET_MPS) / 6.0
+                if speed > rejoin_cap * 1.2:
+                    excess = (speed - rejoin_cap) / 6.0
                     th, brk = 0.0, max(brk, float(np.clip(excess, 0.3, 1.0)))
                 else:
                     th, brk = self.REJOIN_THROTTLE, 0.0
@@ -853,20 +1528,72 @@ class NeuralRaceController:
                                                       engine.sim_ts, progress_m,
                                                       offtrack)
 
-            # ---- 1. blocked (segurança) ---------------------------------------
+            # REALISMO-1 C3-B: teto longitudinal pós-reentrada. O bloco vem
+            # depois do rejoin/recovery para ser o último cap de velocidade;
+            # só th/brk mudam, steer_rad permanece intocado.
+            if c8_gap_hold:
+                ramp_active, ramp_braked = False, False
+            else:
+                ramp_active, ramp_braked, th, brk = self._rejoin_ramp_step(
+                    drivers[i].driver_id,
+                    was_offtrack=was_offtrack,
+                    offtrack=offtrack,
+                    s_live=float(drv_s[i]),
+                    speed=speed,
+                    sim_ts=engine.sim_ts,
+                    th=th,
+                    brk=brk)
+
+            # ---- 1. blocked (segurança) ----------------------------------------
             blocked = speed < 2.0 and self._contact_with_other_car(engine, drivers, i)
             if blocked:
                 th = min(th, self.BLOCKED_THROTTLE)
                 self._blocked_events[drivers[i].driver_id] = \
                     self._blocked_events.get(drivers[i].driver_id, 0) + 1
 
+            # ---- 0. launch-stagger hold (CICLO LARGADA L-1b; prereg cd3ca5e) --
+            # Enquanto t < release(slot) = (pos−1)×Δt (frente→trás): th=0,
+            # brk=1, pose mantida (carro nasce parado; freio segura). Pós-
+            # release CANÔNICO PURO: rec.clear() a cada tick held — sem isso
+            # a recovery veria "encravado" por até 9 s e governaria a largada.
+            # Última escrita em th/brk (acima de todas as camadas); NUNCA lê clima.
+            held = False
+            if self.LAUNCH_STAGGER_ENABLED:
+                if not self._launch_grid_slots:
+                    raise RuntimeError("--launch-stagger: ordem de largada do run "
+                                       "ausente (fail-loud; nunca no-op silencioso)")
+                slot = self._launch_grid_slots.get(drivers[i].driver_id)
+                # release EM TICKS (prereg: "(pos-1)×Δt, em ticks: ×10") —
+                # round() mata o erro de acumulação de sim_ts (+= 0.1 deixa
+                # 0,99999… < 1,0 e segurava 1 amostra extra no boundary;
+                # pego pelo release-exato do smoke, tick 60 vs 58 no slot 7)
+                if slot is not None and int(round(engine.sim_ts * 10)) < (slot - 1) * 10:
+                    th, brk = 0.0, 1.0
+                    rec.clear()
+                    held = True
+            self._stagger_held[drivers[i].driver_id] = int(held)
+
             # ---- rótulo de autoridade final ----------------------------------
-            if blocked:
+            # Precedência (prereg cd3ca5e): stagger (hold do grid) > segurança
+            # (rejoin/recovery/blocked) > launch_cap > governor > policy.
+            if held:
+                authority = "stagger"
+            elif glue_breaking:
+                authority = "anti_glue"
+            elif handoff_active:
+                authority = "rejoin_handoff"
+            elif gap_hold:
+                authority = "rejoin_gap"
+            elif blocked:
                 authority = "blocked_contact"
             elif rec_active:
                 authority = "recovery_rejoin" if offtrack else "recovery"
+            elif ramp_braked:
+                authority = "rejoin_ramp"
             elif offtrack:
                 authority = "rejoin"
+            elif cap_active:
+                authority = "launch_cap"
             elif gov_braked:
                 authority = "governor"
             else:
@@ -875,6 +1602,112 @@ class NeuralRaceController:
             self.last_authority[drivers[i].driver_id] = authority
             actions.append((th, brk, steer_rad))
         return actions
+
+    def _anti_glue_step(self, drv_id, p_id, ds, dlat, speed, v_partner,
+                        slat_i_abs, slat_p_abs, partner_off, th, brk,
+                        steer_rad, composite_scope):
+        """SANIDADE-1b M3-v2 (prereg 87214c7 §2): anti-glue com TETOS POR-
+        REALIZAÇÃO. Compartilhado por neural E professor (herança) — os
+        chamadores resolvem o parceiro e passam os dados; devolve
+        (th, brk, steer_rad, glue_breaking). Tick lógico 0,1 s.
+
+        Prev (ii, escopo composite/professor — o chamador passa o escopo):
+        |Δlat|<2,5 ∧ |Δs|<10 garantidos pelo chamador; teto 1,0 s por
+        episódio contíguo -> cooldown 2,0 s; <=10 eps/par/corrida; só com
+        |Δv|<8 m/s; REVERT se o próprio carro OU o parceiro está off-track.
+        Breaker (iii, todos): >3 s colado (|Δs|<5,5), de trás cede (empate
+        |Δs|<0,5 -> o de fora; desempate driver_id); teto 4,0 s por
+        episódio -> DESISTE (uma vez por run contíguo); competência por
+        velocidade: <25 m/s lift total + 0,4 rad (v1); acima th<=0,5 +
+        0,15 rad aditivo (a 60+ m/s o grip satura — R7b — o yank 0,4
+        lança pra fora); <=8 eps/par/corrida; REVERT alvo off-track."""
+        st = self._glue_state.setdefault(
+            drv_id, dict(partner=None, ticks=0, breaking=False,
+                         prev_ticks=0, prev_cool=0, prev_eps={},
+                         brk_ticks=0, brk_done_run=False, brk_eps={}))
+        glue_breaking = False
+        if partner_off:
+            # REVERT (D5): nunca agir contra alvo na grama/borda — o domínio
+            # do rejoin cuida do par; o breaker solta, o preventivo inerte.
+            st.update(partner=None, ticks=0, prev_ticks=0, brk_done_run=False)
+            st['breaking'] = False
+            if st['prev_cool'] > 0:
+                st['prev_cool'] -= 1
+            return th, brk, steer_rad, glue_breaking
+        # ---------- (iii) BREAKER ----------
+        if abs(ds) < self.ANTI_GLUE_BREAK_DS:
+            if st['partner'] != p_id:
+                st.update(partner=p_id, ticks=0, brk_done_run=False)
+            st['ticks'] += 1
+            if (st['ticks'] > int(self.ANTI_GLUE_BREAK_S * 10)
+                    and not st['breaking'] and not st['brk_done_run']):
+                i_rear = 0.0 < ds < self._track_len_s / 2.0
+                tie = abs(ds) < 0.5
+                i_out = (slat_i_abs > slat_p_abs
+                         or (slat_i_abs == slat_p_abs and drv_id < p_id))
+                if ((i_rear or (tie and i_out))
+                        and st['brk_eps'].get(p_id, 0)
+                        < self.ANTI_GLUE_BRK_MAX_EPS):
+                    st['breaking'] = True
+                    st['brk_ticks'] = 0
+                    st['brk_eps'][p_id] = st['brk_eps'].get(p_id, 0) + 1
+        else:
+            st.update(partner=None, ticks=0, brk_done_run=False)
+        if st['breaking']:
+            if (abs(dlat) > self.ANTI_GLUE_RELEASE_LAT
+                    or abs(ds) > self.ANTI_GLUE_RELEASE_DS):
+                st['breaking'] = False
+            else:
+                st['brk_ticks'] += 1
+                if st['brk_ticks'] > self.ANTI_GLUE_BRK_MAX_EP_TICKS:
+                    # teto 4 s: DESISTE — não persegue separação eterna no
+                    # regime crawl/borda (D5); nova tentativa só noutro run
+                    st['breaking'] = False
+                    st['brk_done_run'] = True
+                else:
+                    if speed < self.ANTI_GLUE_BRK_V_FULL:
+                        th, brk = 0.0, max(brk, 0.0)   # lift + 0,4 (v1)
+                        steer_rad = float(np.clip(
+                            -math.copysign(1.0, dlat)
+                            * self.ANTI_GLUE_BREAK_STEER,
+                            -self.STEER_MAX_RAD, self.STEER_MAX_RAD))
+                    else:
+                        th = min(th, self.ANTI_GLUE_BRK_TH_SOFT)  # suave
+                        steer_rad = float(np.clip(
+                            steer_rad
+                            - math.copysign(1.0, dlat)
+                            * self.ANTI_GLUE_BRK_STEER_SOFT,
+                            -self.STEER_MAX_RAD, self.STEER_MAX_RAD))
+                    glue_breaking = True
+        elif composite_scope:
+            # ---------- (ii) PREVENTIVO com tetos (D4: custo dominante) ----
+            if st['prev_cool'] > 0:
+                st['prev_cool'] -= 1
+            dv = abs(speed - v_partner)
+            away = float(np.clip(
+                steer_rad - math.copysign(1.0, dlat)
+                * self.ANTI_GLUE_OFFSET_STEER,
+                -self.STEER_MAX_RAD, self.STEER_MAX_RAD))
+            if st['prev_ticks'] > 0:
+                if dv < self.ANTI_GLUE_PREV_DV_MAX:
+                    st['prev_ticks'] += 1
+                    if st['prev_ticks'] > self.ANTI_GLUE_PREV_MAX_EP_TICKS:
+                        st['prev_ticks'] = 0
+                        st['prev_cool'] = self.ANTI_GLUE_PREV_COOLDOWN_TICKS
+                    else:
+                        steer_rad = away
+                        th = min(th, self.ANTI_GLUE_TH_CAP)
+                else:
+                    st['prev_ticks'] = 0    # |Δv| quebrou: fim do episódio
+            elif (st['prev_cool'] == 0
+                    and dv < self.ANTI_GLUE_PREV_DV_MAX
+                    and st['prev_eps'].get(p_id, 0)
+                    < self.ANTI_GLUE_PREV_MAX_EPS):
+                st['prev_ticks'] = 1
+                st['prev_eps'][p_id] = st['prev_eps'].get(p_id, 0) + 1
+                steer_rad = away
+                th = min(th, self.ANTI_GLUE_TH_CAP)
+        return th, brk, steer_rad, glue_breaking
 
     def _v_gov_active(self, s, speed):
         """(diagnóstico) o governador está freando neste estado?"""
@@ -990,14 +1823,7 @@ def update_3d_car_labels(
 
 def print_leaderboard(engine: SimulationEngine, drivers: List[Driver], elapsed_s: float) -> None:
     """Imprime classificação em tempo real da corrida no terminal."""
-    ranked = sorted(
-        drivers,
-        key=lambda d: (
-            engine.states[d.driver_id].lap,
-            engine.cum_dist_m.get(d.driver_id, 0.0),
-        ),
-        reverse=True,
-    )
+    ranked = engine.ranked_drivers()
 
     print("\033[H\033[J", end="")  # Limpa terminal (ANSI)
     print("=" * 80)
@@ -1021,7 +1847,24 @@ def print_leaderboard(engine: SimulationEngine, drivers: List[Driver], elapsed_s
     print("🎮 Controles PyBullet: [0-9] Seguir Carro | [O] Overview | [F] Follow | [L] Labels | [ESPAÇO] Pausa | [Q] Sair")
     print("=" * 80)
 
-def place_grid(engine, track, drivers, spacing_m=9.0, lateral_m=1.9):
+def variedade_params(seed: int, n: int, n_cars: int = 10):
+    """VARIEDADE-1 (prereg b237aeb §1): PRNG PRÓPRIO derivado de (seed, N) —
+    sha256("<seed>//variedade//<N>", o padrão weather_rng_from_seed) — NUNCA
+    o RNG global da sim. Devolve, por carro na ordem do grid, a tupla
+    (d_long m, d_lat m, fator mu) das CONDIÇÕES INICIAIS; None com N<=0
+    (inércia: nenhum código do caminho canônico roda)."""
+    if n <= 0:
+        return None
+    import hashlib
+    import random as _random
+    digest = hashlib.sha256(f"{seed}//variedade//{n}".encode()).hexdigest()
+    rng = _random.Random(int(digest, 16))
+    return [(rng.uniform(-0.5, 0.5), rng.uniform(-0.3, 0.3),
+             rng.uniform(0.98, 1.02)) for _ in range(n_cars)]
+
+
+def place_grid(engine, track, drivers, spacing_m=9.0, lateral_m=1.9,
+               layout: str = "f1", jitter=None):
     """Grid estilo F1 (5 fileiras x 2 colunas) ancorado na RETA mais longa que
     termina ANTES da linha de largada/chegada.
 
@@ -1030,8 +1873,24 @@ def place_grid(engine, track, drivers, spacing_m=9.0, lateral_m=1.9):
     neste conjunto de waypoints é justamente o canto final (Junção-like).
     Aqui detectamos a reta contígua antes da SF e comprimimos o espaçamento se
     a reta for curta.
+
+    SANIDADE-0 M1 (prereg 1007636 §1): layout='staggered' = 2 colunas com
+    offset lateral ±2,5 m (Δlat 5,0 m > corredor 3,5 do professor). A
+    alternativa ao 1-carro-por-fileira c/ gap 12 m é JUSTIFICADA por D1:
+    grid_len 9×12+6 = 114 m > reta de 45 m antes da SF (aborto por
+    construção). Determinístico; a ORDEM segue semeada por --variance grid.
     """
+    race_progress = getattr(engine, "race_progress_m", None)
+    if race_progress is not None:
+        race_progress.clear()
+    last_race_s = getattr(engine, "_race_last_s", None)
+    if last_race_s is not None:
+        last_race_s.clear()
     wps = np.array(track.waypoints, dtype=np.float64)
+    if layout == "staggered":
+        lateral_m = 2.5   # SANIDADE-0 M1: Δlat 5,0 m entre colunas (pin prereg)
+    elif layout != "f1":
+        raise ValueError(f"layout de grid desconhecido: {layout!r}")
     AB = np.roll(wps, -1, axis=0) - wps
     seg_len = np.hypot(AB[:, 0], AB[:, 1])
     seg_cum = np.concatenate([[0.0], np.cumsum(seg_len)])[:-1]
@@ -1084,9 +1943,15 @@ def place_grid(engine, track, drivers, spacing_m=9.0, lateral_m=1.9):
 
     for i, drv in enumerate(drivers):
         row, side = i // 2, (1.0 if i % 2 == 0 else -1.0)
-        s = (front - row * spacing_m) % track_len
+        # VARIEDADE-1 (prereg b237aeb §1): jitter de grid = CONDIÇÃO INICIAL
+        # (±0,5 m long / ±0,3 m lat; folga §2). None (flag OFF) = bit-idêntico.
+        d_long = d_lat = 0.0
+        if jitter is not None:
+            d_long, d_lat = float(jitter[i][0]), float(jitter[i][1])
+        s = (front - row * spacing_m + d_long) % track_len
         x, y, yaw, nx, ny = pose_at_s(s)
-        px, py = x + nx * side * lateral_m, y + ny * side * lateral_m
+        px, py = (x + nx * (side * lateral_m + d_lat),
+                  y + ny * (side * lateral_m + d_lat))
         engine.physics.set_position(engine.handles[drv.driver_id],
                                     pos=(px, py, 0.5), yaw_rad=yaw, reset_vel=True)
         st = engine.states[drv.driver_id]
@@ -1097,20 +1962,42 @@ def place_grid(engine, track, drivers, spacing_m=9.0, lateral_m=1.9):
         if hasattr(engine, "prev_waypoint_idx"):
             _, wp_now = track.nearest_segment(px, py)
             engine.prev_waypoint_idx[drv.driver_id] = wp_now
-    print("[Grid] 10 carros no grid estilo F1 (5 fileiras x 2 colunas, NA RETA)")
+    print("[Grid] 10 carros no grid estilo F1 (5 fileiras x 2 colunas, NA RETA)"
+          + (f" | layout=staggered ±{lateral_m:.1f} m (SANIDADE-0 M1)"
+             if layout == "staggered" else ""))
+
+def resolve_race_randomization(seed: Optional[int], variance: Optional[str],
+                               use_rule_controller: bool) -> Tuple[int, str]:
+    """Use a new seed and varied grid by default for the rule-based race."""
+    if seed is None:
+        seed = secrets.randbits(32) if use_rule_controller else 0
+    if variance is None:
+        variance = "grid" if use_rule_controller else "off"
+    return seed, variance
+
 
 def run_race():
     parser = argparse.ArgumentParser(description="Simulação de Corrida F1 com 10 Carros no PyBullet")
     parser.add_argument("--laps", type=int, default=5, help="Número de voltas da corrida (default: 5)")
     parser.add_argument("--camera", type=str, default="follow", choices=["follow", "overview"], help="Modo inicial de câmera")
     parser.add_argument("--follow-driver", type=str, default="VER", help="Piloto a seguir na câmera inicial (ex: VER, NOR, LEC)")
-    parser.add_argument("--variance", type=str, default="off",
-                        help="v15 R7a: variância semeada opt-in (csv grid,compound)")
+    parser.add_argument("--variance", type=str, default=None,
+                        help="Variância semeada (grid,compound); padrão grid no apex-rules; off fixa o grid")
     parser.add_argument("--steer-gov", type=str, default="off", choices=["off", "cap"],
                         help="v15 R8: steer-governor opt-in — cap do esterço da "
                              "política em 2,0×atan(L·κ@10m) (rejoin/recovery isentos)")
-    parser.add_argument("--seed", type=int, default=0,
-                        help="Seed da corrida (alimenta as streams de variância e do clima)")
+    parser.add_argument("--launch-steer-mute", action="store_true",
+                        help="REALISMO-1 C1-B: mute somente o esterço do residual "
+                             "na janela D_L; default OFF = byte-idêntico")
+    parser.add_argument("--lat-offset-slots", action="store_true",
+                        help="REALISMO-1 C6-B: desloca somente obs4 por slot; default OFF")
+    parser.add_argument("--c8-rejoin", action="store_true",
+                        help="C8-B: perfil de velocidade na grama + gap-check; default OFF")
+    parser.add_argument("--weather", type=str, default="seeded", choices=["seeded", "fixed"],
+                        help="PÓS-CICLO-2: seeded = rng do clima derivado do --seed (igual ao "
+                             "race_diagnostic); fixed = kind travado (prob transição 0)")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Seed da corrida; sem ela, o apex-rules sorteia e exibe uma seed")
     parser.add_argument("--track", type=str, default="interlagos", help="Evento FastF1 (ex: 'interlagos', 'Monaco', 'Silverstone')")
     parser.add_argument("--year", type=int, default=2024, help="Ano da sessão FastF1")
     parser.add_argument("--session", type=str, default="R", help="Sessão FastF1 (R, Q, ...)")
@@ -1124,24 +2011,103 @@ def run_race():
                              "traffic=46d (v14). Default: o do --profile")
     parser.add_argument("--profile", type=str, default=DEFAULT_PROFILE,
                         choices=list(PROFILES),
-                        help="checkpoint de DEPLOY (FASE 4): race=v10 padrão | "
-                             "quali=v11b pace | traffic=v14 60d. Substitui o "
-                             "default antigo por mtime (escolhia errado entre "
-                             "3 candidatos)")
+                        help="controlador da corrida: apex-rules (padrão), "
+                             "race, quali ou traffic (neurais)")
     parser.add_argument("--actor", type=str, default=None,
                         help="Checkpoint .keras específico (sobrepõe o --profile)")
-    parser.add_argument("--gov", type=str, default="vplan", choices=["on", "off", "vplan"],
+    parser.add_argument("--gov", type=str, default=None, choices=["on", "off", "vplan"],
                         help="v15 FASE 1 (ADOTADO): freio de segurança da camada de "
-                             "corrida — vplan = teto v_plan do professor (default do "
-                             "produto; 103,4s vs 137,1s on, zero hesitações) | on = "
-                             "histórico | off = sem governor")
+                             "corrida neural — vplan = teto v_plan | on = histórico | "
+                             "off = sem governor (default vplan nos profiles neurais)")
+    parser.add_argument("--grid", type=str, default="f1", choices=["f1", "staggered"],
+                        help="SANIDADE-0 M1 (prereg 1007636): staggered = 2 colunas "
+                             "±2,5 m (Δlat 5,0 m); default f1 = bit-idêntico. "
+                             "Opt-in research, NÃO-GAITADO: o gate SANIDADE-0 "
+                             "correu o bundle completo; FAIL (c60 942/1352 > 812); "
+                             "configuração solo não medida até SANIDADE-1b")
+    parser.add_argument("--rejoin", type=str, default="bearing",
+                        choices=["bearing", "perceptive"],
+                        help="SANIDADE-0 M2: perceptive = ângulo raso <=15° + "
+                             "grama 6 m/s + gap X=20 (auto); default bearing. "
+                             "Opt-in research, não-gaitado: solo MEDIDO no "
+                             "SANIDADE-1b (comp s0: fora 28,0%% <= teto 29,9; cc "
+                             "516 = -31%%; hesit 6) — adoção = dono")
+    parser.add_argument("--rejoin-handoff", type=str, default=None,
+                        choices=["off", "align"],
+                        help="REALISMO-1 C2-B: handoff alinhado após off->on "
+                             "(theta=20deg, margem=0,5m, teto=24s); "
+                             "default align em race/composite e off nos demais perfis")
+    ramp_group = parser.add_mutually_exclusive_group()
+    ramp_group.add_argument("--rejoin-ramp", dest="rejoin_ramp",
+                        action="store_true",
+                        help="REALISMO-1 C3-B: teto longitudinal pós-reentrada "
+                             "por 5,0 s; requer --gov vplan; "
+                             "default ON em race/composite")
+    ramp_group.add_argument("--no-rejoin-ramp", dest="rejoin_ramp",
+                        action="store_false",
+                        help="desliga explicitamente a rampa homologada de rejoin")
+    parser.add_argument("--anti-glue", action="store_true",
+                        help="SANIDADE-0 M3: fricção 0,01 + preventivo comp/prof "
+                             "+ deadlock-breaker 3 s; default OFF. Opt-in "
+                             "research, NÃO-GAITADO: o gate SANIDADE-0 correu o "
+                             "bundle completo; FAIL por margens (17,8 > 16,5s; "
+                             "1 deadlock s72); configuração solo não medida até "
+                             "SANIDADE-1b")
+    parser.add_argument("--modo", type=str, default="corrida",
+                        choices=["corrida", "espectador"],
+                        help="SANIDADE BUNDLE: espectador liga SÓ o mecanismo "
+                             "verde (M2 rejoin perceptive; árvore 7afe4a8). "
+                             "Atribuição solo MEDIDA no SANIDADE-1b (comp s0: "
+                             "fora 28,0%% <= 29,9; cc 516; hesit 6; colado 16,4s "
+                             "dead 0) — opt-in research, não-gaitado; adoção = "
+                             "dono; defaults canônicos intactos")
+    parser.add_argument("--variedade", type=int, default=0,
+                        help="VARIEDADE-1 (prereg b237aeb): N>=1 deriva PRNG "
+                             "proprio sha256(seed//variedade//N) e perturba "
+                             "SO condições iniciais (jitter grid ±0,5m/±0,3m; "
+                             "mu_nominal ×U[0,98,1,02] no spawn). Default 0 = "
+                             "OFF = bit-idêntico ao canônico. MESMA (seed,N) "
+                             "-> bit-idêntica; N diferente -> corrida "
+                             "diferente. N<0 = erro")
+    ramp_group.set_defaults(rejoin_ramp=None)
     args = parser.parse_args()
-
     prof = PROFILES[args.profile]
-    actor_keras = Path(args.actor) if args.actor else prof["keras"]
+    use_rule_controller = prof.get("controller") == "apex-rules"
+    args.seed, args.variance = resolve_race_randomization(
+        args.seed, args.variance, use_rule_controller,
+    )
+    if use_rule_controller:
+        if args.actor:
+            parser.error("--actor não se aplica ao profile apex-rules")
+        if args.obs_mode:
+            parser.error("--obs-mode só se aplica aos profiles neurais")
+        if args.gov:
+            parser.error("--gov só se aplica aos profiles neurais")
+        if args.steer_gov != "off" or args.c8_rejoin or args.modo != "corrida":
+            parser.error("--steer-gov, --c8-rejoin e --modo são opções dos profiles neurais")
+        if args.rejoin == "perceptive":
+            parser.error("--rejoin só se aplica aos profiles neurais")
+    else:
+        args.gov = args.gov or "vplan"
+    if args.rejoin_handoff is None:
+        args.rejoin_handoff = "align" if args.profile in ("race", "composite") else "off"
+    if args.rejoin_ramp is None:
+        args.rejoin_ramp = args.profile in ("race", "composite")
+
+    if args.lat_offset_slots and args.profile not in ("race", "composite", "race-blind"):
+        parser.error("--lat-offset-slots requer profile race/composite/race-blind")
+    if args.launch_steer_mute and not prof.get("residual_npz"):
+        parser.error("--launch-steer-mute requer profile composite/race")
+    if args.rejoin_handoff == "align" and not prof.get("residual_npz"):
+        parser.error("--rejoin-handoff align requer profile composite/race")
+    if args.rejoin_ramp and args.gov != "vplan":
+        parser.error("--rejoin-ramp requer --gov vplan")
+    actor_keras = None
+    if not use_rule_controller:
+        actor_keras = Path(args.actor) if args.actor else prof["keras"]
     # FASE 0.8 (v15): resolve pelo ALIAS do registry (MLflow) com fallback
     # para o caminho de arquivo — registry vazio/indisponível nunca quebra
-    if not args.actor:
+    if not use_rule_controller and not args.actor:
         try:
             from backend.model_train.tracking import resolve_deploy
             r = resolve_deploy(args.profile)
@@ -1150,12 +2116,13 @@ def run_race():
                 print(f"[Model] registry: alias '{args.profile}' -> {actor_keras.name}")
         except Exception:
             pass  # fallback: caminho do PROFILES
-    actor_npz = actor_keras.with_name(actor_keras.stem + "_weights.npz")
-    obs_mode = args.obs_mode if args.obs_mode else prof["obs_mode"]
+    actor_npz = (actor_keras.with_name(actor_keras.stem + "_weights.npz")
+                 if actor_keras is not None else None)
+    obs_mode = args.obs_mode if args.obs_mode else prof.get("obs_mode")
     print(f"[Model] profile: {args.profile} — {prof['desc']}")
     if args.actor:
         print(f"[Model] --actor explícito sobrepõe o profile")
-    if not actor_keras.exists():
+    if actor_keras is not None and not actor_keras.exists():
         raise SystemExit(f"[ERRO] checkpoint do profile '{args.profile}' não existe: "
                          f"{actor_keras}")
 
@@ -1200,50 +2167,124 @@ def run_race():
         camera_mode=args.camera,
         draw_track=True,
         realtime=args.realtime,
+        random_seed=args.seed,
+        track_progress_laps=True,
         input_stale_after_s=300.0,  # Neural controller publica a cada tick — sem stale
     )
 
-    weather_model = WeatherModel(initial=BASE_CONDITIONS[WeatherKind.DRY])
+    # PÓS-CICLO-2 PASSO 0: clima SEMEADO por seed no GUI (wiring igual ao
+    # race_diagnostic — mesma derivação sha256 '<seed>//weather'; --weather
+    # seeded|fixed). Antes: WeatherModel SEM rng (clima-loteria entre processos).
+    from backend.domain.weather import weather_rng_from_seed, WeatherTransitionConfig
+    from backend.domain import WeatherModel as _WM
+    if args.weather == 'fixed':
+        weather_rng = weather_rng_from_seed(0)
+        weather_cfg = WeatherTransitionConfig.default(transition_prob_per_lap=0.0)
+    else:
+        weather_rng = weather_rng_from_seed(args.seed)
+        weather_cfg = None
+    weather_model = _WM(initial=BASE_CONDITIONS[WeatherKind.DRY],
+                         config=weather_cfg, rng=weather_rng)
     engine = SimulationEngine(config=sim_config, track=track, drivers=drivers, weather_model=weather_model)
+    # PÓS-CICLO-2 PASSO 0: bloco de IDENTIDADE (mesmo formato do race_diagnostic)
+    import hashlib as _hl
+    _actor_keras_name = (
+        "não se aplica (controle por regras)" if use_rule_controller
+        else getattr(actor_keras, 'name', str(actor_keras).split('/')[-1])
+    )
+    print(f"[gui-identity] pista FROZEN: {track.name} | {len(track.waypoints)} wp | "
+          f"SF wp {track.start_finish_waypoint} | sha256 {getattr(track, 'frozen_sha256', '?')} | "
+          f"clima={args.weather} (seed {args.seed}) | gov={args.gov or 'profile'} | profile={args.profile} | "
+          f"ator={_actor_keras_name} | "
+          f"grid={[d.driver_id for d in drivers]}")
     print("[Setup] Inicializando PyBullet e spawnando os 10 carros no grid de largada...")
+    # SANIDADE-0 (prereg 1007636 §1): bundle ESPECTADOR — ÁRVORE aplicada ao
+    # veredito do gate s70-73: M1 (PRIM-1 FAIL: c60 942/1352 > 812) e M3
+    # (PRIM-3 FAIL: 1 deadlock >10s na s72; comp s73 17,8 > 16,5s) são
+    # research-negativos e SAEM; o bundle embarca SÓ mecanismo verde (M2
+    # rejoin perceptive — PRIM-2 4/4). Flags individuais permanecem p/
+    # research; defaults canônicos intactos.
+    if args.modo == "espectador":
+        grid_layout, rejoin_mode_v, anti_glue_v = "f1", "perceptive", False
+        rejoin_gap_v = 20.0   # M2: X=20 m (cotovelo do dossiê R13) auto
+    else:
+        grid_layout = getattr(args, "grid", "f1")
+        rejoin_mode_v = getattr(args, "rejoin", "bearing")
+        anti_glue_v = bool(getattr(args, "anti_glue", False))
+        rejoin_gap_v = 20.0 if rejoin_mode_v == "perceptive" else 0.0
+    if args.variedade < 0:
+        parser.error("--variedade deve ser >= 0 (0 = OFF bit-idêntico)")
+    # VARIEDADE-1 (prereg b237aeb §1): ICs por carro do PRNG próprio
+    # (seed, N); N=0 -> None -> NENHUM código roda (inércia bit-idêntica).
+    var_params = variedade_params(args.seed, args.variedade, len(drivers))
+    var_jitter = [(a, b) for a, b, _ in var_params] if var_params else None
     engine.setup()
-    place_grid(engine, track, drivers)
+    place_grid(engine, track, drivers, layout=grid_layout, jitter=var_jitter)
+    if var_params:
+        for drv, (_, _, mu_f) in zip(drivers, var_params):
+            engine.physics.scale_mu_nominal(drv.driver_id, mu_f)
+        print(f"[Setup] VARIEDADE-1: N={args.variedade} "
+              f"(PRNG proprio sha256(seed//variedade//N)) | "
+              f"jitter ±0,5m/±0,3m | mu_nominal ×U[0,98,1,02] — "
+              f"mesma (seed,N) = bit-idêntica; N diferente = corrida "
+              f"diferente; --variedade 0 = canônico")
+    if anti_glue_v:
+        # M3(i): fricção chassis-chassis 0,05 -> 0,01 (rodas intactas)
+        engine.physics.set_chassis_lateral_friction(0.01)
+        print("[Setup] anti-glue ON: fricção chassis-chassis 0,01 "
+              "(SANIDADE-0 M3)")
+    print(f"[Setup] SANIDADE-0: grid={grid_layout} | rejoin={rejoin_mode_v} "
+          f"| anti_glue={anti_glue_v} | rejoin_gap={rejoin_gap_v} "
+          f"| launch_steer_mute={args.launch_steer_mute} "
+          f"| rejoin_handoff={args.rejoin_handoff}")
 
     client_id = engine.physics._client_id
     if not args.no_gui:
         setup_pybullet_visuals(client_id)
 
-    # 3. Carrega o Controlador Neural (em NumPy, sem poluição de LLVM)
-    npz_path = ensure_npz_weights_exist(actor_keras, actor_npz)
-    print(f"[Model] Ator: {actor_keras}")
-    controller = NeuralRaceController(
-        steer_gov=getattr(args, "steer_gov", "off"),
-        weights_path=npz_path,
-        mappings_path=DEFAULT_MAPPINGS_PATH,
-        track=track,   # passa a pista: evita rebuild das tabelas a cada predict_batch
-        obs_mode=obs_mode,   # do --profile (ou --obs-mode explícito)
-    )
-    # v15 FASE 4: quando o profile declara residual_npz (race/composite),
-    # conecta o NumpyCompositeActor — a ação vem de tanh(m_solo + g·r), não
-    # do forward solo. Sem isso o else de predict_batch alimenta a obs traffic
-    # (60d) no ator edge (48d) e o 1º tick quebra.
-    if prof.get("residual_npz"):
-        from backend.model_train.residual_gated import NumpyCompositeActor
-        controller._composite_np = NumpyCompositeActor(str(npz_path),
-                                                       str(prof["residual_npz"]))
-        print(f"[Model] composite: residual={prof['residual_npz'].name} "
-              f"(solo congelado + residual gated)")
-    # v15 FASE 1 (ADOTADO): fix da camada de corrida — o governor histórico
-    # (A_LAT_MAX=14 sem downforce, SEM distância de frenagem) custava ~34s de
-    # volta (137,1 -> 103,4s). O teto v_plan usa a MESMA fórmula do professor.
-    if args.gov == "off":
-        controller._gov_enabled = False
-    elif args.gov == "vplan":
-        from backend.model_train.velocity_profile import VelocityProfile
-        controller._v_plan_cap = VelocityProfile(
-            np.array(track.waypoints, dtype=np.float64), grip_mult=0.788,
-            sf=0.80, ds_target=4.0, smooth_window_m=20.0)
-    print(f"[Model] governor: {args.gov}")
+    # 3. Seleciona o controlador do profile. O profile de regras não carrega
+    # checkpoints nem passa pela inferência neural em lote.
+    if use_rule_controller:
+        from backend.engine import RuleBasedRaceController
+        controller = RuleBasedRaceController(track, seed=args.seed)
+        for drv in drivers:
+            engine.set_controller(drv.driver_id, controller)
+        print(f"[Controller] Apex Formula por regras | aleatoriedade semeada: {args.seed}")
+    else:
+        npz_path = ensure_npz_weights_exist(actor_keras, actor_npz)
+        print(f"[Model] Ator: {actor_keras}")
+        controller = NeuralRaceController(
+            steer_gov=getattr(args, "steer_gov", "off"),
+            launch_steer_mute=getattr(args, "launch_steer_mute", False),
+            lat_offset_slots=getattr(args, "lat_offset_slots", False),
+            lat_offset_profile=("composite" if prof.get("residual_npz") else "blind"),
+            rejoin_handoff=getattr(args, "rejoin_handoff", "off"),
+            rejoin_ramp=getattr(args, "rejoin_ramp", False),
+            c8_rejoin=getattr(args, "c8_rejoin", False),
+            rejoin_gap=rejoin_gap_v,
+            rejoin_mode=rejoin_mode_v,
+            anti_glue=anti_glue_v,
+            weights_path=npz_path,
+            mappings_path=DEFAULT_MAPPINGS_PATH,
+            track=track,
+            obs_mode=obs_mode,
+        )
+        if prof.get("residual_npz"):
+            from backend.model_train.residual_gated import NumpyCompositeActor
+            controller._composite_np = NumpyCompositeActor(str(npz_path),
+                                                           str(prof["residual_npz"]))
+            print(f"[Model] composite: residual={prof['residual_npz'].name} "
+                  f"(solo congelado + residual gated)")
+        controller._launch_grid_slots = {
+            d.driver_id: i + 1 for i, d in enumerate(drivers)}
+        if args.gov == "off":
+            controller._gov_enabled = False
+        elif args.gov == "vplan":
+            from backend.model_train.velocity_profile import VelocityProfile
+            controller._v_plan_cap = VelocityProfile(
+                np.array(track.waypoints, dtype=np.float64), grip_mult=0.788,
+                sf=0.80, ds_target=4.0, smooth_window_m=20.0)
+        print(f"[Model] governor: {args.gov}")
 
     # 4. Configuração de Câmera e Visualização
     camera_mode = args.camera
@@ -1266,6 +2307,7 @@ def run_race():
 
     print("\n🏁 TUDO PRONTO! CORRIDA DE 10 CARROS INICIADA! 🏁\n")
     engine.race_started = True
+    authority_ticks = {}  # PC2: acumulado por tick
 
     try:
         while not engine.race_finished:
@@ -1322,21 +2364,24 @@ def run_race():
                 time.sleep(0.05)
                 continue
 
-            # 1. Inferência Neural para os 10 Carros (NumPy puro, ultra rápido)
-            actions = controller.predict_batch(engine, drivers, wps, track_id=0)
-
-            # 2. Aplica os comandos em todos os carros
-            for i, drv in enumerate(drivers):
-                th, brk, steer = actions[i]
-                engine.set_driver_input(
-                    drv.driver_id,
-                    throttle=th,
-                    brake=brk,
-                    steering_yaw_rad=steer,
-                )
+            if not use_rule_controller:
+                # Inferência neural em lote e publicação dos comandos.
+                actions = controller.predict_batch(engine, drivers, wps, track_id=0)
+                for i, drv in enumerate(drivers):
+                    th, brk, steer = actions[i]
+                    engine.set_driver_input(
+                        drv.driver_id,
+                        throttle=th,
+                        brake=brk,
+                        steering_yaw_rad=steer,
+                    )
 
             # 3. Avança um tick físico
             engine._step_tick(dt, sim_config.physics_sub_steps)
+            # PC2: authority acumulado POR TICK (comparável ao headless; o
+            # Counter por carro media só o último estado — métricas diferentes)
+            for _a in controller.last_authority.values():
+                authority_ticks[_a] = authority_ticks.get(_a, 0) + 1
 
             # 4. Atualiza câmera e HUD 3D
             if not args.no_gui:
@@ -1360,6 +2405,16 @@ def run_race():
     finally:
         print("\n🏆 RESULTADO FINAL DA CORRIDA 🏆")
         print_leaderboard(engine, drivers, engine.sim_ts)
+        # PÓS-CICLO-2 PASSO 0: resumo de authority% (instrumento aditivo)
+        try:
+            total = max(sum(authority_ticks.values()), 1)
+            print("[authority% por tick] " + " | ".join(
+                f"{k}: {100*v/total:.1f}%" for k, v in
+                sorted(authority_ticks.items(), key=lambda kv: -kv[1])))
+            if controller.REJOIN_RAMP_ENABLED:
+                print(f"[rejoin-ramp] {controller.rejoin_ramp_summary()}")
+        except Exception as e:
+            print(f"[authority% por tick] indisponível: {e}")
         engine.physics.close()
         print("Simulação concluída com sucesso.")
 

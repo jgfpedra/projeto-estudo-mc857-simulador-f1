@@ -17,13 +17,18 @@ backend/f1db.db
 backend/model_train/cache_fastf1/
 
 # --- Evidência bruta (R2-R13) — fica em experiments/, fora do git ---
-backend/race_diag_*.csv
-backend/race_diag_*.log
-backend/r*_*.csv
-backend/m0a_*.csv
-backend/experiments/**
-!backend/experiments/README.md
-!backend/experiments/**/README.md
+# (prefixo backend/ removido: dentro de backend/.gitignore o padrão é
+#  relativo ao próprio diretório e nunca casava)
+race_diag_*.csv
+race_diag_*.log
+r*_*.csv
+m0a_*.csv
+experiments/**
+!experiments/README.md
+!experiments/**/README.md
+
+# --- Dados brutos regeneráveis (saída do fetch_track_layouts.py) ---
+data/
 
 # --- Archive (movido p/ experiments/archive-scripts) ---
 backend/archive/
@@ -38,3 +43,6 @@ backend/model_train/**/*.log
 *.swp
 .kilo/
 download/
+
+# FASE 4 v15: events de fixtures (regeneráveis; só o CSV principal é âncora)
+tests/fixtures/*_events.csv

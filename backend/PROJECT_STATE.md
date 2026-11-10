@@ -1,16 +1,45 @@
 # PROJECT_STATE.md — F1 RL Bot: estado do projeto
 
 > **Toda sessão futura começa por: ler este arquivo e AUDITORIA_RL.md.**
-> Última atualização: **FASE R13-FECHAMENTO (housekeeping, zero runs): erratas E1-E5 auditáveis (manchete corrigida: 1,5-3,5× menos contatos; contato×carro-fora 28-44%; adversos 0-9 = {2,8,9} confirmado n=3 — vereditos inalterados); CSV v3.3 ADITIVO commitado com bit-identidade PASS (res_16d por tick p/ rota 2; sha universal do residual); DECLARAÇÃO FINAL DE PRODUTO colada como seção canônica: v10-cego = race default; composite research-grade com vantagem de segurança consistente; alavanca = percepção no retorno. Ver FASE R13-FECHAMENTO.**
+> Última atualização: **REJOIN-TEL-2 (2026-10-24; corrida v3.5 concluída com exit 0, g1–g4 PASS; 302/344 reentradas >20°, Pearson com segunda saída −0,361; recomendação ao dono: arquivar hipótese angular da Etapa 2 e avançar Etapa 3, sem promoção. Ver `backend/experiments/rejoin-tel-2/EXECUCAO_REJOIN_TEL_2.md`.)**
+> (anterior: **PROJ-FIX-5 (2026-10-23; freeze corrigido pré-análise `4081f06`; report-only — C3 p95 Δs=1127.55 m, C5=25.34 m; 112/112 reconciliados; eventos/volta indisponível nas fontes permitidas; zero sims/smokes, nenhuma mudança de produção; veredito do dono pendente. Ver `backend/experiments/proj-fix-1/DOSSIÊ_PROJ_GATE.md`.)**
+> (anterior: **PROJ-FIX-3 (2026-10-23): PARE em g0 por erro de proveniência — P3 esperava `a3e7dd18…`, enquanto o PARE v2 commitado/disco é `e287e5bd…`; g1–g4 ainda não executados nesse ciclo. Ver `backend/experiments/proj-fix-1/PARE_PROJ_FIX_3.md`.)**
+> (anterior: **LOC-XY-1 / ERRATA E-XY-3 (2026-10-23): ponteiro da linha 6 restaurado doc-only; gate 3/4 e selftests concluídos após retomada. Entradas futuras de cabeçalho/cadeia já devem conter `Ver <path>` e fechar `)`. Ver `backend/experiments/loc-xy-1/relatorio.md`.)**
+> (anterior: **ERRATA E-XY-2 ratificada: o teste legado compara `split(',')[:49]` incluindo o header; kill-switch v3.3 permanece para restauração de arquivos. Gate 3 retomado terminou 21F/351P/3S e parou por `test_state_files_doc_integrity`. Ver `backend/experiments/loc-xy-1/relatorio.md`.)**
+> (anterior: **FAIL-FORENSICS-1b concluído (2026-10-23): R3 `--track Monaco` passou byte a byte contra `aluno_s0.csv`; R4 Composite Monaco N=1, 43,15% fora, 12 hesitações e 45 saltos ≥30 m pelo proxy de projeção. Veredito offline das 14 entradas concluído; B3' e ANTI-D3-1 seguem FAIL; nenhuma mudança de comportamento. Suite pós-E3: 20F/349P/3S. Ver `backend/experiments/fail-forensics-2/EXECUCAO_FAIL_FORENSICS_1B.md`.)**
+> (anterior: FAIL-FORENSICS-1 (2026-10-23): PARE após duas corridas Interlagos; Ver `backend/experiments/fail-forensics-1/PARE.md`.)
+> Estado anterior: **GATE-RE-DERIVE-1 (2026-10-23; feat/sanidade-produto; prereg congelado 194a709): report-only — 0/10 históricos elegíveis no gate temporal de velocidade; 6 streams alternativos extraídos, 0 aprovados e 0 deltas reportados; nenhum holdout independente; zero rede, promoção ou simulação de produto; suíte serial 20F/349P/3S, mesmas 20 falhas conhecidas. Ver seção GATE-RE-DERIVE-1 e backend/experiments/gate-re-derive-1/PARE.md.**
+> (anterior: PISTAS_EXPAND_1 (2026-10-23; feat/sanidade-produto; ciclo de AQUISIÇÃO — mirrors reais via OpenF1 /location método v4 FONTE-2; prereg 8afec70 + PATCH_PISTAS_EXPAND_1_A 51da2d8; ZERO sims; pool --tracks intocado; caches fastf1 intocados; 17/25 chamadas logadas APPEND): CONCLUÍDO — T0 (d5bb170) reclassificou Hungaroring/Zandvoort (c)→(b) por v1s no disco (RATIFICADO pelo PATCH_A; fail-loud codificado) e CONFIRMOU os 9 oficiais da §1 pelo f1db (sem re-pin). ACHADO MECÂNICO: o gate Δ<1% pinado REPROVOU 7/9 pistas (deltas −1,36% a −2,11%, TODOS no sentido CURTO — o v4 mede a LINHA DE CORRIDA, que corta curvas; a prova Monza −0,64% do FONTE-2 é a pista mais indulgente do calendário; o interlagos canônico é −3,45% vs oficial, ou seja, o gate é mais estrito que o acervo). CONGELADA 1: LasVegas_v2.json (sha c30a8fe636b725cd; case-exata `LasVegas`; 614 wp; −0,998% vs 6201 m) — a única OK veio do ESTICAMENTO; os 3 alvos de congelamento da primária (Montreal/Bahrain/Mexico) falharam o gate (FAILED honesto, sem re-pin pós-número). COMPARADO: Suzuka candidato 5761,6 m (−0,78%) vs v1 5534,8 (−4,69%) = razão entre as magnitudes dos erros de comprimento: 6,0× (272,2 m ÷ 45,4 m), v1 INTACTO (freeze = dono); Hungaroring/Zandvoort reprovaram antes do artefato (números no manifest). GOLDEN PASS TOTAL (canônicos 3/3 bit-idênticos; v1s 5/5; anti-substituição 5/5 — nenhum _v2 não-autorizado no path frozen). Suíte FINAL serial 20F/349P/3S = baseline REAL 20F/345P/3S + 4 t_pe1 com as 20 falhas BIT-A-BIT idênticas (ZERO novo FAIL). LIÇÕES: /tmp de tasks background é EFÊMERO (logs de medição vão ao worktree no MESMO passo); manifest exibe −1,0 (2 casas) mas o gate avaliou −0,9982%. Decisões do dono: gate × re-derivação mecânica (streams TODOS em cache = reprocessar SEM rede); Suzuka freeze (1 linha de aprovação); LasVegas pronta (adoção no pool = ciclo próprio). Ver ANEXO_PISTAS_EXPAND_1.md e seção PISTAS_EXPAND_1.)
+> (anterior: PISTA-IDENT-1 (2026-10-22; feat/sanidade-produto; ciclo de ENGENHARIA; prereg 3758661; ZERO sims; zero rede; pools/caches/mirrors/schema/draw_track/--prof-repair/--variedade INTOCADOS): CONCLUÍDO — resolução de dados SEPARADA do ambiente (G1: backend/domain/track_resolution.py = resolve_track/aliases/FASTF1_*/load_track_frozen MOVIDOS de f1_env c/ re-export de compat total), FAIL-LOUD no treino/eval (G2: resolve_track allow_fallback=False default levanta TrackResolutionError c/ LISTA; o fallback silencioso Interlagos MORRE; --allow-track-fallback preserva o antigo c/ AVISO LOUD + [FALLBACK]) e MIRROR-FIRST (o padrão FONTE-2 agora no TREINO: interlagos/Monaco/Spa resolvem instantâneo/zero-rede/sha-verificado ANTES do FastF1 legado; bugs meus: case-exato do loader H-1 reincidente + gate MIRROR_OPTIONS) + IDENTIDADE verificável (G3: track_identity = requested×efetiva×fonte×sha256×wp×L; env expõe self.track_identity + warning LOUD; eval_teacher_solo imprime IDENTIDADE). GOLDEN 5/5 (CSV/mirrors bit-idênticos/fail-loud/fallback-flag/suíte). ACHADO DE PRODUTO: baseline REAL serial 26F/335P/3S (livros: 25F — ±1 flutuação); FINAL SERIAL 20F/345P/3S — 6 LEGACY CURADAS (curvature_cap/v_plan/hairpin×2/kappa/driver_db: todas eram sintomas do preset procedural 240wp no lugar da pista pedida) e ZERO novas; test_monza_retas_longas reparado (o pass anterior era INVALIDO — corria no preset Interlagos); DISCLOSE: 2 suítes concorrentes minhas causaram falso 'novo' hold_at (colisão /tmp/hold_smoke.csv) — LIÇÃO: suítes que rodam sims em /tmp compartilhado também são 'sims em paralelo'. +4 testes (test_track_resolution 4/4). Ver ANEXO_PISTA_IDENT_1.md e seção PISTA-IDENT-1)**
+> (anterior: PROF-REPAIR-1 (2026-10-22; feat/sanidade-produto; PRIMEIRO ciclo que MODIFICA o professor — pacing pós-reentrada opt-in; prereg fc0a939; 7/7 eps do orçamento; zero rede; pools 70-79/76-79 VIRGENS; caches fastf1 intactos): VEREDITO — GAP ENTRE B E C NÃO PREVISTO PELA ÁRVORE → RESOLUÇÃO CONSERVADORA: nenhum sucesso reivindicado; --prof-repair fica RESEARCH default-OFF; o professor PERMANECE NÃO-VIÁVEL como fonte de rótulos; decisão (2ª rodada de reparo × abandonar o professor) VOLTA AO DONO com gap quantificado. Mecanismo R0 (arquivo:linha): rejoin race_diagnostic.py:327-364 devolve o controle ao professor INSTANTANEAMENTE na transição off→on (sem settling) e reference_controller.py:448-453 comanda o v_plan FROZEN pleno já no tick seguinte ao reentry a 8 m/s na borda = PULSO DE PACE (motor hipotético da cascata 94,6%). Patch UM FATOR: janela 5,0s pós-reentrada com rampa alvo = min(v_plan·0,93, 8+(v_plan·0,93−8)·elapsed/5) e MESMA fórmula long_cmd do professor; esterço intocado. RESULTADO: flag-OFF BIT-IDÊNTICO a prof_s0 (regressão OBRIGATÓRIA PASS); flag-ON: fora 52,47% (−4,46pp vs 56,93 baseline) MAS PRIMÁRIA FAIL (≥45,00 — aluno canônico); SEC-1 cascata 94,4% FAIL (INALTERADA — o pace NÃO é o motor dominante); SEC-2 PASS (C11 22,0% top-1, Reta 2ª 17,1%); SEC-3 preso 277,2s FAIL + REGRESSÃO (+40,2s — a rampa segura o carro MAIS tempo nas janelas presas); authority: rejoin 52,3% + prof_repair 45,6% + professor 2,0% (o carro cicla sai→volta-rampa→sai mesmo a 8-12 m/s). LEITURA (marcada): a TRAJETÓRIA de reentrada (bearing projeção+10m deposita o carro em ângulo incompatível com C11/C04) é a causa dominante — próximo candidato SÓ TEXTO: alvo de reentrada mais adiante/curvatura mínima (ângulo raso, lição M2). Árvore: A não (PRIMÁRIA FAIL); B não como pinado (1/3 SEC verde); C não (sem regressão total/abort) → GAP documentado fail-loud, sem re-pin. Suíte 25F/336P/3S. Ver ANEXO_PROF_REPAIR_1.md e seção PROF-REPAIR-1 [Rótulo de era: PRIMÁRIA FAIL 52,47%; --prof-repair RESEARCH default-OFF; decisão 2ª-rodada×abandonar = dono.])**
+> (anterior: FONTE-2 (2026-10-22; feat/sanidade-produto; desenho de pista: mirrors canônicos → OpenF1 location → ERRO LOUD; prereg 9ba3f8c; ZERO sims — teto 0; env/loader/canônico/schema/requirements INTOCADOS; pools intocados; caches fastf1 intactos; rede 5/10 chamadas logadas APPEND): P1 PASS — as 3 canônicas desenham DOS MIRRORS instantâneo/zero-rede com GOLDEN EXATO (Interlagos 4160,4 m/1131 wp; Monaco 3335,2 m/834 wp + hairpin C06 κ0,1602 = PROF-MONACO-1; Spa 7003,2 vs 7004 −0,01%); DISCLOSE preset×mirror Interlagos: preset legado 240 wp/4309,0 m (era telemetria, +3,6%, 4,7× mais grosso) — o desenho agora usa a MESMA geometria do simulador. P2 PASS — OpenF1 /location entrega contorno de Monza 2024 (session 9590 d44): 575 wp/5756 m vs 5793 oficiais (−0,64%); ACHADO DE UNIDADE: x/y da /location são DECÍMETROS (bounding box 12.568×21.684 ≡ Monza real 1.257×2.168 m, razão exata 10×); 3 métodos mortos documentados (salto>300m; origem=garagem c/ 6.599 amostras paradas; cadeia NN 66 km); método final v4: remove-parado → célula-60m-mais-visitada → janelas-entre-visitas=volta → mediana → re-amostra 10 m; location é PESADO (3,9 MB/7-9,5 s por sessão×driver — cache local). P4 PASS — preset silencioso MORTO: --track inexistente = SystemExit 3 + lista (mirrors + OpenF1 + --legacy-preset c/ AVISO LOUD 'desenhará Interlagos'). ACHADO-P0: o draw_track NUNCA usou mirrors (draw_track.py:23-24 → resolve_track → FastF1 morto → preset; load_track_frozen no mesmo f1_env.py:1292 sem ser chamado). PATCH: CSV → MIRROR → OpenF1 → ERRO LOUD. +2 testes (círculo sintético multi-volta c/ garagem: filtro não distorce; fail-loud exit 3). PNGs: 3 mirrors + monza_openf1. Suíte esperada 25F/334P/3S. Ver ANEXO_FONTE_2.md e seção FONTE-2 [Rótulo de era: P1-P4 provados; ACHADO unidade decímetros; preset morto.])**
+> (anterior: FONTE-1 (2026-10-22; feat/sanidade-produto; migração da aquisição externa plano pago→gratuito; READ-MOSTLY; prereg 27ebff9; ZERO sims — teto 0 cumprido; caches fastf1 96K+935M INTACTOS; pools 70-79/76-79 INTOCADOS): P1 PASS — a JOLPICA É DROP-IN NA VERSÃO 3.8.3 PINADA (fastf1.ergast BASE_URL=api.jolpi.ca confirmado no F0 e PROVADO em execução: circuits 2024 200/24, schedule 200/24 com Monaco=round 8, lap_times 200 com paging 30/pág); P2 PASS — âncora externa OBTÍVEL: volta mais rápida Monaco 2024 = 1:14.165 (FastestLap rank=1 via results; os 2:01/2:57 das laps eram ARTEFATO DE PAGING, não a âncora); P3 PASS — OpenF1 cobre telemetria histórica SEM LOGIN (session 9516 Monaco 2024; car_data 17.485 amostras; campos speed/throttle/brake/gear/rpm/drs; position é endpoint SEPARADO /position; latência 6,8s/2,9MB). F0: (i)=3 Jolpica, (ii)=2 órfãos em camadas LEGADAS (track_loader get_session+circuit_info — dado=geometria JÁ superseded pelos mirrors F1DB; driver_db get_session R — necessidade=metadado coberto pela Jolpica), (iii) mirrors/f1db intocáveis, (iv) caches congelados PROIBIDO limpar — telemetria de verdade NÃO é consumida por código ativo. Orçamento 10/30 chamadas logadas APPEND-only (A=3+1retry c/ bug-de-probe corrigido v2; B=3 REST direto SEM fastf1; C=2; +1 manual 404 DISCLOSED contada no teto). DISCLOSE-254 fechado: 254,5=1272,4/5 (tabela_anatomia); eps do B' bit-idênticos conferidos; '270 s/ep' não reconcilia — NIT aberto não-gating. RECOMENDAÇÃO FONTE-2 (SÓ TEXTO): adoção drop-in do plano metadado via fastf1.ergast e/ou REST direto (SEM upgrade — a 3.8.3 já fala jolpi.ca); OpenF1 documentada como candidata gratuita p/ telemetria histórica; decisão de dono. Suíte INVARIANTE 25F/332P/3S (zero código de produção). Ver ANEXO_FONTE_1.md e seção FONTE-1 [Rótulo de era: recomendação FONTE-2 emitida ao orquestrador; P1/P2/P3 da FONTE-1 provados.])**
+> (anterior: PROF-MONACO-1 (2026-10-22; feat/sanidade-produto; diagnóstico READ-MOSTLY do professor-solo em Monaco_v2; prereg 2aa018c; NENHUM reparo; zero treino; pools 70-79/76-79 INTOCADOS): PARE IMEDIATO PELA FALSIDICAÇÃO-Q4 — o ALUNO (v10-cego, fora 45,00%) é MELHOR que o PROFESSOR (56,93%) na pista-gargalo (−11,9 pp, determinístico): a premissa 'o fora do aluno é herdado dos rótulos do professor' está FALSIFICADA — nem 'herdado' nem 'degradado' sobrevivem; o gargalo da Meta A é o PRÓPRIO professor. Q1 FALSIDICADA (report-only): RETA no top-1 do professor (50 excursões 24,4%; hairpin C06 só 7,3%) → lead REJOIN-CASCATA; Q3 ANATOMIA: 94,6% (prof) / 92,4% (aluno) das excursões são REJOIN-CASCATA ≤10 s pós-fim (churn de reentrada; 0 wanderers; 0 spins relevantes) — o fora é auto-infligido no RETORNO, não geometria do hairpin. VERIFICAÇÕES: paridades bit-idênticas; V1 DEGENERESCÊNCIA — TODOS os seeds 0-4 bit-idênticos por braço (solo+seca+sem variance = seed SEM canal: bateria = 1 realização + 4 réplicas; ICs cluster degenerados; lição: bateria multi-seed solo precisa de canal de variância); V2/V2b bateria ≡ artefatos ADOÇÃO-H-2 BIT-IDÊNTICOS (metaA era janela 600 s — '2 voltas' = completas no cap; leitura de era corrigida); ERRATA R6 (era ADOÇÃO-H-2): preso herdado '118 s' era 1185 ticks÷10 — CANÔNICO 237,0 s (R3 opera sobre LINHAS 5 Hz ×0,2 s; classe da NIT de exibição temporal, 4º caso, agora erro 2×). Erratas R5-a (C07 IQR-B canônico 23,6) e R5-b (Reta-B solo 11/20=55,0%) consolidadas no P0 com proveniência R1 VAZIA (ratificação SAIDAS-1 ÍNTEGRA); NIT-2: re-execução do veredito regenera as 6 tabelas BYTE-IDÊNTICAS (golden permanente); NIT-3: C10='Senna S (T1/T2)' s∈[2748,2852] κ0,0311 CONFIRMA por geometria (ressalva de margem ±30 m: 96/114 m da zona F0). Instrumento: saidas_verdict --track (golden Interlagos provado; bateria multi-ep com Σ solo==total fail-loud; +6 testes). Orçamento: 12/14 sims (re-smoke poupado); A×B ABERTA e CONGELADA. Proposta de reparo do professor (SÓ TEXTO): mirar re-entry/pacing pós-excursão, não a geometria — ciclo próprio com prereg, autorização = dono. Ver ANEXO_PROF_MONACO_1.md e seção PROF-MONACO-1 [Rótulo de era: veredito mecânico do PROF-MONACO-1 emitido ao orquestrador; erratas R5-a/R5-b/R6 consolidadas.])**
+> (anterior: ERRATA-SAIDAS-1 (2026-10-21; feat/sanidade-produto; ciclo de erratas R1–R4 ratificado pelo orquestrador): VEREDITO MECÂNICO CONCLUÍDO — RECONCILIAÇÃO COM ÂNCORAS F4v15 DENTRO DA TOLERÂNCIA PRÉ-REGISTRADA (A fora 22,1167% vs 22,1% Δ=0,0167pp; B 25,2133% vs 25,2% Δ=0,0133pp; 180 e 219 eventos; dur med 4,2s). Perguntas respondidas: Q1 PROPORÇÃO SOLO = 46,7% no v10-cego [IC 95%: 39,4%-53,9%] vs 83,6% no composite [IC 95%: 78,5%-88,1%] (quase o dobro; confirmação estatística inequívoca da queixa do dono); Q2 TOP CURVAS = 4 curvas concentram 91,7% (A) e 78,1% (B) de todos os eventos de saída (T4/T5 Descida do Lago 23-27%, T10 Bico de Pato 17-22%, T11 Mergulho 19-21%, T12 Junção 19-22%); Q3 MODOS = 59-65% LINHA-RETA / subesterço tangencial, 35-41% SLIDE (deriva >=10° pontual), 0,0% SPIN (zero piruetas descontroladas); Q4 VELOCIDADE = IQR <=3,7 km/h em C01/C06 (repetição determinística), C07 largo 22,0-23,6 km/h (heterogeneidade 31-72 km/h insumo do professor), C08 intermediário 3,2-6,7 km/h (todas com v_med 35-60 km/h plausíveis de hairpin). Erratas R1-R4 incorporadas: R1 pin collision sanada (C09-A solo=0 nos dados/código; o 87 foi artefato de display; soma das curvas 25+22+21+16+0=84 == total Q1 84 exato; B fecha 183 exato); R2 IQR segregado; R3 % de eventos corrigido; R4 rotulagem canônica ajustada. Decisão A×B ABERTA e CONGELADA (zero promoção/flip/retreino). Orçamento: ZERO corridas (re-análise de artefatos existentes; pools 76-79 virgens). Ver seção SAIDAS-1 e ANEXO_SAIDAS_1_ERRATAS.md [Rótulo de era: veredito ratificado na SAIDAS-1-review; execução/erratas ratificadas na ERRATA-SAIDAS-1-review.])**
+> (anterior: VARIEDADE-1 (2026-10-21): camada de variedade opt-in; determinismo sobreviveu; D2==D1 byte-a-byte; 76-79 virgens. Ver seção VARIEDADE-1.)
+> (anterior: SANIDADE-1b (2026-10-20): M3-v2 (tetos) FAIL ARQUIVADO com leads; M2 rejoin-perceptive atribuição LIMPA solo (cc 516 −31%, hesit 6, fora 28,0 ≤ 29,9 — escala não dispara); PIN COLLISION divulgada. Ver seção SANIDADE-1b.)
+> (anterior: SANIDADE-0 (2026-10-20; feat/sanidade-produto; ciclo de DEFEITOS DO PRODUTO): M1/M3 v1 FAIL saem do bundle; M2 rejoin-perceptive PASS 4/4 único no --modo espectador; proteções duplas bit-idênticas; D0 coluna lat=MÓDULO (slat=obs4×hw patrimônio). Ver seção SANIDADE-0.)
+> (anterior: ANTI-D3-1 (2026-10-21; ataque de mecanismo-ÚNICO ao D3, pinnado pelo dono antes da decisão A×B): FAIL MECÂNICO — PARE; D3 DECLARADO ESTRUTURAL à camada. Progress-guard fade gate→base (prereg 57a9342; N=5 ticks/F=5/Δcum<0,5m; tick lógico 10 Hz ⇒ EFETIVO 0,5s @ v<5 m/s) no caminho composite (7dde1d8); PRIMÁRIO hesit 12 ≤ 3 FAIL (sem guard 13); não-reg 5/5 PASS mas cc 752→1520 (+102%) e pós-largada 292→846: o guard DEGRADA o valor primário; 9/10 disparos NA LARGADA (probe 1ª-divergência); D3 como custo permanente; A×B volta ao dono. Ver seção ANTI-D3-1.)
+> (anterior: FASE 4 v15 (2026-10-21; wiring): grupo composite no --mixed (limitação 2 resolvida; 3 controllers; PROTEÇÃO v10-cego bit-idêntica ao fixture); B3' FAIL MECÂNICO sob regime canônico — hesit 13 vs ≤3 (R10 D3 reproduzido fora de sessão) + mistas pós-largada 193/242 > ≤2 (absoluto pré-canônico NÃO re-ancorado — gap de pin divulgado); PASSA: cc 752 vs 3674 (4,9× menos), 10/10, 0 par, fora 25,2 ≤ 29,9, rol 140 ≤ 146; mistas +33s vs ctrl-embaralhado; HOLD-AT 9/10 com 4 paradas (pilha multi-composite = limitação confirmada). Promoção = dono. Ver seção FASE 4 v15.)
+> (anterior:  Última atualização: **ADOÇÃO-H-2 (2026-10-20; dono aprovou: AMBOS): mirrors F1DB ADOTADOS como canônico — Monaco_v2.json (sha 67ca11dc211c8c78) e Spa_v2.json (sha 4b05f2c3bbc625fc) via git mv + prioridade {key}_v2 EXISTENTE do loader (loader INTOCADO); v1s → archive/tracks_frozen_v1 (NUNCA deletar; Monaco_v1 07e7ef4dd6af4517 ABORTA no runner atual; Spa_v1 f83365bf26d0b1b1 truncada). PROFESSOR-FIRST 3/3 em ambos (6 eps bit-idênticos, ≥2 voltas pelo critério pinado); CONTROLES: professor-solo-frozen off% é BASELINE do instrumento (interlagos canônico 24,3%; os 0,36% históricos eram 10-carros/live); mirrors MAIS dirigíveis que os v1s (Monaco v1 aborta; Spa 45,4% vs 32%). B' SOB MIRROR 9/9 por completude (Monaco 3/3 — era 0/3 — com ressalva fora 45%; Spa 3/3 canária COMPLETA fora 20,8%); Meta A Monaco 5/5 professor. t-inércia flipado + t-novo archive (verdes); suite 25F/302P/3S [desvio do declarado 304P/2S justificado: os 2 testes novos SUBSTITUÍRAM os 2 antigos; composite_parity:45 (artefato Monaco_v1) virou skip condicional]. Zero corridas/pool/re-pin; 70-79 intactos. Ver seção ADOÇÃO-H-2.)**
+> (anterior: FASE H-1 (2026-10-20): G4 morto como gate por calibração em controles (0/5 in-band em toda a grade; detector não reproduz turns oficiais); mirrors congelados via G1/G2/G3/G5. Ver seção FASE H-1.)
+> (anterior: FASE H-0 (2026-10-19; geometria): mirrors GATE FAIL só no G4 (calibração); nada congelado; H3 detector validado (Monaco_v1 45 riscos artifact; Suzuka_v1 0,04 m crossover real). Ver seção FASE H-0.)
+> (anterior: CICLO LARGADA — FECHADO (2026-10-19; teto documentado; DOSSIE_LARGADA.md; RATIFICADO pela LARGADA-2-review/ANEXO B 8bd728c). Ver DOSSIE_LARGADA.md.)
+> (anterior: CICLO LARGADA F1b (out/19): launch-stagger GATE FAIL; PRIMÁRIO-1 PASS esmagador (densidade validada); atrator estrutural. Ver CICLO LARGADA — FASE 1b.)
+> (anterior: CICLO LARGADA F1a (out/19): launch-cap FAIL por falsificação limpa (velocidade refutada; E1 keying medido). Ver CICLO LARGADA — FASE 1a.)
+> (anterior: CICLO ALAVANCA — REVALIDAÇÃO (out/19): C' 8/8 seco; D adverso FAIL → rejoin-gap OPT-IN. Ver CICLO ALAVANCA — REVALIDAÇÃO.)
+> (anterior: CICLO ALAVANCA — REPARO + RE-VALIDAÇÃO (out/18): instrumento REPARADO (ead15a7, amenda ANTES de runs) e verificado — smoke B 3/3 PASS (largada bit-idêntica; telemetria em fase, keying por carro; divergência == 1º hold). RE-GATE seco seeds 30-39: **FAIL mecânico** por GUARD-P/GUARD-W nas 2 seeds DAMP (s30 par 7/wand 4; s37 4/6 — o pool NÃO era todo-seco: 5/10 com transições; paradas em úmido são fenômeno do CLIMA, presente no cego histórico) e fb s34=16>10 (fallback agora VISÍVEL: 6-16×/run). PASS-P 0,141 ✓ PASS-R 0,220 ✓ — mecanismo de taxa REAL (−56%, perto do teto teórico 0,149); EXPECTATION RESET CONFIRMADO (fora 17-26% — efeito-largada sumiu). PARE em C; D/E não executados; alavanca rejoin-only = research-grade; dossiê LARGADA = candidato prioritário. Ver CICLO ALAVANCA — REPARO.)
+> (anterior: CICLO ALAVANCA — SESSÃO ADVERSA: PARE POR INSTRUMENTO no 0-c (VAZAMENTO): o gap-check engaja SEM estado de rejoin — segura na LARGADA (tick 0, 8/10 carros do grid, th 0,928→0,35 crawl; 1ª excursão 4,2 s→32,6 s) — e a telemetria rejoin_gap_hold está FORA DE FASE com as ações (SAI crawl@0 com hold=0). Gate adverso {2,8,9} NÃO rodou; SEM re-pin/re-run. ERRATA do gate seco: medição do FLAG válida (base fresco = histórico bit-idêntico 0/30000), mas o mecanismo é um híbrido launch-pacing+rejoin NÃO-especificado — atribuição confundida. Ver CICLO ALAVANCA — SESSÃO ADVERSA.)
+> (anterior: FASE R13-FECHAMENTO (housekeeping, zero runs): erratas E1-E5 auditáveis (manchete corrigida: 1,5-3,5× menos contatos; contato×carro-fora 28-44%; adversos 0-9 = {2,8,9} confirmado n=3 — vereditos inalterados); CSV v3.3 ADITIVO commitado com bit-identidade PASS (res_16d por tick p/ rota 2; sha universal do residual); DECLARAÇÃO FINAL DE PRODUTO colada como seção canônica: v10-cego = race default; composite research-grade com vantagem de segurança consistente; alavanca = percepção no retorno. Ver FASE R13-FECHAMENTO.)
 > (anterior: FASE R3 (fix do absorvedor + gate multi-realização): branch hotfix/instrument-repair. ABSORVEDOR MORTO — rejoin por BEARING: excursão de 40 m recupera em 15,7 s (vs 500+s/never em R2); teste sintético PASS; contatos/pós-largada/voltas melhoraram em TODAS as seeds (pós-largada ≤100 pela primeira vez). GATE MULTI-REALIZAÇÃO VERMELHO por OUTRA causa: pilotagem — 96% das 253 excursões de s0 começam SEM contato (v med 14 m/s, todos os setores): o composite sai da pista 2-3×/carro/volta em tráfego denso; fora-pilotagem 6% > 1,5%, rolante 190 s > 115. Promoção PERMANECE SUSPENSA. — Ver seção FASE R3.)**
 
 ## Metas
 
 | Meta | Critério | Status | Melhor resultado |
 |---|---|---|---|
-| **A** Professor ≥95% | todas as pistas, grip 0,75–1,0 | **✓ 100%** | professor v2: 40/40 nas 8 pistas |
+| **A** Professor ≥95% | todas as pistas, grip 0,75–1,0 | **✓ 100%** | professor v2: 40/40 nas 8 pistas [SOB MIRROR (ADOÇÃO-H-2): Monaco_v2 5/5 eps × 2 voltas — 211,9 s/volta, fora 56,9% (baseline do instrumento professor-solo-frozen; ver seção ADOÇÃO-H-2)] |
 | **B** Aluno ≥9/10 treino | cada pista de treino | **✓ 100%** | v10: 39/39 nas 13 pistas |
-| **B'** Aluno ≥7/10 teste | Monaco, Suzuka, Spa (zero-shot) | **✘ 6/9** | Suzuka 3/3 ✓, Spa 3/3 ✓, Monaco 0/3 |
+| **B'** Aluno ≥7/10 teste | Monaco, Suzuka, Spa (zero-shot) | **✘ 6/9 [era v1]** | Suzuka 3/3 ✓, Spa 3/3 ✓ [era v1: pista TRUNCADA], Monaco 0/3 [era v1: pista que hoje ABORTA no runner] — **SOB MIRROR (ADOÇÃO-H-2, canária runner solo 600s): 9/9 por completude** — Monaco_v2 3/3 eps × ≥2 voltas (RESSALVA: fora 45%, 34 excursões, preso acumulado 118 s, wanderer 0), Spa_v2 3/3 × 3 voltas (fora 20,8% ≤ 25% — canária COMPLETA), Suzuka_v1 3/3 (inalterada) |
 | **C** Tempo ≤91,2s (−20%) | Interlagos raw eval | **✘ 109s** | teto DAgger: 108s; PPO: **4× falhou** (v13 no-respawn: 2/3 a 125s) |
 | **D** Corrida 10 carros | zero paradas ≥3s, 10/10, fora ≤4,6% | **✓ 100%** | v10: 1 hesitação, 2s parado, 0,8% fora |
 | D-v15 (corrida, gov vplan) | idem + rolante | ✓ 103,4s | zero hesitações, fora 0,0%, contatos 1576 (nota: 103,4s é instrumento CORRIDA compostos rolante — NÃO comparável a 109s eval MEDIUM grip-realista nem a 107,9s professor-corrida) |
@@ -583,7 +612,7 @@ o residual está sub-treinado para a distribuição padrão de eval. Opções:
 |---|---|---|---|---|
 | **B3.1 all-composite** | **223 (0)** | 0,17% | 103,4s | 0 |
 | B3.2 hold-at 1200 | 3975 (3727) — pilha | 0,36% | — | 13 |
-| B3.3c CONTROLE v10 cego vplan | **3433 (3061)** | **73,6%** | — | — |
+| B3.3c CONTROLE v10 cego vplan | **3433 (3061)** [PRÉ-CANÔNICO: instrumento live pré-R2, clima-loteria; o regime canônico é 21-32% fora (R13)] | **73,6%** [idem] | — | — |
 
 ### B3.1 — TODAS as metas verdes → PROMOÇÃO
 | meta | resultado |
@@ -673,14 +702,14 @@ solo/tráfego; histerese de slots (v15).
 | `scripts/run_race_10_cars.py` | corrida: --profile race/quali/traffic (default race; obs 'traffic' 60d no NeuralRaceController) |
 | `model_train/train_dagger.py` | DAgger multi-pista --obs-mode traffic --traffic-stages "n:iters,..." + warm start + gates por estágio |
 | `model_train/physics_frontier.json` | fronteira R_min(v) calibrada |
-| `model_train/AUDITORIA_RL.md` | histórico completo de investigação |
+| `model_train/AUDITORIA_RL.md` | histórico completo de investigação (restaurado VERBATIM da versão-FONTE 439f402 no commit 2fb1d37 — LARGADA-4; bloco de proveniência no topo) |
 
 ## Comandos essenciais
 
 ```bash
 cd backend
 # testes
-.venv/bin/python -m pytest tests/ -q  # 238/238
+.venv/bin/python -m pytest tests/ -q  # 20F/349P/3S (20F pré-existentes; +4 t_pe1 do PISTAS_EXPAND_1; composite_parity:45 skip condicional)
 # avaliação determinística
 .venv/bin/python model_train/eval_policy.py \
   --actor model_train/v10_dagger/dagger_actor_best.keras \
@@ -721,6 +750,74 @@ cd backend
   --gate-tracks "interlagos,Suzuka,Silverstone,Montreal,procedural:107" \
   --init-actor model_train/v14_traffic/init_from_v10.keras \
   --save-dir model_train/vN_traffic
+# veredito ANTI-D3-1 (mecânico; commitado ANTES das corridas — PADRÃO-OURO)
+.venv/bin/python scripts/anti_d3_verdict.py \
+  experiments/anti-d3-1/1_controle.csv experiments/anti-d3-1/2_allcomposite.csv
+# probe pós-veredito ANTI-D3-1 (read-only; 1ª-divergência ON vs OFF)
+.venv/bin/python scripts/anti_d3_probe.py \
+  experiments/anti-d3-1/2_allcomposite.csv \
+  experiments/f4v15-wiring/2_allcomposite.csv
+# diagnóstico SANIDADE-0 D1-D3 (read-only sobre CSVs F4v15)
+.venv/bin/python scripts/sanidade_diag.py
+# veredito SANIDADE-0 (mecânico; commitado antes das corridas)
+.venv/bin/python scripts/sanidade_verdict.py \
+  experiments/sanidade-0/1_prot_v0.csv experiments/sanidade-0/2_prot_comp.csv \
+  experiments/sanidade-0/3_gate_v0_s70.csv experiments/sanidade-0/4_gate_comp_s71.csv \
+  experiments/sanidade-0/5_gate_v0_s72.csv experiments/sanidade-0/6_gate_comp_s73.csv
+# veredito SANIDADE-1b (auto-validável: --selftest reproduz F4v15+SANIDADE-0)
+.venv/bin/python scripts/sanidade1b_verdict.py --selftest
+.venv/bin/python scripts/sanidade1b_verdict.py \
+  experiments/sanidade-1b/1_prot_v0.csv experiments/sanidade-1b/2_prot_comp.csv \
+  experiments/sanidade-1b/3_m2only_comp_s0.csv experiments/sanidade-1b/4_gate_v0_s74.csv \
+  experiments/sanidade-1b/5_gate_comp_s74.csv experiments/sanidade-1b/6_gate_v0_s75.csv \
+  experiments/sanidade-1b/7_gate_comp_s75.csv
+# DESENHO DE PISTA (FONTE-2: mirrors → OpenF1 → ERRO LOUD; preset silencioso morto)
+.venv/bin/python scripts/draw_track.py --track monaco --save monaco.png
+#   ^ instantâneo, ZERO rede: interlagos|monaco|spa = mirrors canônicos
+.venv/bin/python scripts/draw_track.py --track Italy --year 2024 --save monza.png
+#   ^ OpenF1 location (país F1 2023+, sem login; 1ª vez ~10 s + cache local)
+.venv/bin/python scripts/draw_track.py --track pista-xyz
+#   ^ ERRO LOUD com lista de opções (nunca desenha outra pista)
+.venv/bin/python scripts/draw_track.py --track Monza --legacy-preset
+#   ^ caminho ANTIGO (FastF1 morto → preset Interlagos) — use sabendo
+# PISTAS_EXPAND_1 (aquisição OpenF1 → mirrors v2; 17/25 chamadas gastas;
+# streams em backend/cache/openf1_pistas_expand_1 = reprocessar SEM rede)
+.venv/bin/python scripts/pistas_expand_1.py t0      # inventário offline
+.venv/bin/python scripts/pistas_expand_1.py golden  # §4: canônicos/v1s intocados + manifest×arquivos
+#   manifest: experiments/pistas-expand-1/manifest_pistas_expand_1.csv
+#   mirror NOVO congelado: load_track_frozen('LasVegas') (case-exata; −0,998%)
+#   candidato Suzuka (b): experiments/pistas-expand-1/candidatos/Suzuka_candidato_openf1.json
+# ESPECTADOR (GUI; bundle = só mecanismo verde M2 rejoin-perceptive;
+# atribuição solo LIMPA: comp s0 fora 28,0% <= 29,9; cc 516; hesit 6)
+.venv/bin/python scripts/run_race_10_cars.py --profile race-blind \
+  --modo espectador --seed 0 --laps 99
+# VARIEDADE-1 (opt-in; default 0 = canônico bit-idêntico; o COMANDO DO DONO:
+# mesma seed + N diferente = corrida diferente; mesma (seed,N) = bit-idêntica)
+.venv/bin/python scripts/run_race_10_cars.py --profile race-blind \
+  --modo espectador --seed 0 --variedade 1 --laps 99
+# PROF-MONACO-1: selftest do instrumento (Interlagos + Monaco) e bateria
+.venv/bin/python scripts/saidas_verdict.py --selftest
+.venv/bin/python scripts/saidas_verdict.py --track monaco \
+  --label-a "PROFESSOR (solo-frozen)" --label-b "ALUNO (v10-cego)" \
+  --files-a experiments/prof-monaco-1/prof_s0.csv experiments/prof-monaco-1/prof_s1.csv \
+             experiments/prof-monaco-1/prof_s2.csv experiments/prof-monaco-1/prof_s3.csv \
+             experiments/prof-monaco-1/prof_s4.csv \
+  --files-b experiments/prof-monaco-1/aluno_s0.csv experiments/prof-monaco-1/aluno_s1.csv \
+             experiments/prof-monaco-1/aluno_s2.csv experiments/prof-monaco-1/aluno_s3.csv \
+             experiments/prof-monaco-1/aluno_s4.csv \
+  --out-dir experiments/prof-monaco-1
+# veredito VARIEDADE-1 (mecânico; selftest reproduz as âncoras)
+.venv/bin/python scripts/variedade_verdict.py --selftest
+.venv/bin/python scripts/variedade_verdict.py \
+  experiments/variedade-1/1_prot_v0.csv experiments/variedade-1/2_prot_comp.csv \
+  experiments/variedade-1/3_var1_v0.csv experiments/variedade-1/4_var1_v0_rep.csv \
+  experiments/variedade-1/5_var2_v0.csv experiments/variedade-1/6_var1_comp.csv
+# veredito SAIDAS-1 (mecânico e auto-validável: --selftest reproduz casos sintéticos; Q1-Q4 cruas)
+.venv/bin/python scripts/saidas_verdict.py --selftest
+.venv/bin/python scripts/saidas_verdict.py \
+  --ctrl experiments/f4v15-wiring/1_controle.csv \
+  --comp experiments/f4v15-wiring/2_allcomposite.csv \
+  --out-dir experiments/saidas-1
 ```
 
 ## v15 FASE R2 (2026-10-17) — unificação do SF + re-medida B3.1-v2: VERMELHO; caos + rejoin são as causas
@@ -1121,6 +1218,1287 @@ em 52 colunas canônicas × 600 ticks (mesma seed, logging on vs off).** Suite
 > futura é percepção de tráfego no RETORNO (rejoin com gap) ou weave/slide
 > com tráfego VIVO (rota 2 — pré-condição de dados agora disponível via
 > CSV v3.3).
+
+## CICLO ALAVANCA — rejoin-gap-check (2026-10-18, feat/rejoin-gap-check): GATE TODOS-PASS
+
+Derivado do dossiê R13 (18% das excursões -> contato <=30s; mediana
+reentrada->contato 8,7s). P0: tabela X mecânica (20m = cotovelo: 54%
+perigosas bloqueadas, espera 0,6s); 1ª excursão 10/10 na largada.
+P1 prereg 1883d6d: reconciliação 4.356 (A) vs 1.808 (B); X=20m por
+critério min{>=50% E espera <=1s}; hold crawl 4m/s + T_max 10s
+fallback; ISENÇÃO de paradas decidida ANTES; âncoras históricas B:
+taxa mediana 0,323 / p25 0,307 / rolante 136s. P2: UMA variável na
+camada rejoin; testes 4/4; smoke instrumento VIVO (490 hold ticks,
+rejoin_gap 10,5%, fora 22,6->12,8% s0). P3 GATE (seeds 20-29, secos,
+600s, frozen, cego+vplan, --variance grid,compound, --rejoin-gap 20):
+**TODOS OS 7 CRITÉRIOS PASS** — taxa mediana 0,054 (vs 0,323 histórico,
+−83%); pior 0,133 (<=0,323); 10/10 voltas; 0 paradas; 0 wanderers;
+rolante med 136s (= histórico); fora 10,4-14,8% (MELHOR que o range
+histórico 21-31,6 em TODAS as seeds — o crawl na borda evita
+re-excursões em cascata, reportado); hold 60-132s/run; fallback 0.
+**ALAVANCA VIVA NO SECO.** Adversos: sessão própria. Adoção: revisão.
+> **ERRATA (SESSÃO ADVERSA, abaixo):** o gate seco mediu o FLAG como
+> implementado — que age TAMBÉM na largada (vazamento de engajamento) e com
+> telemetria de hold fora de fase. Atribuição de mecanismo confundida.
+
+## CICLO ALAVANCA — SESSÃO ADVERSA (2026-10-18): PARE POR INSTRUMENTO (0-c VAZAMENTO)
+Prereg 3331ee8 (recontagem + veredito pareado + leak-check commitados ANTES
+de qualquer run) + recontagem commitada 120081e (instrumento `stats()` do
+gate seco sobre o braço cego 0-9 — âncoras pareadas por seed):
+| seed | clima | taxa | fora% | rolante | n_comp | paradas | wand |
+|---|---|---|---|---|---|---|---|
+| 2 | v2 DRY→CLOUDY | 0,277 | 23,0 | 134 | 10 | 0 | 0 |
+| 8 | v2 DRY→CLOUDY→DAMP | 0,444 | 59,4 | 150 | 10 | 14 | 17 |
+| 9 | v3 DRY→DAMP | 0,348 | 46,9 | 147 | 10 | 8 | 13 |
+
+Execução (2 corridas, seriais): smoke s0 base + s0 gap.
+- **0-b smoke: PASS (wiring VIVO)** — CSVs divergem; authority `rejoin_gap`
+  3330 ticks; identity `rejoin_gap=20.0` ✓.
+- **0-c PAIR: FAIL — VAZAMENTO**: 1ª divergência no **tick 0** (SAI, t=0,0:
+  th 0,928→0,35 crawl, steer −0,438→−0,376) ANTES da 1ª reentrada (tick 74).
+  No grid, 8/10 carros (4 fileiras traseiras, gaps 9 m < X=20) já com
+  authority `rejoin_gap` no tick 0.
+- **0-c SELF (retroativo, 10 secos 20-29): 10/10 FAIL** — hold@tick 0 em
+  TODOS (50 hold-ticks t<10 s por run; 1ªs reentradas só a partir de
+  tick 496). O gate seco carregava o MESMO vazamento.
+- **Bônus excursão: FAIL** — 1ª excursão do tratamento (HAM, 32,6 s) ≠
+  histórica (RUS, 4,2 s): a LARGADA MUDOU (o hold elimina a excursão de
+  largada 10/10 do dossiê — a "alavanca de LARGADA" foi implementada
+  ACIDENTALMENTE dentro da flag de rejoin).
+- **Drift (report-only): 0/30000 divergências em 49 colunas comuns** — base
+  fresco = histórico R10 bit-idêntico: código atual com flag OFF = era R10;
+  TODO o efeito do tratamento vem da flag (o pareamento é válido).
+- **CAUSA RAIZ 1 (engajamento, código 7414fc7:845-853)**: o gate exige só
+  `flag>0 + not offtrack + near_edge` — SEM requisito de estado de rejoin
+  (spec do prereg ALAVANCA §3: "aplica-se DENTRO do estado rejoin");
+  `near_edge = lat(assinado) < 1,5×meia-largura` ≈ sempre true on-track.
+- **CAUSA RAIZ 2 (telemetria)**: `rejoin_gap_hold` NÃO coincide com as ações
+  (SAI crawl@0 com hold=0; 531 flags concentrados em 1 carro/run) —
+  instrumento de hold não-confiável em TODOS os CSVs de tratamento,
+  inclusive os 10 do gate seco (os "hold 60-132 s/run" reportados são
+  suspeitos). Encaminhamento da fase (qual chamada escreve _gap_hold vs
+  qual escreve a linha) fica para o reparo.
+- **ERRATA da INTERPRETAÇÃO do GATE SECO (veredito 869cd65)**: as MEDIÇÕES
+  são válidas (isolamento bit-a-bit provado pelo drift-check), mas o FLAG
+  medido NÃO é a alavanca preregada — é um híbrido launch-pacing + rejoin.
+  A queda de fora% (21-31 → 10-15) e da taxa (0,323 → 0,054) têm atribuição
+  de mecanismo CONFOUNDIDA: a excursão de largada era a maior fonte única.
+  O veredito "alavanca VIVA no seco" fica SUSPENSO até re-validação com o
+  instrumento reparado.
+- **0-d/0-e: NÃO EXECUTADOS** (PARE por instrumento; SEM re-pin, SEM re-run).
+  Runs desta sessão: 2 (o par do smoke). Seeds {2,8,9} NÃO consumidas —
+  continuam disponíveis para o gate com o instrumento consertado; 30-39
+  permanecem virgem-pool.
+- Próximo passo (revisão): reparo do instrumento (engajamento rejoin-only +
+  telemetria de hold em fase com ações) → re-smoke → re-gate seco (pool novo
+  ou re-pin explícito) → só então adverso. Artefatos:
+  `experiments/diag-alv-adverso/` (smoke + recontagem), leak-check
+  `scripts/lever_leak_check.py` (commitado ANTES — foi ele que pegou o
+  vazamento que o gate seco inteiro não viu).
+
+## CICLO ALAVANCA — REPARO + RE-VALIDAÇÃO (2026-10-18, feat/rejoin-gap-check): B PASS, C FAIL → PARE
+Amenda `ead15a7` commitada ANTES de qualquer run (orçamento 22 runs; usados 12).
+
+### A — REPARO (A.0-A.3) + SMOKE B: TODAS AS 3 CONDIÇÕES PASS
+- **A.0**: suite 25F/280P/2S (skips: composite_parity=ARTEFATO DE COLEÇÃO —
+  paridade formal coberta por test_residual_numpy_equals_keras; v2v4=checkpoints
+  ausentes); ordem de commits confirmada; **taxas 10-19 REPRODUZIDAS** pelo
+  script do prereg 1883d6d sobre `race_diag_r13_b_s1[0-9]`:
+  [0,306;0,328;0,317;0,441;0,333;0,406;0,267;0,310;0,300;0,350] → med 0,323/
+  p25 0,307/máx 0,441 (s10 histórico: par 4/wand 4 — o seed WET).
+- **A.1 (3 fixes)**: (i) ENGate — engate SÓ na transição off→on
+  (`_was_offtrack`); correção do diagnóstico: `drv_lat` JÁ é distância
+  absoluta (offtrack/near_edge sempre foram bilaterais) — o vazamento vinha
+  da ausência do requisito de excursão; (ii) KEYING `drivers[i]` — o bloco
+  usava `drv` STALE do loop de observações (= último driver): UM estado
+  compartilhado por todos os carros + flags só do último (a causa de "SAI
+  crawl@0 com hold=0"); (iii) telemetria todo tick por carro EM FASE; fb =
+  transição 0→1 (a contagem antiga era INVISÍVEL — o pop de expiração apagava
+  o estado antes da leitura).
+- **A.2**: t1 (largada não engata) / t2 (retorno com gap 9 m segura, crawl,
+  authority rejoin_gap) / t3 (flag na chave do HOLDER, nada em driver alheio)
+  — harness real (pista frozen + pybullet + pesos v10); suite **25F/283P/2S**.
+- **A.3**: âncoras inalteradas; pool seco NOVO 30-39; {2,8,9} poupados;
+  40-49 reservado; emenda GUARD-P/W ≤hist no veredito adverso; modo `phase`
+  no leak-check.
+- **B SMOKE (2 runs, seed 0 seco)**: (1) 1ª divergência tick 90 ≥ 1ª
+  reentrada tick 74 **E == 1º hold** (o hold é o único canal); (2) fase: 597
+  hold ticks em 9 carros, 0 violações authority⟺hold, fb 5 eventos VISÍVEL;
+  (3) **1ª excursão BIT-IDÊNTICA à histórica (RUS, 4,2 s, 2702,685 m) — a
+  largada NÃO muda**; drift base≡hist 0/30000.
+
+### C — RE-GATE SECO (seeds 30-39, 10 runs seriais): **FAIL → PARE**
+| seed | clima | taxa | par | wand | rol | off% | hold s | fb |
+|---|---|---|---|---|---|---|---|---|
+| 30 | DRY→DAMP(v5) | 0,205 | **7** | **4** | 133 | 23,1 | 206 | 7 |
+| 31 | seco | 0,102 | 0 | 0 | 134 | 17,3 | 239 | 12 |
+| 32 | seco | 0,208 | 0 | 0 | 133 | 17,8 | 224 | 9 |
+| 33 | DRY→CLOUDY | 0,098 | 0 | 0 | 134 | 17,8 | 241 | 9 |
+| 34 | seco | 0,129 | 0 | 0 | 134 | 17,8 | 248 | **16** |
+| 35 | seco | 0,113 | 0 | 0 | 132 | 20,5 | 101 | 9 |
+| 36 | DRY→CLOUDY | 0,158 | 0 | 0 | 134 | 18,2 | 234 | 12 |
+| 37 | DRY→DAMP(v5) | 0,220 | **4** | **6** | 138 | 26,3 | 186 | 6 |
+| 38 | seco | 0,152 | 0 | 0 | 134 | 17,6 | 221 | 12 |
+| 39 | DRY→CLOUDY(v2) | 0,085 | 0 | 0 | 134 | 19,8 | 138 | 10 |
+
+- **PASS**: PASS-P mediana 0,141 ≤ 0,307 | PASS-R máx 0,220 ≤ 0,323 |
+  GUARD-V 10/10 | GUARD-L 133-138 ≤ 141 | GUARD-F 17,3-26,3 ≤ 33,6.
+- **FAIL**: GUARD-P/GUARD-W absolutos quebrados pelas DUAS seeds DAMP (s30,
+  s37); **fb re-medido: 6-16 eventos/run (s34 SECO = 16 > 10 = 2º gatilho de
+  PARE do §C)** — o fallback T_max é exercitado DE VERDADE (no gate
+  contaminado fb era mascarado=0).
+- **EXPECTATION RESET CONFIRMADO**: fora 17,3-26,3% (vs 10,4-14,8 do
+  contaminado; vs 21,0-31,6 histórico) — o efeito-largada SUMIU com o
+  reparo; a alavanca rejoin-only fica DENTRO do range histórico.
+  **O mecanismo de taxa é REAL: mediana 0,141 = −56% vs 0,323, PERTO do teto
+  teórico do prereg §4 (≈0,149 de 54% bloqueadas)** — correção de atribuição,
+  não regressão.
+- **Diagnóstico dos guards**: paradas/wanderers só nas seeds DRY→DAMP
+  (t=544-574 s, fase úmida, liberadas por CONTATO — o padrão RECUP-OFF/clima
+  do produto). O MESMO fenômeno existe no braço cego HISTÓRICO (s10 WET: 4/4;
+  s8: 14/17; s9: 8/13) — paradas em clima úmido são do CLIMA, não da alavanca.
+  **CAVEAT de pool (omissão da amenda)**: 30-39 NÃO foi pré-verificado como
+  seco — 5/10 com transições (30/37 DAMP; 33/36/39 CLOUDY); os guards
+  absolutos presumiam pool seco (como 20-29). SEM re-pin, SEM re-run — o
+  FAIL mecânico fica; o pool 40-49 (reservado) permitiria um gate seco-seco
+  SE a revisão quiser (decisão dela, com re-pin explícito).
+- **Veredito C (mecânico, prereg REPARO §C)**: FAIL → PARE. **Alavanca
+  rejoin-only = research-grade documentada**: reduz a taxa de perigosas
+  −56% com pace preservado, mas NÃO zera paradas/wanderers em realizações
+  DAMP e o fallback dispara 6-16×/run (em tráfego denso o buraco ≥20 m não
+  chega em 10 s — dado NOVO, antes invisível). **Dossiê LARGADA vira
+  candidato prioritário** (ramo do prereg).
+- **D/E NÃO executados** (PAREs em C). Runs 12/22 (2 B + 10 C);
+  {2,8,9} CONTINUAM poupadas; 30-39 consumidos; 40-49 reservado.
+
+## CICLO ALAVANCA — REVALIDAÇÃO (2026-10-19): C' TODOS-PASS no seco; D FAIL no adverso → alavanca OPT-IN (viva no seco, adverso reprovado)
+Amenda 4308287 commitada ANTES dos 16 runs; NENHUM código da alavanca mudou
+(smoke B/ead15a7 = validação permanente do instrumento).
+
+### P0 — WEATHER SCAN offline (validado 30/30; zero runs)
+Mecânica exata derivada do código: transições avaliadas por VOLTA COMPLETADA
+POR CARRO (10 draws/onda, labels 2-5; o race_diagnostic não passa pelo
+engine.run → SEM draw de largada). **Teorema do prefixo** validado: in-race ⊂
+scan (s9/s10 = prefixos — carros encravados truncam o stream; 28 exatos).
+**40-49 declarada: 1/10 DAMP (s42 v5 DRY→DAMP)**, 3 CLOUDY-only (43/46/48),
+6 sem transições — guardrail >5/10 PASS. Caveat: o GUI (engine.run) consome
+1 draw a mais na largada → clima GUI ≠ headless na mesma seed (gates são
+headless-canônicos).
+
+### P1 — atribuição CONFIRMADA (predição pré-registrada; 2 runs)
+Base fresca SEM flag: s30 par 7/wand 5; s37 par 9/wand 6 — vs tratamento
+7/4 e 4/6. **A base para/wandera IGUAL ou MAIS que o tratamento**: as
+paradas em DAMP são do CLIMA; a alavanca REDUZ paradas na s37 (9→4) e corta
+a taxa mesmo em úmido (0,317→0,205; 0,277→0,220). Condição de PARE (0/0)
+não disparou.
+
+### C' — RE-GATE SECO (seeds 40-49, clima declarado pelo scan): TODOS OS 8 CRITÉRIOS PASS
+| seed | clima | taxa | par | wand | rol | off% | hold s | fb |
+|---|---|---|---|---|---|---|---|---|
+| 40 | SECA | 0,274 | 0 | 0 | 135 | 18,9 | 285 | 14 |
+| 41 | SECA | 0,187 | 0 | 0 | 134 | 18,3 | 250 | 9 |
+| 42 | DAMP | 0,156 | 2 | 8 | 135 | 25,4 | 228 | 13 |
+| 43 | SECA | 0,176 | 0 | 0 | 135 | 19,0 | 194 | 5 |
+| 44 | SECA | 0,169 | 0 | 0 | 133 | 17,4 | 249 | 10 |
+| 45 | SECA | 0,183 | 0 | 0 | 136 | 21,2 | 172 | 10 |
+| 46 | SECA | 0,160 | 0 | 0 | 135 | 18,2 | 190 | 11 |
+| 47 | SECA | 0,196 | 0 | 0 | 134 | 19,0 | 191 | 5 |
+| 48 | SECA | 0,179 | 0 | 0 | 135 | 19,6 | 239 | 8 |
+| 49 | SECA | 0,198 | 0 | 0 | 136 | 21,6 | 254 | 9 |
+
+- PASS-P mediana 0,181 ≤ 0,307 | PASS-R máx 0,274 ≤ 0,323 | GUARD-V 10/10
+  | GUARD-L 135 ≤ 141 | GUARD-F 17,4-25,4 ≤ 33,6 | **GUARD-P/W: 9 secas
+  0/0 absolutos (espelho do histórico 9/9) + s42 DAMP ≤ base fresca
+  (par 2≤4, wand 8≤8)** | SELF leak-check 10/10 PASS. Identity 10/10
+  (rejoin_gap=20.0).
+- fb report-only: 5-14/run; >10 em s40/s42/s46 → **diagnóstico obrigatório:
+  em tráfego denso o buraco ≥20 m não chega dentro da janela de 10 s — o
+  fallback T_max dispara por construção (cobertura parcial, teto 54%)**.
+
+### D — GATE ADVERSO PAREADO ({2,8,9}): FAIL → PARE
+| seed | taxa | par | wand | rolante | off% | veredito |
+|---|---|---|---|---|---|---|
+| 2 | 0,277→0,190 | 0→0 | 0→0 | 134→137 | 23,0→19,0 | **PASS** |
+| 8 | 0,444→0,241 | 14→**15** | 17→16 | 150→**237** | 59,4→50,2 | **FAIL** (GUARD-P, GUARD-L) |
+| 9 | 0,348→0,231 | 8→**12** | 13→13 | 147→143 | 46,9→42,3 | **FAIL** (GUARD-P) |
+
+- O mecanismo de taxa FUNCIONA no adverso (−31% a −46%) e o fora% fica
+  ABAIXO do histórico em 3/3 — mas em DAMP o hold na borda CUSTA: paradas
+  ACIMA do cego histórico (s8 +1, s9 +4) e na s8 o rolante explode
+  (237 s — espera em crawl no caos úmido). SEM re-pin, SEM re-run.
+- **E NÃO executado** (condicionado a D TODOS-PASS).
+
+### ESTADO FINAL DO CICLO
+- **Alavanca rejoin-gap-check X=20: VIVA no seco (C' 40-49 TODOS-PASS),
+  REPROVADA no adverso (D {2,8,9} FAIL por paradas/rolante em DAMP)** —
+  permanece OPT-IN research-grade; adoção = revisão (default seco-só
+  exigiria a flag depender do clima — decisão de produto).
+- Runs 16/23 (2 P1 + 11 C' + 3 D). Pools: 40-49 consumidos (C');
+  {2,8,9} consumidas (D); **50-59 = próximo pool virgem** (dossiê LARGADA).
+- Fila para a revisão: (a) ADOÇÃO da alavanca (seco-só ou opt-in
+  documentado); (b) dossiê LARGADA (prereg próprio, pool 50-59, baseline =
+  config adotada — a 1ª excursão 10/10 na largada continua a maior fonte
+  única); (c) fb frequente (5-14/run) = dado novo: janela/T_max a
+  re-derivar SE a alavanca for adiada; (d) caveat GUI↔headless do clima.
+
+## ALAVANCA REJOIN-GAP X=20 — DISPOSIÇÃO FINAL (canônico; rulings REVALIDA-0-review)
+- **OPT-IN** via flag `--rejoin-gap 20` no race_diagnostic (default 0 = off).
+  SEM flip de default; SEM flag clima-dependente; SEM re-pin do regime
+  canônico (v10-cego+vplan = race default).
+- **Validada NO SECO** (re-gate C' seeds 40-49, instrumento reparado ead15a7):
+  8/8 critérios — taxa mediana 0,181 = −44% vs 0,323 histórico; 9 secas
+  par/wand 0/0 absolutos; s42 DAMP ≤ base fresca.
+- **REPROVADA NO ADVERSO** (gate D {2,8,9} pareado): paradas acima do cego
+  histórico em DAMP (s8 15>14; s9 12>8) e rolante 237 s vs 155 na s8 —
+  **recomendada SOMENTE com pista seca declarada**.
+- **NUNCA acoplar a flag ao clima no runner**: o clima do GUI ≠ headless
+  para a mesma seed (o engine.run do GUI consome 1 draw a mais do rng do
+  clima — ver weather_scan.py).
+- **Fallback T_max report-only por construção**: o buraco ≥20 m não chega em
+  10 s em tráfego denso (5-14 eventos/run; teto de cobertura 54% do prereg).
+- **Re-derivação de janela/T_max = PRÉ-CONDIÇÃO de qualquer promoção futura**
+  (não um ciclo por si).
+
+## CICLO LARGADA — FASE 0: ANATOMIA OFFLINE (2026-10-19): P-A/P-B 20/20 PASS; P-C FAIL → PARE (premissa cai)
+Zero corridas. Amends: f801d09 (disposição final) → 071bc37 (prereg da
+anatomia, ANTES do script; P-B EMENDADO p/ s∈[2650,2950] com âncoras
+citadas — RUS 4,2 s @ 2702,685 do smoke B e cluster 2698-2814 mediana 2757;
+a região literal do prompt [550,850] deu 0/20, reportada).
+- **Fechamento de registro V**: V-1 GUARD-L do C' confirmado **135,0**
+  (mediana das medianas; máx 136) — SEM errata (veredito imune, ≤141);
+  V-2 GUARD-V do D 3/3 (10=10 por seed); V-3 SELF do D 3/3 quantificado
+  (margem mínima 1º hold − 1ª reentrada = **0 ticks** — engaje exato na
+  reentrada; 9-10 carros/run; 0 violações).
+- **SELF-checks 3/3 PASS** (10 taxas exatas + recontagem 120081e + RUS
+  4,2/2702,685). Instrumento: `scripts/largada_anatomy.py`; âncoras
+  `experiments/largada_anatomia_cego_s0_19.csv` (20 runs cegos) e
+  `largada_anexo_CONTAMINADO.csv` (11, rotulado).
+- **ANATOMIA (braço cego 0-19)**: 1ª excursão 20/20 em W (t 4,2-8,4 s) E
+  20/20 na 1ª curva (s 2699,7-2814,0 — entrada do Senna S, pós-SF 2655);
+  **taxonomia 20/20 CONTATO-ADJ** (contato do dono em ±2 s); 12-23 pares de
+  contato por run em W, **primeiros contatos JÁ NO GRID** (t 1,2-1,4 s, s
+  2618-2656); v do campo: 14,5 (t=2) → 28,7 (t=4) → 10-17 (t=8) m/s.
+- **P-C FAIL: share_largada mediana 0,074** (range 0,021-0,115; décadas
+  0,072/0,075) vs ≥0,20 pinado — **a janela de largada detém só ~7% do
+  TEMPO fora, não 20-50% → PARE: a premissa "maior fonte única" (em
+  tempo-fora) CAI; re-prioritização com a revisão ANTES de qualquer L-1.**
+- **RE-ATRIBUIÇÃO (registrada)**: a derivação original (contaminado 10-15%
+  fora vs histórico 17-26% ⇒ largada ≈ 1/4-1/2 do fora) confundia o
+  efeito-largada LOCAL com a CASCATA inteira (o híbrido contaminado também
+  carregava o bug de keying) — a diferença de fora% (−7-11 pp) vem do
+  desenvolvimento completo da corrida, não da janela W. O que PERMANECE:
+  a largada é um evento de CONTATO concentrado e localizado (grid + Senna
+  S), 100% CONTATO-ADJ; o teto de um pacing perfeito sobre o tempo-fora é
+  ~7% + qualquer cascata que previna (valor INDETERMINADO nos dados
+  atuais — confundido com o keying do híbrido).
+- **ANEXO CONTAMINADO (insumo de design)**: 10/10 runs com hold de largada
+  → 1ª excursão empurrada para **t=32,6 s** (modo exato, 10/10) e fora
+  10,4-14,8% — o launch-hold atrasa a primeira excursão; a atribuição do
+  resto da diferença segue confundida.
+- Pools intactos (50-59 virgens); suite inalterada. Proposta L-1 (pacing)
+  fica NO RELATÓRIO, condicionada à re-prioritização da revisão.
+
+### ERRATAS LARGADA-1 0-a (rulings LARGADA-0-review; doc-only)
+- **E1**: a leitura da era REPARO de que os "fora 10,4-14,8% = efeito-
+  largada" é **CONFOUNDADA** — o gate contaminado era um híbrido (com o bug
+  de keying) e a diferença inclui a CASCATA completa, não a janela local.
+  Medido local (LARGADA-0, 20 runs cegos 0-19): **share_largada = 7,4% do
+  tempo-fora** (mediana; máx 0,115). Teto honesto de um pacing perfeito
+  ≈ 7% + cascata indeterminada.
+- **E2**: o âncora "s≈685 m" do prompt da revisão era leitura errada do
+  registro ("RUS, 4,2 s, 2702,685 m" — a mantissa). Emenda P-B
+  [2650, 2950] **RATIFICADA** pela revisão (não-gateável: o cluster literal
+  do 0-d dá 20/20).
+
+## CICLO LARGADA — FASE 1a: launch-cap (2026-10-19): GATE FAIL — falsificação limpa; flag morta (default OFF)
+- **0-c decomposição** (82b12c6): pares_W pooled **ENTRADA-S 228/348 (65%) vs
+  GRID 112 (32%)** → árvore: ramo CAP. Pares adjacentes à 1ª excursão **20/20
+  em ENTRADA-S, 0 no GRID**. 1ª exc por posição de grid: P2 6× (não P1);
+  mesma fileira 29%. cc hist: SECA med 2.906 | DAMP med 3.500.
+- **Instrumento**: `--launch-cap` (v_ceiling = 0,8×v_plan(s) na janela t<30 E
+  s<2950; freio do governor; default OFF; telemetria per-carro). Prereg
+  a3b8ff0 com constantes PINADAS por derivação medida (v_plan real 20,3-57,1
+  vs chegada medida máx 48,4). Smoke: div == 1º cap (tick 48) ✓; **3
+  violações de fase = FLAG FANTASMA off-track** (rejoin sobrescreve th/brk) →
+  reparo `not offtrack` (4b0d4eb, mudança de comportamento ZERO, +t6) →
+  re-smoke SELF 3/3; drift base≡hist 0/30000.
+- **GATE (11 runs: base s50 + tratamentos 50-59; veredito 7f10fb0 ANTES dos
+  números; identity 10/10)**: **FAIL** — PRIMÁRIO-1 pares_W mediana 18/máx
+  24 vs ≤8/≤14 (o cap NÃO reduziu o storm; âncora 17); PRIMÁRIO-2 1/10 (9/10
+  ainda CONTATO-ADJ em 4,4-9,6 s); s50 (WET) PIORA (par 22 vs base 12; cc
+  10.872 vs 8.258); s58 cc 3.400 > 3.197. Secas: rolante 132-138 ✓, par/wand
+  0/0 ✓ 9/9, GUARD-V 10/10 ✓.
+- **EXPECTATIVA (report-only): fora% <15 em 0/10 → o efeito da era
+  contaminada era ARTEFATO DO KEYING (E1 confirmado por MEDIÇÃO), não
+  pacing**; fora 20,9-26,7 (secas) ≈ histórico.
+- **Diagnóstico (falsificação limpa)**: o cap ENGAJOU (74-137 cap-ticks/run
+  em 10/10 carros; fase 0 violações) e NADA mudou — a hipótese "velocidade de
+  chegada causa o storm" é REFUTADA: a compressão vem do FUNIL do próprio
+  v_plan (todos freiam no mesmo ápice; fator uniforme 0,8× preserva a
+  geometria relativa do campo). Em úmido o cap PIORA (campo mais lento =
+  mais compactado).
+- **Estado**: launch-cap = research-negativo documentado; flag PERMANECE
+  default OFF (opt-in morto). SEM re-pin, SEM re-run. Fila da largada ao
+  DONO: (a) mudança de GRID (espaçamento/fileiras — era nova, re-pin total;
+  112 pares de grid + storm entrada-S persistem); (b) aceitar o launch-storm
+  como teto documentado do produto. Pools: 50-59 consumidos; 60-69 próximo
+  virgem. 13 runs (o cabeçalho do prereg dizia 12 — slip aritmético;
+  sequência §4 correta).
+
+## CICLO LARGADA — FASE 1b: launch-stagger (2026-10-19): GATE FAIL; PRIMÁRIO-1 (vinculante) PASS ESMAGADOR — densidade de grid validada; re-empacotamento estrutural
+- **Dados pré-commitados**: scan 60-69 = 1/10 DAMP (s60: v2 CLOUDY → v3
+  DAMP; 6551bac) + probe Δt COMMITADO (0268919; lição L-1a do probe inline):
+  Δt=1,0 s → gap 1º par 20,3-57,1 m (≥2× os 9 m do grid na zona da queixa).
+- **Instrumento**: `--launch-stagger` (hold th=0/brk=1 até release=(pos−1)×
+  1,0 s frente→trás; rec.clear() p/ pós-release canônico; slots do run
+  wiring na ordem efetiva; cap×stagger exclusivos; telemetria per-carro).
+  Smoke: drift 0/30000 ✓; div==1º held (tick 0) ✓; **release NÃO exato
+  6/10 — float `+= 0,1` no boundary (0,99999<1,0 segurava 1 amostra; GAS
+  slot 7 held até tick 60 vs 58)** → fix tick-exato com round() (ea1194a,
+  +t6) → re-smoke SELF 3/3. Suite **25F/296P/2S** (295 prereg + 1 t6 do
+  reparo, disclose).
+- **GATE (14 runs = 2 smoke + 1 re-smoke + base s60 + 10 trat 60-69;
+  identity 10/10; veredito 52fa020 ANTES dos números)**:
+
+| seed | clima | pares_W | 1ª exc (t, s) | taxonomia | par_excl | wand | rol_v1ex | off% | cc |
+|---|---|---|---|---|---|---|---|---|---|
+| 60 | DAMP | 2 | 32,8s @ 32m | OUTRO | 15 | 16 | 135 | 46,5 | 9.268 |
+| 61-69 | SECA | 1-4 | 32,8s @ 31-35m | ADJ 5 / OUTRO 4 | 0 | 0 | 132-135 | 20,6-23,7 | 692-1.902 |
+
+- **PRIMÁRIO-1 (vinculante) PASS ESMAGADOR: pares_W mediana 2, máx 4** vs
+  ≤8/≤14 (âncora 12-23 med 17) — **o stagger ELIMINA o storm de largada:
+  a densidade de grid É o mecanismo local** (expectativa report-only:
+  DENSIDADE VALIDADA).
+- **PRIMÁRIO-2 FAIL 5/10**: a 1ª excursão reaparece em TODOS os 10 runs a
+  **t=32,8 s, s≈31-35 m — o fim da volta 1, o MESMO sítio/modo da era
+  contaminada (32,6 s @ s≈37)**: o campo RE-EMPACOTA dentro de uma volta
+  (perfis idênticos convergem de volta ao funil do v_plan) e a
+  excursão-por-contato reemerge — ainda CONTATO-ADJ em 5/10.
+- **s60 (DAMP) FAIL em PW/OFF/CC**: wand 16 vs base 13; off 46,5% (clima —
+  base 46,8%); **cc 9.268 vs base 6.418 (+44%) — úmido PIORA com campo
+  segurado (o MESMO padrão do cap: 10.872 vs 8.258)**.
+- **REPORT-ONLY compostos**: pares residuais pooled — HARD/SOFT 8,
+  MEDIUM/SOFT 9, MEDIUM/MEDIUM 1, SOFT/SOFT 2 → **19/20 envolvem um carro
+  SOFT** (insumo grid-era: composto mole domina o contato residual).
+- **VEREDITO MECÂNICO: FAIL → PARE por seed; SEM re-pin, SEM re-run.** A
+  leitura conjunta F1a+F1b fecha a cadeia causal: a VELOCIDADE não é o
+  mecanismo (cap refutado); a DENSIDADE de largada é o mecanismo DO STORM
+  DE LARGADA (stagger esmaga) — mas o RE-EMPACOTAMENTO pós-largada é
+  ESTRUTURAL (perfis idênticos): segurar a largada só TRANSFERE a
+  primeira excursão-por-contato para o fim da volta 1. O launch-storm como
+  fenômeno de campo é o TETO do produto com este stack; mitigação
+  permanece a alavanca rejoin opt-in (−44% no seco).
+- Pools: 60-69 consumidos; **70-79 próximos virgens**. Flags L-1a/L-1b
+  ambas default OFF (research-negativas, código preservado).
+
+## CICLO LARGADA — FECHADO (2026-10-19): teto documentado; dossiê canônico
+**Local único: `DOSSIE_LARGADA.md`** (cadeia causal com âncoras, enunciado
+do teto, disposição de produto, lead SOFT com ressalva, inventário). Resumo:
+- Fecho executado com ZERO runs, ZERO mecanismo novo, pools intatos
+  (70-79 virgens). Errata-canônica: orçamento L-1b 13→14 (+1 re-smoke
+  sancionado pelo §3, disclose); regra de template permanente (+1 re-smoke
+  contingente em todo prereg futuro).
+- Diagnósticos N1/N2/N3 (script commitado antes de executar):
+  N1 GUARD-V 10/10 PASS; N2 1ªs excursões SEM padrão SOFT (7 MEDIUM/2
+  HARD/1 SOFT — o lead 19/20-SOFT aplica aos pares residuais, não ao
+  evento de re-empacotamento); N3 14 runs → 13 CSVs (re-smoke re-usou
+  race_diag_lg1b_stg_s0.csv).
+- PENDÊNCIA RESOLVIDA (LARGADA-4, 2026-10-19): o texto "LARGADA-2-review"
+  chegou e foi apendado VERBATIM ao worklog no commit **8bd728c** (ANEXO B)
+  — a revisão RATIFICA o fecho (R1-R5) e registra a DECISÃO DE FILA
+  (fechar o ciclo; grid-era contra-indicada; veto do dono registrado).
+- **AUDITORIA_RL.md RESTAURADO do histórico (LARGADA-4)**: o arquivo existia
+  (`backend/model_train/AUDITORIA_RL.md`, 1.181 linhas — auditoria do
+  pipeline de RL pré-reestruturação; criado 9099235, última versão
+  439f402) e perdeu-se no squash da PÓS-CICLO-1. Restaurado verbatim de
+  439f402 com bloco de proveniência no topo. A frase do header ("ler este
+  arquivo e AUDITORIA_RL.md") é VERDADEIRA novamente; tabela
+  Arquivos-chave atualizada.
+- FRENTE LARGADA ENCERRADA. Estado de produto vigente: v10-cego+vplan =
+  race default; rejoin-gap opt-in = mitigação do sintoma (seco);
+  launch-cap/stagger = research-negativas default OFF.
+
+## FASE H-0 (2026-10-19) — geometria: mirrors Monaco/Spa GATE FAIL no G4 (limiar); NÃO congelados; H3 detector validado
+Prereg 21ac676 ANTES do código (d470a87). ZERO runs/pool/re-pin; v1s
+canônicos INTOCADOS (o nome previsto era `{Name}_mirror*_v1.json` — NUNCA
+`_v2`: o `load_track_frozen` PRIORIZA `{key}_v2.json` (R2 S4) e nomear assim
+mudaria a pista canônica sem decisão do dono; o loader segue inalterado).
+- **Fonte espelhada**: F1DB SVGs oficiais (circuit_layouts_evolution.json;
+  probes HTTP 200; parse M/c/s/z; fechamento 0,000% nas duas). Monaco
+  "mirror 2021" = `monaco-6` (2003-2019, 2021-2026); Spa = `spa-francorchamps-4`
+  (2007-2026). Pipeline: Béziers→resample 4 m→calibração ao oficial
+  (3.337/7.004 m).
+- **GEOM GATE (prereg §3, mecânico)**:
+  | pista | G1 clearance | G2 cross | G3 R_min | G4 turns | G5 L | veredito |
+  |---|---|---|---|---|---|---|
+  | Monaco | **16,30 m** ✓ | 0 ✓ | **11,34 m** ✓ (hairpin real) | 15 vs 19±3 **✗** | 0,05% ✓ | FAIL → não congela |
+  | Spa | **24,83 m** ✓ | 0 ✓ | **14,66 m** ✓ | 5 vs 19±3 **✗** | 0,01% ✓ | FAIL → não congela |
+- **Diagnóstico pós-veredito (emenda = revisão; precedente ERRATA #2)**:
+  o limiar κ≥0,02 (R≤50 m) do G4 sub-detecta curvas rápidas. Sweep:
+  Monaco κ≥0,01 → 17 (DENTRO de 19±3); Spa κ≥0,01 → 23 (κ≈0,008 daria
+  ~19-21). **Crítica: G4 como pinado não separa Spa COMPLETA (5) da Spa_v1
+  TRUNCADA (~4-5) — em pista rápida não serve ao próprio intento.** Opções
+  para a revisão: emendar G4 em prereg novo e re-rodar o builder (segundos,
+  zero runs); trocar G4 por outro cheque de completude; rejeitar os mirrors.
+- **H3 detector G3 (report-only; critérios pinados ANTES)**: 9/9 frozen
+  auditadas; **2/9 flaggeadas exatamente como o prereg previa** — Monaco_v1
+  **45 riscos** de hint (pares não-adjacentes <2 m; clearance 1,63 m;
+  concentrados em s≈972-1055 m) e Suzuka_v1 **8 riscos** (clearance **0,04 m**
+  em s≈1731↔3936 m — o crossover real da ponte/esses, mais crítico que os
+  0,39 m da FASE G); Spa_v1 **0 gaps** (confirmado: o furo dela é
+  comprimento); demais 7 limpas (17-23 m). O mapa do fix "janela arc-local"
+  (G3 futura) está quantificado. ZERO mudança de runtime.
+  [RÓTULO N2, ADOÇÃO-H-2: os DOIS valores de clearance do Monaco_v1 são
+  instrumentos diferentes — **1,71 m** = audit FASE G (mínimo sobre pares
+  <8 m, janela cKDTree) e **1,63 m** = detector H3 da H-0 (mínimo sobre pares
+  <2 m não-adjacentes); não é contradição.]
+- **ERRATA R8 (ADOÇÃO-H-2; HIPÓTESE ABERTA, marcada)**: Spa_v1 mede 4.352 m
+  e o oficial 7,004 km = 4,352 mi (7004/1,609344 = 7.003,85 m) — causa-raiz
+  PROVÁVEL: o builder original engoliu MILHAS como METROS (explica o −37,9%
+  de uma vez). CONFIRMAÇÃO buscou o literal "4.352"/conversão mi no código
+  do repo: **NENHUM ACHADO** (o builder da Spa_v1 não está no repo atual) ⇒
+  hipótese permanece ABERTA. Nota aditiva `r8_hypothesis` no JSON da
+  Spa_mirror (sha de conteúdo 2637c8adf3c37939 → **4b05f2c3bbc625fc**,
+  conferido e documentado).
+- **[NOTA-DEP] fastf1 (ADOÇÃO-H-2; registro + audit, zero runs)**: 2026-10 —
+  F1 exigiu auth no livetiming archive (**401 CloudFront desde ~15/out**;
+  issue fastf1 #978); fastf1 **3.9.0a0 (alpha)** adiciona auth F1TV; stalls
+  relatados (#982). Caches quentes intactos; artefatos frozen (v1s +
+  mirrors F1DB) IMUNES. **requirements pinado `fastf1==3.8.3`** (sem upgrade
+  silencioso). Blast radius (imports): `domain/track_loader.py` (REDE a
+  cache frio — get_session/schedule; cache-only a quente; usado SÓ pelo
+  fallback resolve_track do env/evals legados — o runner frozen NÃO toca),
+  `database/driver_db.py` (REDE a frio; metadados de pilotos, fora do
+  caminho de corrida), `archive/scripts/train_multi_context.py` (arquivado,
+  fora do runtime). Runner/sim em frozen: ZERO rede. Ingestão futura de
+  telemetria = decisão do dono (assinatura F1TV Access+; preferir 3.9
+  estável; token via env, NUNCA commitado).
+- **FONTE-1 (2026-10-22; decisão do dono: SEM assinatura; migração
+  gratuita)**: o módulo `fastf1.ergast` da versão 3.8.3 PINADA já usa
+  `BASE_URL=api.jolpi.ca` — plano METADADO/RESULTADO é drop-in SEM
+  upgrade (provado em execução: circuits/schedule/lap_times 200; Monaco
+  2024 round 8; âncora FastestLap 1:14.165 via results). Telemetria
+  histórica: OpenF1 sem login (campos car_data OK; /position separado).
+  Caches congelados intactos. Adoção = FONTE-2 (ciclo próprio).
+- **Instrumento**: 5 testes (parser M/c/s/z + rejeição; resample 4 m; gates
+  sintéticos; convenção sha validada contra Monaco_v1 REAL — t4 adaptado,
+  "artefatos se congelados" ficou N/A; detector sintético). Suite
+  **25F/301P/2S** (296+5). doc-test verde.
+- **Estado**: mirrors NÃO congelados; fila = revisão (emenda G4 → re-run do
+  builder). Pools 70-79 intactos. Hashes: fdb1afb (ANEXO review), 738f72d
+  (NITs), 21ac676 (prereg), d470a87 (impl).
+
+## FASE H-1 (2026-10-20) — calibração do G4 em CONTROLES: G4 MORRE como gate; mirrors CONGELADOS (ramo B)
+Prereg 1f4af52 ANTES de qualquer execução (contagens oficiais ESCRITAS:
+fonte única Wikipedia EN 2026-10-20 — formula1.com omitiu turns nas race
+pages, probe registrado). Zero runs/pool/re-pin; canônico intocado.
+- **Calibração (fase controles → CSV commitado ANTES dos alvos —
+  anti-tautologia)**: grade κ 0,004→0,020 (passo 0,001) sobre 5 CONTROLES
+  (Hungaroring 14, Monza 11, Zandvoort 14, Suzuka 18, interlagos_v2 15;
+  excluídos Monaco_v1 artifact, Spa_v1 truncada, os 2 alvos):
+  **0/5 in-band em TODOS os 17 κ** (melhor Σ|Δ|=42 @κ=0,02: contagens
+  21-28 vs oficiais 11-18 [N3 ADOÇÃO-H-2: Monza 11 é controle] — o detector κ-picos INFLA em frozen de
+  telemetria por ruído de polyline e DEFLACIONA em mirrors Bézier).
+  **Conclusão do instrumento: a contagem de "turns oficiais" é convenção
+  humana que o detector geométrico não reproduz em NENHUMA classe de
+  fonte** — G4 válido exige <4/5 → **RAMO B** (g4_calibration_
+  controles.csv commitado 00be13d).
+- **RAMO B executado (e405298)**: G4 → fingerprint report-only
+  (turns_detected + g4_kappa_used + g4_note da crítica no JSON de
+  proveniência); completude = G5 + G1/G2/G3. **Mirrors CONGELADOS**:
+  `Monaco_mirror2021_v1.json` (sha 67ca11dc211c8c78; 834 wp; G1 16,30 m;
+  G2 0; G3 11,34 m — hairpin real; G5 0,05%) e `Spa_mirror_v1.json`
+  (sha 2637c8adf3c37939; 1.751 wp; G1 24,83 m; G2 0; G3 14,66 m; G5
+  0,01%). Nomes INERTES ao loader (`{key}_v2.json` tem prioridade e os
+  mirrors nunca a acionam).
+- **Teste de INÉRCIA (verde)**: `load_track_frozen('Monaco')` → Monaco_v1
+  (sha 07e7ef4dd6af4517) e `'Spa'` → Spa_v1, mesmo com os mirrors no
+  diretório; mirrors loadáveis pelos nomes explícitos. LIÇÃO: o loader é
+  CASE-SENSITIVE ('monaco' minúsculo não acha Monaco_v1.json).
+- **Instrumento**: +2 testes (inércia; métricas recomputadas == proveniência).
+  Suite **25F/303P/2S** (301+2, declarado no prereg). doc-test verde.
+- **Estado**: mirrors congelados como artefatos GEOMÉTRICOS (âncoras de
+  corrida — SF/direção — = era de adoção, decisão do DONO; trocar o
+  canônico = DONO). Hashes: 94e8df8 (ANEXO H-0-review) + f277819 (NIT
+  Comandos 301P) + 1f4af52 (prereg) + 00be13d (calibração/κ*) + e405298
+  (freeze + testes). Pools 70-79 intactos.
+
+
+## ADOÇÃO-H-2 (2026-10-20) — mirrors ADOTADOS como canônico (dono: AMBOS); B' sob mirror 9/9 por completude
+Prereg 8c14f9f ANTES de qualquer mudança/medida. Zero corridas/pool/re-pin;
+loader INTOCADO; 17 evals solo determinísticos + 3 controles.
+- **PASSO 0**: ANEXO FASE-H-1-review verbatim (87419b1, caminho absoluto);
+  NITs N1-N3 + errata R8 (HIPÓTESE ABERTA: Spa_v1 4.352 m = 4,352 mi —
+  literal NÃO achado no repo; nota `r8_hypothesis` no JSON da Spa, sha
+  2637c8→4b05f2c3bbc625fc, disclose) + fastf1 ==3.8.3 pinado + blast
+  radius (ce4e799).
+- **PROFESSOR-FIRST (por nome explícito, ANTES do swap)**: 3 eps × mirror,
+  bit-idênticos (md5), ≥2 voltas/ep pelo critério PINADO → **3/3 em ambos**
+  (Monaco 2 voltas @ 211,9 s, fora 58,5%; Spa 2 voltas @ 223,1 s, fora 32%).
+  DISCLOSE: eps terminaram em 2 voltas (--laps default 2) dentro da janela
+  de 600 s. **CONTROLES (diagnóstico pós-veredito, marcado)**: professor
+  solo no interlagos canônico = **fora 24,3%** (o off% alto é BASELINE do
+  instrumento professor-solo-frozen — nunca ancorado antes; os 0,36%
+  históricos eram 10-carros/live); **Monaco_v1 ABORTA no runner atual**
+  ("reta antes da SF = 0 m"); Spa_v1 professor fora 45,4% — **os mirrors
+  são MAIS dirigíveis que os v1s**.
+- **Mecânica (86a129c)**: git mv → Monaco_v2.json/Spa_v2.json; shas de
+  conteúdo conferidos (67ca11dc211c8c78 / 4b05f2c3bbc625fc); v1s →
+  `archive/tracks_frozen_v1/` com README de proveniência (NUNCA deletar);
+  zero duplicatas inertes; CSVs/logs das evals commitados como evidência.
+- **B' RE-ANCORADO (SOB MIRROR; canária runner solo 600s, 3 eps/pista,
+  bit-idênticos)**: **Monaco_v2 3/3 × ≥2 voltas** (cruzamentos−1; era-v1:
+  0/3 numa pista que hoje ABORTA) — RESSALVA: fora 45,0% (> 25% da
+  canária), 34 excursões, preso acumulado 118 s (R3), **wanderer 0** (mais
+  longa 26,8 s < 60 s); H-Mon: o artefato limitava a era-v1, mas a
+  pilotagem segue custando (completude com custo). **Spa_v2 3/3 × 3
+  voltas, fora 20,8% ≤ 25%, wanderer 0 — canária COMPLETA**; H-Spa: o
+  aluno SUSTENTA nos 7,004 m reais (era-v1 3/3 era na truncada 4.352 m).
+- **Meta A Monaco SOB MIRROR (professor 5 eps)**: 5/5 × 2 voltas (211,9
+  s; fora 56,9% — mesmo baseline de instrumento).
+- **Instrumento**: t-inércia REESCRITO (flip verde: 'Monaco'→Monaco_v2
+  67ca11dc211c8c78; 'Spa'→Spa_v2 4b05f2c3bbc625fc; v1s fora do frozen;
+  zero duplicatas) + t-novo (v1s arquivados: sha + Track.from_waypoints
+  OK; loader não vê archive/ por PARE). **Suite 25F/302P/3S** [desvio do
+  declarado 25F/304P/2S: (1) os 2 testes novos SUBSTITUÍRAM os 2 antigos
+  de inércia (net 0, não +2); (2) test_composite_parity:45 (artefato de
+  coleta Monaco_v1) virou SKIP condicional — consequência direta da
+  adoção]. doc-test verde.
+- **Metas**: ver tabela com tags [era v1] / SOB MIRROR. Números históricos
+  NUNCA apagados. Pools 70-79 intactos. Hashes: 87419b1 → ce4e799 →
+  8c14f9f → 86a129c → fechamento.
+
+
+## FASE 4 v15 — wiring: composite no race runner (2026-10-21; ABERTA)
+Fila pinada pelo dono (Opção B da ADOÇÃO-H-2-review). NÃO toca
+mirrors/loader/v1s. PROMOÇÃO (race default = composite?) NÃO é desta fase —
+a fase produz evidência; decisão = dono. R13 mantém v10-cego como default.
+
+### PASSO 0 — recon wiring (zero runs)
+- **O composite no runner JÁ EXISTE**: `NeuralRaceController` obs
+  `traffic` + `_composite_np` (`NumpyCompositeActor`; `run_race_10_cars.py`
+  750-790): ação = tanh(m_solo PRÉ-tanh + g·r); residual 16d =
+  `build_residual_input(tf_feats, v_ego, κ@10m, prev_st, prev_lng)`;
+  gate = `gate_value(v_ego, d_min à frente)`; `_res_prev` fecha o loop
+  (a_prev da PRÓPRIA ação composite). `--profile composite` (alias de
+  `race`): solo v10 npz + `v15_residual/residual_best_weights.npz`
+  (PROFILES em run_race_10_cars.py:71). **B3.1 v1 rodou com este caminho**
+  (all-composite N=10 funciona hoje).
+- **O que falta (mixed)**: `parse_mixed` aceita SÓ `traffic|edge`
+  (race_diagnostic.py:60); o branch `--mixed` (521-531) constrói só
+  ctrl_traffic/ctrl_edge (atores .keras puros, SEM residual); o loop (594-600)
+  previne 2 controllers; o export CSV usa `ctrl_i` binário e as colunas
+  g_gate/r_norm/composite_active só saem via `ctrl._composite_np`.
+  → Extensão: grupo `composite` no parse; ctrl_comp (obs traffic + solo
+  v10 + NumpyCompositeActor); loop com 3 controllers; export por grupo.
+- **Instrumento canônico R13 (o regime de TODA a B3')**:
+  `race_diagnostic --actor model_train/v10_dagger/dagger_actor_best.keras
+  --obs-mode edge --ticks 6000 --laps 99 --track interlagos --seed N
+  --gov vplan --variance grid,compound` — regime canônico seco dá fora
+  21-32% (v10-cego); clima semeado por seed (seed 0 = DRY sem transições).
+
+### Q1 — semântica de parada (resposta; zero runs)
+`--laps` (default **2**) vira `SimulationConfig.num_laps`: o ENGINE seta
+`race_finished` quando o LÍDER completa num_laps — não há contador oculto.
+Os eps professor-first da ADOÇÃO-H-2 rodaram SEM --laps (default 2 → parada
+exata em 2 voltas); os re-baselines/Meta A rodaram com `--laps 99`
+(janela canária de 600s pinada no prereg §6) → correram até o cap de ticks:
+Spa_v2 a ~200s/volta completa 3 voltas em 600s ✓ (4 cruzamentos = 3 voltas
++largada — voltas = cruzamentos−1). Diferença de FLAG entre meus próprios
+comandos; zero mistério de contador.
+
+### Q2 — métrica "preso" (resposta; zero runs)
+DUAS métricas distintas, ambas legítimas:
+- **R3 (diagnóstico, impresso no log)**: janelas de 30 s sobre
+  (|lat|, cum_dist) por carro; só janelas com ticks off-track; janela é
+  "presa" se |lat|máx > 20 m OU progresso (Δcum) < 5 m; o valor impresso =
+  TICKS OFF-TRACK ACUMULADOS nas janelas presas (race_diagnostic.py:832-862).
+  Monaco_v2: 1185 ticks (118,5 s) ACUMULADOS em múltiplas janelas — NÃO é
+  episódio contíguo.
+- **R4/gate (critério wanderer)**: EPISÓDIO CONTÍGUO off-track > 60 s sem
+  retorno. Monaco_v2: excursão mais longa 26,8 s → wanderer 0 ✓. As duas
+  se complementam: R3 mede churn (custo acumulado), R4 mede encravo real.
+
+### RESULTADO B3' (PARE conforme prereg d54bfe; veredito e5cd2ab ANTES dos números)
+6 corridas seed 0 DRY 600s regime canônico (seriais):
+
+| corrida | fora% | par | hesit | comp | rolante | cc | pós-larg |
+|---|---|---|---|---|---|---|---|
+| 1 CONTROLE | 22,1 | 0 | 3 | 10/10 | 136 | 3674 | 2482 |
+| 2 ALL-COMPOSITE | 25,2 | 0 | **14 [errata FF1-E3: log 2_allcomposite.log:71 + recontagem + verificação FAIL-FORENSICS-1b]** | 10/10 | 140 | **752** | 292 |
+| 3 MISTA 2comp | 17,3 | 0 | 4 | 10/10 | 166 | 1808 | 574 |
+| 4 MISTA 4comp | 19,2 | 0 | 3 | 10/10 | 166 | 2022 | 930 |
+| 5 CTRL-EMBARALHADO | 21,2 | 0 | 1 | 10/10 | 133 | 1622 | 966 |
+| 6 HOLD-AT (report) | 16,9 | 4 | 6 | 9/10 | 168 | 4244 | 3188 |
+
+Por grupo nas mistas: composite n=2 cc=397 (pós-larg 193; 96,5/carro) vs edge
+n=8 cc=1411 (pós-larg 381; 47,6/carro); composite n=4 cc=625 (242; 60,5/c)
+vs edge n=6 cc=1397 (688; 114,7/c).
+
+**VEREDITO: FAIL** (2 critérios):
+- **HESIT ≤3: composite 14 [errata FF1-E3]** (controle da mesma sessão: 3; R10 D3 mediu
+  12,5 vs 5 — REPRODUÇÃO fora de sessão do achado R10: o custo de
+  hesitação do composite é REAL e sobrevive ao regime canônico).
+- **Mistas pós-largada composite ≈0 (≤2): 193/242** — absoluto da era
+  pré-canônica (B3.3 FASE 5: 0 contato pós-largada com clima-loteria) que
+  o prereg NÃO re-ancorou (só re-ancorou fora/rolante do B3.1) — GAP DE
+  PIN divulgado: sob o regime canônico o pós-largada é endêmico (o
+  CONTROLE tem 2482); o relativo: composite-minoridade acumula ~2× mais
+  contatos/carro que o edge na mesma corrida (96,5 vs 47,6).
+- O que PASSA (evidência para o dono): **GATE PRIMÁRIO contatos < controle:
+  752 vs 3674 (4,9× menos na MESMA sessão)**; 10/10 voltas; 0 paradas;
+  fora 25,2% ≤ 29,9%; rolante 140 ≤ 146. Custos confirmados: hesit 14 [errata FF1-E3];
+  pace +4s all-composite; **mistas +33s vs ctrl-embaralhado** (o campo
+  misto desacelera). HOLD-AT (report): 9/10, 4 paradas — a pilha
+  multi-composite PERMANECE limitação (confirmada sob canônico).
+
+### Wiring + instrumento
+- Grupo `composite` no `--mixed` (limitação 2 da FASE 4 RESOLVIDA):
+  parse/assign/construção (ctrl_comp obs traffic + solo v10 npz +
+  NumpyCompositeActor com npz do PROFILES race)/loop de 3 controllers/export
+  por grupo (commits 89598ef + f2c66f2). PROTEÇÃO v10-cego: corrida 1200
+  ticks seed 0 BIT-IDÊNTICA ao fixture pré-wiring (verde na 1ª tentativa —
+  o wiring toca só o branch --mixed). 3 testes novos; suíte 25F/305P/3S
+  (ESPERADA 25F/306P/3S ±: t-parity race-path N/A — paridade já coberta
+  pelo test_composite_parity + bit-identidade do canônico; desvio
+  justificado). Veredito e5cd2ab ANTES de ler números.
+- DIAGNÓSTICO pós-veredito (marcado, padrão H-0): zsh NÃO faz word-split
+  de variáveis não-quotadas (SH_WORD_SPLIT off) — args em $VAR viram UM
+  argumento; cadeias de corrida com args EXPLÍCITOS.
+- Hashes: 5b2bcf0 (ANEXO) → 472cd94 (seção+Q1/Q2) → d54b5fe (prereg) →
+  89598ef/f2c66f2 (wiring+testes) → e5cd2ab (veredito) → fechamento.
+
+## ANTI-D3-1 (2026-10-21) — progress-guard fade gate→base: PRIMÁRIO FAIL → D3 ESTRUTURAL; PARE
+Fila pinnada pelo dono: atacar o D3 (hesitações) com UM mecanismo de camada
+ANTES da decisão A×B de promoção — sem retreino, sem recoleção, sem re-pin,
+sem mudança de default. Base do ataque: diagnóstico P1 (8c79ee6) — 13
+hesitações = residual-brake dead-stop (12/13 gate persistente; 13/13 |r|>0,1;
+th=0,00; 8/13 na fila s≈2289-2318).
+
+### Cadeia
+57a9342 (prereg ANTES de código/medida; reconciliação SISTEMÁTICA — mistas
+DROP; veredito pré-commitado OBRIGATÓRIO; orçamento 2 corridas) → 7dde1d8
+(implementação no ÚNICO caminho composite do predict_batch + 5 testes;
+v10-cego BIT-IDÊNTICO ao fixture ANTES de qualquer corrida) → 33610ba
+(anti_d3_verdict.py commitado ANTES das corridas) → corridas → veredito →
+probe pós-veredito bbe9512/29399d4/2f29c98/18c00a2 (cada versão commitada
+antes do run; regra "probe nunca inline") → fechamento.
+
+### Mecanismo pinnado — e as constantes EFETIVAS
+g>0,01 + Δcum<0,5m por N=5 ticks consecutivos → fade linear de g_eff a 0 em
+F=5 ticks; retoma (fade=0) ao reprogredir ≥0,5m; estado por driver
+(`_pguard_state`). O prereg pinou em TICKS; o tick lógico do engine é 0,1s
+(10 Hz; o CSV exporta ticks pares = linhas de 0,2s) ⇒ EFETIVO: trigger
+0,5s com limiar v<5,0 m/s (18 km/h), fade completo +0,5s. A leitura
+"1,0s / 2,5 m/s" (semântica 5 Hz do P1) NÃO era a do código rodado — não é
+desvio do pin (o prereg não pinou segundos), mas muda toda a leitura do
+resultado.
+
+### RESULTADO (2 corridas seed 0 DRY 600s regime canônico; seriais; controle 1º)
+
+| corrida | fora% | par | hesit | comp | rol | cc | pós-larg |
+|---|---|---|---|---|---|---|---|
+| 1 CONTROLE | 22,1 | 0 | 3 | 10/10 | 136,0 | 3674 | 2482 |
+| 2 ALL-COMPOSITE (guard) | 26,1 | 0 | **12** | 10/10 | 145,0 | 1520 | 846 |
+
+PROTEÇÃO DUPLA verde: v10-cego bit-idêntico ao fixture (pré-corridas) +
+controle re-run BIT-IDÊNTICO à F4v15 (cc 3674, pós-larg 2482, rol 136,0,
+hesit 3, fora 22,1 — o guard não vaza para o caminho canônico).
+
+VEREDITO MECÂNICO (anti_d3_verdict.py — verbatim):
+
+```
+PRIMÁRIO hesit composite (12) <= controle (3): FAIL
+Não-reg cc (1520) < controle (3674): PASS
+Não-reg paradas = 0: PASS
+Não-reg 10/10 voltas: PASS
+Não-reg fora <= 29,9%: PASS
+Não-reg rol (145.0) <= controle+10 (146.0): PASS
+
+ANTI-D3-1: FAIL — PARE; sem re-pin/re-run
+```
+
+### Ramo 3 da árvore → D3 ESTRUTURAL; A×B volta ao dono
+PRIMÁRIO FAIL ⇒ D3 DECLARADO ESTRUTURAL à camada: o mecanismo-único pinnado
+não remove as hesitações (13→12 vs limiar ≤3) E degrada o valor primário
+(cc 752→1520; pós-largada 292→846). A decisão A×B (manter v10-cego default ×
+promover all-composite) VOLTA AO DONO com o D3 como CUSTO PERMANENTE — e o
+guard vira EVIDÊNCIA CONTRA intervenções de fade na camada. Nenhum ramo
+promove; R13 mantém v10-cego; zero mudança de default.
+
+### Diagnóstico pós-veredito (marcado; probe commitado; ZERO runs)
+1. **LARGADA: 9/10 carros DISPARAM o guard em t=0,4-0,6s** — disparos
+   PRÓPRIOS (razão ON/OFF 0,80/0,60 = fade 0,2/0,4 no tick; PIA/NOR/VER
+   t=0,4s; ALO/PER/LEC/RUS/GAS/SAI t=0,6s — o tick 5 não é exportado). A
+   aceleração de largada 0→5 m/s leva ~0,8s = 8 ticks com Δcum<0,5m e gate
+   aberto (grid comprimido, g=1,0) — disparo GARANTIDO pelo limiar efetivo.
+   Exceção HAM: gate nominal 0,00 durante toda a largada (else branch, não
+   acumula; 1ª divergência só t=99,6s com g_on=0,00 — disparo próprio
+   tardio). Fade visível na PIA: g 1,00→0,80→0,40→0,00 (0,4-0,8s), reset a
+   1,00 em t=1,0s ao reprogredir.
+2. **O fade ACELEROU a largada** (PIA t=1,0s: v_on 6,67 vs v_off 4,84;
+   t=1,2s: 7,97 vs 6,12) — residual mudo no funil → carros mais rápidos no
+   pelotão → pós-largada 292→846 (o valor do composite é CONCENTRADO na
+   largada: controle 2482).
+3. **Hesitações quase intocadas (13→12; med 0,6s; máx 1,0→0,6s)**: os
+   episódios (0,4-0,6s) terminam ANTES de trigger (0,5s) + fade (0,5s)
+   completarem; e o contador (janela 0,3-3s) CONTARIA o episódio resgatado
+   de qualquer forma — o PRIMÁRIO pinnado é quase-insensível ao resgate POR
+   CONSTRUÇÃO. A liberação das hesitações é NATURAL (presente na OFF sem
+   guard: 4/13 episódios com g nominal colapsando): a fila descarrega →
+   d_min > D(v→0)=40m → g→0 → residual desliga → base retoma.
+4. **cc 752→1520 (+102%)**: o limiar v<5 m/s (18 km/h) trata CRAWL de
+   tráfego como "sem progresso" — o guard cicla fade em todo seguimento
+   lento, mutilando o residual exatamente onde ele previne contato.
+5. **DESVIO DE INSTRUMENTO (defeito da fase, divulgado)**: o prereg pinou
+   "o gate NOMINAL segue como instrumento"; o código gravou o g_eff
+   (`g = g_eff` antes de `gates[i] = g`; o comentário da linha 798
+   CONTRADIZ o próprio código). Nominal irrecuperável do CSV ON — o probe
+   precisou da corrida OFF como referência do prefixo. Sem efeito nos
+   critérios do veredito (métricas de estado), mas o instrumento NÃO
+   cumpriu o pin.
+6. **Probe v1 cego (retificado)**: o "0 disparos ON" do contador v1 era
+   artefato (tick 0 não contado no proxy; g_gate=g_eff≤0,01 sob fade cega o
+   branch nominal) — suplantado pela §Divergência (v2-v4).
+
+### Suíte
+25F/310P/3S (ESPERADA ~25F/309P/3S ±: base 25F/305P/3S + 5 testes do
+progress-guard = 310P; aritmética do prereg — desvio +1P justificado).
+
+### Pool / intocáveis
+Zero pool novo (seed 0 = âncora já usada na F4v15); 70-79 VIRGENS;
+mirrors/loader/v1s/fastf1 intocados; runs≠arquivos (2 corridas = 6 arquivos
+csv+events+log coerentes em experiments/anti-d3-1/).
+
+## SANIDADE-0 (2026-10-20) — defeitos do produto (largada/grama/colagem): M1/M3 FAIL saem; M2 verde no bundle; PARE
+Branch `feat/sanidade-produto`. SEM promoção A×B, SEM flip de default, SEM
+re-pin do canônico R13. NIT N1 da review ANTI-D3-1 executado no PASSO 0.
+
+### Cadeia
+158e9f9 (NIT N1: --pguard DEFAULT-OFF + t6; ANEXO review PENDENTE — texto
+ausente) → sanidade_diag v1→v2.2 (D0-D3, probes commitados antes de cada
+run) → 1007636 (PREREG com reconciliação SISTEMÁTICA, antes da impl) →
+d42d947 (M1/M2/M3 + bundle + 5 testes) → veredito commitado (antes das
+corridas; auto-testado nas âncoras F4v15) → 6 corridas seriais → 90e5b63
+(evidência) → 7afe4a8 (árvore: bundle = só M2) → fechamento.
+
+### Diagnóstico D0-D3 (instrumento VALIDADO antes das âncoras)
+- **D0**: coluna `lat` do CSV = MÓDULO (lat@0 +1,9 p/ TODOS vs grid físico
+  ±1,9); canal válido **slat = obs4 × half_width** (hw 6,00 derivado do
+  grid; ±1,90 exato por paridade de slot). Toda análise lateral do ciclo
+  usa slat.
+- **D1 (controle)**: pós-largada t>20s = 2482; t 20-30 74 (3,0%) | 30-60
+  358 (14,4%) | **>60s 2050 (82,6%)**; t<60s = **1624** (âncora PRIM-1);
+  17 pares, top-5 = 62% dos ticks; T1: |Δlat| do vizinho<20m mediana 0,4 m,
+  10/10 <1,7 m; EMPURRÃO 49/180 (27%) × PILOTAGEM 131 (73%); largada:
+  máx|Δlat|/1s até 8,0 m/s.
+- **D2**: excursões 180/219 (v0/comp), mediana 4,2s ambos, wanders 0;
+  reentrada ~9 m/s, 15 m/s em 1,0s; contato ≤30s pós-reentrada 38% (gap
+  mediana 3,0s). Lei ativa: bearing R3 + teto 8 m/s.
+- **D3 (slat; |Δlat|<2,0 ∧ Δs<5,5; >2s)**: controle **41 janelas/247s/6
+  deadlocks**; esterço ~0,05 nas retas (NINGUÉM esterça — relato do dono
+  CONFIRMADO); 29 DECISÃO × 12 FÍSICA. Composite 7/33s/0; 2×5.
+
+### Mecanismos (prereg 1007636 §1; TODOS flag própria DEFAULT-OFF)
+M1 `--grid staggered` (2 colunas ±2,5 m; 1-por-fileira 12 m não cabe na
+reta de 45 m — derivação D1); M2 `--rejoin perceptive` (ângulo raso ≤15° =
+alvo a clip(|lat|/tan15°, 10, 120) m; grama 6,0 m/s; gap X=20 auto reusando
+o gap-check REPARADO; trigger ESTADO, nunca progresso — lição ANTI-D3-1;
+neural + professor); M3 `--anti-glue` (fricção chassis 0,05→0,01; preventivo
++0,25 rad escopado a comp/prof; breaker 3 s lift+offset 0,4 todos;
+authority=anti_glue sem colunas novas). Bundle `--modo espectador` (GUI).
+
+### RESULTADO (6 corridas seriais; veredito pré-commitado)
+
+| corrida | cc | t<60s | hesit | rol | off% | exc med | colado | dead |
+|---|---|---|---|---|---|---|---|---|
+| P1 v0 s0 OFF | 3674 | — | 3 | 136,0 | 22,1 | — | — | — |
+| P2 comp s0 OFF | 752 | — | 13 | 140,0 | 25,2 | — | — | — |
+| G1 v0 s70 | 1380 | **942** | 0 | 149,0 | 25,7 | 5,1s | 66,6s | 0 |
+| G2 comp s71 | 274 | 222 | 14 | 153,0 | 30,0 | 6,0s | 2,4s | 0 |
+| G3 v0 s72 | 1854 | **1352** | 4 | 145,0 | 25,6 | 4,0s | 99,2s | **1** |
+| G4 comp s73 | 416 | 340 | 11 | 165,0 | 30,3 | 4,5s | 17,8s | 0 |
+
+**PROTEÇÕES BIT-IDÊNTICAS** (P1 = 3674/2482/136/3/22,1; P2 =
+752/292/140/13/25,2): zero vazamento no caminho compartilhado; o guard-off
+restaura o pré-guard (NIT N1 confirmado em corrida).
+
+VEREDITO MECÂNICO (sanidade_verdict.py, verbatim):
+```
+M1: FAIL — research-negativo, SAI do bundle
+M2: PASS — embarca no bundle
+M3: FAIL — research-negativo, SAI do bundle
+SANIDADE-0: PRIMÁRIO(S) FAIL — mecanismo(s) sai(m) do bundle; sem re-pin/re-run/promoção
+```
+- **M1 FAIL**: c60 942/1352 > 812 (teto = 50% de 1624). Direção positiva
+  (−42%/−17%) mas longe do −50% — consistente com o RE-EMPACOTAMENTO da
+  LARGADA F1b: geometria de grid não halve contatos de largada.
+- **M2 PASS (4/4)**: medianas 4,0/4,5/5,1/6,0 ≤ 8,4; wanders 0. O braço
+  comp subiu 4,2→6,0s — o retorno mais lento do ângulo raso + cap 6,
+  EXATAMENTE o previsto na re-ancoragem (a leitura literal "2× melhor"
+  foi rejeitada no prereg com essa derivação).
+- **M3 FAIL por margens**: 1 deadlock >10s na s72 (o breaker engajou mas
+  não separou dentro da janela) + comp s73 colado 17,8 > 16,5s. MAS: v0
+  colado 247→66,6/99,2 (−73/−60% [errata R4 da review: ordem corrigida])
+  e comp 33→2,4/17,8 — o mecanismo MOVE a
+  métrica massivamente; research-negativo pela árvore, dado p/ o dono.
+- **Não-reg**: rol 149/153/145/165 (G1/G2/G4 > 146) e comp off 30,0/30,3
+  (> 29,9, marginais 0,1-0,4pp). DISCLOSE marcado: os tetos 146/29,9 são
+  âncoras de UMA realização (s0 +10s) / quantil seco p75; a dispersão
+  histórica R7a é rol 139-192s e comp-fora 25,1-41,2% — s70-73 são
+  realizações NOVAS e os FAILs marginais são consistentes com variância de
+  seed (não necessariamente efeito do bundle). Sem re-run (árvore).
+- G2 comp s71: cc 274 (t<60s 222) — o MENOR cc já medido no instrumento
+  canônico (âncora era 752): o bundle composto + seed novo; hesit 14 (D3
+  persiste — consistente com o veredito ANTI-D3-1).
+
+### Disposição
+- `--modo espectador` (GUI) = **SÓ M2** (árvore 7afe4a8): o bundle embarca
+  apenas mecanismo verde. Flags individuais `--grid staggered` /
+  `--anti-glue` permanecem NO CÓDIGO como research opt-in default-OFF.
+- Comando do dono (GUI): `.venv/bin/python scripts/run_race_10_cars.py
+  --profile race-blind --modo espectador --seed 0 --laps 99` (idem
+  `--profile race` para o composite).
+- Pools: **70-73 CONSUMIDOS**; 74-79 VIRGENS. ANEXO review ANTI-D3-1
+  PENDENTE (texto não veio no prompt SANIDADE-0 nem existe em sítio
+  acessível — buscado; nada fabricado).
+
+### Suíte
+25F/316P/3S (ESPERADA ~25F/31xP/3S ±: base 310 + t6 do NIT N1 + 5 testes
+dos mecanismos = 316 exato). doc-test verde.
+
+## SANIDADE-1b (2026-10-20) — M3-v2 (tetos) ARQUIVADO; M2 atribuição LIMPA; PARE
+Branch `feat/sanidade-produto`. SEM retreino/promoção/flip/re-pin pós-número.
+Fila do dono: M3-v2 (anti-colagem com tetos por-realização) + atribuição
+limpa do M2, antes da re-decisão A×B.
+
+### Cadeia
+33396f6 (ANEXO SANIDADE-0-review VERBATIM em commit dedicado — pendência (b)
+zerada) → 8b95f69 (caveats "opt-in research, não-gaitado" nos helps do
+--modo espectador e das flags — pendência (a)) → sanidade1b_diag (D4/D5
+commitado antes de cada uso) → 4c7d96a (diag_d4_d5.md) → 87214c7 (PREREG
+com reconciliação sistemática + predição M2 pré-registrada) → e9d1877
+(M3-v2: `_anti_glue_step` COMPARTILHADO, neural + professor POR HERANÇA;
+v1 MORTO atrás da MESMA flag; +6 testes dos tetos) → d32036d (veredito
+commitado + --selftest OK reproduzindo F4v15 E SANIDADE-0 dos CSVs) →
+7 corridas seriais → ae1367d (evidência) → fechamento.
+
+### Diagnóstico D4/D5 (informou os tetos; zero runs)
+- **D4**: FRICÇÃO INOCENTE (shove ≈ 0 em todos os braços, 0,01 e 0,05);
+  BREAKER marginal (0-11 eps, 0-17,6 car·s); **PREVENTIVO = o custo
+  dominante** — exposição comp 194-213 car·s e taxa de excursão DURANTE
+  janela de exposição DOBRA (0,144-0,169/s vs 0,077/s da ref): o offset
+  +0,25 crônico empurra pra fora.
+- **D5**: deadlock s72 = GAS×PIA reentrando em PARALELO — PIA seguro
+  pelo gap-hold do M2 (crawl 4 m/s) e GAS 6,0s sob o breaker (60 ticks
+  anti_glue) sem separar; ARTEFATO DA INTERAÇÃO M2×M3; breaker v1
+  incompetente no regime crawl/borda.
+
+### RESULTADO (7 corridas seriais; veredito pré-commitado e auto-validado)
+
+| corrida | cc | pós-larg | hesit | rol | off% | exc med | colado | dead |
+|---|---|---|---|---|---|---|---|---|
+| P1 v0 s0 OFF | 3674 | 2482 | 3 | 136,0 | 22,1 | 4,2s | 246,8s | 6 |
+| P2 comp s0 OFF | 752 | 292 | 13 | 140,0 | 25,2 | 4,2s | 33,2s | 0 |
+| M2-only comp s0 | **516** | 98 | **6** | 147,0 | **28,0** | 4,6s | **16,4** | 0 |
+| G1 v0 s74 (v2) | 2536 | 1142 | 1 | 137,0 | 23,0 | 4,2s | 133,0s | 3 |
+| G2 comp s74 (v2) | 1536 | 948 | 15 | 146,0 | 28,8 | 4,4s | **51,6s** | 1 |
+| G3 v0 s75 (v2) | 2116 | 694 | 1 | 133,0 | 21,7 | 4,5s | 145,4s | 3 |
+| G4 comp s75 (v2) | 964 | 728 | 13 | 159,0 | 30,6 | 4,8s | **50,6s** | 2 |
+
+**PROTEÇÕES BIT-IDÊNTICAS** (P1 = 3674/2482/136/3/22,1; P2 =
+752/292/140/13/25,2): zero vazamento da v2 flag-off.
+
+VEREDITO MECÂNICO (sanidade1b_verdict.py — verbatim):
+```
+M3-v2: FAIL — ARQUIVADO research-negative COM LEADS (D4 preventivo-custo;
+D5 interação M2×M3; ativo v1 colado −73/−60% v0); não-reg FAIL [...];
+ABSOLUTO deadlocks FAIL
+M2: atribuição limpa registrada (fora dentro do teto)
+```
+
+### Atribuição M2 (o resultado de ouro; memo p/ o dono)
+Comp M2-only s0: **cc 516 (−31% vs 752)**, pós-larg 98 (vs 292), **hesit 6
+(vs 13 = −54%** — parte do D3 das hesitações é fenômeno de rejoin e o
+perceptive ataca), **colado 16,4s (−51%)**, wand 0, dead 0, **fora 28,0%
+(Δ+2,8pp ≤ teto 29,9 — gatilho de escala NÃO dispara)**, exc mediana
+4,2→4,6s (+0,4s), rol 147 (+7s). A predição pré-registrada (31,8% =
+25,2 + 1,8s×219/6000) SUPERESTIMOU: o +1,8s×219 da review SANIDADE-0 era
+em parte custo do M3 (bundle); o M2 puro custa +0,4s de mediana. Helps
+atualizados pós-atribuição: "solo MEDIDO no SANIDADE-1b (fora 28,0% ≤
+teto 29,9; cc 516 = −31%; hesit 6) — opt-in research, não-gaitado; adoção
+= dono".
+
+### M3-v2: por que os tetos mataram o mecanismo (leitura marcada)
+A dose crônica do preventivo ERA o ingrediente ativo de separação — os
+tetos (1,0s/episódio + cooldown 2,0s + 10 eps/par + |Δv|<8 + breaker
+4s-desiste + 8 eps/par + competência-v) reduziram a dose e a separação
+foi junto: v0 colado 66,6/99,2 (v1) → **133,0/145,4** (v2) com deadlocks
+0/1 → **3/3**; comp colado 51,6/50,6s = 3× o teto 16,5; e o cc do braço
+comp PIOROU vs proteção (1536/964 > 752) — o preventivo oscilante
+(1s-on/2s-off) e o breaker que desiste deixam pares moendo.
+**LEAD registrada (árvore §6)**: custo (D4) e separação são O MESMO
+mecanismo — limitar a dose perde os dois; um M3 futuro precisa de OUTRO
+princípio de separação (ex.: separação por convenção de lado/precência),
+não limitação de dose do esterço.
+
+### PIN COLLISION divulgada (erro de pin MEU)
+O ABSOLUTO "0 deadlocks em TODOS os 7 runs" colide com a bit-identidade
+de P1: a âncora F4v15-v0 TEM 6 deadlocks (246,8s colado, 6 janelas >10s)
+— o absoluto era impossível para as proteções POR CONSTRUÇÃO. Leitura
+correta: o absoluto aplica aos runs de TRATAMENTO (M2-only: 0 ✓; gates:
+3/1/3/2 ✗ — falham de qualquer forma). O veredito M3-v2 é INALTERADO por
+isso (PRIMÁRIO 3×, deadlocks de gate, não-reg comp todos FAIL).
+Não-reconciliar colisões entre pins é a lição.
+
+### Disposição
+- `--anti-glue` (v2) = **research default-OFF, ARQUIVADA**; v1 e v2
+  mortos; nenhum entra no bundle.
+- `--modo espectador` = **SÓ M2** (inalterado; agora com atribuição
+  solo LIMPA registrada). Adoção = dono.
+- Pools: **74/75 CONSUMIDOS**; 76-79 VIRGENS.
+- Suíte **25F/322P/3S** (316+6 — número EXATO do prereg; ± não usado).
+
+## VARIEDADE-1 (2026-10-21) — camada de variedade OPT-IN: TODOS OS CRITÉRIOS PASS; PARE
+Micro-ciclo self-contained. **O determinismo NÃO morre** (infraestrutura de
+medição): sem a flag, mesma seed + mesmo profile = corrida bit-idêntica
+ao hoje (provado em corrida). Zero promoção/flip/retreino; zero pool.
+
+### Cadeia
+083ddea (ANEXO SANIDADE-1b-review verbatim, commit dedicado) → b237aeb
+(prereg com reconciliação sistemática E ENTRE PINS — regra nova da review,
+1ª aplicação; zero colisões) → 95a6a16 (implementação camada-only + 4
+testes) → 9b97da6 (veredito mecânico; --selftest OK — padrão-ouro 3ª) →
+c06dd7e (evidência 6 corridas) → fechamento.
+
+### Mecanismo (prereg b237aeb §1 — TUDO pinado antes do código)
+`--variedade N` (default 0 = OFF; N<0 fail-loud; nos DOIS runners). N>=1
+deriva PRNG PRÓPRIO `random.Random(int(sha256("<seed>//variedade//<N>"),
+16))` — o padrão weather_rng_from_seed — NUNCA o RNG global da sim.
+Perturba SÓ condições iniciais, ANTES do tick 0, por carro na ordem do
+grid: **jitter de grid** d_long ~ U(−0,5, +0,5) m e d_lat ~ U(−0,3, +0,3)
+m (derivação: grid 42+1 = 43 m ≤ reta 45 m; fileiras ≥ 8 m; Δlat min
+3,2 m > largura 1,8 m) + **fator de pace** mu_nominal ×= U(0,98, 1,02) NO
+SPAWN ([1,764, 1,836] ⊂ banda slick [1,7, 1,9]; o canal DINÂMICO
+grip_multiplier de pneu/clima/superfície e as leis dos controllers
+(vplan grip_mult 0,788, M2, anti-glue) INTOCADOS; física de contato
+intacta). **Variedade vai em LINHA DE LOG/IDENTIDADE** (`[diag]
+VARIEDADE-1: N=...` + `variedade=N` na linha frozen), NUNCA no schema do
+CSV. `--variedade` compõe com `--modo espectador` (comando do dono).
+
+### RESULTADO (6 corridas seriais seed 0; ordem pinada do prereg §5)
+
+| corrida | cc | pós-larg | hesit | rol | off% | colado | dead | 10/10 | par |
+|---|---|---|---|---|---|---|---|---|---|
+| P1 v0 OFF | 3674 | 2482 | 3 | 136,0 | 22,1 | 246,8s | 6 | ✓ | 0 |
+| P2 comp OFF | 752 | 292 | 13 | 140,0 | 25,2 | 33,2s | 0 | ✓ | 0 |
+| D1 v0 var=1 | 2052 | 972 | 3 | 134,0 | 21,6 | 122,0s | 2 | ✓ | 0 |
+| D2 v0 var=1 REP | 2052 | 972 | 3 | 134,0 | 21,6 | 122,0s | 2 | ✓ | 0 |
+| D3 v0 var=2 | 1068 | 114 | 1 | 134,0 | 21,6 | 43,0s | 0 | ✓ | 0 |
+| D4 comp var=1 | 2336 | 1796 | 24 | 156,0 | 30,9 | 88,8s | 3 | ✓ | 0 |
+
+VEREDITO MECÂNICO (variedade_verdict.py — verbatim):
+```
+PROTEÇÃO P1 == F4v15-v0: BIT-IDÊNTICO
+PROTEÇÃO P2 == F4v15-comp: BIT-IDÊNTICO
+D2 == D1 byte-a-byte + stats: BIT-IDÊNTICAS: PASS
+D3 diverge <tick 200: vs base t=0, vs D1 t=0: PASS
+D1: 10/10 voltas e 0 paradas: PASS
+[D2, D3, D4 idem]: PASS
+
+VARIEDADE-1: TODOS OS CRITÉRIOS PASS — camada entregue como OPT-IN
+(default 0; canônico intocado; adoção = dono). Contatos variam
+naturalmente (sem teto — report acima).
+```
+
+### Leitura
+- **A variedade FUNCIONA**: a MESMA seed 0 que produzia uma única corrida
+  (v0: cc 3674) agora produz realizações distintas e plausíveis por N:
+  2052 (var=1) / 1068 (var=2) / 2336 (comp var=1) — contatos variam
+  naturalmente (sem teto, pin do dono), 10/10 voltas e 0 paradas em todas.
+- **O determinismo sobreviveu**: D2 == D1 BYTE-A-BYTE (linhas de dados) —
+  mesma (seed, N) reproduz exatamente; e a flag OFF reproduz as âncoras
+  bit-a-bit. D3 (N=2) diverge no TICK 0 (o jitter muda posições desde a
+  primeira amostra — < 200 por construção; o critério também valida que
+  as streams sha256 de N=1 e N=2 são distintas).
+- **Reconciliação ENTRE PINS (1ª aplicação da regra nova)**: zero colisões
+  declaradas ANTES do commit (bit-idêntica OFF × bit-idêntica D2==D1
+  compatíveis via RNG derivado + serial R6; absolutos × âncoras checados)
+  — contraste com a PIN COLLISION do SANIDADE-1b, agora prevenida por
+  regra.
+- D4 (comp var=1): hesit 24 / off 30,9 / rol 156 — a variedade re-sorteia
+  o braço comp também (realização nova); report-only, sem teto (pin).
+
+### Disposição
+- Camada **OPT-IN entregue**: default 0 = canônico intocado; adoção em
+  GUI/corridas do dono = decisão dele. Comando do dono (nos Comandos
+  essenciais): `scripts/run_race_10_cars.py --profile race-blind --modo
+  espectador --seed 0 --variedade 1 --laps 99` (e seed 0/var 0 segue o
+  canônico bit-idêntico).
+- Pools: ZERO consumo novo (demos = seed 0 + variedade); 76-79 VIRGENS.
+- Suíte **25F/326P/3S** (322+4 — número EXATO do prereg).
+
+## SAIDAS-1 (2026-10-21) — diagnóstico pré-registrado de saídas solo por curva: VEREDITO MECÂNICO CONCLUÍDO (VEREDITO ratificado na SAIDAS-1-review; EXECUÇÃO/ERRATAS R1–R4 ratificadas na ERRATA-SAIDAS-1-review; R5-a/R5-b consolidadas no PROF-MONACO-1 P0 — §8 do ANEXO)
+Ciclo de diagnóstico mecânico self-contained pré-registrado. Motivação do dono: "há curvas que eles saem mesmo estando sozinhos". A decisão A×B permanece **ABERTA e CONGELADA** (zero promoção/flip/retreino). Orçamento: **ZERO corridas** (re-análise de artefatos existentes F4v15 `1_controle.csv` e `2_allcomposite.csv`; pools 76-79 VIRGENS).
+
+### Cadeia
+1c24988 (PREREG_SAIDAS_1.md com reconciliação sistemática, 11 complexos de curva derivados de interlagos_v2.json com gap merge 40m, seed 42 de bootstrap) → 7ea2f27 (scripts/saidas_verdict.py com --selftest mecânico verde: SPIN, SLIDE, LINHA-RETA, RUIDOSO, bootstrap e geometria) → 736102d (tabelas de evidência Q1-Q4 emitidas em experiments/saidas-1/) → 36cdff3 (fechamento SAIDAS-1) → ce895cd (fix: correções R1–R4 + saidas_verdict.py re-rodado com selftest verde e cross-check aritmético) → fechamento ERRATA-SAIDAS-1.
+
+### Reconciliação com Âncoras F4v15
+- Perfil A (v10-cego): 22,1% fora (22,1167% exato; Δ = +0,0167 pp <= 0,1 pp), 180 eventos de saída, duração mediana 4,2 s [IQR: 1,3–10,5 s].
+- Perfil B (composite): 25,2% fora (25,2133% exato; Δ = +0,0133 pp <= 0,1 pp), 219 eventos de saída, duração mediana 4,2 s [IQR: 1,9–8,7 s].
+- Reconciliação semântica e dentro da tolerância pré-registrada (<= 0,1 pp) 100% satisfeita.
+
+### Veredito Mecânico (saidas_verdict.py — verbatim)
+```
+RECONCILIAÇÃO F4v15 ÂNCORAS:
+  Perfil A (v10-cego): 22.1167% fora vs âncora 22.1% (DIFF: 0.0167 pp <= 0.1 pp) -> PASS
+  Perfil B (composite): 25.2133% fora vs âncora 25.2% (DIFF: 0.0133 pp <= 0.1 pp) -> PASS
+Q1 PROPORÇÃO SOLO (D=15m, T=5s):
+  Perfil A (v10-cego): 46.7% (84/180) [IC 95%: 39.4% - 53.9%]
+  Perfil B (composite): 83.6% (183/219) [IC 95%: 78.5% - 88.1%]
+  Diferença (B - A): +36.9 pp (IC 95% não se cruzam)
+Q2 TOP-5 COMPLEXOS DE CURVA:
+  Perfil A: C01 Descida do Lago (26.7%), C06 Bico de Pato (22.2%), C08 Junção (22.2%), C07 Mergulho (20.6%), C09 Subida dos Boxes (3.9%)
+  Perfil B: C01 Descida do Lago (22.8%), C07 Mergulho (19.2%), C08 Junção (18.7%), C06 Bico de Pato (17.4%), Retas (9.1%)
+Consistência Aritmética Q1 x Q2:
+  Perfil A: soma curvas (84) == total Q1 (84) -> PASS
+  Perfil B: soma curvas (183) == total Q1 (183) -> PASS
+Q3 MODOS CINEMÁTICOS DE SAÍDA:
+  Perfil A: LINHA-RETA: 58.9% (106), SLIDE: 41.1% (74), SPIN: 0.0% (0)
+  Perfil B: LINHA-RETA: 65.3% (143), SLIDE: 34.7% (76), SPIN: 0.0% (0)
+Q4 VELOCIDADE DE ENTRADA (1s antes do evento):
+  C01 Descida do Lago (T4/T5): A med 60.2 km/h (IQR 2.4), B med 60.0 km/h (IQR 3.7)
+  C06 Bico de Pato (T10):      A med 46.9 km/h (IQR 0.7), B med 46.8 km/h (IQR 1.3)
+  C08 Junção (T12):            A med 35.4 km/h (IQR 3.2), B med 36.8 km/h (IQR 6.7)
+  C07 Mergulho (T11):          A med 44.4 km/h (IQR 22.0), B med 42.1 km/h (IQR 23.6)
+  C09 Subida dos Boxes:        A med 73.1 km/h (IQR 8.0)
+  Reta / Outro:                B med 66.1 km/h (IQR 84.7)
+```
+
+### Síntese Diagnóstica e Erratas R1–R4 Ratificadas
+1. **Confirmação estatística da queixa do dono**: O composite reduz contatos no bolo, mas 83,6% das suas saídas de pista acontecem com pista limpa (sem carro a menos de 15 m nos 5 s prévios), contra 46,7% no v10-cego (+36,9 pp, ICs disjuntos).
+2. **R1 (Consistência aritmética Q1×Q2)**: Fechamento perfeito e comprovado. Nos artefatos brutos e scripts, C09 (Subida dos Boxes) no Perfil A sempre teve 0 saídas solo (0/7 = 0,0%). O número 87 computado na revisão adveio de um erro de digitação no markdown do relatório anterior (onde constou erroneamente 42,9% = 3 saídas para C09-A). Zero números moveram no código ou CSVs gerados. A soma das curvas no Perfil A é 25 + 22 + 21 + 16 + 0 = 84, exatamente igual ao total solo de Q1 (84/180). No Perfil B, soma = 183 == total solo Q1 (183/219). O headline estatístico sobrevive íntegro.
+3. **R2 (Dispersão de velocidades Q4 segregada)**: C01 e C06 apresentam dispersão ultrabaixa (IQR <= 3,7 km/h; C06 IQR 0,7 a 1,3 km/h = repetição determinística da linha de saída volta após volta). C07 (Mergulho) exibe dispersão ampla (IQR 22,0–23,6 km/h; velocidades entre 31 e 72 km/h indicando múltiplos modos de falha / tráfego residual). C08 Junção apresenta dispersão intermediária (IQR 3,2–6,7 km/h). Todas com velocidades medianas de 35–60 km/h, compatíveis com os raios das curvas.
+4. **R3 (Métrica de concentração)**: Concentração refere-se a % de EVENTOS de saída de pista (91,7% em A e 78,1% em B nas top-4 curvas: Descida do Lago, Mergulho, Bico de Pato, Junção), não a tempo cumulado.
+5. **R4 (Reconciliação e terminologia)**: Reconciliação classificada canonicamente como "dentro da tolerância pré-registrada (Δ <= 0,1 pp)" com delta de 0,0167 pp em A e 0,0133 pp em B.
+6. **Mecanismo dinâmico**: 0% de spins; saídas acontecem por subesterço tangencial (59-65%) ou deriva lateral (35-41%).
+Para o detalhamento exaustivo das 4 erratas, ver [ANEXO_SAIDAS_1_ERRATAS.md](file:///home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/ANEXO_SAIDAS_1_ERRATAS.md).
+
+### Disposição
+- **Decisão A×B**: Permanece **ABERTA e CONGELADA** com o dono.
+- **Insumos para próximo ciclo de treino (professor Monaco_v2)**: Curvas C01, C06, C07, C08 catalogadas como pontos críticos para revisão de dados de treino e DAgger.
+- **Pools de seed**: 76–79 VIRGENS.
+- **Suíte**: 25F/326P/3S mantida.
+
+## PROF-MONACO-1 (2026-10-22) — professor-solo em Monaco_v2: FALSIDICAÇÃO-Q4 (PARE); Q1 reta-no-top-1; churn de reentrada
+Ciclo READ-MOSTLY (prereg 2aa018c; nenhum reparo; instrumento =
+saidas_verdict --track com golden Interlagos byte-idêntico). Orçamento 12/14
+sims solo (re-smoke poupado); pools 70-79/76-79 INTOCADOS.
+
+### Cadeia
+99ec615 (P0: ANEXO ERRATA-SAIDAS-1-review verbatim + R5-a 23,6 + R5-b
+11/20=55,0 + proveniência R1 VAZIA + NITs) → 2aa018c (prereg + errata
+calibração §10) → 1ecf52d (instrumento --track + bateria multi-ep + Σ
+fail-loud + 6 testes; golden provado) → 12 sims seriais → 205c2c6
+(evidência + bateria + verificação V1-V3b) → fechamento.
+
+### Resultado (bateria 600 s; TODAS as eps por braço bit-idênticas — V1)
+| braço | fora | eventos | dur_med | cascata | limpa | wanderer |
+|---|---|---|---|---|---|---|
+| PROFESSOR solo-frozen | 56,93% | 41/ep | 6,8 s | **94,6%** (330,7 s/ep) | 5,4% | 0 |
+| ALUNO v10-cego | 45,00% | 34/ep | 6,1 s | **92,4%** (254,5 s/ep) | 7,6% | 0 |
+
+VEREDITO MECÂNICO (verbatim):
+- **Q4-mecânico: FALSIDICAÇÃO-Q4 — aluno ABAIXO do professor com ICs
+  DISJUNTOS (45,00 < 56,93) → PARE IMEDIATO** (rótulos inconsistentes com
+  a premissa; nem herdado nem degradado).
+- **Q1-mecânico: top-1 professor = RETA (50 excursões, 24,4%) →
+  FALSIDICAÇÃO-Q1 report-only** → lead REJOIN-CASCATA (hairpin C06 κmax
+  0,1602 só 7,3%).
+- Q2: C11 22,0% / C04 14,6% / C12 9,8% top professor; C03 determinística
+  (IQR 0,5 km/h); C04 prof é a única com SPIN (5).
+- Q3: preso canônico do aluno = **237,0 s** (errata R6 da era: 1185 ticks
+  × 0,2 s; o herdado 118 s dividia por 10) — vive DENTRO do churn cascata.
+
+### Verificações (probe prof_monaco_f4.py)
+V1: seeds 0-4 bit-idênticos por braço — SOLO+SECA+sem-variance = seed sem
+canal (bateria = 1 realização + réplicas; ICs degenerados; comparação Q4
+determinística). V2/V2b: bateria ≡ ADOÇÃO-H-2 bit-a-byte (aluno_s0 ==
+aluno_Monaco_ep1; prof_s0 == metaA_mon_1; metaA era 600 s). Golden
+Interlagos: 6 tabelas byte-idênticas pós-refatoração (teste permanente).
+
+### Disposição
+- PARE pela FALSIDICAÇÃO-Q4; escala ao orquestrador SEM coleta adicional.
+- A×B ABERTA e CONGELADA (dono). Proposta de reparo (SÓ TEXTO, §5 do
+  ANEXO_PROF_MONACO_1.md): re-entry/pacing pós-excursão do professor, não
+  geometria. Suíte: ver Comandos (25F/332P/3S).
+
+## FONTE-1 (2026-10-22) — aquisição externa: Jolpica drop-in PROVADO; âncora 1:14.165; OpenF1 sem-login; recomendação FONTE-2 (SÓ TEXTO)
+Ciclo READ-MOSTLY (prereg 27ebff9; ZERO sims; ZERO treino; ZERO
+canônico/loader/schema/requirements; caches congelados intactos).
+Decisão do dono: SEM assinatura F1TV; migração gratuita.
+
+### Cadeia
+02ea59b (P0/F0: guarda anti-duplicata 0-commits + disclose-254 +
+inventário classificado f0_inventario.md) → 27ebff9 (prereg ANTES dos
+probes) → probes v1-v3 (commitados antes do uso; bug
+ErgastMultiResponse corrigido; retry 1/2 logado) → 10/30 chamadas
+logadas (probe_log.md APPEND-only) → fechamento.
+
+### Resultado dos probes (teto 30; 10 consumidas; 0 sims)
+| Probe | caminho | resultado |
+|---|---|---|
+| A1 circuits 2024 | fastf1.ergast (3.8.3 pinada) | 200; 24 circuitos; 1020 ms |
+| A2 schedule 2024 | fastf1.ergast | 200; 24 corridas; **Monaco = round 8** |
+| A3 lap_times (retry) | fastf1.ergast | 200; paging 30/pág; 7 ms (cache) |
+| B1 circuits | REST direto (sem fastf1) | 200; 5322 B |
+| B2 results | REST direto | 200; **FastestLap rank=1: 1:14.165** |
+| B3 laps | REST direto | 200; min de página = artefato de paging |
+| C1 sessions | OpenF1 | 200; Monaco 2024 = session_key 9516 |
+| C2 car_data | OpenF1 | 200; 2,9 MB; 17.485 amostras; 10 campos (speed/throttle/brake/n_gear/rpm/drs…); SEM LOGIN |
+
+- **P1 PASS**: a 3.8.3 PINADA já fala com a Jolpica (interface.py:35
+  BASE_URL=api.jolpi.ca) — drop-in SEM upgrade. **P2 PASS**: âncora
+  obtível (1:14.165 via results/FastestLap; paging de laps não serve de
+  âncora). **P3 PASS**: OpenF1 sem login com telemetria histórica;
+  position em endpoint separado (documentado, não consumido).
+- **Rate limit observado**: NENHUM cabeçalho de limite nas respostas
+  Jolpica; zero 429 (não pressionamos; fastf1 cacheia localmente).
+- **F0**: (i)=3 / (ii)=2-legado / (iii)=mirrors / (iv)=caches; a
+  classe (ii) não esconde nenhuma necessidade ATIVA de telemetria.
+- **DISCLOSE-254** fechado: 254,5 s/ep = 1272,4/5 (tabela_anatomia);
+  eps do B' originais bit-idênticos (conferidos ep1/2/3); "270 s/ep"
+  não reconcilia — NIT aberto não-gating.
+
+### Disposição
+- [NOTA-DEP] atualizado com a decisão do dono e os achados (abaixo).
+- RECOMENDAÇÃO FONTE-2 (SÓ TEXTO): adoção drop-in do plano metadado via
+  fastf1.ergast e/ou REST direto; OpenF1 = candidata gratuita para
+  telemetria histórica; decisão de dono.
+- Suíte INVARIANTE 25F/332P/3S (zero código de produção).
+
+## FONTE-2 (2026-10-22) — draw_track: mirrors → OpenF1 → ERRO LOUD; golden EXATO; preset silencioso morto
+Ciclo de diagnóstico + 1 módulo novo (prereg 9ba3f8c; zero sims; código
+novo: track_geometry_free.py + patch draw_track.py — MAIS NADA).
+
+### Cadeia
+3d29116 (P0: guarda + ACHADO-P0 arquivo:linha + mapa de acoplamento +
+NIT Jolpica re-escrito como OBSERVADO) → 9ba3f8c (prereg) → módulo v1-v4 +
+probe (5/10 chamadas; cache do payload p/ iteração offline) → f382938
+(patch + golden + PNGs + 2 testes) → fechamento.
+
+### Resultado
+- **P1/GOLDEN**: mirrors desenhados = a fonte da verdade do simulador:
+  Interlagos 4160,4 EXATO; Monaco 3335,2 EXATO (834 wp; hairpin C06
+  κ0,1602 = PROF-MONACO-1); Spa 7003,2 (~7004 pinado, −0,01%).
+  DISCLOSE preset×mirror Interlagos: preset 240 wp/4309,0 m (telemetria
+  era) vs mirror 1131 wp/4160,4 m.
+- **P2/OpenF1**: Monza 2024 (session 9590, driver 44): 575 wp,
+  **5.756 m vs 5.793 oficiais (−0,64%)**. UNIDADE = DECÍMETROS
+  (achado; razão 10× do bounding box). Location PESADO: 3,9 MB/7-9,5 s
+  por sessão×driver (cache local implementado).
+- **P4/fail-loud**: --track inexistente → SystemExit 3 + lista;
+  preset antigo SÓ com --legacy-preset + AVISO LOUD.
+- **Probes**: 5/10 chamadas (sessions ~0,7-1,3 KB <1,3 s; location 3,9
+  MB/7-9,5 s); 3 métodos mortos documentados; PROBE-B (GPX) não
+  necessário — orçamento devolvido.
+
+### Disposição
+- Comandos do dono: `draw_track --track monaco` (mirror instantâneo) |
+  `--track Italy` (OpenF1 sem login) | `--track xyz` (erro com lista).
+- env/loader/canônico/schema/requirements INTOCADOS; zero sims; pools
+  70-79/76-79 INTOCADOS; caches fastf1 intactos. A×B intocada.
+- Suíte: ver fechamento (esperada 25F/334P/3S).
+
+## PROF-REPAIR-1 (2026-10-22) — pacing pós-reentrada do professor: PRIMÁRIA FAIL (52,47% ≥ 45,00%); GAP B/C → conservador; PARE
+PRIMEIRO ciclo que modifica o professor (prereg fc0a939; baseline
+PROF-MONACO-1 reusado; aluno 45,00% canônico não re-coletado).
+
+### Cadeia
+fc0a939 (prereg c/ mecanismo arquivo:linha + falsificações pinadas +
+árvore A/B/C) → eb09171 (patch --prof-repair default-OFF; UM fator;
+zona: só ProfessorRaceController + argparse) → cae63df/35f3baa (+2
+testes) → 7 eps seriais (1 flag-OFF identidade + 1 flag-ON smoke +
+5 bateria seeds 0-4) → 50ea3eb (evidência + ANEXO) → fechamento.
+
+### Resultado vs baseline canônico
+| métrica | baseline | repair | pin | veredito |
+|---|---|---|---|---|
+| fora% | 56,93 | **52,47** | < 45,00 | **FAIL** (−4,46pp, melhora insuficiente) |
+| cascata | 94,6% | 94,4% | < 50% | **FAIL** (inalterada) |
+| top-1 | Reta 24,4% | C11 22,0% | Reta não-top-1 | **PASS** |
+| preso | 237,0 s | 277,2 s | < 118,5 s | **FAIL + REGRESSÃO** |
+| bit-identidade flag-OFF | — | ≡ prof_s0 byte | obrigatória | **PASS** |
+
+- Determinismo: smoke-ON ≡ bateria s0; seeds 0-4 bit-idênticos
+  (degenerescência solo+seca — lição V1 confirmada de novo).
+- Authority do eps repair: rejoin 52,3% + prof_repair 45,6% + professor
+  2,0% — o carro cicla quase 100% do tempo entre borda e janela.
+
+### Veredito (árvore §5 — GAP documentado)
+A/B/C pinados NENHUM se aplica ao resultado (melhora parcial sem SECs
+verdes nem regressão total). Resolução conservadora (fail-loud, sem
+re-pin): **nenhum sucesso; reparo não promovido; --prof-repair =
+RESEARCH default-OFF; professor segue não-viável como fonte de
+rótulos; decisão (2ª rodada × abandonar) volta ao dono** com gap
+quantificado: 7,47pp residual vs aluno; cascata intacta; preso piorou.
+
+### Leitura (marcada; SÓ TEXTO o próximo candidato)
+O pulso de pace NÃO é o motor dominante da cascata — o carro sai de
+novo mesmo a 8-12 m/s dentro da janela. A TRAJETÓRIA de reentrada
+(bearing à projeção+10 m) deposita o carro em ângulo incompatível
+com os complexos C11/C04; próximo candidato: alvo de reentrada mais
+ADIANTE (projeção +30-40 m / ponto de curvatura mínima — ângulo raso,
+lição M2/FONTE-2). Ciclo próprio com prereg.
+
+### Disposição
+- Suíte: 25F/336P/3S (334+2; ver fechamento). Zonas proibidas
+  intocadas; A×B intocada; pools/caches intactos; f1_env.py:81
+  whitespace não-commitado (ruling).
+
+## PISTA-IDENT-1 (2026-10-22) — resolução de pista: separada, mirror-first, fail-loud; 6 legacy curadas; zero sims
+Ciclo de engenharia (prereg 3758661; a ressalva do dono — f1_env mistura
+Gym/pista/FastF1 e resolve_track caía silenciosamente em Interlagos).
+
+### Cadeia
+3758661 (prereg + inventário T0) → 015ecaf (G1 módulo novo + G2
+fail-loud) → 22d13ad (G3 wiring + mirror-first + case-fix; reparo do
+teste monza) → 9b0f378 (+4 testes) → 135e409 (ANEXO) → fechamento.
+
+### Entregas
+- **G1**: `backend/domain/track_resolution.py` (resolve_track,
+  aliases, FASTF1_*, load_track_frozen, TrackResolutionError,
+  track_identity); f1_env RE-EXPORTA (imports existentes todos
+  funcionam — compat provada por teste).
+- **G2**: `allow_fallback=False` default → **TrackResolutionError com
+  lista** (mirrors/CSV/OpenF1/preset-flag); `--allow-track-fallback`
+  (eval) / kwarg (env) preservam o antigo com AVISO LOUD + [FALLBACK].
+- **G3**: `track_identity()` (requested/efetiva/fonte/sha256/wp/L) no
+  env (`self.track_identity` + warning LOUD) e no eval_teacher_solo.
+- **MIRROR-FIRST** no resolve_track: canônicas instantâneas/zero-rede
+  (shas 164876196eb12174/67ca11dc211c8c78/4b05f2c3bbc625fc) ANTES do
+  FastF1 legado — o padrão FONTE-2 estendido ao treino.
+
+### Suíte (o achado)
+| | baseline serial (5beb1da) | final serial |
+|---|---|---|
+| falhas | 26 (livros: 25 — ±1) | **20** |
+| passes | 335 | **345** |
+| skips | 3 | 3 |
+- **6 legacy CURADAS** (sintomas do fallback: passavam/falhavam contra
+  o PRESET 240wp em vez da pista pedida): curvature_cap (κ 0,13>0,11),
+  interlagos_v_plan, hairpin_frontal, wrap_fechamento,
+  interlagos_hairpin_sign, fastf1_driver_database.
+- **ZERO novas**; monza-test reparado (pass anterior = pista errada).
+- **DISCLOSE**: 2 suítes concorrentes (minha violação) = falso hold_at
+  (colisão /tmp/hold_smoke.csv); serial limpo o eliminou. LIÇÃO:
+  suítes que rodam sims em /tmp compartilhado = sims em paralelo.
+
+### Disposição
+- Treino/eval sem flag = fail-loud com lista; identidade em toda
+  execução. Produto race-runner INTOCADO (frozen direto, sha no log).
+- Suíte: **20F/345P/3S** (+4 testes novos). A×B intocada.
 
 ## (registro anterior) FASE R13-GATE (2026-10-18) — 20 runs out-of-sample (seeds 10-19): VEREDITO R10 PERMANENTE
 Prereg 2882a37 (limiares MECÂNICOS pinados do braço A 0-9; tolerância
@@ -1676,6 +3054,14 @@ claim de produto.
   (janelas 30 s), CARROS-PRESO/sessão e HESITAÇÕES; `scripts/gate_multi_seed.py`.
 - CSVs/logs: `race_diag_b31_v3_seed{0,1,2}.{csv,log}`. Mudanças NÃO commitadas.
 
+## Proveniência dos preregs (R8→R13)
+Os preregs e vereditos commitados no ciclo (2882a37 R13-prereg,
+20a6042 R13-veredito, 3d4f0e9 fechamento, 0c5892c/97f3ad9 v3.3,
+cab38ed dossiê, cf04f88/4a61bf1 R8, 2e5159d/6bda0c3 R9, 98c8fd8/79df2cc
+R11, 9ca161e/85ca849 R12) vivem preservados na tag **`v15-audit-trail`**
+(cab38ed) — a trilha completa de 65 commits R2→R13. O squash v15.0
+preserva o CONTEÚDO; a HISTÓRIA de medição está na tag.
+
 ## Próximos passos recomendados
 
 0. **v15 PÓS-R5a (prioridade — re-pós da re-medida com instrumento canônico)**:
@@ -1739,3 +3125,339 @@ claim de produto.
 4. **Ultrapassagem deliberada**: fora do escopo do professor (ele ensina
    follow). Se o v14c ainda ficar preso atrás de fantasmas no --hold-at, o
    caminho é rotulagem específica de passagem — nunca às cegas.
+
+## PISTAS_EXPAND_1 (2026-10-23) — mirrors reais via OpenF1: gate Δ<1% reprova 7/9 (racing-line); LasVegas congelada; Suzuka: razão entre magnitudes dos erros de comprimento = 6,0×; ZERO sims
+
+Ciclo de AQUISIÇÃO (prereg 8afec70 + PATCH_PISTAS_EXPAND_1_A 51da2d8; commits:
+script 6395354 → T0 d5bb170 → pins 48a16f2 → fixação-3 3eac9be → dados 81866bd →
+testes 96947fa → ANEXO 25589b2). 17/25 chamadas OpenF1 logadas APPEND
+(experiments/pistas-expand-1/probe_log.csv); cache backend/cache/openf1_pistas_expand_1
+(NOVO, distinto dos fastf1; streams TODOS em cache = reprocessar sem rede).
+
+**T0 (achados)**: Hungaroring_v1 e Zandvoort_v1 EXISTEM (era telemetria, out/16) →
+reclassificação (c)→(b) ratificada pelo PATCH_A; oficiais da §1 CONFIRMADOS 9/9 pelo
+f1db (race.course_length 2024 — SEM re-pin §7); v1s estão −2,6% a −4,8% abaixo do
+oficial (Monza 5641,9 vs 5793; Hungaroring 4177,7 vs 4381; Zandvoort 4053,2 vs 4259;
+Suzuka 5534,8 vs 5807).
+
+**Resultado por pista (manifest = verdade)**:
+| pista | classe | L OpenF1 (m) | oficial | Δ | status |
+|---|---|---|---|---|---|
+| Hungaroring | (b) | 4320,8 | 4381,0 | −1,37% | FAILED (gate) |
+| Silverstone | (c) | 5810,8 | 5891,0 | −1,36% | FAILED (gate) |
+| Montreal | (c) | 4295,9 | 4361,0 | −1,49% | FAILED (gate) |
+| Bahrain | (c) | 5298,0 | 5412,0 | −2,11% | FAILED (gate; P1 VER salto 784 m → P2 PER) |
+| Mexico | (c) | 4236,4 | 4304,0 | −1,57% | FAILED (gate) |
+| Zandvoort | (b) | 4171,3 | 4259,0 | −2,06% | FAILED (gate; top-3 com 1 salto) |
+| Suzuka | (b) | 5761,6 | 5807,0 | −0,78% | **COMPARADO** (candidato GRAVADO, v1 intacto) |
+| LasVegas | (c) str | 6139,1 | 6201,0 | −0,998% | **OK CONGELADO** (case-exata `LasVegas`) |
+| Miami | (c) str | 5330,5 | 5412,0 | −1,51% | FAILED (gate; P1 NOR salto 320 m → P2 VER) |
+
+**ACHADO MECÂNICO (a leitura central do ciclo)**: o gate Δ<1% (pinado no prereg com a
+prova Monza −0,64%) reprovou 7/9 — TODOS os deltas são NEGATIVOS porque o v4 extrai a
+LINHA DE CORRIDA (corta curvas) e a re-amostra 10 m mede cordas (< arco). Monza é a
+pista mais indulgente do calendário; sinuosas/rua encurtam 1,3-2,1%. O gate é mais
+estrito que o acervo canônico (interlagos_v2 é −3,45% vs oficial). SEM re-pin
+pós-número — FAILED honesto; a DECISÃO (aceitar × novo ciclo com gate re-derivado
+MECANICAMENTE antes de qualquer run) é do dono.
+
+**Comparativo (b) v1 × OpenF1**: Suzuka 5534,8 (−4,69%) × 5761,6 (−0,78%); a razão
+entre as magnitudes dos erros de comprimento é 6,0× (272,2 m ÷ 45,4 m; sha
+72807c529604ee6c; freeze = dono); Hungaroring 4177,7 (−4,64%) × 4320,8
+(−1,37%) = 3,4×; Zandvoort 4053,2 (−4,83%) × 4171,3 (−2,06%) = 2,3× — TODOS os
+contornos OpenF1 são melhores que os v1s do acervo (e melhores que o interlagos
+canônico). PNGs de conferência via draw_track --csv (zona proibida SÓ chamada):
+experiments/pistas-expand-1/png/{LasVegas_v2,Suzuka_candidato}.png.
+
+**Golden §4 PASS TOTAL**: canônicos 3/3 bit-idênticos; v1s 5/5 intactos;
+anti-substituição 5/5 (nenhum {key}_v2.json não-autorizado no path frozen —
+t_pe1_carrega/t_pe1_manifest estruturais); shas recalculados == manifest; 17/25.
+
+**Suíte**: baseline serial REAL 20F/345P/3S (175,53 s) → FINAL serial 20F/349P/3S
+(177,89 s) — as 20 falhas BIT-A-BIT idênticas, +4P = t_pe1_* 4/4 (data-driven do
+manifest; o congelamento seletivo do PATCH_A não deslocou contagem — §8 satisfeito
+sem desvio).
+
+**Disclosures**: cwd-flip ×2 (sem efeito; absolutos); /tmp de tasks background é
+EFÊMERO — tee/log do baseline foram reclamados, comparação itemizada feita contra as
+listas capturadas no registro da sessão (LIÇÃO: logs de medição → worktree no mesmo
+passo); manifest exibe −1,0 (arredondamento 2 casas) mas o gate avaliou −0,9982%;
+1 salto 320-784 m por stream em 4 pistas (regra de avanço §2.2 + fallback documentado);
+AGUARDA_DONO/NAO_EXECUTADO do PATCH_A ficaram não-usados (Silverstone reprovou antes do
+candidato; esticamento EXECUTOU com teto); stray antigo backend/backend/ANEXO_SAIDAS_1_
+ERRATAS.md permanece (fora do escopo FIXAÇÃO 3; backend/worklog.md → archive 3eac9be).
+
+**Decisões do dono (fila)**: (1) gate Δ<1% — aceitar 7 FAILED × novo ciclo com gate
+re-derivado mecanicamente (streams em cache = zero rede p/ reprocessar); (2) Suzuka —
+congelar Suzuka_v2.json? (erro de comprimento do candidato com módulo 6,0× menor;
+1 linha de aprovação); (3) LasVegas_v2
+pronta via load_track_frozen('LasVegas') — adoção no pool --tracks = ciclo próprio;
+(4) A×B e PROF-REPAIR-1 seguem abertas (inalteradas por este ciclo).
+
+## GATE-RE-DERIVE-1 (2026-10-23)
+
+Prereg congelado em `194a709`, sobre o v0 verbatim `e58e8c4`; erratas E1/E2
+em commit separado `b28e100`. Resultado report-only: não há holdout independente
+por pista; os dez streams históricos e seis alternativos foram extraídos do
+cache pelo v4, mas os 16 falham o limite estrutural pré-registrado de 120 m/s.
+Nenhuma pista histórica ficou elegível para LOO; nenhum fold ou limiar global
+foi produzido. Suzuka também tem auto-interseção em uma medição histórica e
+nos dois alternativos; LasVegas e Suzuka permanecem sem promoção/flip.
+
+Sem rede, gravação em path frozen, mudança de pool ou simulação de produto.
+Auditoria reproduzida bit a bit; detalhes, hashes e resultados individuais em
+`backend/experiments/gate-re-derive-1/PARE.md` e `audit.json`. Suíte serial:
+20F/349P/3S, mesmas 20 falhas do baseline registrado `1a228b8`; quatro testes
+adicionais passam. Rótulo: “349 testes, com 20 falhas bit a bit estáveis
+('regressão estável conhecida') e 3 skips”.
+
+## FAIL-FORENSICS-1 (2026-10-23) — PARE por inconsistência da âncora
+
+Prereg `1e9ceee` e veredito offline `d631a46` foram commitados antes das
+simulações. A corrida 1, Interlagos cego, e a corrida 2, Interlagos Composite,
+foram seriais, seed 0, clima DRY sem transições e 6000 ticks. Em ambas, CSV e
+contatos solver-side reproduziram os arquivos F4v15 byte a byte; hashes e
+identidade de pista constam em `backend/experiments/fail-forensics-1/`.
+
+**PARE após a corrida 2:** o pin do estado/pedido declara 13 hesitações; o log
+original `2_allcomposite.log` e o CSV âncora produzem 14 pelo classificador
+atual. O código de contagem é legado desde `439f402`. Sem evidência de mudança
+de simulação/ambiente, o problema é a contradição do registro de âncora. Prereg
+mantido intacto, sem re-pin pós-número. As duas corridas Monaco não rodaram;
+não houve classificação causal nem conclusão sobre saltos de projeção. A
+retomada requer ratificação do dono e prereg novo.
+
+Artefatos: `experiments/fail-forensics-1/PARE.md` e `relatorio.md`; dois CSVs,
+dois `_events.csv` e dois logs preservados. Nenhum mecanismo de comportamento
+foi tocado.
+
+## ERRATA FF1-E3 (2026-10-23) — hesitações Composite: 14
+
+Ratificação do dono: para a âncora Composite Interlagos F4v15 governa **14**.
+O valor 13 nas linhas canônicas do B3' foi substituído apenas na tabela e no
+veredito acima, com proveniência no log original (`2_allcomposite.log:71`), na
+recontagem do CSV frozen e na reprodução FAIL-FORENSICS-1b. O veredito B3'
+continua FAIL por HESIT ≤3; o veredito primário ANTI-D3-1 também continua FAIL.
+O prereg, script, relatório e PARE congelados da sessão FAIL-FORENSICS-1 não
+foram editados. Referências `13` em narrativas históricas permanecem verbatim;
+esta seção é a errata aditiva.
+
+Reconciliação do ANTI-D3-1-P1 (`8c79ee6`): a extração histórica contou 13
+episódios **on-track**; o episódio adicional na contagem canônica é NOR,
+167,4–167,8 s, inteiramente off-track (`recovery_rejoin`, `th=0,35`,
+`g_gate=1`, `|r| máx=1,59`), portanto excluído pelo filtro on-track do P1.
+Para os 14 episódios totais: `g_gate>0` em 13/14 e `|r|>0,1` em 14/14. No
+subconjunto on-track do P1 ficam 12/13 com `g_gate>0`; isso reconcilia os
+denominadores sem alterar sua leitura histórica nem o veredito.
+
+Suite baseline executada antes da errata: 21 falhas, 348 passes, 3 skips. A
+falha excedente foi `test_state_files_doc_integrity`: um resumo anterior
+removeu o prefixo exigido `> Última atualização:`. O contrato foi restaurado
+nesta errata; não há teste que pine 13 e nenhum teste foi alterado. Suite
+pós-errata: **20 falhas, 349 passes, 3 skips**, as 20 falhas conhecidas
+esperadas e sem falha documental excedente.
+
+## FAIL-FORENSICS-1b — pausa operacional antes de R3 (2026-10-23)
+
+Prereg `16910ef` e instrumento `ad5a88d` estão commitados. Selftests golden
+passaram para as âncoras Interlagos, Monaco professor/aluno, dados repetidos
+s0–s4 e salto sintético. Nenhuma corrida R3/R4 foi iniciada.
+
+As duas invocações R3 encerraram em `load_track_frozen`, antes do carregamento
+do ator/engine: `--track monaco` procurou `monaco_v1.json`; `--track Monaco_v2`
+procurou `Monaco_v2_v1.json`. Não há CSV válido nem comparação de âncora. O
+alias correto, confirmado por preflight read-only, é `--track Monaco`, que
+resolve `Monaco_v2.json` (SF 0, 834 wp, short SHA `67ca11dc211c8c78`). A errata
+operacional está em `experiments/fail-forensics-2/ERRATA_R3_TRACK_ALIAS.md`, e
+os dois logs foram preservados. Como a contingência pré-CSV prevista já foi
+usada, aguardar autorização do dono antes de qualquer nova invocação; R4
+depende do gate byte-a-byte de R3.
+
+## FAIL-FORENSICS-1b — fechamento da Etapa 1 (2026-10-23)
+
+Após autorização do dono, R3 foi executada com `--track Monaco` e passou no
+leak-check: CSV byte-idêntico a `prof-monaco-1/aluno_s0.csv`, SHA-256
+`f43c760a1dca3d7ca5697ec15c2960fd8c6a66541f35cd565fe9a725cf0ffca0`. R4
+Composite Monaco (10 carros, 6000 ticks, seed 0) foi executada como primeira
+medição exploratória **N=1**: 43,15% fora, 29 episódios de contato solver-side
+(110.794 pontos), 12 hesitações e 45 saltos de projeção ≥30 m pelo proxy
+`|Δs_wrapped − Δcum_dist|`. O veredito offline classificou as 14 entradas;
+recuperação predomina nos eventos Monaco. Limite: não há XY nem índice bruto
+de `nearest_segment`; a recomendação para Etapa 2 é instrumentá-los e revisar
+corredor/bordas de Monaco. B3' e ANTI-D3-1 continuam FAIL. Sem alteração de
+comportamento, checkpoints, pools ou dados frozen. Relatório e SHAs em
+`backend/experiments/fail-forensics-2/EXECUCAO_FAIL_FORENSICS_1B.md` e
+`backend/experiments/fail-forensics-2/veredito/relatorio.md`.
+
+## LOC-XY-1 (2026-10-23) — PARE no gate 3
+
+Baseline pré-código: **20F/349P/3S**. O ciclo registrou a decisão do dono de
+usar o resultado aritmético **20F/352P/3S** para três testes novos. A
+implementação aditiva (`race_diagnostic.py`) e exatamente três testes foram
+commitados (`4d22d65`); o prereg e o log de baseline foram congelados antes do
+código (`5fe4ff8`).
+
+A suíte pós-código terminou em **21F/351P/3S**. As 20 falhas canônicas são as
+mesmas do baseline; a falha adicional é
+`tests/test_mixed_composite_wiring.py::test_t_regression_v10_cego_bit_identico`,
+que compara o header/corpo completo contra um fixture v3.3 de 49 colunas e
+rejeita as 3 colunas v3.4. Os três testes LOC-XY passaram. Conforme o gate,
+PARE imediato: sem smoke formal do gate 4, sem selftests golden e sem qualquer
+correção/reexecução. As suítes baseline e pós-código executaram o subprocesso
+de corrida de 1.200 ticks do próprio teste de regressão; seus CSV/eventos
+temporários foram removidos após a falha. O log completo e hashes estão em
+`backend/experiments/loc-xy-1/relatorio.md`.
+
+O patch só lê `phys['x']`/`phys['y']` do getter existente e calcula
+`Track.nearest_segment` global; não tocou controle, governor, física, ordenação
+ou contadores. O teste de serialização do kill-switch reproduziu o fixture
+v3.3 byte a byte, mas não houve prova de corrida completa. A decisão posterior
+do dono está registrada na errata E-XY-2 abaixo.
+
+### ERRATA E-XY-2 — retomada e PARE atualizado no gate 3 (2026-10-23)
+
+Errata aditiva ratificada pelo dono: o teste legado
+`test_t_regression_v10_cego_bit_identico` roda no caminho default v3.4 e
+compara a projeção dumb `split(',')[:49]` em cada linha, incluindo header,
+com o fixture pré-wiring v3.3. Nome/path não mudam; a linha de contrato foi
+adicionada ao docstring. `RACE_DIAG_NO_XY=1` segue como caminho de restauração
+v3.3 completo para saídas de arquivo.
+
+A suíte seguinte resultou em **21F/351P/3S**, fora do ratificado
+**20F/352P/3S**. A regressão legada corrigida e os três testes LOC-XY passaram;
+as 20 falhas do baseline persistiram e `test_state_files_doc_integrity` falhou
+fora do conjunto canônico por uma entrada histórica da cadeia `> (anterior:)`.
+PARE imediato: zero smokes formais de 6.000 ticks e zero selftests golden
+pós-código; pools e pistas frozen intocados. SHA-256 do log
+`4_post_fix_pytest.log`: `37527575cf3b889d65819f920e6fa0216f00817549674c9fe07e053371f1d675`.
+O relatório antigo de PARE e seus logs `0_baseline`/`3_post` permanecem como
+histórico.
+
+### ERRATA E-XY-3 — fechamento após correção documental (2026-10-23)
+
+E-XY-3 corrigiu exclusivamente a linha 6 deste arquivo, restaurando o ponteiro
+para o relatório FAIL-FORENSICS-1b; commit doc-only `29cf2a2`. A suíte completa
+reexecutada depois passou o gate 3: **20F/352P/3S**, lista de 20 falhas
+idêntica ao baseline, sem nova ou ausente. SHA-256 do log
+`5_post_chain_fix_pytest.log`:
+`7dcda10548478604dbcf36a65a16b89b2ea085f60b4d202b7d096cfe6d349185`.
+
+Gate 4: Smoke A (`RACE_DIAG_NO_XY=1`) byte-idêntico à âncora v3.3
+`47df0ed834e8e8a6a5c2f114cee6ee745230ce0f37d7682890debe9d3f15c733`.
+Smoke B: projeção legada idêntica incluindo header; 52 campos totais e
+`body_x,body_y,ns_raw` finitos/preenchidos, com índice inteiro dentro dos 1131
+waypoints. Selftests `fail_forensics_verdict.py` e `saidas_verdict.py` PASS.
+Orçamento encerrado em 2/2 smokes formais, zero corridas de medição, pools e
+pistas frozen intocados.
+
+Regra permanente para futuras entradas de cabeçalho/cadeia: incluir um
+ponteiro `Ver <path>` e fechar a entrada com `)` para continuar íntegra quando
+for rebaixada a `(anterior:)`. Relatório final e hashes de todos os artefatos:
+`backend/experiments/loc-xy-1/relatorio.md`.)
+
+## PROJ-FIX-1 (2026-10-23) — PARE na reconciliação NIT-2 (Ver `backend/experiments/proj-fix-1/PARE.md`)
+
+- Prereg e classificador offline v1.0 congelados antes do replay no commit
+  `a519081`; selftest sintético PASS. Uma corrida R4 Composite Monaco N=1,
+  seed 0, alias `Monaco`, foi executada com writer v3.4 default.
+- g1 PASS: as 49 colunas projetadas, incluindo header, são byte-idênticas à
+  âncora FF1b R4. g2 PASS: 71 campos por linha, X/Y finitos e `ns_raw` inteiro
+  válido. Replay: 30.000 linhas; clima sem transições.
+- O seletor congelado da fonte NIT-2 encontrou zero entradas sob o run id
+  preregistrado, contra 112 eventos ≥10 m e 45 ≥30 m esperados. PARE antes da
+  saída de classificação/mapeamento; nenhuma classe C1/C2/C3 é reportada e o
+  script não foi editado após esse resultado. Retomada exige prereg novo para
+  resolver a identidade do run histórico e versão/selftest novo do instrumento.
+- Sem correção de comportamento, sem nova medição ou smoke; pools e pistas
+  frozen intocados. Artefatos e hashes em `backend/experiments/proj-fix-1/PARE.md`.
+
+## PROJ-FIX-2 (2026-10-23) — PARE em g4 (Ver `backend/experiments/proj-fix-1/PARE_PROJ_FIX_2.md`)
+
+- Prereg e classificador offline v1.1 congelados antes da classificação no
+  commit `8222dff`; selftest sintético PASS. A suíte não foi reexecutada e a
+  referência permanece 20F/352P/3S.
+- g0–g3 PASS: hashes dos artefatos conferem; projeções do replay/âncora são
+  byte-idênticas; replay tem 71 campos/30.000 linhas; seletor NIT-2 retorna
+  112 eventos ≥10 m e 45 ≥30 m para `composite_monaco`.
+- g4 acionou PARE no evento `('ALO', 2130, 2132)`, sem classe XY/ns_raw. Não há
+  classificação completa, mapa 1:1 ou resumo C1/C2/C3/p95; nenhuma conclusão
+  de classe ou proposta de correção é feita. O classificador v1.1 não foi
+  alterado após o resultado.
+- Zero corridas de medição novas e zero smokes; controles, física, pools e pistas
+  frozen intocados. Logs e hashes estão no anexo do PARE.
+
+## PROJ-FIX-3 (2026-10-23) — PARE em g0 (Ver `backend/experiments/proj-fix-1/PARE_PROJ_FIX_3.md`)
+
+- Diagnóstico da única chave ALO registrado antes do freeze; sem outros eventos
+  ou agregados examinados. Classificador v1.2 e selftest sintético congelados no
+  commit `2330e9f` antes de qualquer contagem por classe.
+- g0 parou porque o prereg congelado esperava SHA `a3e7dd18…` para o relatório
+  PARE v2, mas o arquivo preservado tem SHA `e287e5bd…`. Os demais hashes g0
+  registrados conferem. O prereg não foi editado após o gate.
+- g1–g4 não foram executados; não há mapeamento, contagens ou p95 C1–C5. Zero
+  simulações/smokes; controles, física, pools e pistas frozen intocados.
+
+## PROJ-FIX-4 (2026-10-23) — classificação offline C1–C5 (Ver `backend/experiments/proj-fix-1/EXECUCAO_PROJ_FIX_4.md`)
+
+- Retificação de proveniência: o PARE v2 tem SHA-256 `e287e5bdbc6a746089f0b53dd3a30e4d25b0ae43405bf3ef8ce9b5af2f0aa08c` em disco e nos snapshots commitados; `a3e7…` veio de rascunho não commitado. P3 ficou intocado.
+- Freeze P4 `574c5ea` (prereg SHA-256 `0d9c8d31bfee6470d045cedea46c25264b3ba5d12d757116e75a300554219392`); selftest recheck PASS (SHA `3b9453b828cc35f31386c6c6d5e285e6b61624cb2209c777f3c438a91e1aa127`). Manifest `75666b3`, SHA `5715be7b663394e29cc9b2a21a2baf554ccdb9281cc6d25439651d38e0b641ee`, 18/18 PASS. Classificador v1.2 intacto.
+- g1/g2 PASS: projeção legada `a2c96670e1c84198365468740929559a55f26e2c0f89b84ea7060dbc41044092`; 71 campos/30.000 linhas, XY finitos e `ns_raw` inteiro de 0 a 833. Log SHA `617ef75e8cae3aa556e8e362c5e54a8099f6446b734c3bb836040a5839807a10`. g3 confirmou 112 eventos ≥10 m e 45 ≥30 m.
+- g4 fechou 112 = C1 0 + C2 0 + C3 46 + C5 66; headline 45 = C1 0 + C2 0 + C3 45 + C5 0. Chaves únicas, sem C4 inválido; ALO (2130,2132) é C5. Mapa C5 1:1: `backend/experiments/proj-fix-1/classificacao_v12/mapa_nit2_ge10.csv`. No C5, `offtrack=1` em 66/66. Mapa SHA `1f75e75b50ac9d6a78f96b12f04ca0ac422cbff8ec1546d8cafb7aa791f5008f`; resumo SHA `9744db80cb2c55400aac4bc75351af59c89fb7963c0163dbe63b42c5abf5cb05`; validação SHA `e62d487948772713bb76959d21713fa575bcdc7dd63bc9f0de20cc9c18036f30`; relatório SHA `b4b8c6ca4bbf2c7514978e09fe2a2b826c1dfd44be7c2f827d68a96142642403`.
+- Zero corridas/smokes; suíte de referência 20F/352P/3S não reexecutada; pools e pistas frozen intocados. Nenhuma correção proposta; escolha da Etapa 2 retorna ao dono.
+
+## PROJ-GATE-1 (2026-10-23) — PARE em g2/g4 (Ver `backend/experiments/proj-gate-1/PARE_PROJ_GATE_1.md`)
+
+V-A ficou implementada em modo opt-in e default-OFF. R1 reproduziu os hashes
+congelados; R2 falhou o proxy de projeção e os limites de não-piora, enquanto
+as 392 reaquisições passaram nearest-global. PARE sem suíte completa ou
+promoção; CSVs, sidecars, logs e audit estão preservados com hashes duplos.
+
+- **PROJ-GATE-2 (2026-10-24):** prereg congelado em `0a269ff`, audit v1.0 em `a6d6775`; proveniência/schema/samples passaram. `ns_raw` ficou fora do ramo local em 0/12.945 amostras OFF e 5/18.045 ON; g2 decompõe R1 ≥10/≥30 em C1/C2/C3/C5 = 0/0/46/66 e 0/0/45/0, R2 = 0/0/110/63 e 0/0/107/1. H1 não identificável, H2 sem leitura interna, H3 confirma que g2 não mede localidade; encaminhamento único: arquivar esta bifurcação. Zero simulações/smokes, suíte não executada, flag default-OFF e sem promoção. (Ver `backend/experiments/proj-gate-1/autopsia/5_veredito.md`.)
+
+- TRAFEGO-MED-1B (2026-10-24): report-only, 52/65 séries elegíveis; recomendação única para medir espaço/lado para passar, sem implementação ou promoção. Ver `backend/experiments/trafego-med-1/4_DOSSIE_TRAFEGO_MED_1B.md`.
+
+- PASS-1 (2026-10-24): suíte 20F/375P/3S com as 20 falhas conhecidas; R1/R2 g1/g2 PASS, mas mediana de volta e contatos g4 falharam; R3 bloqueada, sem promoção. Ver `backend/experiments/pass-1/5_EXECUCAO_PASS_1.md`.
+
+- YIELD-1C (2026-10-25): execução standalone em `b9f9061` exit 0, CSV 30.000 linhas byte-idêntico a R1, mas zero yields/consumos; g2 FAIL, linha yield arquivada e pivô para Etapa 4. Ver `backend/experiments/yield-1/EXECUCAO_YIELD_1C.md`.
+
+- COMPOSITE-MAP-1 (2026-10-25): inventário report-only congelado em `98a71e6` (blob==disco; 6 pins críticos conferidos pelo dono). Composite treinável pelo residual gating existente (solo v10 congelado); corpus medido bloqueado por conversor/rotulagem/split/proveniência — instrumentação ratificada como COMPOSITE-CORPUS-1, depois COMPOSITE-BASE-1 e COMPOSITE-TRAIN-1. Ver `backend/experiments/composite-1/PREREG_COMPOSITE_MAP_1.md`.
+
+- COMPOSITE-CORPUS-1 (2026-10-25): report-only; módulo/testes focados passaram 7/7 e o censo de 38 fontes encontrou 0 elegíveis, 35 rejeitadas e 3 excluídas, com 26 `SEM_BLOB_HEAD`; sem treino/sim/inferência e sem tocar produção. Ver `backend/experiments/composite-1/PREREG_COMPOSITE_CORPUS_1.md`.
+- COMPOSITE-COLLECT-1C (2026-10-26): g0 446 testes (20 canônicas, 423 passes, 3 skips; sem falha nova); conversão A/B validada, 30.000 registros/10 episódios/24.000-3.000-3.000 por caso, 20 shards e 2 audits; commits de proveniência `55b7d05` e `33c75ce`; sem corrida standalone ou treino. Ver `backend/experiments/composite-1/EXECUCAO_COMPOSITE_COLLECT_1C.md`.
+- COMPOSITE-BASE-1 (2026-10-26): g0 pinado 453 testes (20F/430P/3S, log `db0abd33…`); 4 corridas formais R1-R4 exit 0 com 30.002 linhas e sidecars completos; extrator determinístico (hashes idênticos em 2 leituras); proveniência commits `7cb4f19` (12 artefatos) e `ceeaa20` (4 métricas); deltas Composite vs blind medidos (−36% a −44% contatos, +6,7pp fora em Interlagos); sem treino ou promoção. Ver `backend/experiments/composite-1/EXECUCAO_COMPOSITE_BASE_1.md`.
+- COMPOSITE-TRAIN-1 (2026-10-27): g0 pinado 460 testes (20F/437P/3S, log `bf051732…`); 2 treinos formais (Run 1 candidato + Run 2 réplica seed 42) concluídos exit 0; gates O-1 e réplica PASS (delta val_loss 0.0, max |dW| 0.0, NPZ SHA `6210fff6…` byte-idêntico); proveniência commit `c186ef2` (10 artefatos); sem corrida, simulação ou promoção. Ver `backend/experiments/composite-1/EXECUCAO_COMPOSITE_TRAIN_1.md`.
+COMPOSITE-BASE-2 etapa B executada (agente, 2026-10-27): g0 460=20F/437P/3S fail-set canônico exato; R1'-R4' 4/4 gates (R2'/R4' blind BYTE-IDÊNTICOS ao BASE-1; override 6210fff6/6a2dbf53 nos logs); extração 8/8 determinística; commits ab9da45 (provenance) + 3a02c11 (metrics); EXECUCAO staged; zero PARE; bucket TEST selado intocado.
+COMPOSITE-STAGE-5 etapa B executada (agente, 2026-10-28): desselo TEST em 2 leituras exit 0 (6.000 amostras A_VER+B_SAI); candidato 6210fff6 SANCIONADO (5/5 gates PASS: Huber 0.2885 vs null 0.7077 ratio 0.4077 <= 0.80; MAE 0.5856 < 1.0440; norm 1.5985 <= 2.0; nan/inf 0; determinismo cmp byte-idêntico exit 0); proveniência commit e017874; EXECUCAO staged; zero corrida, zero treino, zero promoção.
+COMPOSITE-STAGE-6 promoção executada (agente, 2026-10-28): backup B3.1 (6a2dbf53/5a2c20ce) em archive/residual_promocao_stage6; PAR candidato (6210fff6/f237ac9e) assume produção; g0 pós 462=20F/439P/3S (460 canônicos + 2 testes do selo, ambos PASS; fail-set canônico exato, diff bit-a-bit — emenda de contagem do dono); R1''/R3'' sem override cmp byte-a-byte vs BASE-2 PASS; g3 residual baseline 6210fff65b19ad0e; commits c8270a5+608e671; EXECUCAO staged; zero PARE.
+- REALISMO-1 C0 (2026-10-29): etapa B executada após freeze `240bacde`; 8 corridas OFF N=1..4 seriais, 32 extrações determinísticas, 2 relatórios de ruído byte-idênticos; g0 20F/458P/3S com fail-set canônico; sem mecanismo/promoção. Ver `backend/experiments/realismo-1/c0/EXECUCAO_REALISMO_C0.md`.
+2026-10-30 REALISMO-1 C1 etapa B: matriz ON N=0..4 (10 corridas) + 2 controles OFF + 48 leituras de extração determinísticas + EXECUCAO_REALISMO_C1.md.
+2026-11-01 REALISMO-1 C2 etapa B: matriz ON N=0..4 (10 corridas) + 2 controles OFF + 48 leituras de extração determinísticas + EXECUCAO_REALISMO_C2.md.
+2026-11-02 REALISMO-1 C3 etapa B: matriz ON N=0..4 (10 corridas) + 2 controles OFF + 48 leituras de extração determinísticas + EXECUCAO_REALISMO_C3.md.
+2026-11-03 REALISMO-1 C4 etapa B: análise offline de geometria (Tasks 10-11); 2.199 voltas filtradas; PARE duro em frame RMS (17,79 m > 5,0 m); ramo GEOMETRIA rejeitado; adoção do ramo FALLBACK (A5); zero corrida; C4_FINDINGS.md.
+2026-11-04 REALISMO-1 C6 etapa B: matriz ON N=0..4 (20 corridas) + 4 controles OFF + 96 leituras de extração determinísticas + EXECUCAO_REALISMO_C6.md.
+2026-11-04 REALISMO-1 C7 consolidação: matriz ON/OFF em N=5..8 (16 corridas) + 64 leituras de extração determinísticas + EXECUCAO_REALISMO_C7.md.
+2026-11-05 REALISMO-1 promoção produção: defaults --rejoin-handoff align e --rejoin-ramp adotados no composite; suíte 20F canônica confirmada; RELATORIO_PROMOCAO_REALISMO_1.md.
+2026-11-06 ABERTURA PERCEPÇÃO-1 + C8-rejoin: selados N=9..12 (confirmação C8) e N=13..16 (confirmação Fase 3); pools 76..79 e shards test/ intocados; PREREG_PERCEPCAO_1_F0.md e PREREG_C8_0.md.
+2026-11-06 C8-0 referência: 10 corridas em N=0..4 (Interlagos e Monaco) + 40 extrações determinísticas cmp=0; EXECUCAO_C8_0.md.
+2026-11-06 C8-B execução: 2 controles OFF cmp=0 + 10 corridas ON N=0..4 + 48 extrações determinísticas; gates primário/B-1/R-2/reentrada não aprovados; EXECUCAO_C8.md.
+2026-11-06 C8-B errata: números agregados N=0..4 confirmam FAIL por B-1 (+48% contatos Interlagos, +17% Monaco) e R-2 (+1,9 pp fora Interlagos); voltas ON=354 passam R-1; PERCEPÇÃO-1 formalmente suspensa por falha do professor na Task 3 (sobreposição 94,1%).
+2026-11-06 ABERTURA PROF-CURVA-1: teto de velocidade local no professor solo; PREREG_PROF_CURVA_1.md.
+2026-11-06 PROF-CURVA-1 Task 2: referência solo 600 s Interlagos confirmada (4 voltas, 24,6% fora, 4 saídas crônicas C01/C06/C07/C08 em 100% das voltas; teto guarda ritmo <=123,05 s); REF_FINDINGS.md.
+2026-11-06 PROF-CURVA-1 Task 4: fronteira v2 250 medições cmp=0; 10 corridas OFF solo Interlagos/Monaco N=0..4 e 20 leituras determinísticas cmp=0; baseline confirma saídas crônicas e 56,4–57,2% fora em Monaco; EXECUCAO_PROF_CURVA_1_0.md; PARE para closing do Dono.
+2026-11-06 PROF-CURVA-1 Task 5: mapa de viabilidade OFFLINE do teto local (determinístico cmp=0 ×2, script e5853aa commitado antes da execução) — MECANISMO COMO PREREGISTRADO INVIÁVEL: guarda Interlagos estoura no PISO (integral capped 131,04 s > teto 123,05 s; Δ+34,84 s), Gate Primário inalcançável (C01 0/22 bind R 107–140 m = saída comportamental, não pacing; C06 4/20), teto engaja 74% da volta Interlagos / 89% Monaco (rastejamento 3,2–5,8 m/s); PARE automático §4 — ZERO corrida ON, orçamento 10 solo 600 s preservado, --prof-curva mantido default OFF bit-idêntico; encaminhamento preregistrado: racing line suavizada (curva geométrica 18 m na Junção) em ciclo próprio a abrir pelo dono; MAPA_VIABILIDADE.md
+2026-11-06 ABERTURA RACING-LINE-1: ciclo separado para linha suavizada local do professor, com curva geométrica R=18 m na Junção; plano/prereg staged, zero corrida e zero alteração no PROF-CURVA-1; aguardando Freeze do Dono.
+2026-11-07 RACING-LINE-1 Task 2: construção geométrica offline do arco R=18 m na janela C08/Junção (instrumento staged antes da execução, R7; determinístico cmp=0 ×2) — PARE §7: sem arco exato com os limites congelados (resíduo dos centros 3,189856 m ≫ 1e-3; corda 35,58 m implica sweep 162,6° vs giro real −140,6° = superdeterminado); evidência report-only: raiz bi-tangente EXATA com limites livres dentro da janela (s 2282,417 → 2342,863 m, giro −139,89°, resíduo <1e-6; +6 raízes degeneradas R_local=18 e 2 fillets locais); corredor/C1/fechamento/auto-interseção da raiz NÃO avaliados (fora do escopo do candidato); ZERO corrida, ZERO produção, pista frozen intocada, orçamento 10 solo intacto; decisão do dono: nova prereg com limites derivados / outra construção (biarc) / arquivar. GEOMETRIA_C08.json/md
+2026-11-07 RACING-LINE-1 Task 3: Emenda nº 1 (limites derivados s=2282,417->2342,863 m, R=18 m); validacao offline de corredor e C1; CORREDOR_C08.md.
+2026-11-07 RACING-LINE-1 arquivado: candidato de arco unico R=18 m inviavel no corredor (|lat|=10,07 m > 6,0 m); orcamento de 10 corridas solo 100% preservado; transicao para diagnostico de controle do professor (PROF-CONTROL-1).
+2026-11-07 ABERTURA PROF-CONTROL-1: controle lateral do professor com feedforward arctan(L*kappa) e ajuste no ápice contra subesterço (LAGO_ANATOMY.md); PREREG_PROF_CONTROL_1.md.
+2026-11-07 PROF-CONTROL-1 Task 2: implementado --prof-control opt-in (delta_ff cinemático + ld modulado por c_ld derivado); testes unitários e bit-identidade OFF PASS.
+2026-11-07 PROF-CONTROL-1 Task 3: 2 controles OFF cmp=0 e 10 corridas ON N=0..4 solo 600 s concluidas com extracoes deterministicas; integridade PASS; EXECUCAO_PROF_CONTROL_1.md.
+2026-11-07 PROF-CONTROL-1 Task 4 closing: avaliacao formal dos gates — REPROVADO (FAIL em Primario: 4/4/4/4 cronicas inalteradas e fora% piorou +1,67 pp; FAIL em Monaco: -0,93 pp < 5 pp com piora em C05/C12; FAIL em Guarda: 132,40 s > 123,05 s); default OFF mantido; EXECUCAO_PROF_CONTROL_1.md.
+2026-11-07 ABERTURA PROF-GRIP-1: pacing grip-sensível com reserva de 10% nas janelas das 4 crônicas (hipótese única da LAGO_APPROACH_FINDINGS + GRIP_PACING_FEASIBILITY); PLANO e PREREG; matriz 2 OFF cmp=0 + 10 ON com --variedade N.
+2026-11-07 PROF-GRIP-1 Task 2: implementado --prof-grip opt-in (teto grip-sensível v_alvo=v_plan·min(1,sqrt(grip/0,85))·sqrt(1/1,10) nas janelas canônicas de C01/C06/C07/C08, grip_atual = tyre.grip_multiplier por tick); bit-identidade OFF exata e 10/10 testes PASS.
+2026-11-07 PROF-GRIP-1 Task 3: 2 controles OFF cmp=0 vs PROF-CONTROL-1 e 10 corridas ON --prof-grip com --variedade N solo 600 s concluidas; extracoes deterministicas cmp=0 12/12; cronicas nao zeradas (C06/C07/C08 4/4/4/4; C01 3 em N1/N2); PRELIMINAR_PROF_GRIP_1.md.
+2026-11-07 PROF-GRIP-1 Task 4 closing: avaliacao formal dos gates — REPROVADO (FAIL em Primario: C06/C07/C08 4/4/4/4 inalteradas e C01 3 em N1/N2; FAIL em Monaco: delta offtrack > 0 em N3/N4 e regressao C05; FAIL em Guarda: mediana 129,0–130,4 s > 123,05 s); causa: teto fator=0,9535*sqrt(grip/0,85) era comparado com v_plan*0,93 e foi no-op em >80% da corrida; default OFF mantido; EXECUCAO_PROF_GRIP_1.md.
+2026-11-07 ABERTURA PROF-PACE-1: pacing preventivo grip_mode=fixed (grip_ref=0,789547 SOFT 6 voltas DRY 42°C; 0,807 NÃO é o pior caso confirmado pelo TyreState canônico); escada η1=0,48848/η2=0,40000; PLANO e PREREG; decisões do dono pendentes (controles OFF, escalada, Guarda voltas limpas).
+2026-11-07 PROF-PACE-1 Task 1 (correção documental): grip_ref recalculado com demonstração n_laps=ceil(600/130,195)+1=6 aplicações exatas; length_factor precisão completa 0,9245415555555555 (versões divergentes removidas); grip_ref=0,7895474400345001; SHAs completos pinados; identidade operacional congelada (--n-cars 1, VER, SOFT, 42,0°C, grip fixed nunca atualizado); decisões do dono marcadas PENDENTE_DO_DONO (controles OFF, escalada η1→η2, Guarda voltas limpas).
+2026-11-07 PROF-PACE-1 Task 1 (auditoria final): decisões do dono registradas (CTRL_OFF pareado N=0..4; ON η1 N=0..4; ON η2 N=0..4 condicional; orçamento máx 15; escalada com 5 condições; Guarda = mediana das voltas limpas por realização, mediana das medianas ≤ 123,05 s, OFF inconclusivo por desenho); auditoria clima/grip: 6 realizações DRY 0 transições grip 0,8420→0,8070 (gate grip_ref PASS); variação N0..N4 = jitter IC (variedade_params); t_base 96,202 / t_margin 103,656 / t_cap η1 105,660 / η2 107,080 com grip_ref 0,789547 (todos cabem).
+2026-11-07 PROF-PACE-1 FREEZE Task 2 (dono): mecanismo --prof-pace congelado (grip_mode=FIXED grip_ref=0,7895474400345001; escada eta1=0,48848/eta2=0,40000; k_inst no v_safe + k suav 20 m nas passadas; tempos do PACE_MARGIN com 30 m superados; exclusividade vs --prof-grip/--prof-control; 0,93 uma vez -> cap -> passadas; correcao wrap-safe da mascara C01 + teste de cobertura circular; equivalencia cap inativo 1e-9; clima 6 realizacoes DRY 0 transicoes, grip_ref <= grip final 0,807); custos canonicos pelo caminho do controlador: t_base 96,201711 / t_margin_only 103,442766 / t_cap eta1 107,410153 / eta2 109,610725 (folga >= 15,6 s); incremental sobre t_margin: +3,97 (eta1) / +6,17 (eta2); reducoes rel max 38%/44%; estimativa 111-113 s observados = extrapolacao exploratoria do dono (sem status de medicao/gate); ressalva 1: os 4 ticks s1872-1884 (frenagem antecipada C06, dist 8,0 m, regra d_b <= 2*ds) com metricas no relatorio do executor; ressalva 2: determinismo pareado verificado estruturalmente (ICs = f(seed,N) puro) e empiricamente para variedade 0 (REF=CTRL bit-identico); N>0 sem duplicatas nos dados existentes (limitacao registrada para a Task 3).

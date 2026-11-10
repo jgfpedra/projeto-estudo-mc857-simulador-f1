@@ -312,6 +312,7 @@ class PyBulletPhysics:
         grip_multiplier: float = 1.0,
         brake: float = 0.0,
         throttle: Optional[float] = None,
+        aero_drag_multiplier: float = 1.0,
     ) -> None:
         """Aplica força de tração, frenagem, downforce e steering no chassis (1 sub-step)."""
         self._apply_control_internal(
@@ -321,6 +322,7 @@ class PyBulletPhysics:
             grip_multiplier=grip_multiplier,
             brake=brake,
             throttle=throttle,
+            aero_drag_multiplier=aero_drag_multiplier,
         )
 
     def _apply_control_internal(
@@ -331,6 +333,7 @@ class PyBulletPhysics:
         grip_multiplier: float = 1.0,
         brake: float = 0.0,
         throttle: Optional[float] = None,
+        aero_drag_multiplier: float = 1.0,
     ) -> None:
         """Orquestra as 4 fases de física analítica de F1 para 1 sub-step.
 
@@ -351,7 +354,10 @@ class PyBulletPhysics:
 
         # Fase 2 — aerodinâmica (downforce + drag) e cargas verticais nos eixos
         downforce, drag_magnitude, f_z_total, f_z_front, f_z_rear = \
-            self._apply_aero(car_id, pos, lin_vel, v_speed, handle, mass, g, cid)
+            self._apply_aero(
+                car_id, pos, lin_vel, v_speed, handle, mass, g, cid,
+                drag_multiplier=aero_drag_multiplier,
+            )
 
         # Fase 3 — dinâmica longitudinal (tração / freio / atrito de rolamento)
         mu_effective = handle.mu_nominal * max(0.1, grip_multiplier)
@@ -420,6 +426,7 @@ class PyBulletPhysics:
         mass: float,
         g: float,
         cid: int,
+        drag_multiplier: float = 1.0,
     ):
         """Aplica downforce e drag aerodinâmico; devolve cargas verticais nos eixos.
 
@@ -434,7 +441,9 @@ class PyBulletPhysics:
 
         # Ambas as forças são proporcionais a v² (equação da pressão dinâmica)
         downforce      = 0.5 * rho * cl * area * (v_speed ** 2)
-        drag_magnitude = 0.5 * rho * cd * area * (v_speed ** 2)
+        # Simplificação do vácuo: reduz apenas o arrasto, preservando o downforce.
+        drag_multiplier = max(0.5, min(1.0, float(drag_multiplier)))
+        drag_magnitude = 0.5 * rho * cd * area * (v_speed ** 2) * drag_multiplier
 
         # Downforce: força vertical para baixo no chassis
         p.applyExternalForce(
@@ -619,17 +628,25 @@ class PyBulletPhysics:
         slip_r  = math.atan2(v_lateral - b * yaw_rate, v_x_eff)
 
         # Curva de Pacejka suavizada com rolloff
-        c_alpha   = 12.0
+        # Em esterço de curva fechada, a dianteira precisa gerar yaw com
+        # mais autoridade que o eixo traseiro. Em esterços pequenos (retas e
+        # curvas rápidas) preservamos a resposta neutra do modelo original.
+        high_steer = (
+            v_speed > 3.0
+            and abs(steer_angle) >= math.radians(10.0)
+        )
+        c_alpha_front = 24.0 if high_steer else 12.0
+        c_alpha_rear = 6.0 if high_steer else 12.0
         f_yf_peak = mu_effective * f_z_front
         f_yr_peak = mu_effective * f_z_rear
 
-        def _pacejka(peak: float, slip: float) -> float:
+        def _pacejka(peak: float, slip: float, c_alpha: float) -> float:
             return -peak * math.tanh(c_alpha * slip) * (
                 1.0 - 0.2 * (abs(slip) / (0.25 + abs(slip)))
             )
 
-        f_yf = _pacejka(f_yf_peak, slip_f) * speed_blend * stability_blend
-        f_yr = _pacejka(f_yr_peak, slip_r) * speed_blend * stability_blend
+        f_yf = _pacejka(f_yf_peak, slip_f, c_alpha_front) * speed_blend * stability_blend
+        f_yr = _pacejka(f_yr_peak, slip_r, c_alpha_rear) * speed_blend * stability_blend
 
         # Força lateral total no CG, limitada pela aderência máxima
         max_lat_force   = mu_effective * f_z_total
@@ -919,6 +936,7 @@ class PyBulletPhysics:
             - (handle, target_speed, steering, grip) [4 elementos]
             - (handle, target_speed, steering, grip, brake) [5 elementos]
             - (handle, target_speed, steering, grip, brake, throttle) [6 elementos]
+            - Tupla de 7 elementos pode incluir multiplicador do arrasto aerodinâmico.
         sub_steps : int
             Número de sub-passos PyBullet a executar.
         """
@@ -933,6 +951,13 @@ class PyBulletPhysics:
                 elif len(ctrl) == 5:
                     handle, target_speed, steering, grip, brake = ctrl[:5]
                     self._apply_control_internal(handle, target_speed, steering, grip, brake=brake)
+                elif len(ctrl) >= 7:
+                    handle, target_speed, steering, grip, brake, throttle, aero_drag = ctrl[:7]
+                    self._apply_control_internal(
+                        handle, target_speed, steering, grip,
+                        brake=brake, throttle=throttle,
+                        aero_drag_multiplier=aero_drag,
+                    )
                 elif len(ctrl) >= 6:
                     handle, target_speed, steering, grip, brake, throttle = ctrl[:6]
                     self._apply_control_internal(
@@ -1045,6 +1070,24 @@ class PyBulletPhysics:
         )
         if reset_vel:
             p.resetBaseVelocity(handle.chassis_id, [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], physicsClientId=cid)
+
+    def set_chassis_lateral_friction(self, value: float) -> None:
+        """SANIDADE-0 M3(i) (prereg 1007636 §1): fricção LATERAL do chassis
+        par-a-par (chassis×chassis) sob a flag --anti-glue. Só a BASE do
+        multibody é tocada — as RODAS (links) ficam intactas e continuam
+        donas de toda a física de solo por construção (comentário do spawn:
+        fricção do chassis com o solo já é propositalmente baixa)."""
+        for handle in self._cars.values():
+            p.changeDynamics(self._client_id, handle.chassis_id, -1,
+                             lateralFriction=float(value))
+
+    def scale_mu_nominal(self, driver_id: str, factor: float) -> None:
+        """VARIEDADE-1 (prereg b237aeb §1): fator no mu_nominal do carro —
+        CONDIÇÃO INICIAL de setup (a banda slick é 1,7-1,9; mu 1,8 ×
+        [0,98, 1,02] fica dentro). O canal DINÂMICO grip_multiplier
+        (pneu/clima/superfície, por sub-step) NÃO é tocado. Só o runner
+        chama sob a flag --variedade (default OFF = bit-idêntico)."""
+        self._cars[driver_id].mu_nominal *= float(factor)
 
     def get_car_handle(self, driver_id: str) -> Optional[PhysicsCarHandle]:
         return self._cars.get(driver_id)

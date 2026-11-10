@@ -1,0 +1,70 @@
+{
+  "contacts_5hz_t_le_60s": 370,
+  "contacts_5hz_total": 582,
+  "driver_count": 10,
+  "hesitations": 3,
+  "laps_by_driver": {
+    "ALO": 4,
+    "GAS": 4,
+    "HAM": 4,
+    "LEC": 4,
+    "NOR": 4,
+    "PER": 4,
+    "PIA": 4,
+    "RUS": 5,
+    "SAI": 3,
+    "VER": 5
+  },
+  "laps_total": 41,
+  "metrics_sha256": "20e97e393436f0208d4066d982750cb58840c53cd629d09d703364ee66e660d1",
+  "offtrack_pct": 26.5,
+  "run_id": "11_ON_INTERLAGOS_N4",
+  "runner_summary": {
+    "driver_count": 10,
+    "hesitations": 3,
+    "offtrack_pct": 26.5,
+    "offtrack_ticks": 7961,
+    "stuck_car_count": 10
+  },
+  "sample_rows": 30000,
+  "schema_version": "base-metrics-v1.0",
+  "solver_event_contacts_by_pair": {
+    "ALO-GAS": 2359,
+    "ALO-HAM": 14,
+    "ALO-PER": 118,
+    "ALO-SAI": 589,
+    "GAS-PER": 5039,
+    "GAS-SAI": 2011,
+    "HAM-LEC": 6210,
+    "HAM-SAI": 579,
+    "LEC-PER": 127,
+    "LEC-PIA": 158,
+    "LEC-SAI": 609,
+    "LEC-VER": 280,
+    "NOR-RUS": 2568,
+    "NOR-VER": 956,
+    "PER-PIA": 522,
+    "PER-RUS": 803,
+    "PER-SAI": 4846,
+    "PIA-RUS": 1322
+  },
+  "solver_event_rows": 29110,
+  "source_sha256": {
+    "events": "7b99a9f940d99e0006c3bae97b58db7e9c3e4b82725aa1a76e09604d3e60fc86",
+    "log": "274e0cfa31aa0fa3760c8fa5128cfbbf477f701e25b992f807b235872718a244",
+    "main": "8c225458ef0d5d5e62e512b8f99315a980cbdddd7b26360f2cd0f6147084d049"
+  },
+  "stuck_car_count": 10,
+  "stuck_driver_ids": [
+    "ALO",
+    "GAS",
+    "HAM",
+    "LEC",
+    "NOR",
+    "PER",
+    "PIA",
+    "RUS",
+    "SAI",
+    "VER"
+  ]
+}

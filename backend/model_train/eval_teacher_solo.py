@@ -74,10 +74,23 @@ def main():
     ap.add_argument('--laps', type=int, default=3)
     ap.add_argument('--episodes', type=int, default=3)
     ap.add_argument('--sf', type=float, default=0.80)
+    ap.add_argument('--allow-track-fallback', action='store_true',
+                    help='PISTA-IDENT-1: fallback legado (FastF1→preset '
+                         'Interlagos) quando a pista pedida não carregar '
+                         '— AVISO: usará Interlagos (comportamento antigo)')
     args = ap.parse_args()
 
     import run_race_10_cars as R
-    track = R.resolve_track(track=args.track, year=2024, session='R')
+    # PISTA-IDENT-1 (prereg 3758661 §3-4): fail-loud + identidade
+    track = R.resolve_track(track=args.track, year=2024, session='R',
+                            allow_fallback=bool(getattr(args, 'allow_track_fallback', False)))
+    from backend.domain.track_resolution import track_identity
+    ident = track_identity(track, requested=args.track)
+    print("[eval_teacher_solo][IDENTIDADE] "
+          f"solicitada={ident['requested']} | efetiva={ident['efetiva']} "
+          f"| fonte={ident['fonte']} | sha256={ident['sha256']} "
+          f"| wp={ident['n_wp']} | L={ident['length_m']} m"
+          + (" [FALLBACK]" if getattr(args, 'allow_track_fallback', False) else ""))
     all_first, all_rolling = [], []
     for ep in range(args.episodes):
         r = run_solo_episode(track, args.laps, args.sf)

@@ -57,6 +57,20 @@ voltas, fora ≤25%, 0 wanderers.
 
 ## Comportamento conhecido (limitações documentadas)
 
+- **GUI × headless são o mesmo instrumento** (PÓS-CICLO-2): mesma pista
+  frozen (sha no log `[gui-identity]`), mesmo ator, mesmo clima semeado
+  por seed (`--weather seeded`). O v10-cego com `--gov vplan` corre
+  ~22-23% fora-de-pista e ~23% dos ticks em rejoin — idêntico nos dois
+  caminhos (authority por-tick: policy 75% / rejoin 23% em ambos).
+  Corrida do GUI termina quando o LÍDER completa `--laps` voltas (por
+  cum_dist do engine, não por cruzamento de SF — dá ~3s de diferença
+  por volta vs a contagem por cruzamento).
+- **Fora% multi-seed (R13 out-of-sample, seeds 10-19)**: v10-cego
+  21,0-31,6% (mediana 22,6%); composite 25,1-41,2% (mediana 28,0%).
+  O seed 0 (22,6% cego) é representativo. O regime canônico do produto
+  tem ~22-23% de fora — os 73,6% do B3.3c eram pré-canônicos (ver
+  PROJECT_STATE).
+
 - O composite evita contatos (1,5-3,5× menos que o v10-cego em 10/10
   seeds out-of-sample) mas sai da pista mais (25-54% fora) e hesita no
   retorno das excursões — não passou o gate de promoção (R13).

@@ -1,0 +1,7 @@
+PASS-DIAG-1E — censo mascarado de resíduos
+Fonte: log R2 pinado; campos start_s/end_s somente.
+Fórmula: residue = round((t_segundos * 10) % 2, 6).
+Sanidade da grade lógica: PASS (|t*10 - round(t*10)| <= 1e-3).
+Hash agregado dos horários (ordem do log; valores omitidos): cc857725bb1eed63c379bdd45fd13f651597d151d8194a4acca6f3d2276e68bc
+Buckets agregados (sem piloto, alvo, outcome ou associação): 0=4, 1=1, 2=5.
+Horários absolutos omitidos.

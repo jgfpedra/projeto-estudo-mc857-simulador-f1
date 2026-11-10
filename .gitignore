@@ -8,24 +8,16 @@ __pycache__/
 mlflow.db
 mlruns/
 
-# Caches e artefatos grandes
-cache/
+# Caches, logs e artefatos regeneráveis
+cache*/
 model_train/cache_fastf1/
 *.log
-
-# Experimentos (CSVs grandes — regeneráveis)
 experiments/
 repo_manifest.csv
+f1db.db
+download/
 
-# Arquivos de estado de ferramentas
-.kilo/
-.claude/
-.agents/
-skills-lock.json
-teste.py
-
-<<<<<<< Updated upstream
-# Checkpoints ML (binários grandes — usar model_train/tracks_frozen para dados)
+# Checkpoints e artefatos de treino grandes
 archive/checkpoints/**/*.keras
 archive/checkpoints/**/*.npz
 archive/checkpoints_root/*.keras
@@ -36,23 +28,14 @@ model_train/*.keras
 model_train/*.npz
 model_train/*.npy
 model_train/*.pkl
-# Cache FastF1 e banco
-model_train/cache_fastf1/
-f1db.db
-download/
-# Scalers/mappings (artefatos de treino)
 model_train/scaler_*.pkl
 model_train/mappings.pkl
-=======
 
-# FASE 0.5 (v15): caches, artefatos e rastreio
-cache*/
-model_train/cache_fastf1/
-__pycache__/
-*.log
-mlruns/
-mlflow.db
-archive/
-experiments/
-repo_manifest.csv
->>>>>>> Stashed changes
+# Arquivos locais de ferramentas e IDE
+.kilo/
+.claude/
+.agents/
+.cursor/mcp.json
+.kiro/settings/mcp.json
+skills-lock.json
+teste.py

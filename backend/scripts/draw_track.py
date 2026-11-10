@@ -23,8 +23,18 @@ for p in (str(BACKEND.parent), str(BACKEND)):
 import numpy as np
 
 
-def load_track(name=None, csv_path=None, year=2024):
-    """Resolve a pista pelo mesmo caminho do env (FastF1/CSV/preset)."""
+def load_track(name=None, csv_path=None, year=2024, legacy_preset=False):
+    """Resolve a pista. FONTE-2 (prereg 9ba3f8c): rota nova SEM paywall —
+
+    1. CSV de referência (inalterado);
+    2. MIRROR canônico (interlagos/monaco/spa — os JSONs congelados que o
+       simulador usa; instantâneo, ZERO rede; o ACHADO-P0 mostrou que o
+       caminho antigo NUNCA consultava os mirrors);
+    3. OpenF1 location (qualquer país F1 2023+, sem login; 2 chamadas);
+    4. ERRO LOUD (nunca desenha outra pista silenciosamente).
+    O caminho legado (FastF1→preset de Interlagos) fica SÓ atrás de
+    --legacy-preset, com WARNING LOUD (o plano sessão FastF1 está morto
+    por paywall desde ~15/out/2026 e cai no preset de Interlagos)."""
     if csv_path:
         import pandas as pd
         from backend.domain import Track
@@ -34,8 +44,55 @@ def load_track(name=None, csv_path=None, year=2024):
             waypoints=ref[['X', 'Y']].values.astype(float),
             width_m=12.0,
         )
-    from backend.model_train.f1_env import resolve_track
-    return resolve_track(track=name, year=year)
+    from backend.domain import Track
+    import track_geometry_free as TGF
+
+    # 2. MIRROR canônico — zero rede, a fonte da verdade do simulador
+    mirror = TGF.load_mirror(name or '')
+    if mirror is not None:
+        t = Track.from_waypoints(name=mirror["name"],
+                                 waypoints=mirror["waypoints"],
+                                 width_m=mirror["width_m"])
+        t.start_finish_waypoint = mirror["sf_idx"]
+        print(f"[draw_track] MIRROR canônico: {mirror['name']} "
+              f"({mirror['n_wp']} wp, L={mirror['length_m']:.1f} m, "
+              f"sha-fonte = JSON congelado; ZERO rede)")
+        return t
+
+    if legacy_preset:
+        print("[draw_track][AVISO LOUD] --legacy-preset: caminho ANTIGO "
+              "(FastF1 plano sessão = morto por paywall; cai no preset "
+              "de Interlagos se a rede falhar).")
+        from backend.model_train.f1_env import resolve_track
+        return resolve_track(track=name, year=year)
+
+    # 3. OpenF1 location (país F1 2023+; sem login)
+    openf1 = TGF.openf1_track(str(name).capitalize() if name else "",
+                              year=year)
+    if openf1 is not None:
+        t = Track.from_waypoints(name=openf1["name"],
+                                 waypoints=openf1["waypoints"],
+                                 width_m=openf1["width_m"])
+        t.start_finish_waypoint = 0
+        print(f"[draw_track] OpenF1 location: {openf1['name']} "
+              f"({openf1['n_wp']} wp, L~{openf1['length_m']:.0f} m, "
+              f"session_key={openf1['session_key']})")
+        return t
+
+    # 4. ERRO LOUD — nunca desenha outra pista silenciosamente
+    import sys as _sys
+    print(f"[draw_track][ERRO] Pista '{name}' indisponível: não é mirror "
+          f"canônico e OpenF1 não a resolveu (ou falhou).", file=_sys.stderr)
+    print("Opções disponíveis:", file=_sys.stderr)
+    print("  Mirrors canônicos (instantâneo, zero rede): "
+          + ", ".join(TGF.mirror_options()), file=_sys.stderr)
+    print("  Qualquer pista de F1 2023+ via OpenF1 (país em inglês, "
+          "sem login): --track Italy|Monaco|Belgium|... [--year 2024]",
+          file=_sys.stderr)
+    print("  Caminho legado (FastF1 morto → preset Interlagos): "
+          "--legacy-preset  [USE SABENDO QUE desenhará Interlagos]",
+          file=_sys.stderr)
+    raise SystemExit(3)
 
 
 # ──────────────────────────────────────────────────────── desenho matplotlib
@@ -200,9 +257,14 @@ def main():
                     help='salva em PNG (ex: --save pista.png) em vez de abrir janela')
     ap.add_argument('--ascii', action='store_true',
                     help='desenho ASCII no terminal (sem gráfico)')
+    ap.add_argument('--legacy-preset', action='store_true',
+                    help='caminho ANTIGO (FastF1 plano sessão morto → '
+                         'preset de Interlagos): USAR SABENDO que '
+                         'desenhará Interlagos para pistas fora do espelho')
     args = ap.parse_args()
 
-    track = load_track(name=args.track, csv_path=args.csv, year=args.year)
+    track = load_track(name=args.track, csv_path=args.csv, year=args.year,
+                      legacy_preset=args.legacy_preset)
     if args.ascii:
         ascii_draw(track)
     else:

@@ -1044,6 +1044,7 @@ solo hash estável em TODAS (ac2504e5), val_loss 0,020→0,065.
 | Interlagos | clearance infinita (não se dobra) | ✓ instrumento ok |
 | Hungaroring/Zandvoort/Monza | clearance infinita | ✓ |
 | Spa | **−37,9% comprimento** (4352m vs 7004m) | **PISTA INCOMPLETA no cache** → usar mirror ou re-download |
+  [ERRATA R8, ADOÇÃO-H-2 — HIPÓTESE ABERTA: 4352 m = 4,352 mi (oficial 7004 m = 4,352 mi); provável engoliu MILHAS como METROS no builder original; literal não achado no repo atual → hipótese aberta; Spa superada pelo mirror F1DB (FASE H-1)] |
 | Interlagos SF | 63,8% da volta (não na reta) | **SF errado confirmado** → propor correção |
 | Comprimentos | Interlagos −3,45%, Monaco −3,33% | dentro da tolerância do spline (−3-4% esperado) |
 
@@ -1719,3 +1720,37 @@ causa: retorno vs erro limpo);
 (iv) latência de re-aceleração pós-reentrada (distribuição do tempo da
 REJOIN-DIP até v>5 m/s).
 RAMO: corpus insuficiente para (ii)/(iv) por carro → reportar o que houver.
+
+---
+
+# v15 PÓS-CICLO-2 — PRÉ-REGISTRO (2026-10-18, antes de qualquer medição)
+
+## PASSO 0 — identity logs no caminho GUI (commit isolado de instrumento)
+O run_race_10_cars.py (GUI) passa a imprimir no startup o MESMO bloco de
+identidade do race_diagnostic: pista (nome, nº wp, SF, sha256 frozen),
+ator (keras+npz+residual com sha), gov mode, weather seed (verificar
+wiring do clima semeado no GUI; se não existir, DOCUMENTAR o gap e usar
+clima fixo no GUI para o PASSO 1), posições do grid, e um resumo de
+authority% no fim da corrida.
+
+## PASSO 1 — mesma seed GUI × headless (v10 cego, gov vplan, 600s)
+Headless de referência (instrumento canônico): race_diagnostic
+--actor model_train/v10_dagger/dagger_actor_best.keras --obs-mode edge
+--ticks 6000 --laps 99 --track interlagos --seed 0 --gov vplan.
+GUI: run_race_10_cars --profile race-blind --laps 99 --seed 0 (mesma seed).
+Comparar: (1) identidade do log (pista-sha, SF, wp, ator); (2) primeiras
+excursões: s de início, % fora nos primeiros 600 ticks (60s), tempo até
+rejoin. GUI não grava CSV por padrão → comparar pelo log + resumo
+aditivo (percentuais por authority ao final).
+
+## ÁRVORE (pré-registrada)
+| resultado | ação |
+|---|---|
+| pista-sha/SF divergem GUI vs headless | BUG de wiring do GUI (consumir load_track_frozen); corrigir e RE-TESTAR |
+| idênticos E headless reproduz GUI | comportamento documentado do vplan no cego (B3.3c: 73,6% fora pré-canônico); documentar no README, sem 'consertar' |
+| idênticos E headless NÃO reproduz GUI | bissecção camada a camada (weather seed, place_grid, dt/realtime, obs wiring), UMA variável por vez |
+
+## RAMOS de execução
+- GUI sem wiring de clima semeado → usar clima fixo no GUI no PASSO 1
+  e documentar o gap; wiring semeado = instrumento futuro.
+- GUI crasha em headless (sem display) → consertar instrumento, re-run.

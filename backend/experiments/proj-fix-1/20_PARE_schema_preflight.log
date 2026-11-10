@@ -1,0 +1,6 @@
+PROJ-FIX-5 v1.0 pre-analysis attempt
+Result: PARE before publishing metrics.
+Reason: the frozen instrument requested `tick_s`; the pinned map header uses `t_s`.
+Observed diagnostics: analysis stopped with `PARE: campo inválido: tick_s`; the first synthetic selftest after correction also stopped because its fixture still used `tick_s`.
+No anatomy JSON, Markdown table, or metrics were written.
+Recovery: pre-analysis errata maps the preregistered event-time field and synthetic fixture to the actual `t_s` column; a passing synthetic selftest and fresh freeze manifest precede retry.
