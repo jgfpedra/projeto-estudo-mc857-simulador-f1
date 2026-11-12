@@ -1,0 +1,180 @@
+{
+  "coherence": {
+    "authority_class_counts": {
+      "rejoin": {
+        "C3": 46,
+        "C5": 66
+      }
+    },
+    "authority_counts": {
+      "rejoin": 112
+    },
+    "checkpoint_basis": "(drv,tick_prev,tick)",
+    "checkpoint_class_counts": {
+      "C3": 46,
+      "C5": 66
+    },
+    "headline_counts": {
+      "C3": 45,
+      "C5": 0
+    },
+    "map_class_counts": {
+      "C3": 46,
+      "C5": 66
+    },
+    "map_rows": 112,
+    "offtrack_counts": {
+      "1": 112
+    },
+    "summary_class_counts": {
+      "C3": 46,
+      "C5": 66
+    },
+    "unique_checkpoints": 112
+  },
+  "definitions": {
+    "lap_cadence": "unavailable; neither permitted input contains lap identity or total lap count",
+    "mean_interval": "arithmetic mean of consecutive t_s differences; ticks also reported",
+    "quantile": "linear interpolation at p*(n-1)",
+    "signed_values": true
+  },
+  "per_car": [
+    {
+      "driver": "ALO",
+      "events": 14,
+      "events_per_lap": null,
+      "lap_cadence_status": "unavailable: lap denominator absent from permitted sources",
+      "lap_count": null,
+      "mean_interval_s": 38.676923076923075,
+      "mean_interval_ticks": 386.7692307692308
+    },
+    {
+      "driver": "GAS",
+      "events": 9,
+      "events_per_lap": null,
+      "lap_cadence_status": "unavailable: lap denominator absent from permitted sources",
+      "lap_count": null,
+      "mean_interval_s": 60.25,
+      "mean_interval_ticks": 602.5
+    },
+    {
+      "driver": "HAM",
+      "events": 14,
+      "events_per_lap": null,
+      "lap_cadence_status": "unavailable: lap denominator absent from permitted sources",
+      "lap_count": null,
+      "mean_interval_s": 33.36923076923077,
+      "mean_interval_ticks": 333.6923076923077
+    },
+    {
+      "driver": "LEC",
+      "events": 15,
+      "events_per_lap": null,
+      "lap_cadence_status": "unavailable: lap denominator absent from permitted sources",
+      "lap_count": null,
+      "mean_interval_s": 40.028571428571425,
+      "mean_interval_ticks": 400.2857142857143
+    },
+    {
+      "driver": "NOR",
+      "events": 13,
+      "events_per_lap": null,
+      "lap_cadence_status": "unavailable: lap denominator absent from permitted sources",
+      "lap_count": null,
+      "mean_interval_s": 48.31666666666666,
+      "mean_interval_ticks": 483.1666666666667
+    },
+    {
+      "driver": "PER",
+      "events": 8,
+      "events_per_lap": null,
+      "lap_cadence_status": "unavailable: lap denominator absent from permitted sources",
+      "lap_count": null,
+      "mean_interval_s": 59.685714285714276,
+      "mean_interval_ticks": 596.8571428571429
+    },
+    {
+      "driver": "PIA",
+      "events": 9,
+      "events_per_lap": null,
+      "lap_cadence_status": "unavailable: lap denominator absent from permitted sources",
+      "lap_count": null,
+      "mean_interval_s": 66.125,
+      "mean_interval_ticks": 661.25
+    },
+    {
+      "driver": "RUS",
+      "events": 9,
+      "events_per_lap": null,
+      "lap_cadence_status": "unavailable: lap denominator absent from permitted sources",
+      "lap_count": null,
+      "mean_interval_s": 67.975,
+      "mean_interval_ticks": 679.75
+    },
+    {
+      "driver": "SAI",
+      "events": 11,
+      "events_per_lap": null,
+      "lap_cadence_status": "unavailable: lap denominator absent from permitted sources",
+      "lap_count": null,
+      "mean_interval_s": 36.959999999999994,
+      "mean_interval_ticks": 369.6
+    },
+    {
+      "driver": "VER",
+      "events": 10,
+      "events_per_lap": null,
+      "lap_cadence_status": "unavailable: lap denominator absent from permitted sources",
+      "lap_count": null,
+      "mean_interval_s": 54.35555555555555,
+      "mean_interval_ticks": 543.5555555555555
+    }
+  ],
+  "per_class": {
+    "C3": {
+      "count": 46,
+      "metrics": {
+        "d_ns_raw": {
+          "max": 810.0,
+          "p50": 53.0,
+          "p95": 416.25
+        },
+        "delta_cum_dist_m": {
+          "max": 6.612690528082567,
+          "p50": 1.7593118011652678,
+          "p95": 1.870456767072028
+        },
+        "delta_s_wrapped_m": {
+          "max": 1624.8196280418174,
+          "p50": 206.39987804129578,
+          "p95": 1127.5509557217772
+        }
+      }
+    },
+    "C5": {
+      "count": 66,
+      "metrics": {
+        "d_ns_raw": {
+          "max": 7.0,
+          "p50": 5.0,
+          "p95": 6.75
+        },
+        "delta_cum_dist_m": {
+          "max": 6.1582082207378335,
+          "p50": 1.7734209697980532,
+          "p95": 3.30776034546426
+        },
+        "delta_s_wrapped_m": {
+          "max": 30.68637805575804,
+          "p50": 19.109887778902475,
+          "p95": 25.339436343445414
+        }
+      }
+    }
+  },
+  "source_hashes": {
+    "map": "1f75e75b50ac9d6a78f96b12f04ca0ac422cbff8ec1546d8cafb7aa791f5008f",
+    "summary": "9744db80cb2c55400aac4bc75351af59c89fb7963c0163dbe63b42c5abf5cb05"
+  },
+  "version": "1.0"
+}

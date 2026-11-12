@@ -1,0 +1,15 @@
+=== PROF-MONACO-1 P0: reconciliações R5-a/R5-b + NITs (read-only) ===
+[R5-a] C07-B IQR(raw, n=42) = 23.6327 -> exibição 1 casa: 23.6
+       original display 24,2 | republicado 23,6 -> CANÔNICO = 23.6 (republicado CONFIRMA)
+       C07-A IQR(raw) = 21.9853 (referência A: 22,0-22,1)
+[R5-b] Reta-B solo(raw) = 11/20 = 55.0%
+       original 16/20=80% | errata 11/20=55% -> CANÔNICO = 11/20 (errata CONFIRMA)
+[NIT-3] C10 = 'Senna S (T1/T2)' s∈[2748.3,2852.3] κmax=0.0311 | com margem 30 m: [2718.3,2882.3]
+       sítio Senna S da LARGADA-F0 = s 2699,7-2814,0 -> rótulo NÃO CONFIRMA contra o catálogo do código
+[NIT-2] re-execução do veredito nas F4v15: exit=0
+       eventos_saidas_detalhados.csv: BYTE-IDÊNTICA
+       tabela_q1_solo.csv: BYTE-IDÊNTICA
+       tabela_q2_curvas.csv: BYTE-IDÊNTICA
+       tabela_q3_modos.csv: BYTE-IDÊNTICA
+       tabela_q4_velocidade.csv: BYTE-IDÊNTICA
+       tabela_resumo_curva_perfil.csv: BYTE-IDÊNTICA

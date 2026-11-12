@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 import time
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 
@@ -86,6 +86,7 @@ class SimulationConfig:
     input_source_type: str = "memory"  # "memory" | "redis"
     input_fallback: str = "brake"       # "brake" (freia aos poucos) | "neutral" (parado)
     input_stale_after_s: float = 1.0    # input sem atualização há mais de N segundos → fallback
+    track_progress_laps: bool = False   # encerra voltas pelo avanço na pista
 
 
 # ---------------------------------------------------------------------------
@@ -101,6 +102,16 @@ class SimulationEngine:
         engine.setup()
         engine.run()
     """
+
+    DRAFTING_RANGE_M = 60.0
+    DRAFTING_WAKE_START_M = 8.0
+    DRAFTING_WAKE_PEAK_M = 12.0
+    DRAFTING_LATERAL_RANGE_M = 2.5
+    DRAFTING_HEADING_TOLERANCE_RAD = math.radians(20.0)
+    DRAFTING_MIN_SPEED_MPS = 35.0
+    DRAFTING_MAX_DRAG_REDUCTION = 0.08
+    DRAFTING_MAX_TRACK_CURVATURE = 0.010
+    DRAFTING_CURVATURE_SPAN = 4
 
     def __init__(
         self,
@@ -144,7 +155,18 @@ class SimulationEngine:
         self.lap_start_ts: Dict[str, float] = {}
         self.cum_dist_m: Dict[str, float] = {}
         self.last_pos: Dict[str, Tuple[float, float]] = {}
+        points = np.asarray(track.waypoints, dtype=float)
+        segments = np.roll(points, -1, axis=0) - points
+        self._race_segment_lengths = np.linalg.norm(segments, axis=1)
+        self._race_segment_starts = np.r_[0.0, np.cumsum(self._race_segment_lengths[:-1])]
+        self._race_track_length = float(self._race_segment_lengths.sum())
+        self.race_progress_m: Dict[str, float] = {}
+        self._race_last_s: Dict[str, float] = {}
         self.last_tyre_warn_pct: Dict[str, float] = {}
+        # FASE 2 (v14 tráfego): drivers que acumulam distância mas NÃO
+        # completam voltas — fantasmas não geram evento de volta, não
+        # degradam pneu/combustível e não avançam o clima.
+        self._no_lap_drivers: Set[str] = set()
         self.last_weather_kind: WeatherKind = self.weather_model.current.kind
 
     # ------------------------------------------------------------------
@@ -170,7 +192,7 @@ class SimulationEngine:
             state = drv.initial_state()
             self.states[drv.driver_id] = state
             px, py = self.track.initial_position(i)
-            color = self._color_for_index(i)
+            color = getattr(drv, "color_rgba", self._color_for_index(i))
             handle = self.physics.spawn_car(
                 driver_id=drv.driver_id,
                 mass_kg=state.car.total_mass,
@@ -380,21 +402,27 @@ class SimulationEngine:
         weather_kind = weather.kind
         track_temp   = weather.track_temp
 
+        # Snapshot all cars before controllers run so every driver sees the
+        # same relative positions for this tick.
+        for drv in self.drivers:
+            self._sync_driver_state(
+                self.states[drv.driver_id], self.handles[drv.driver_id],
+            )
+        aero_drag_multipliers = self._compute_aero_drag_multipliers()
+
         env = EnvironmentState(
             sim_ts=self.sim_ts,
             lap=self.current_lap,
             weather=weather,
             track=self.track,
             all_driver_states=dict(self.states),
+            aero_drag_multipliers=aero_drag_multipliers,
         )
 
         controls = []
         for drv in self.drivers:
             state  = self.states[drv.driver_id]
             handle = self.handles[drv.driver_id]
-
-            # 1 — sincroniza estado físico do PyBullet no driver state
-            self._sync_driver_state(state, handle)
 
             # Pit lane: carro parado independente do controller
             if state.pitting:
@@ -415,14 +443,152 @@ class SimulationEngine:
                 grip,
                 car_input.brake,
                 car_input.throttle,
+                aero_drag_multipliers.get(drv.driver_id, 1.0),
             ))
 
         # 4 — avança física reaplicando os controles a cada sub-step
         self.physics.step_with_control(controls, sub_steps)
         self.sim_ts += dt
 
+        if self.config.track_progress_laps or len(self.drivers) > 1:
+            self._update_race_progress(dt)
         self._check_lap_completion()
         self._publish_tick()
+
+    def _update_race_progress(self, dt: float) -> None:
+        """Track progress along the circuit, including the starting grid offset."""
+        length = self._race_track_length
+        if length <= 0.0:
+            return
+        start_s = float(self._race_segment_starts[self.track.start_finish_waypoint])
+        for drv in self.drivers:
+            driver_id = drv.driver_id
+            phys = self.physics.get_state(self.handles[driver_id])
+            x, y = float(phys["x"]), float(phys["y"])
+            state = self.states[driver_id]
+            state.position_x, state.position_y = x, y
+            state.velocity_mps = float(phys["speed_mps"])
+            state.heading_rad = float(phys.get("heading_rad", state.heading_rad))
+            hint = self.prev_waypoint_idx.get(driver_id, self.track.start_finish_waypoint)
+            _, idx = self.track.distance_to_centerline_near(x, y, hint_idx=hint, window=50)
+            ax, ay = self.track.waypoints[idx]
+            bx, by = self.track.waypoints[(idx + 1) % len(self.track.waypoints)]
+            dx, dy = bx - ax, by - ay
+            segment_len = float(self._race_segment_lengths[idx])
+            if segment_len < 1e-9:
+                continue
+            fraction = max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / (segment_len * segment_len)))
+            s = float(self._race_segment_starts[idx] + fraction * segment_len)
+            previous = self._race_last_s.get(driver_id)
+            if previous is None:
+                self.race_progress_m[driver_id] = (s - start_s + length * 0.5) % length - length * 0.5
+            else:
+                delta = (s - previous + length * 0.5) % length - length * 0.5
+                max_step = max(30.0, float(phys["speed_mps"]) * dt * 3.0 + 10.0)
+                if abs(delta) <= max_step:
+                    self.race_progress_m[driver_id] += delta
+            self._race_last_s[driver_id] = s
+
+    def ranked_drivers(self) -> List[Driver]:
+        """Return drivers in circuit order, retaining grid order for ties."""
+        return sorted(
+            self.drivers,
+            key=lambda driver: self.race_progress_m.get(driver.driver_id, float("-inf")),
+            reverse=True,
+        )
+
+    def _compute_aero_drag_multipliers(self) -> Dict[str, float]:
+        """Estimate a bounded slipstream from nearby cars ahead in the same lane."""
+        states = [
+            state for state in self.states.values()
+            if not getattr(state, "pitting", False)
+        ]
+        result: Dict[str, float] = {}
+        min_heading_cos = math.cos(self.DRAFTING_HEADING_TOLERANCE_RAD)
+
+        for follower in states:
+            if float(follower.velocity_mps) < self.DRAFTING_MIN_SPEED_MPS:
+                result[follower.driver_id] = 1.0
+                continue
+            hint = self.prev_waypoint_idx.get(
+                follower.driver_id, self.track.start_finish_waypoint,
+            )
+            _, segment_idx = self.track.distance_to_centerline_near(
+                follower.position_x, follower.position_y, hint_idx=hint,
+            )
+            waypoints = self.track.waypoints
+            waypoint_count = len(waypoints)
+            span = self.DRAFTING_CURVATURE_SPAN
+            before = waypoints[(segment_idx - span) % waypoint_count]
+            center = waypoints[segment_idx % waypoint_count]
+            after = waypoints[(segment_idx + span) % waypoint_count]
+            incoming = math.atan2(center[1] - before[1], center[0] - before[0])
+            outgoing = math.atan2(after[1] - center[1], after[0] - center[0])
+            heading_change = abs(
+                (outgoing - incoming + math.pi) % (2.0 * math.pi) - math.pi
+            )
+            span_in = math.hypot(center[0] - before[0], center[1] - before[1])
+            span_out = math.hypot(after[0] - center[0], after[1] - center[1])
+            track_curvature = heading_change / max(
+                1.0, 0.5 * (span_in + span_out),
+            )
+            if track_curvature > self.DRAFTING_MAX_TRACK_CURVATURE:
+                result[follower.driver_id] = 1.0
+                continue
+
+            fx, fy = math.cos(follower.heading_rad), math.sin(follower.heading_rad)
+            strongest_wake = 0.0
+            for leader in states:
+                if leader.driver_id == follower.driver_id:
+                    continue
+                if float(leader.velocity_mps) < self.DRAFTING_MIN_SPEED_MPS:
+                    continue
+                dx = leader.position_x - follower.position_x
+                dy = leader.position_y - follower.position_y
+                longitudinal = dx * fx + dy * fy
+                if (longitudinal <= self.DRAFTING_WAKE_START_M
+                        or longitudinal >= self.DRAFTING_RANGE_M):
+                    continue
+
+                lateral = abs(-dx * fy + dy * fx)
+                if lateral >= self.DRAFTING_LATERAL_RANGE_M:
+                    continue
+
+                heading_delta = abs(
+                    (leader.heading_rad - follower.heading_rad + math.pi)
+                    % (2.0 * math.pi) - math.pi
+                )
+                heading_cos = math.cos(heading_delta)
+                if heading_cos <= min_heading_cos:
+                    continue
+
+                if longitudinal <= self.DRAFTING_WAKE_PEAK_M:
+                    distance_strength = (
+                        (longitudinal - self.DRAFTING_WAKE_START_M)
+                        / (self.DRAFTING_WAKE_PEAK_M - self.DRAFTING_WAKE_START_M)
+                    )
+                else:
+                    distance_strength = (
+                        (self.DRAFTING_RANGE_M - longitudinal)
+                        / (self.DRAFTING_RANGE_M - self.DRAFTING_WAKE_PEAK_M)
+                    )
+                lateral_strength = max(
+                    0.0, 1.0 - lateral / self.DRAFTING_LATERAL_RANGE_M,
+                )
+                heading_strength = max(
+                    0.0,
+                    min(1.0, (heading_cos - min_heading_cos)
+                        / (1.0 - min_heading_cos)),
+                )
+                strongest_wake = max(
+                    strongest_wake,
+                    distance_strength * lateral_strength * heading_strength,
+                )
+
+            result[follower.driver_id] = float(
+                1.0 - self.DRAFTING_MAX_DRAG_REDUCTION * strongest_wake
+            )
+        return result
 
     # ------------------------------------------------------------------
     # Helpers de tick — extraídos de _step_tick para melhorar legibilidade
@@ -571,10 +737,9 @@ class SimulationEngine:
     def _check_lap_completion(self) -> None:
         """Para cada carro, detecta se cruzou a linha de largada/chegada.
 
-        Estratégia: rastreamos a distância percorrida acumulada (sem módulo).
-        Quando ``cum_dist_m`` cruza um múltiplo de ``track.length_m``,
-        completamos uma volta. Isso evita falsos-positivos quando o carro
-        começa a corrida ANTES da linha de largada.
+        A corrida visual pode usar o progresso projetado na pista, que não
+        conta uma excursão pela grama como avanço de volta. O modo legado
+        mantém a distância percorrida para ambientes que dependem dela.
         """
         for drv in self.drivers:
             state = self.states[drv.driver_id]
@@ -596,9 +761,17 @@ class SimulationEngine:
                 self.cum_dist_m[drv.driver_id] += step_dist
             self.last_pos[drv.driver_id] = (curr_x, curr_y)
 
+            # FASE 2 (v14 tráfego): fantasma acumula progresso (a recuperação
+            # por movimento continua válida) mas NÃO dispara _complete_lap.
+            if drv.driver_id in self._no_lap_drivers:
+                continue
+
             # Detecta volta: cum_dist >= (lap_atual + 1) * track_length_m
-            target_dist = (state.lap + 1) * self.track.length_m
-            if self.cum_dist_m[drv.driver_id] >= target_dist:
+            distance = (self.race_progress_m.get(drv.driver_id, 0.0)
+                        if self.config.track_progress_laps else self.cum_dist_m[drv.driver_id])
+            lap_length = self._race_track_length if self.config.track_progress_laps else self.track.length_m
+            target_dist = (state.lap + 1) * lap_length
+            if distance >= target_dist:
                 self._complete_lap(drv)
 
     def _complete_lap(self, driver: Driver) -> None:
@@ -737,12 +910,8 @@ class SimulationEngine:
         ))
 
     def _publish_race_end(self) -> None:
-        # Classificação: ordena por (a) mais voltas completadas, (b) menor tempo total
-        def classification_key(d):
-            s = self.states[d.driver_id]
-            return (-s.lap, s.total_time_s)
         classification = []
-        for d in sorted(self.drivers, key=classification_key):
+        for d in self.ranked_drivers():
             s = self.states[d.driver_id]
             classification.append({
                 "position": len(classification) + 1,
@@ -774,7 +943,7 @@ class SimulationEngine:
         ))
 
     def _publish_position_update(self, lap: int) -> None:
-        positions = [self._snapshot_position(d) for d in self.drivers]
+        positions = [self._snapshot_position(d) for d in self.ranked_drivers()]
         self.publisher.publish(PositionUpdateEvent(
             sim_ts=self.sim_ts,
             lap=lap,
@@ -782,7 +951,7 @@ class SimulationEngine:
         ))
 
     def _publish_tick(self) -> None:
-        positions = [self._snapshot_position(d) for d in self.drivers]
+        positions = [self._snapshot_position(d) for d in self.ranked_drivers()]
         self.publisher.publish(TickEvent(
             sim_ts=self.sim_ts,
             lap=max(0, min(s.lap for s in self.states.values())) if self.states else 0,

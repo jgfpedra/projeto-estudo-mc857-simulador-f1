@@ -280,12 +280,19 @@ class Track:
                 best_idx = i
         return math.sqrt(best_dist2), best_idx
 
-    def distance_to_centerline(self, x: float, y: float) -> float:
-        """Fallback O(W) — use só em testes/APIs externas sem hint disponível."""
+    def nearest_segment(self, x: float, y: float) -> Tuple[float, int]:
+        """Busca completa O(W): (distância à linha central, índice do segmento).
+
+        O índice retornado é o waypoint de INÍCIO do segmento mais próximo —
+        o mesmo formato de hint que ``distance_to_centerline_near`` consome.
+        Use após teleports/largada, quando não existe hint válido (stale =>
+        fator de grama no asfalto); no hot path prefira a versão com janela.
+        """
         n = len(self.waypoints)
         if n < 2:
-            return 0.0
+            return 0.0, 0
         best_dist2 = float("inf")
+        best_idx = 0
         for i in range(n):
             ax, ay = self.waypoints[i]
             bx, by = self.waypoints[(i + 1) % n]
@@ -298,7 +305,13 @@ class Track:
             dist2 = (x - cx) ** 2 + (y - cy) ** 2
             if dist2 < best_dist2:
                 best_dist2 = dist2
-        return math.sqrt(best_dist2)
+                best_idx = i
+        return math.sqrt(best_dist2), best_idx
+
+    def distance_to_centerline(self, x: float, y: float) -> float:
+        """Fallback O(W) — use só em testes/APIs externas sem hint disponível."""
+        dist, _ = self.nearest_segment(x, y)
+        return dist
 
     # ------------------------------------------------------------------
     # Superfície: versões com e sem distância pré-calculada
@@ -442,6 +455,87 @@ def _catmull_rom_spline(
                 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3
             )
             result.append((float(x), float(y)))
+    return result
+
+
+def _centripetal_catmull_rom_spline(
+    points: Sequence[Point2D],
+    samples_per_segment: int = 12,
+) -> List[Point2D]:
+    """Spline Catmull-Rom fechada com parametrização centrípeta.
+
+    Ao parametrizar pelo comprimento das cordas, evita cusps e picos de
+    curvatura entre pontos de controle com espaçamentos diferentes.
+    """
+    normalized = np.asarray(points, dtype=np.float64)
+    count = len(normalized)
+    if count < 3:
+        return [(float(x), float(y)) for x, y in normalized]
+    if samples_per_segment < 1:
+        raise ValueError("samples_per_segment deve ser pelo menos 1")
+
+    alpha = 0.5
+    result: List[Point2D] = []
+    for index in range(count):
+        p0 = normalized[(index - 1) % count]
+        p1 = normalized[index]
+        p2 = normalized[(index + 1) % count]
+        p3 = normalized[(index + 2) % count]
+
+        def knot_interval(a: np.ndarray, b: np.ndarray) -> float:
+            return max(float(np.linalg.norm(b - a)) ** alpha, 1e-6)
+
+        t0 = 0.0
+        t1 = t0 + knot_interval(p0, p1)
+        t2 = t1 + knot_interval(p1, p2)
+        t3 = t2 + knot_interval(p2, p3)
+
+        for fraction in np.linspace(0.0, 1.0, samples_per_segment, endpoint=False):
+            t = t1 + float(fraction) * (t2 - t1)
+            a1 = ((t1 - t) / (t1 - t0)) * p0 + ((t - t0) / (t1 - t0)) * p1
+            a2 = ((t2 - t) / (t2 - t1)) * p1 + ((t - t1) / (t2 - t1)) * p2
+            a3 = ((t3 - t) / (t3 - t2)) * p2 + ((t - t2) / (t3 - t2)) * p3
+            b1 = ((t2 - t) / (t2 - t0)) * a1 + ((t - t0) / (t2 - t0)) * a2
+            b2 = ((t3 - t) / (t3 - t1)) * a2 + ((t - t1) / (t3 - t1)) * a3
+            point = ((t2 - t) / (t2 - t1)) * b1 + ((t - t1) / (t2 - t1)) * b2
+            result.append((float(point[0]), float(point[1])))
+    return result
+
+
+def _resample_closed_polyline(
+    points: Sequence[Point2D],
+    spacing_m: float,
+) -> List[Point2D]:
+    """Subdivide uma polilinha fechada sem alterar seu comprimento.
+
+    Cada aresta é dividida em segmentos de mesmo tamanho, limitado por
+    ``spacing_m``. Os novos pontos ficam sobre a aresta original, então a
+    subdivisão preserva exatamente a geometria e o comprimento da polilinha.
+    """
+    spacing = float(spacing_m)
+    if not math.isfinite(spacing) or spacing <= 0.0:
+        raise ValueError("spacing_m deve ser positivo e finito")
+    if len(points) < 2:
+        return [(float(x), float(y)) for x, y in points]
+
+    normalized = [(float(point[0]), float(point[1])) for point in points]
+    result: List[Point2D] = []
+    for index, start in enumerate(normalized):
+        end = normalized[(index + 1) % len(normalized)]
+        dx = end[0] - start[0]
+        dy = end[1] - start[1]
+        length = math.hypot(dx, dy)
+        if length <= 1e-12:
+            continue
+
+        subdivisions = max(1, math.ceil(length / spacing))
+        for step in range(subdivisions):
+            fraction = step / subdivisions
+            result.append((start[0] + dx * fraction,
+                           start[1] + dy * fraction))
+
+    if not result:
+        return [normalized[0]]
     return result
 
 

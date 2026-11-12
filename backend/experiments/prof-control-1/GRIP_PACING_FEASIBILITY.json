@@ -1,0 +1,244 @@
+{
+  "constantes": {
+    "grip_grid": [
+      0.85,
+      0.84,
+      0.82,
+      0.8,
+      0.78,
+      0.75
+    ],
+    "grip_ref": 0.85,
+    "janelas_canonicas_m": {
+      "C01": [
+        -32.003,
+        128.013
+      ],
+      "C06": [
+        1888.198,
+        1964.206
+      ],
+      "C07": [
+        2012.211,
+        2092.22
+      ],
+      "C08": [
+        2276.239,
+        2344.246
+      ]
+    },
+    "reserva_variante_b": 0.1,
+    "v_floor_mps": 0.5
+  },
+  "custo_base_por_curva_s": {
+    "C01": 4.984,
+    "C06": 3.876,
+    "C07": 4.367,
+    "C08": 4.356
+  },
+  "grid_grip": [
+    {
+      "grip": 0.85,
+      "variantes": {
+        "direta": {
+          "custo_por_curva_s": {
+            "C01": 0.0,
+            "C06": -0.0,
+            "C07": 0.0,
+            "C08": -0.0
+          },
+          "delta_vs_base_s": 0.0,
+          "fator": 1.0,
+          "guarda_123_05_burst": false,
+          "guarda_margem_s": 26.848,
+          "t_lap_piso_s": 96.202
+        },
+        "reserva_10pct": {
+          "custo_por_curva_s": {
+            "C01": 0.244,
+            "C06": 0.189,
+            "C07": 0.213,
+            "C08": 0.213
+          },
+          "delta_vs_base_s": 0.858,
+          "fator": 0.953463,
+          "guarda_123_05_burst": false,
+          "guarda_margem_s": 25.99,
+          "t_lap_piso_s": 97.06
+        }
+      }
+    },
+    {
+      "grip": 0.84,
+      "variantes": {
+        "direta": {
+          "custo_por_curva_s": {
+            "C01": 0.03,
+            "C06": 0.023,
+            "C07": 0.026,
+            "C08": 0.026
+          },
+          "delta_vs_base_s": 0.104,
+          "fator": 0.9941,
+          "guarda_123_05_burst": false,
+          "guarda_margem_s": 26.744,
+          "t_lap_piso_s": 96.306
+        },
+        "reserva_10pct": {
+          "custo_por_curva_s": {
+            "C01": 0.275,
+            "C06": 0.213,
+            "C07": 0.241,
+            "C08": 0.24
+          },
+          "delta_vs_base_s": 0.968,
+          "fator": 0.947837,
+          "guarda_123_05_burst": false,
+          "guarda_margem_s": 25.881,
+          "t_lap_piso_s": 97.169
+        }
+      }
+    },
+    {
+      "grip": 0.82,
+      "variantes": {
+        "direta": {
+          "custo_por_curva_s": {
+            "C01": 0.091,
+            "C06": 0.07,
+            "C07": 0.079,
+            "C08": 0.079
+          },
+          "delta_vs_base_s": 0.319,
+          "fator": 0.982194,
+          "guarda_123_05_burst": false,
+          "guarda_margem_s": 26.53,
+          "t_lap_piso_s": 96.52
+        },
+        "reserva_10pct": {
+          "custo_por_curva_s": {
+            "C01": 0.338,
+            "C06": 0.263,
+            "C07": 0.296,
+            "C08": 0.295
+          },
+          "delta_vs_base_s": 1.193,
+          "fator": 0.936486,
+          "guarda_123_05_burst": false,
+          "guarda_margem_s": 25.656,
+          "t_lap_piso_s": 97.394
+        }
+      }
+    },
+    {
+      "grip": 0.8,
+      "variantes": {
+        "direta": {
+          "custo_por_curva_s": {
+            "C01": 0.154,
+            "C06": 0.119,
+            "C07": 0.135,
+            "C08": 0.134
+          },
+          "delta_vs_base_s": 0.541,
+          "fator": 0.970143,
+          "guarda_123_05_burst": false,
+          "guarda_margem_s": 26.307,
+          "t_lap_piso_s": 96.743
+        },
+        "reserva_10pct": {
+          "custo_por_curva_s": {
+            "C01": 0.405,
+            "C06": 0.314,
+            "C07": 0.354,
+            "C08": 0.353
+          },
+          "delta_vs_base_s": 1.426,
+          "fator": 0.924995,
+          "guarda_123_05_burst": false,
+          "guarda_margem_s": 25.423,
+          "t_lap_piso_s": 97.627
+        }
+      }
+    },
+    {
+      "grip": 0.78,
+      "variantes": {
+        "direta": {
+          "custo_por_curva_s": {
+            "C01": 0.219,
+            "C06": 0.17,
+            "C07": 0.192,
+            "C08": 0.191
+          },
+          "delta_vs_base_s": 0.772,
+          "fator": 0.957939,
+          "guarda_123_05_burst": false,
+          "guarda_margem_s": 26.076,
+          "t_lap_piso_s": 96.974
+        },
+        "reserva_10pct": {
+          "custo_por_curva_s": {
+            "C01": 0.473,
+            "C06": 0.367,
+            "C07": 0.415,
+            "C08": 0.413
+          },
+          "delta_vs_base_s": 1.668,
+          "fator": 0.913359,
+          "guarda_123_05_burst": false,
+          "guarda_margem_s": 25.18,
+          "t_lap_piso_s": 97.87
+        }
+      }
+    },
+    {
+      "grip": 0.75,
+      "variantes": {
+        "direta": {
+          "custo_por_curva_s": {
+            "C01": 0.322,
+            "C06": 0.25,
+            "C07": 0.282,
+            "C08": 0.281
+          },
+          "delta_vs_base_s": 1.136,
+          "fator": 0.939336,
+          "guarda_123_05_burst": false,
+          "guarda_margem_s": 25.713,
+          "t_lap_piso_s": 97.337
+        },
+        "reserva_10pct": {
+          "custo_por_curva_s": {
+            "C01": 0.581,
+            "C06": 0.451,
+            "C07": 0.509,
+            "C08": 0.508
+          },
+          "delta_vs_base_s": 2.049,
+          "fator": 0.895622,
+          "guarda_123_05_burst": false,
+          "guarda_margem_s": 24.799,
+          "t_lap_piso_s": 98.251
+        }
+      }
+    }
+  ],
+  "metodo": {
+    "base": "VelocityProfile canônico do professor (grip 0,788, sf 0,80, ds 4 m, suavização 20 m) — pacing/v_plan histórico",
+    "escala": "v_capped = v_plan · sqrt(grip/grip_ref) NOS windows das 4 crônicas; nunca escala para cima; fora das janelas intocado",
+    "guarda_s": 123.05,
+    "integracao": "t_lap = Σ ds/max(v, 0,5) sobre o laço fechado (piso: sem passadas dinâmicas de frenagem a montante)"
+  },
+  "piso_base_s": 96.202,
+  "proveniencia": {
+    "comprimento_laco_fechado_m": 4160.437,
+    "comprimento_mandato_m": 4156.75,
+    "comprimento_nota": "o mandato pina 4156,75 m = cum[-1] (sem o segmento de fecho ~3,69 m); a integração usa o laço fechado (Δ ≈ 0,1% do t_lap)",
+    "n_waypoints": 1131,
+    "saidas_verdict_sha256_prefix": "e1ac9f699e6d1339",
+    "track_file": "model_train/tracks_frozen/interlagos_v2.json",
+    "track_sha256_pin": "164876196eb12174"
+  },
+  "schema_version": "prof-control-1/grip-pacing-feasibility-v1.0"
+}

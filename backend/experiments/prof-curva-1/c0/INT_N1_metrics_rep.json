@@ -1,0 +1,445 @@
+{
+  "by_corner": {
+    "C01": {
+      "corner_name": "Descida do Lago (T4/T5)",
+      "max_abs_lat_m": 6.529169037045465,
+      "n_events": 5,
+      "s_values": [
+        33.018,
+        31.73,
+        32.045,
+        31.353,
+        33.01
+      ],
+      "steer_saturated_events": 0
+    },
+    "C06": {
+      "corner_name": "Bico de Pato (T10)",
+      "max_abs_lat_m": 9.55229936768235,
+      "n_events": 4,
+      "s_values": [
+        1948.388,
+        1946.173,
+        1945.469,
+        1947.808
+      ],
+      "steer_saturated_events": 0
+    },
+    "C07": {
+      "corner_name": "Mergulho (T11)",
+      "max_abs_lat_m": 15.883200242758525,
+      "n_events": 4,
+      "s_values": [
+        2056.337,
+        2056.594,
+        2056.345,
+        2057.728
+      ],
+      "steer_saturated_events": 4
+    },
+    "C08": {
+      "corner_name": "Junção (T12)",
+      "max_abs_lat_m": 40.213609193479066,
+      "n_events": 4,
+      "s_values": [
+        2318.662,
+        2317.847,
+        2317.901,
+        2317.0
+      ],
+      "steer_saturated_events": 4
+    },
+    "Reta": {
+      "corner_name": "Reta / Outro",
+      "max_abs_lat_m": 27.410806046625893,
+      "n_events": 4,
+      "s_values": [
+        2411.105,
+        2410.185,
+        2411.248,
+        2410.218
+      ],
+      "steer_saturated_events": 4
+    }
+  },
+  "driver_count": 1,
+  "excursions": [
+    {
+      "authority_start": "professor",
+      "corner_id": "C01",
+      "corner_name": "Descida do Lago (T4/T5)",
+      "drv": "VER",
+      "dur_s": 0.4,
+      "event_index": 0,
+      "max_abs_lat_m": 6.075372875750771,
+      "s": 33.018306658617306,
+      "steer_saturated_in_prior_1s": false,
+      "steer_saturation_ratio_max": 0.7375481992876314,
+      "t_s": 33.8,
+      "tick": 338,
+      "v_1s_mps": 16.729984851581566
+    },
+    {
+      "authority_start": "rejoin",
+      "corner_id": "C06",
+      "corner_name": "Bico de Pato (T10)",
+      "drv": "VER",
+      "dur_s": 3.4000000000000004,
+      "event_index": 1,
+      "max_abs_lat_m": 9.223931879125294,
+      "s": 1948.3883086559515,
+      "steer_saturated_in_prior_1s": false,
+      "steer_saturation_ratio_max": 0.9465130792060806,
+      "t_s": 85.0,
+      "tick": 850,
+      "v_1s_mps": 13.904381768547148
+    },
+    {
+      "authority_start": "professor",
+      "corner_id": "C07",
+      "corner_name": "Mergulho (T11)",
+      "drv": "VER",
+      "dur_s": 7.0,
+      "event_index": 2,
+      "max_abs_lat_m": 14.831729650119089,
+      "s": 2056.337250747312,
+      "steer_saturated_in_prior_1s": true,
+      "steer_saturation_ratio_max": 1.0055690145049714,
+      "t_s": 93.6,
+      "tick": 936,
+      "v_1s_mps": 13.011649687525264
+    },
+    {
+      "authority_start": "rejoin",
+      "corner_id": "C08",
+      "corner_name": "Junção (T12)",
+      "drv": "VER",
+      "dur_s": 15.0,
+      "event_index": 3,
+      "max_abs_lat_m": 38.82194361283536,
+      "s": 2318.6623902851647,
+      "steer_saturated_in_prior_1s": true,
+      "steer_saturation_ratio_max": 1.0025061812836984,
+      "t_s": 109.8,
+      "tick": 1098,
+      "v_1s_mps": 10.099212523479242
+    },
+    {
+      "authority_start": "rejoin",
+      "corner_id": "Reta",
+      "corner_name": "Reta / Outro",
+      "drv": "VER",
+      "dur_s": 10.8,
+      "event_index": 4,
+      "max_abs_lat_m": 26.2422403539783,
+      "s": 2411.10487513411,
+      "steer_saturated_in_prior_1s": true,
+      "steer_saturation_ratio_max": 1.009635354756377,
+      "t_s": 126.0,
+      "tick": 1260,
+      "v_1s_mps": 10.20827645182479
+    },
+    {
+      "authority_start": "professor",
+      "corner_id": "C01",
+      "corner_name": "Descida do Lago (T4/T5)",
+      "drv": "VER",
+      "dur_s": 0.6000000000000001,
+      "event_index": 5,
+      "max_abs_lat_m": 6.11780231863648,
+      "s": 31.730102512623635,
+      "steer_saturated_in_prior_1s": false,
+      "steer_saturation_ratio_max": 0.7328817523258674,
+      "t_s": 173.6,
+      "tick": 1736,
+      "v_1s_mps": 16.495708023751643
+    },
+    {
+      "authority_start": "professor",
+      "corner_id": "C06",
+      "corner_name": "Bico de Pato (T10)",
+      "drv": "VER",
+      "dur_s": 3.6,
+      "event_index": 6,
+      "max_abs_lat_m": 9.117192779565013,
+      "s": 1946.1726460132452,
+      "steer_saturated_in_prior_1s": false,
+      "steer_saturation_ratio_max": 0.9348159034577714,
+      "t_s": 225.0,
+      "tick": 2250,
+      "v_1s_mps": 13.72322905807605
+    },
+    {
+      "authority_start": "professor",
+      "corner_id": "C07",
+      "corner_name": "Mergulho (T11)",
+      "drv": "VER",
+      "dur_s": 7.2,
+      "event_index": 7,
+      "max_abs_lat_m": 15.29700405185648,
+      "s": 2056.593632428295,
+      "steer_saturated_in_prior_1s": true,
+      "steer_saturation_ratio_max": 1.0073871077104963,
+      "t_s": 233.8,
+      "tick": 2338,
+      "v_1s_mps": 13.00754561671907
+    },
+    {
+      "authority_start": "professor",
+      "corner_id": "C08",
+      "corner_name": "Junção (T12)",
+      "drv": "VER",
+      "dur_s": 15.200000000000001,
+      "event_index": 8,
+      "max_abs_lat_m": 39.20679443414558,
+      "s": 2317.8465392153053,
+      "steer_saturated_in_prior_1s": true,
+      "steer_saturation_ratio_max": 1.0023801489937256,
+      "t_s": 250.2,
+      "tick": 2502,
+      "v_1s_mps": 10.10420364647445
+    },
+    {
+      "authority_start": "professor",
+      "corner_id": "Reta",
+      "corner_name": "Reta / Outro",
+      "drv": "VER",
+      "dur_s": 10.4,
+      "event_index": 9,
+      "max_abs_lat_m": 24.798187825458932,
+      "s": 2410.185312073095,
+      "steer_saturated_in_prior_1s": true,
+      "steer_saturation_ratio_max": 1.008912565176875,
+      "t_s": 266.6,
+      "tick": 2666,
+      "v_1s_mps": 9.57558160096053
+    },
+    {
+      "authority_start": "professor",
+      "corner_id": "C01",
+      "corner_name": "Descida do Lago (T4/T5)",
+      "drv": "VER",
+      "dur_s": 0.6000000000000001,
+      "event_index": 10,
+      "max_abs_lat_m": 6.273564508302094,
+      "s": 32.04477822668866,
+      "steer_saturated_in_prior_1s": false,
+      "steer_saturation_ratio_max": 0.7398019229044381,
+      "t_s": 314.0,
+      "tick": 3140,
+      "v_1s_mps": 16.542648628551024
+    },
+    {
+      "authority_start": "professor",
+      "corner_id": "C06",
+      "corner_name": "Bico de Pato (T10)",
+      "drv": "VER",
+      "dur_s": 3.6,
+      "event_index": 11,
+      "max_abs_lat_m": 9.152968675517515,
+      "s": 1945.4688877254237,
+      "steer_saturated_in_prior_1s": false,
+      "steer_saturation_ratio_max": 0.9408751243957199,
+      "t_s": 365.6,
+      "tick": 3656,
+      "v_1s_mps": 13.690037582478649
+    },
+    {
+      "authority_start": "professor",
+      "corner_id": "C07",
+      "corner_name": "Mergulho (T11)",
+      "drv": "VER",
+      "dur_s": 7.4,
+      "event_index": 12,
+      "max_abs_lat_m": 15.696304254266105,
+      "s": 2056.345037623992,
+      "steer_saturated_in_prior_1s": true,
+      "steer_saturation_ratio_max": 1.005692670941004,
+      "t_s": 374.6,
+      "tick": 3746,
+      "v_1s_mps": 13.012243674749906
+    },
+    {
+      "authority_start": "rejoin",
+      "corner_id": "C08",
+      "corner_name": "Junção (T12)",
+      "drv": "VER",
+      "dur_s": 15.4,
+      "event_index": 13,
+      "max_abs_lat_m": 39.64071182231529,
+      "s": 2317.900746213954,
+      "steer_saturated_in_prior_1s": true,
+      "steer_saturation_ratio_max": 1.0023944618406042,
+      "t_s": 391.2,
+      "tick": 3912,
+      "v_1s_mps": 10.100732303595011
+    },
+    {
+      "authority_start": "rejoin",
+      "corner_id": "Reta",
+      "corner_name": "Reta / Outro",
+      "drv": "VER",
+      "dur_s": 11.4,
+      "event_index": 14,
+      "max_abs_lat_m": 27.410806046625893,
+      "s": 2411.247781877716,
+      "steer_saturated_in_prior_1s": true,
+      "steer_saturation_ratio_max": 1.0087870322419592,
+      "t_s": 407.8,
+      "tick": 4078,
+      "v_1s_mps": 9.79535404384343
+    },
+    {
+      "authority_start": "professor",
+      "corner_id": "C01",
+      "corner_name": "Descida do Lago (T4/T5)",
+      "drv": "VER",
+      "dur_s": 0.8,
+      "event_index": 15,
+      "max_abs_lat_m": 6.279627011760558,
+      "s": 31.353249734068125,
+      "steer_saturated_in_prior_1s": false,
+      "steer_saturation_ratio_max": 0.7425976391001697,
+      "t_s": 456.0,
+      "tick": 4560,
+      "v_1s_mps": 16.474346566272175
+    },
+    {
+      "authority_start": "rejoin",
+      "corner_id": "C06",
+      "corner_name": "Bico de Pato (T10)",
+      "drv": "VER",
+      "dur_s": 3.6,
+      "event_index": 16,
+      "max_abs_lat_m": 9.55229936768235,
+      "s": 1947.8075851841447,
+      "steer_saturated_in_prior_1s": false,
+      "steer_saturation_ratio_max": 0.9470086871602648,
+      "t_s": 507.8,
+      "tick": 5078,
+      "v_1s_mps": 13.871614383273666
+    },
+    {
+      "authority_start": "rejoin",
+      "corner_id": "C07",
+      "corner_name": "Mergulho (T11)",
+      "drv": "VER",
+      "dur_s": 7.4,
+      "event_index": 17,
+      "max_abs_lat_m": 15.883200242758525,
+      "s": 2057.7276348491705,
+      "steer_saturated_in_prior_1s": true,
+      "steer_saturation_ratio_max": 1.0101013929640603,
+      "t_s": 516.8,
+      "tick": 5168,
+      "v_1s_mps": 12.998801944020263
+    },
+    {
+      "authority_start": "professor",
+      "corner_id": "C08",
+      "corner_name": "Junção (T12)",
+      "drv": "VER",
+      "dur_s": 16.0,
+      "event_index": 18,
+      "max_abs_lat_m": 40.213609193479066,
+      "s": 2316.9999487274404,
+      "steer_saturated_in_prior_1s": true,
+      "steer_saturation_ratio_max": 1.0022581258207033,
+      "t_s": 533.4,
+      "tick": 5334,
+      "v_1s_mps": 10.13790032695689
+    },
+    {
+      "authority_start": "professor",
+      "corner_id": "Reta",
+      "corner_name": "Reta / Outro",
+      "drv": "VER",
+      "dur_s": 11.4,
+      "event_index": 19,
+      "max_abs_lat_m": 26.410985717421354,
+      "s": 2410.2184073522385,
+      "steer_saturated_in_prior_1s": true,
+      "steer_saturation_ratio_max": 1.008164919674948,
+      "t_s": 550.6,
+      "tick": 5506,
+      "v_1s_mps": 9.2475052311252
+    },
+    {
+      "authority_start": "rejoin",
+      "corner_id": "C01",
+      "corner_name": "Descida do Lago (T4/T5)",
+      "drv": "VER",
+      "dur_s": 0.8,
+      "event_index": 20,
+      "max_abs_lat_m": 6.529169037045465,
+      "s": 33.009910922808515,
+      "steer_saturated_in_prior_1s": false,
+      "steer_saturation_ratio_max": 0.7596070695699912,
+      "t_s": 598.8,
+      "tick": 5988,
+      "v_1s_mps": 16.793133065257198
+    }
+  ],
+  "integrity": {
+    "config_sha256": null,
+    "data_rows": 3000,
+    "expected_total_lines": 3002,
+    "mode": "off",
+    "sidecar_bytes": 0,
+    "sidecar_present": true,
+    "total_lines": 3002,
+    "track_sha16": "164876196eb12174",
+    "variedade": 1
+  },
+  "lap_counts": {
+    "VER": 4
+  },
+  "lap_time_crosscheck": {
+    "VER": {
+      "csv_s": [
+        139.753,
+        131.217,
+        128.498,
+        131.022
+      ],
+      "delta_s": [
+        -0.147,
+        0.017,
+        -0.002,
+        0.022
+      ],
+      "log_s": [
+        139.9,
+        131.2,
+        128.5,
+        131.0
+      ],
+      "tolerance_s": 0.3
+    }
+  },
+  "lap_times_from_csv_s": {
+    "VER": [
+      139.753,
+      131.217,
+      128.498,
+      131.022
+    ]
+  },
+  "metrics_sha256": "a1ba1141ba2fe73b18c5ea276b5a01ffde7a67f5b0d10b930945adc2d47133c8",
+  "n_events": 21,
+  "off_pct": 25.333,
+  "off_ticks": 760,
+  "sample_rows": 3000,
+  "schema_version": "prof-curva-metrics-v1.0",
+  "source_sha256": {
+    "csv": "f0a0972ee34082980a0d43533c06dba7860faef4275d7fd6b0e85a00be132b3a",
+    "log": "1b04c0511b4ad312700d87502c1545f0f5ec32a13cd59134e80e5d0ebf948922",
+    "saidas_verdict": "e1ac9f699e6d1339e67b7d53683f6becd5e3041da52102516cc4529c21496d6c",
+    "sidecar": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "track_file": "c4617650983df9b1141296dac953b0e4be03f0c06c1de006340233c39e308613"
+  },
+  "steer_saturation_threshold": 0.95,
+  "total_ticks": 3000,
+  "track": "interlagos",
+  "track_length_m": 4160.436950117386
+}

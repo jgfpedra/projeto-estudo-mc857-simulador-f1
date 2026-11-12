@@ -1,0 +1,10 @@
+pista,chave_case_exata,session_key,ano,driver,n_amostras,wp,L_m,L_oficial_m,delta_pct,sha256,status,notas
+Hungaroring,Hungaroring,9566,2024,P1 #81 PIA,35724,432,4320.8,4381.0,-1.37,,FAILED,GATES FAIL: delta -1.37% fora de ±1% [P1#81PIA saltos=0]
+Silverstone,Silverstone,9558,2024,P1 #44 HAM,33899,581,5810.8,5891.0,-1.36,,FAILED,GATES FAIL: delta -1.36% fora de ±1% [P1#44HAM saltos=0]
+Montreal,Montreal,9531,2024,P1 #1 VER,25940,430,4295.9,4361.0,-1.49,,FAILED,GATES FAIL: delta -1.49% fora de ±1% [P1#1VER saltos=0]
+Bahrain,Bahrain,9472,2024,P2 #11 PER,35994,530,5298.0,5412.0,-2.11,,FAILED,GATES FAIL: delta -2.11% fora de ±1% [P1#1VER saltos=1 | P2#11PER saltos=0]
+Mexico,Mexico,9625,2024,P1 #55 SAI,36741,423,4236.4,4304.0,-1.57,,FAILED,GATES FAIL: delta -1.57% fora de ±1% [P1#55SAI saltos=0]
+Zandvoort,Zandvoort,9582,2024,P1 #4 NOR,34781,417,4171.3,4259.0,-2.06,,FAILED,GATES FAIL: delta -2.06% fora de ±1% [P1#4NOR saltos=1 | P2#1VER saltos=1 | P3#16LEC saltos=1]
+Suzuka,Suzuka,9496,2024,P1 #1 VER,41801,576,5761.6,5807.0,-0.78,72807c529604ee6c,COMPARADO,(b) v1 wp=1485 L=5534.8 m sha=4323ecb67e12d18e; candidato Suzuka_candidato_openf1.json FORA do tracks_frozen (v1 intacto; loader prioriza _v2; substituição = dono) [P1#1VER saltos=1 | P2#11PER saltos=1 | P3#55SAI saltos=1]
+LasVegas,LasVegas,9644,2024,P1 #63 RUS,33175,614,6139.1,6201.0,-1.0,c30a8fe636b725cd,OK,P1#63RUS saltos=0
+Miami,Miami,9507,2024,P2 #1 VER,34375,533,5330.5,5412.0,-1.51,,FAILED,GATES FAIL: delta -1.51% fora de ±1% [P1#4NOR saltos=1 | P2#1VER saltos=0]

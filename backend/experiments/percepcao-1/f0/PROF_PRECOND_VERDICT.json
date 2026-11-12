@@ -1,0 +1,162 @@
+{
+  "cmp0_readback": true,
+  "curvas": {
+    "C01": {
+      "saidas_prof": 4,
+      "saidas_v10": 5,
+      "sobreposicao_curva": 1.0,
+      "taxa_prof": 1.0,
+      "taxa_v10": 1.25,
+      "voltas_prof": 4,
+      "voltas_v10": 4
+    },
+    "C02": {
+      "saidas_prof": 0,
+      "saidas_v10": 0,
+      "sobreposicao_curva": 0.0,
+      "taxa_prof": 0.0,
+      "taxa_v10": 0.0,
+      "voltas_prof": 4,
+      "voltas_v10": 4
+    },
+    "C03": {
+      "saidas_prof": 0,
+      "saidas_v10": 0,
+      "sobreposicao_curva": 0.0,
+      "taxa_prof": 0.0,
+      "taxa_v10": 0.0,
+      "voltas_prof": 4,
+      "voltas_v10": 4
+    },
+    "C04": {
+      "saidas_prof": 0,
+      "saidas_v10": 0,
+      "sobreposicao_curva": 0.0,
+      "taxa_prof": 0.0,
+      "taxa_v10": 0.0,
+      "voltas_prof": 4,
+      "voltas_v10": 4
+    },
+    "C05": {
+      "saidas_prof": 0,
+      "saidas_v10": 0,
+      "sobreposicao_curva": 0.0,
+      "taxa_prof": 0.0,
+      "taxa_v10": 0.0,
+      "voltas_prof": 4,
+      "voltas_v10": 4
+    },
+    "C06": {
+      "saidas_prof": 4,
+      "saidas_v10": 4,
+      "sobreposicao_curva": 1.0,
+      "taxa_prof": 1.0,
+      "taxa_v10": 1.0,
+      "voltas_prof": 4,
+      "voltas_v10": 4
+    },
+    "C07": {
+      "saidas_prof": 4,
+      "saidas_v10": 4,
+      "sobreposicao_curva": 1.0,
+      "taxa_prof": 1.0,
+      "taxa_v10": 1.0,
+      "voltas_prof": 4,
+      "voltas_v10": 4
+    },
+    "C08": {
+      "saidas_prof": 4,
+      "saidas_v10": 4,
+      "sobreposicao_curva": 1.0,
+      "taxa_prof": 1.0,
+      "taxa_v10": 1.0,
+      "voltas_prof": 4,
+      "voltas_v10": 4
+    },
+    "C09": {
+      "saidas_prof": 0,
+      "saidas_v10": 0,
+      "sobreposicao_curva": 0.0,
+      "taxa_prof": 0.0,
+      "taxa_v10": 0.0,
+      "voltas_prof": 4,
+      "voltas_v10": 4
+    },
+    "C10": {
+      "saidas_prof": 0,
+      "saidas_v10": 0,
+      "sobreposicao_curva": 0.0,
+      "taxa_prof": 0.0,
+      "taxa_v10": 0.0,
+      "voltas_prof": 4,
+      "voltas_v10": 4
+    },
+    "C11": {
+      "saidas_prof": 0,
+      "saidas_v10": 0,
+      "sobreposicao_curva": 0.0,
+      "taxa_prof": 0.0,
+      "taxa_v10": 0.0,
+      "voltas_prof": 4,
+      "voltas_v10": 4
+    },
+    "Reta": {
+      "saidas_prof": 4,
+      "saidas_v10": 0,
+      "sobreposicao_curva": 0.0,
+      "taxa_prof": 1.0,
+      "taxa_v10": 0.0,
+      "voltas_prof": 4,
+      "voltas_v10": 4
+    }
+  },
+  "instrument": "percepcao_prof_check_v1",
+  "professor": {
+    "csv": "experiments/percepcao-1/f0/prof_solo_interlagos.csv",
+    "events": 20,
+    "laps": 4,
+    "off_pct": 24.6,
+    "outputs": {
+      "C01": 4,
+      "C02": 0,
+      "C03": 0,
+      "C04": 0,
+      "C05": 0,
+      "C06": 4,
+      "C07": 4,
+      "C08": 4,
+      "C09": 0,
+      "C10": 0,
+      "C11": 0,
+      "Reta": 4
+    },
+    "rows": 3000
+  },
+  "razao_sobreposicao": 0.9411764705882353,
+  "saidas_verdict_sha256": "e1ac9f699e6d1339e67b7d53683f6becd5e3041da52102516cc4529c21496d6c",
+  "threshold_pare": 0.5,
+  "track": "interlagos",
+  "track_sha256": "c4617650983df9b1141296dac953b0e4be03f0c06c1de006340233c39e308613",
+  "v10": {
+    "csv": "experiments/percepcao-1/f0/v10_solo_interlagos.csv",
+    "events": 17,
+    "laps": 4,
+    "off_pct": 18.4,
+    "outputs": {
+      "C01": 5,
+      "C02": 0,
+      "C03": 0,
+      "C04": 0,
+      "C05": 0,
+      "C06": 4,
+      "C07": 4,
+      "C08": 4,
+      "C09": 0,
+      "C10": 0,
+      "C11": 0,
+      "Reta": 0
+    },
+    "rows": 3000
+  },
+  "veredito": "FALHA_PRE_CONDICAO_PARE"
+}

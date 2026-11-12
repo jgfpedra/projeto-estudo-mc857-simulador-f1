@@ -1,0 +1,5 @@
+perfil,classe,eventos,pct,tempo_acum_s
+PROFESSOR (solo-frozen),REJOIN-CASCATA,194,94.6,1653.4
+PROFESSOR (solo-frozen),SAIDA_LIMPA,11,5.4,54.6
+ALUNO (v10-cego),REJOIN-CASCATA,157,92.4,1272.4
+ALUNO (v10-cego),SAIDA_LIMPA,13,7.6,77.6

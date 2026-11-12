@@ -1,0 +1,10 @@
+=== EXECUTANDO SELFTEST (saidas_verdict.py) ===
+  [PASS] Caso Sintético 1: SPIN (|dpsi/dt|=60°/s sustentado 1,0s -> classificado SPIN)
+  [PASS] Caso Sintético 2: SLIDE (deriva lateral 20° >= 10°, yaw estável -> classificado SLIDE)
+  [PASS] Caso Sintético 3: LINHA-RETA (alinhado, sem deriva -> classificado LINHA-RETA)
+  [PASS] Caso Sintético 4: RUIDOSO (v < 0,5 m/s + ruído -> guarda atua, classificado LINHA-RETA)
+  [PASS] Bootstrap CI 95%: pt=80.0%, IC=[72.0%, 87.0%]
+  [PASS] Geometria da Pista: 1131 waypoints, L=4160.4m, 11 curvas identificadas
+  [PASS] Geometria Monaco_v2: L=3335.2 m, 12 complexos, hairpin geométrico=C06 (κmax 0.1602 ≈ R 6.2 m do perfil; r_min do builder = 11,34 m — métricas distintas; método = κmax máximo)
+
+TODOS OS SELF-TESTS PASSARAM (4/4 sintéticos + bootstrap + geometria Interlagos + geometria Monaco).

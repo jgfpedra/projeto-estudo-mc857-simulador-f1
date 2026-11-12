@@ -1,0 +1,301 @@
+{
+  "gates": {
+    "B1": {
+      "agg": "sum",
+      "direction": "upper",
+      "id": "B1",
+      "kind": "anti-regression",
+      "metric": "contacts_5hz_total",
+      "n_pairs": 20,
+      "name": "B-1 contatos totais",
+      "off_sum": 2169,
+      "p_fail_normal": 0.3047088436881139,
+      "p_pass_normal": 0.6952911563118861,
+      "pair_fail_frac": 0.45,
+      "pair_pass_frac": 0.55,
+      "status": "ratificado",
+      "sum_mean": 2169.0,
+      "sum_sd": 425.71528043987337,
+      "threshold": 2386
+    },
+    "C1P1": {
+      "agg": "per_realization",
+      "direction": "upper",
+      "id": "C1P1",
+      "kind": "primary",
+      "metric": "z_reta_exits",
+      "n_pairs": 20,
+      "name": "C1-P1 reta de largada",
+      "note": "aproximação: realizações independentes",
+      "p_fail_all_indep": 1.0,
+      "pair_fail_frac": 1.0,
+      "pair_pass_frac": 0.0,
+      "status": "ratificado (estrutural)"
+    },
+    "C1P2": {
+      "agg": "sum",
+      "direction": "upper",
+      "id": "C1P2",
+      "kind": "primary",
+      "metric": "excursions_t_le_60s",
+      "n_pairs": 20,
+      "name": "C1-P2 saídas t<=60 s",
+      "off_sum": 342,
+      "p_fail_normal": 0.519321257169604,
+      "p_pass_normal": 0.480678742830396,
+      "pair_fail_frac": 0.55,
+      "pair_pass_frac": 0.44999999999999996,
+      "status": "agregação a ratificar",
+      "sum_mean": 342.0,
+      "sum_sd": 10.319883720275147,
+      "threshold": 341
+    },
+    "C23P": {
+      "agg": "rate",
+      "direction": "upper",
+      "id": "C23P",
+      "kind": "primary",
+      "metric": "offtrack_rows",
+      "n_pairs": 20,
+      "name": "C2/C3 primário (fora)",
+      "off_sum": 74546,
+      "p_fail_normal": 0.5004903126402587,
+      "p_pass_normal": 0.49950968735974133,
+      "pair_fail_frac": 0.5,
+      "pair_pass_frac": 0.5,
+      "status": "agregação a ratificar",
+      "sum_mean": 74546.0,
+      "sum_sd": 406.8242863940156,
+      "threshold": 74545
+    },
+    "C6D": {
+      "agg": "per_realization",
+      "direction": "upper",
+      "id": "C6D",
+      "kind": "primary",
+      "metric": "deadlocks",
+      "n_pairs": 20,
+      "name": "C6 primário (deadlocks por realização)",
+      "note": "aproximação: realizações independentes",
+      "p_fail_all_indep": 0.8319300000000001,
+      "pair_fail_frac": 0.3,
+      "pair_pass_frac": 0.7,
+      "status": "agregação a ratificar"
+    },
+    "C6G": {
+      "agg": "sum",
+      "direction": "upper",
+      "id": "C6G",
+      "kind": "primary",
+      "metric": "glued_rows",
+      "n_pairs": 20,
+      "name": "C6 primário (colado)",
+      "off_sum": 2378,
+      "p_fail_normal": 0.5016822927278324,
+      "p_pass_normal": 0.4983177072721676,
+      "pair_fail_frac": 0.5,
+      "pair_pass_frac": 0.5,
+      "status": "agregação a ratificar",
+      "sum_mean": 2378.0,
+      "sum_sd": 118.57065404222075,
+      "threshold": 2377
+    },
+    "R1": {
+      "agg": "sum",
+      "direction": "lower",
+      "id": "R1",
+      "kind": "anti-regression",
+      "metric": "laps_total",
+      "n_pairs": 20,
+      "name": "R-1 ritmo (laps_total)",
+      "off_sum": 152,
+      "p_fail_normal": 0.0023032661316959024,
+      "p_pass_normal": 0.997696733868304,
+      "pair_fail_frac": 0.1,
+      "pair_pass_frac": 0.9,
+      "status": "gate ratificado; agregação a ratificar no freeze do C1",
+      "sum_mean": 152.0,
+      "sum_sd": 3.0,
+      "threshold": 144
+    },
+    "R2": {
+      "agg": "rate",
+      "direction": "upper",
+      "id": "R2",
+      "kind": "anti-regression",
+      "metric": "offtrack_rows",
+      "n_pairs": 20,
+      "name": "R-2 fora (+1,0 pp)",
+      "off_sum": 74546,
+      "p_fail_normal": 0.00011286780371055904,
+      "p_pass_normal": 0.9998871321962894,
+      "pair_fail_frac": 0.15,
+      "pair_pass_frac": 0.85,
+      "status": "gate ratificado; agregação a ratificar no freeze do C1",
+      "sum_mean": 74546.0,
+      "sum_sd": 406.8242863940156,
+      "threshold": 76046
+    },
+    "R2T1": {
+      "agg": "per_realization",
+      "direction": "upper",
+      "id": "R2T1",
+      "kind": "anti-regression",
+      "metric": "z_t1_exits_t_le_60s",
+      "n_pairs": 20,
+      "name": "R-2-T1 entrada da T1",
+      "note": "aproximação: realizações independentes",
+      "p_fail_all_indep": 0.9496715625,
+      "pair_fail_frac": 0.45,
+      "pair_pass_frac": 0.55,
+      "status": "gate ratificado (ajuste 2); classificação estrutural a confirmar no freeze do C1"
+    },
+    "S1": {
+      "agg": "sum",
+      "direction": "upper",
+      "id": "S1",
+      "kind": "anti-regression",
+      "metric": "contacts_5hz_t_le_60s",
+      "n_pairs": 20,
+      "name": "S-1 contatos t<=60 s",
+      "off_sum": 1013,
+      "p_fail_normal": 0.4992140747767104,
+      "p_pass_normal": 0.5007859252232896,
+      "pair_fail_frac": 0.5,
+      "pair_pass_frac": 0.5,
+      "status": "ratificado",
+      "sum_mean": 1013.0,
+      "sum_sd": 253.80405828118668,
+      "threshold": 1013
+    }
+  },
+  "inputs": {
+    "0": "b2f3a552c86db6262357d1d8939eae11522f368bc52667b193498b2ca54e9b07",
+    "1": "6a7678051620a259364ea201c15a1e314de406734f0a6fcb44158a6c35c6c438",
+    "2": "dc306cfbbfc2e244347ad85206a31224de932391f2cf1e34f1577db3af4f448f",
+    "3": "ab9263f19b336ddaee88228ed5de6e7a17b3998d061b754eccd08a7fe833fa83",
+    "4": "0abb7d982efb3c8eb7a13f99008d93ccb0f28d3de0d9d12e2f40279191734924"
+  },
+  "kind": "noise",
+  "method": "nula caótica: pares ordenados OFF(N')xOFF(N), N' != N; somas: N(k·mean, k·sd²), sd amostral (ddof=1), correção de continuidade 0,5",
+  "metrics": {
+    "contacts_5hz_t_le_60s": {
+      "mean": 202.6,
+      "n": 5,
+      "sd": 113.50462545641037,
+      "values": {
+        "0": 96,
+        "1": 285,
+        "2": 91,
+        "3": 194,
+        "4": 347
+      }
+    },
+    "contacts_5hz_total": {
+      "mean": 433.8,
+      "n": 5,
+      "sd": 190.38566122478866,
+      "values": {
+        "0": 210,
+        "1": 487,
+        "2": 373,
+        "3": 374,
+        "4": 725
+      }
+    },
+    "deadlocks": {
+      "mean": 1.4,
+      "n": 5,
+      "sd": 0.5477225575051661,
+      "values": {
+        "0": 1,
+        "1": 1,
+        "2": 2,
+        "3": 1,
+        "4": 2
+      }
+    },
+    "excursions_t_le_60s": {
+      "mean": 68.4,
+      "n": 5,
+      "sd": 4.61519230368573,
+      "values": {
+        "0": 67,
+        "1": 70,
+        "2": 61,
+        "3": 72,
+        "4": 72
+      }
+    },
+    "glued_rows": {
+      "mean": 475.6,
+      "n": 5,
+      "sd": 53.02640851500316,
+      "values": {
+        "0": 401,
+        "1": 547,
+        "2": 487,
+        "3": 457,
+        "4": 486
+      }
+    },
+    "laps_total": {
+      "mean": 30.4,
+      "n": 5,
+      "sd": 1.3416407864998738,
+      "values": {
+        "0": 31,
+        "1": 31,
+        "2": 32,
+        "3": 29,
+        "4": 29
+      }
+    },
+    "offtrack_rows": {
+      "mean": 14909.2,
+      "n": 5,
+      "sd": 181.93735185497232,
+      "values": {
+        "0": 14963,
+        "1": 14769,
+        "2": 14764,
+        "3": 14849,
+        "4": 15201
+      }
+    },
+    "z_reta_exits": {
+      "mean": 6.6,
+      "n": 5,
+      "sd": 0.5477225575051661,
+      "values": {
+        "0": 6,
+        "1": 7,
+        "2": 6,
+        "3": 7,
+        "4": 7
+      }
+    },
+    "z_t1_exits_t_le_60s": {
+      "mean": 9.6,
+      "n": 5,
+      "sd": 1.6733200530681511,
+      "values": {
+        "0": 9,
+        "1": 7,
+        "2": 11,
+        "3": 10,
+        "4": 11
+      }
+    }
+  },
+  "metrics_sha256": "c84e4ae2f0f3e8e296167b053af5b6ceeee120f26168c373de4f5f6ca6041360",
+  "realizations": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "schema_version": "realismo-metrics-v1.0",
+  "track": "monaco"
+}

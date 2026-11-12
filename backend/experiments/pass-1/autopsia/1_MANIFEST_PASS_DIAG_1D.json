@@ -1,0 +1,53 @@
+{
+  "census": {
+    "path": "experiments/pass-1/autopsia/0_CENSO_FORMAS_PASS_DIAG_1D.txt",
+    "sha256": "83cdb13f01eb6bdc0ac4712abe5663aae8fade577855baad8b1f0dde204ae8b2"
+  },
+  "cycle": "PASS-DIAG-1D",
+  "instrument_version": "1.2",
+  "parent_freeze_commit": "67c2c4bf064f5c72a4bdc300168faa0d55189a06",
+  "parent_instrument_commit": "9d81dd019c1a619c935e9d26515bea65b74aca27",
+  "prereg": {
+    "path": "experiments/pass-1/autopsia/PREREG_PASS_DIAG_1D.md",
+    "sha256": "170a35d4f9b750a91f164fd5a759052249a77e5bd98ea83e7095c25a4188a936"
+  },
+  "script": {
+    "path": "scripts/pass_1_diag.py",
+    "sha256": "a97bcadf6c29229cdcf4a0e91b6783dc1ff584411ffd5580a4a762c5f9e1b310"
+  },
+  "selftest_log": {
+    "path": "experiments/pass-1/autopsia/0_selftest_v12.log",
+    "sha256": "4270d55495046ed496a44a9f7211e9f76763e8fb037b3285c0e8c531fd69a255",
+    "status": "PASS"
+  },
+  "source_pins": [
+    {
+      "path": "experiments/pass-1/1_R1_OFF.csv",
+      "sha256": "5cb49097fea9bb066e9bef5ae62f4ee7c6f9ceb70485448792d33b533ce5cdaa"
+    },
+    {
+      "path": "experiments/pass-1/2_R2_ON.csv",
+      "sha256": "7d2c49b9b873fc4fc4888b1413cd47ae3b9dde040a4e1af111ac246c90e0a27c"
+    },
+    {
+      "path": "experiments/pass-1/1_R1_OFF.log",
+      "sha256": "f23a79771bd9f05d8e709f9bf67a93be8a93bf2e8129403db03972b0c0c23273"
+    },
+    {
+      "path": "experiments/pass-1/2_R2_ON.log",
+      "sha256": "213fb953c98e59a51e2178a9f05171560dd63ed15f675fcf6c2a86b33c783f1b"
+    },
+    {
+      "path": "experiments/pass-1/4_AUDIT_PASS_1.json",
+      "sha256": "347216e6cf65f109ec82d927762bab5ffefea85c4913fca024891bf05e1a134b"
+    },
+    {
+      "path": "experiments/pass-1/5_EXECUCAO_PASS_1.md",
+      "sha256": "e4f6ac05383d481c862cf679edac171547ccbde81c44557ecd2072f295281a67"
+    },
+    {
+      "path": "model_train/tracks_frozen/interlagos_v2.json",
+      "sha256": "c4617650983df9b1141296dac953b0e4be03f0c06c1de006340233c39e308613"
+    }
+  ]
+}

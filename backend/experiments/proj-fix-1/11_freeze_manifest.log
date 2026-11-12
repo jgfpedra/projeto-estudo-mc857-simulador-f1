@@ -1,0 +1,13 @@
+PROJ-FIX-3 — freeze manifest (pre-classification)
+Status: PASS; frozen by commit before opening any class-count aggregate.
+
+10_diagnostico_chave_alo.log SHA-256: 0efe1bc82568d39a92076539d5cf5e708b38926a03bdc5d19abe0d519de40990
+PREREG_PROJ_FIX_3.md SHA-256: d1bd9190183e50ff841e008ee5e4610d135765bfe5e449e056bbe33c8d13b1b2
+proj_fix_3_classify.py SHA-256: bc0a7ba9a5a9e4194d6195f3bc830a7626133939b465829f8ee1225e30414bdd
+11_classifier_selftest_v12.log SHA-256: 3b9453b828cc35f31386c6c6d5e285e6b61624cb2209c777f3c438a91e1aa127
+proj_fix_2_classify.py v1.1 SHA-256: 9d73a890964974b3f04d2261fe0806a21ec6b162b111aa89c28c7919c3704d8d
+
+Review: v1.2 diff is limited to the PROJ-FIX-3 docstring, VERSION="1.2",
+all-adjacent-pair metrics and C5 residual mapping, C1–C5 summary blocks,
+and the synthetic C5 selftest extension. The v1.1 script is unchanged.
+Synthetic selftest: PASS. No class-count aggregate was read before this freeze.
