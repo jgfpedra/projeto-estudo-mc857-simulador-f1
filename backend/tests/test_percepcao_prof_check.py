@@ -1,4 +1,4 @@
-from scripts.percepcao_prof_check import overlap_ratio
+from scripts.analysis.percepcao_prof_check import overlap_ratio
 
 
 def test_overlap_ratio_zero():

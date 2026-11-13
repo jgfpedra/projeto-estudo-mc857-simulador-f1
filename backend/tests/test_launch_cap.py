@@ -20,12 +20,12 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from backend.scripts.run_race_10_cars import NeuralRaceController as N
+from backend.scripts.simulation.run_race_10_cars import NeuralRaceController as N
 
 
 def _build(launch_cap=True, n_cars=3):
     from backend.model_train.f1_env import load_track_frozen
-    from backend.scripts.run_race_10_cars import (NeuralRaceController,
+    from backend.scripts.simulation.run_race_10_cars import (NeuralRaceController,
                                                   build_grid_drivers,
                                                   DEFAULT_MAPPINGS_PATH,
                                                   MODEL_DIR)

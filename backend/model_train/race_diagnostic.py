@@ -39,7 +39,7 @@ import pandas as pd
 
 # camada da corrida (mesma instância de código do run_race_10_cars.py) —
 # ProfessorRaceController herda dele as camadas rejoin/recovery/blocked
-import run_race_10_cars as R
+from scripts.simulation import run_race_10_cars as R
 from backend.model_train.reference_controller import signed_dist_s
 
 
@@ -311,7 +311,7 @@ def _capture_composite_dump_rows(dumper, ctrl, engine, drivers, tick,
             state.car.fuel_kg / ctrl.OBS_FUEL_KG,
         ], dtype=np.float32)
         curvature = float(obs23[11]) / ctrl.KAPPA_OBS_SCALE
-        from scripts.composite_corpus_dump import resolve_compound_id
+        from scripts.training.composite_corpus_dump import resolve_compound_id
         compound_id = resolve_compound_id(
             getattr(getattr(state.tyre, 'model', None), 'compound', None),
             compound_mapping,
@@ -1637,7 +1637,7 @@ def main():
     corpus_dump = None
     corpus_compound_mapping = None
     if args.corpus_dump:
-        from scripts.composite_corpus_dump import (
+        from scripts.training.composite_corpus_dump import (
             CompositeCorpusDump, load_compound_mapping,
         )
         corpus_compound_mapping = load_compound_mapping(R.DEFAULT_MAPPINGS_PATH)

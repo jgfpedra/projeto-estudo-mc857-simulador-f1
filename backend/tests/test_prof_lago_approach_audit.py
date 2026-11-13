@@ -16,7 +16,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scripts.prof_lago_approach_audit import (  # noqa: E402
+from scripts.experiments.controller.prof_lago_approach_audit import (  # noqa: E402
     APPROACH_ZONE_M,
     BRAKE_THRESHOLD,
     GRAVITY,

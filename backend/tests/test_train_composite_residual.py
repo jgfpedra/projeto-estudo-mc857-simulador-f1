@@ -21,7 +21,7 @@ import numpy as np
 import pytest
 
 from model_train.residual_gated import NumpyCompositeActor, build_residual_keras
-from scripts.train_composite_residual import (
+from scripts.training.train_composite_residual import (
     SEALED_TEST_SHARDS,
     OutputCollisionError,
     SealedTestBucketViolationError,

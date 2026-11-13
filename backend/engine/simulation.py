@@ -700,7 +700,7 @@ class SimulationEngine:
         do piloto), o que mantém o input "fresco" e evita que o fallback
         stale freie o carro sozinho durante a pilotagem. Com o piloto em
         repouso a engine publica nada, deixando a fonte externa (ex.:
-        ``scripts/publish_keyboard.py``) assumir o controle.
+        ``scripts/simulation/publish_keyboard.py``) assumir o controle.
         """
         if not self.drivers:
             return

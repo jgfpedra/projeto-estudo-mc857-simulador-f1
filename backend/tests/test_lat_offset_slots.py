@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from backend.scripts.run_race_10_cars import NeuralRaceController  # noqa: E402
+from backend.scripts.simulation.run_race_10_cars import NeuralRaceController  # noqa: E402
 
 BACKEND = Path(__file__).resolve().parent.parent
 
@@ -79,7 +79,7 @@ def test_invalid_or_missing_slots_fail_loud():
 
 def test_flag_is_wired_in_both_runners_and_parser_rejects_professor():
     diagnostic = (BACKEND / "model_train" / "race_diagnostic.py").read_text()
-    visual = (BACKEND / "scripts" / "run_race_10_cars.py").read_text()
+    visual = (BACKEND / "scripts" / "simulation" / "run_race_10_cars.py").read_text()
     assert "--lat-offset-slots" in diagnostic
     assert "--lat-offset-slots" in visual
     proc = subprocess.run(

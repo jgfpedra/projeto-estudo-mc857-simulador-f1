@@ -18,10 +18,10 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from backend.scripts.track_mirror_build import (parse_svg_path, resample_closed,
+from backend.scripts.tracks.track_mirror_build import (parse_svg_path, resample_closed,
                                                 seg_seg_min_dist, count_crossovers,
                                                 radii_and_turns)
-from backend.scripts.track_g3_detector import GAP_M, RISK_M
+from backend.scripts.tracks.track_g3_detector import GAP_M, RISK_M
 
 BACKEND = Path(__file__).resolve().parent.parent
 

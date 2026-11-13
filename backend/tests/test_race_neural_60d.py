@@ -51,21 +51,21 @@ def v14_pair(tmp_path_factory):
 
 class TestShapeValidation:
     def test_actor_60d_rejects_edge_mode_with_explicit_error(self, v14_pair):
-        import run_race_10_cars as R
+        from scripts.simulation import run_race_10_cars as R
         _, npz = v14_pair
         with pytest.raises(ValueError, match="INCOMPATÍVEL"):
             R.NeuralRaceController(weights_path=npz, obs_mode='edge',
                                    mappings_path=None, track=None)
 
     def test_actor_60d_rejects_legacy_mode_with_explicit_error(self, v14_pair):
-        import run_race_10_cars as R
+        from scripts.simulation import run_race_10_cars as R
         _, npz = v14_pair
         with pytest.raises(ValueError, match="INCOMPATÍVEL"):
             R.NeuralRaceController(weights_path=npz, obs_mode='legacy',
                                    mappings_path=None, track=None)
 
     def test_actor_60d_builds_in_traffic_mode(self, v14_pair):
-        import run_race_10_cars as R
+        from scripts.simulation import run_race_10_cars as R
         _, npz = v14_pair
         ctrl = R.NeuralRaceController(weights_path=npz, obs_mode='traffic',
                                       mappings_path=None, track=None)
@@ -77,7 +77,7 @@ class TestDeployProfiles:
     """O profile padrão usa regras; os profiles neurais continuam explícitos."""
 
     def test_profiles_exist_default_race_obs_correct(self):
-        import run_race_10_cars as R
+        from scripts.simulation import run_race_10_cars as R
         assert R.DEFAULT_PROFILE == 'apex-rules'
         assert R.PROFILES['apex-rules']['controller'] == 'apex-rules'
         neural_profiles = {'race', 'race-blind', 'quali', 'traffic', 'composite'}
@@ -98,7 +98,7 @@ class TestNumpyKerasParity60d:
     def test_parity_on_1000_real_obs(self, v14_pair):
         """≥1000 obs REAIS (env n_traffic=8, ator keras pilotando): o motor
         NumPy da corrida deve reproduzir o Keras (atol 2e-5, float32)."""
-        import run_race_10_cars as R
+        from scripts.simulation import run_race_10_cars as R
         from backend.model_train.f1_env import F1MultiContextEnv
         model, npz = v14_pair
         np_actor = R.NumpyNeuralActor(npz)
@@ -148,7 +148,7 @@ class TestRegistryResolution:
     coerente com o PROFILES."""
 
     def test_resolve_deploy_aliases_exist_and_match_profiles(self):
-        import run_race_10_cars as R
+        from scripts.simulation import run_race_10_cars as R
         from backend.model_train import tracking
         for alias in ('race', 'quali', 'traffic'):
             p = tracking.resolve_deploy(alias)

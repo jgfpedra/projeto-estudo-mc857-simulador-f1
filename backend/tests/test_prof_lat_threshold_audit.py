@@ -15,7 +15,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scripts.prof_lat_threshold_audit import (  # noqa: E402
+from scripts.experiments.controller.prof_lat_threshold_audit import (  # noqa: E402
     contiguous_events,
     decel_cost_s,
     threshold_audit,

@@ -356,7 +356,7 @@ class TestLeaderYieldSynthetic:
     def test_parity_audit_synthetic_selftest_does_not_open_race_csvs(self):
         import importlib.util
 
-        path = PROJECT_ROOT / 'backend' / 'scripts' / 'pass_parity_1_audit.py'
+        path = PROJECT_ROOT / 'backend' / 'scripts' / 'experiments' / 'passing' / 'pass_parity_1_audit.py'
         spec = importlib.util.spec_from_file_location(
             'pass_parity_1_audit', path)
         module = importlib.util.module_from_spec(spec)

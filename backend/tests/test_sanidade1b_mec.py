@@ -24,7 +24,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from backend.scripts.run_race_10_cars import NeuralRaceController as N
+from backend.scripts.simulation.run_race_10_cars import NeuralRaceController as N
 
 
 def _mk():
@@ -150,7 +150,7 @@ def test_t2_6_professor_espelha_por_heranca_e_v1_morto():
     assert 'self._anti_glue_step(' in rd, "professor sem o helper herdado"
     assert 'def _anti_glue_step' not in rd, "professor NÃO re-implementa (herança)"
     rr = (Path(__file__).resolve().parent.parent
-          / 'scripts' / 'run_race_10_cars.py').read_text()
+          / 'scripts' / 'simulation' / 'run_race_10_cars.py').read_text()
     assert 'SANIDADE-1b M3-v2' in rr and 'v1 MORTO' in rr
     # v2 substitui v1 ATRÁS DA MESMA FLAG (sem flag nova)
     assert 'anti_glue: bool = False' in rr

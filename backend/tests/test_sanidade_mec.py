@@ -23,7 +23,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from backend.scripts.run_race_10_cars import (NeuralRaceController as N,
+from backend.scripts.simulation.run_race_10_cars import (NeuralRaceController as N,
                                              build_grid_drivers,
                                              place_grid,
                                              DEFAULT_MAPPINGS_PATH,
@@ -197,7 +197,7 @@ def test_t_m3_wiring_defaults_e_bundle():
     assert 'if self.ANTI_GLUE_ENABLED and not offtrack:' in src
     assert 'elif glue_breaking:' in src          # autoridade anti_glue
     gui = (Path(__file__).resolve().parent.parent
-           / 'scripts' / 'run_race_10_cars.py').read_text()
+           / 'scripts' / 'simulation' / 'run_race_10_cars.py').read_text()
     assert '"--modo"' in gui and '"espectador"' in gui
     # ÁRVORE do veredito s70-73: M1/M3 FAIL saem; bundle = SÓ M2 (verde)
     assert '"f1", "perceptive", False' in gui

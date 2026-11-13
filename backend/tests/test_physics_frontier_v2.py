@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.physics_frontier_v2 import (
+from scripts.benchmarks.physics_frontier_v2 import (
     INSTRUMENT_VERSION,
     calibrate,
     classify_old,

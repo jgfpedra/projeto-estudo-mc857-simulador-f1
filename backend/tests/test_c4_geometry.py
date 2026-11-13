@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from backend.scripts.c4_geometry_analysis import (  # noqa: E402
+from backend.scripts.experiments.attribution.c4_geometry_analysis import (  # noqa: E402
     C08_FOCAL,
     CORRIDOR_M,
     DS_BIN_M,
@@ -96,7 +96,7 @@ def test_synthetic_demo_is_self_contained():
 
 
 def test_extended_timing_schema_and_lap_filters():
-    from backend.scripts.c4_geometry_analysis import (
+    from backend.scripts.experiments.attribution.c4_geometry_analysis import (
         _valid_laps_for_year, inspect_session_schema,
     )
     times = pd.to_timedelta(np.arange(0.0, 40.0, 0.5), unit="s")

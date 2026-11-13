@@ -4,7 +4,7 @@ from backend.domain import BASE_CONDITIONS, CarSpecs, Driver, Track, WeatherKind
 from backend.engine import RuleBasedRaceController, SimulationConfig, SimulationEngine
 from backend.engine.controllers import EnvironmentState
 from backend.model_train.f1_env import resolve_track
-from backend.scripts import run_race_10_cars
+from backend.scripts.simulation import run_race_10_cars
 
 
 class FakePhysics:

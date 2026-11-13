@@ -208,7 +208,7 @@ def test_headless_stall_recovery_physical():
     os comandos do anti-stall — velocidade e progresso voltam a crescer
     (critério: não basta o comando; o carro tem que andar de verdade)."""
     from backend.model_train.f1_env import F1MultiContextEnv
-    from backend.scripts.run_race_10_cars import NeuralRaceController as N
+    from backend.scripts.simulation.run_race_10_cars import NeuralRaceController as N
     env = F1MultiContextEnv(track='interlagos', allow_respawn=False)
     env.reset()
     h = env.engine.handles[env.driver_id]
@@ -245,7 +245,7 @@ def test_headless_stall_recovery_physical():
 def test_rejoin_gains_authority_off_track():
     """A camada de rejoin reage no LIMITE do asfalto (1× meia-largura), não a 2×.
     Verifica as constantes e o mapeamento steer/velocidade-alvo."""
-    from backend.scripts.run_race_10_cars import NeuralRaceController as N
+    from backend.scripts.simulation.run_race_10_cars import NeuralRaceController as N
     assert N.OFFTRACK_FACTOR == 1.0, "rejoin deve agir na borda do asfalto (era 2.0)"
     assert N.REJOIN_TARGET_MPS <= 10.0, "rejoin deve ser lento"
     assert N.REJOIN_THROTTLE <= 0.5, "rejoin não deve arremeter pela grama"

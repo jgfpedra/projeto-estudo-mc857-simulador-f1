@@ -27,7 +27,7 @@ import pytest
 
 def _ctrl():
     """NeuralRaceController sem carregar ator — só a máquina de recuperação."""
-    from backend.scripts.run_race_10_cars import NeuralRaceController as N
+    from backend.scripts.simulation.run_race_10_cars import NeuralRaceController as N
     return object.__new__(N)
 
 
@@ -136,7 +136,7 @@ class TestBlockedContact:
         return real
 
     def test_6_contact_caps_throttle(self):
-        from backend.scripts.run_race_10_cars import NeuralRaceController as N
+        from backend.scripts.simulation.run_race_10_cars import NeuralRaceController as N
         real = self._fake_pb([1, 2])
         try:
             class _H:

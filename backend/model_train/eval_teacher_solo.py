@@ -33,7 +33,7 @@ import numpy as np
 
 def run_solo_episode(track, laps: int, sf: float) -> dict:
     """1 corrida solo: professor no grid, `laps` voltas, tempos da engine."""
-    import run_race_10_cars as R
+    from scripts.simulation import run_race_10_cars as R
     from backend.engine import SimulationConfig, SimulationEngine
     from backend.domain import WeatherModel, WeatherKind, BASE_CONDITIONS
     from backend.model_train.race_diagnostic import ProfessorRaceController
@@ -80,7 +80,7 @@ def main():
                          '— AVISO: usará Interlagos (comportamento antigo)')
     args = ap.parse_args()
 
-    import run_race_10_cars as R
+    from scripts.simulation import run_race_10_cars as R
     # PISTA-IDENT-1 (prereg 3758661 §3-4): fail-loud + identidade
     track = R.resolve_track(track=args.track, year=2024, session='R',
                             allow_fallback=bool(getattr(args, 'allow_track_fallback', False)))

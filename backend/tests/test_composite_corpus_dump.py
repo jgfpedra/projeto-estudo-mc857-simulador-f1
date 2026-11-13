@@ -5,13 +5,13 @@ import pickle
 import pytest
 
 from domain.tyre import TyreCompound, TyreModel, TyreState, TYRE_CATALOG
-from scripts.composite_corpus_dump import (
+from scripts.training.composite_corpus_dump import (
     CompositeCorpusDump,
     CorpusDumpError,
     load_compound_mapping,
     resolve_compound_id,
 )
-from scripts.composite_corpus import audit_dump_families, load_composite_dump
+from scripts.training.composite_corpus import audit_dump_families, load_composite_dump
 
 
 def _row(writer, tick=0):

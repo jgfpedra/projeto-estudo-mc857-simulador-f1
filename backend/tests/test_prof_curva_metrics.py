@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.prof_curva_metrics import (
+from scripts.experiments.controller.prof_curva_metrics import (
     EXPECTED_TOTAL_LINES,
     MetricsIntegrityError,
     analyze_run,

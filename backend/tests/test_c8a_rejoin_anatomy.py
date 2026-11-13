@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from scripts.c8a_rejoin_anatomy import find_reentry_windows, gap_at_reentry
+from scripts.experiments.attribution.c8a_rejoin_anatomy import find_reentry_windows, gap_at_reentry
 
 
 def synthetic_frame() -> pd.DataFrame:

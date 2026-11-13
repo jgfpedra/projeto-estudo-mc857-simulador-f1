@@ -16,7 +16,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scripts.racing_line_1_corredor import (  # noqa: E402
+from scripts.experiments.racing_line.racing_line_1_corredor import (  # noqa: E402
     build_virtual_line,
     c1_deviation_deg,
     evaluate_gates,
@@ -97,7 +97,7 @@ def test_externo_invariante_byte_identico():
 def test_arco_nao_altera_vertices_frozen_em_interlagos():
     """Invariância do trecho externo na pista real (limites da Emenda nº 1)."""
     import json
-    from scripts.racing_line_1_corredor import S_A_M, S_B_M, TRACK_FILE, TRACK_SHA_PIN
+    from scripts.experiments.racing_line.racing_line_1_corredor import S_A_M, S_B_M, TRACK_FILE, TRACK_SHA_PIN
     with TRACK_FILE.open("r", encoding="utf-8") as f:
         track = json.load(f)
     assert track["sha256"] == TRACK_SHA_PIN

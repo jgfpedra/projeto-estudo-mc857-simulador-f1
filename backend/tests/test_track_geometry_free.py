@@ -18,7 +18,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-import track_geometry_free as TGF  # noqa: E402
+from scripts.tracks import track_geometry_free as TGF  # noqa: E402
 
 
 def _synthetic_session(radius: float = 800.0, laps: int = 5,
@@ -68,7 +68,7 @@ def test_t_f2_2_fail_loud_lista_opcoes(monkeypatch):
     # deste teste fez 1 chamada de rede NÃO-LOGADA a OpenF1 (país
     # fictício, 1,9 s) — DISCLOSED no probe_log #6; regra: teste não
     # gasta orçamento de rede).
-    import draw_track as DT
+    from scripts.tracks import draw_track as DT
     # load_track importa o módulo DENTRO da função — o monkeypatch no
     # objeto-módulo compartilhado é visível no import da função.
     monkeypatch.setattr(TGF, "openf1_track", lambda *a, **k: None)

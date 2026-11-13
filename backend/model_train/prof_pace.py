@@ -12,7 +12,7 @@ Mecanismo congelado no ``PREREG_PROF_PACE_1.md`` (freeze ``947c091``):
   backward/forward de ``prof_curva.py`` sobre v_seed. O 0,93 fica EMBUTIDO
   no perfil capado — o controlador NÃO aplica margin adicional;
 - **paridade estrutural com o instrumento:** o cap é construído por
-  ``build_v_target_cap`` de ``scripts/prof_pace_margin_derivation.py`` (o
+  ``build_v_target_cap`` de ``scripts/experiments/controller/prof_pace_margin_derivation.py`` (o
   instrumento homologado) — mesma função, mesmas constantes, mesmas
   janelas canônicas;
 - **cap restrito:** somente professor, somente Interlagos (pin
@@ -100,7 +100,7 @@ def build_capped(v_plan: np.ndarray, s_arr: np.ndarray, kappa_arr: np.ndarray,
 
     ``v_plan`` = perfil histórico completo (com as passadas). Retorna dict
     com v_seed, v_target_cap e o interpolador v_at(s)."""
-    from scripts.prof_pace_margin_derivation import (  # noqa: E402
+    from scripts.experiments.controller.prof_pace_margin_derivation import (  # noqa: E402
     build_v_target_cap,
     window_mask,
 )

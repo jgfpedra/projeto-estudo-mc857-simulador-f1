@@ -45,7 +45,7 @@ def test_t_composite_controller_do_mixed():
     """PROFILES['race'] aponta solo v10 + residual r2; o wiring do grupo
     composite usa EXATAMENTE esses artefatos (o mesmo caminho do --profile
     composite). Verificação estática dos caminhos + carga do NumpyCompositeActor."""
-    from backend.scripts.run_race_10_cars import PROFILES, MODEL_DIR
+    from backend.scripts.simulation.run_race_10_cars import PROFILES, MODEL_DIR
     prof = PROFILES['race']
     assert prof['obs_mode'] == 'traffic'
     solo = Path(prof['keras'])

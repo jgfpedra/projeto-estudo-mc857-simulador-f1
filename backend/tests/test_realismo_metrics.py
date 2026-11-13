@@ -1,4 +1,4 @@
-"""REALISMO-1 · C0 — testes do instrumento `scripts/realismo_metrics.py`.
+"""REALISMO-1 · C0 — testes do instrumento `scripts/analysis/realismo_metrics.py`.
 
 PLANO_REALISMO_BOTS_1 v1.1, Task 2 (TDD: escritos antes do instrumento).
 
@@ -25,7 +25,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from scripts import realismo_metrics as RM
+import scripts.analysis.realismo_metrics as RM
 
 BACKEND = Path(__file__).resolve().parents[1]
 PROMO = BACKEND / "experiments" / "composite-1" / "promocao-1"

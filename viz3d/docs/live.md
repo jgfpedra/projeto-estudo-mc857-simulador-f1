@@ -11,12 +11,20 @@ O eixo do backend `(x, y)` corresponde a `(x, 0, -y)` no Three.js; a direção v
 Na sessão gráfica Linux, execute na raiz do projeto:
 
 ```bash
-backend/scripts/visualization/run-live-compare.sh --laps 3 --drivers 10 --camera follow
+python backend/scripts/visualization/run_live_compare.py --laps 3 --drivers 10 --camera follow
 ```
 
 O script cria uma única corrida, abre a janela do PyBullet e abre no navegador o visualizador conectado à mesma engine. `--drivers N` configura entre 1 e 24 corredores (o padrão é 2). Pressione `Ctrl+C` no terminal para encerrar os processos iniciados pelo script. A visualização no navegador usa um buffer de cerca de 150 ms, de modo que fica um pouco atrás do PyBullet.
 
-É necessário ter `backend/.venv` com `backend/requirements.txt` instalado, Node/npm e uma sessão gráfica com `DISPLAY`. Sem `REDIS_URL`, o script usa Docker para criar um Redis temporário; se `viz3d/node_modules` não existir, instala as dependências com `npm ci`. Use `--no-browser` para abrir o endereço manualmente, `--camera overview` para a câmera geral ou `--help` para as demais opções. As portas padrão podem ser alteradas com `F1_API_PORT` e `F1_VIZ_PORT`.
+É necessário ter Python com `backend/requirements.txt` instalado, Node/npm e uma sessão gráfica. No Windows, configure o ambiente e rode pelo PowerShell:
+
+```powershell
+python -m venv backend\.venv
+backend\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+python backend\scripts\visualization\run_live_compare.py --laps 3 --drivers 10
+```
+
+O lançador usa esse ambiente automaticamente quando existe. No macOS/Linux, execute o comando inicial no terminal gráfico. Sem `REDIS_URL`, o programa usa Docker para criar um Redis temporário; se `viz3d/node_modules` não existir, instala as dependências com `npm ci`. Use `--no-browser` para abrir o endereço manualmente, `--camera overview` para a câmera geral ou `--help` para as demais opções. As portas padrão podem ser alteradas com `F1_API_PORT` e `F1_VIZ_PORT`.
 
 ## Geometria e largada
 

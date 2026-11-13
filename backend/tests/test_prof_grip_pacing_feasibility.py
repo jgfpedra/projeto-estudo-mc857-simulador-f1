@@ -11,7 +11,7 @@ import math
 import numpy as np
 import pytest
 
-from scripts.prof_grip_pacing_feasibility import (
+from scripts.experiments.controller.prof_grip_pacing_feasibility import (
     apply_corner_scaling,
     lap_time,
     scale_factor,

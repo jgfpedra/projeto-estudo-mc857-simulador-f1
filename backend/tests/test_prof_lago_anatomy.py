@@ -16,7 +16,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from model_train.f1_env import F1MultiContextEnv  # noqa: E402
-from scripts.prof_lago_anatomy import (  # noqa: E402
+from scripts.experiments.controller.prof_lago_anatomy import (  # noqa: E402
     RATIO_A,
     RATIO_B,
     analyze_dataframe,

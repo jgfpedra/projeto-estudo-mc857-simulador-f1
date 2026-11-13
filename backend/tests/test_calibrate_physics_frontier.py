@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from backend.scripts.calibrate_physics_frontier import (  # noqa: E402
+from backend.scripts.benchmarks.calibrate_physics_frontier import (  # noqa: E402
     build_frontier,
     classify,
     fit_circle,

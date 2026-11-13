@@ -15,7 +15,7 @@ clima e variância semeados, pistas congeladas com sha256).
 
 ```bash
 cd backend
-.venv/bin/python scripts/run_race_10_cars.py --profile race-blind --laps 3
+.venv/bin/python scripts/simulation/run_race_10_cars.py --profile race-blind --laps 3
 ```
 
 Perfis disponíveis (`--profile`):
@@ -85,7 +85,7 @@ O endpoint de circuitos precisa do `data/circuit_layouts_evolution.json`,
 extraído do `f1db.db` (banco F1DB, **regenerável** — não está no git):
 
 ```bash
-cd backend && .venv/bin/python scripts/fetch_track_layouts.py
+cd backend && .venv/bin/python scripts/tracks/fetch_track_layouts.py
 ```
 
 ## Testes

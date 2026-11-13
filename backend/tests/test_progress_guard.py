@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from backend.scripts.run_race_10_cars import NeuralRaceController as N
+from backend.scripts.simulation.run_race_10_cars import NeuralRaceController as N
 
 
 def _sim_guard(deltas, g_seq):
