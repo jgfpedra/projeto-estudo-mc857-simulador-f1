@@ -64,7 +64,7 @@ python scripts/extract_track.py --circuit interlagos --year 2023 --start-finish 
 # Phase 0b: engine-format export (exports/, never backend/), proof, smoke lap
 python scripts/export_frozen_track.py --track public/tracks/interlagos.json --name "..." --out exports/interlagos_2023_v1.json
 cd .. && python viz3d/scripts/verify_export_backend.py   # backend's own load_track_frozen
-python viz3d/scripts/smoke_engine_lap.py                 # needs the backend's deps incl. pybullet
+python viz3d/scripts/smoke_engine_lap.py                 # backend deps + joblib, gymnasium; pybullet = Linux/WSL
 
 # Phase 0: the engine's frozen tracks, vendored read-only in vendor/tracks_frozen/
 # (see PROVENANCE.md there) - docs/phase0-geometry-report.md has the full commands

@@ -27,9 +27,15 @@ the exports run on the conservative defaults (0.58, 6 m/s^2), and their lap
 times are not comparable to 112.7 s without that caveat.
 
 Run from the repository root with an environment that has the backend's
-dependencies (pybullet, numpy, pandas, joblib, gymnasium):
+dependencies: `backend/requirements.txt` plus joblib and gymnasium. pybullet
+ships Linux wheels only, so on Windows use WSL with the venv in the Linux home:
 
-    python viz3d/scripts/smoke_engine_lap.py
+    wsl -d Ubuntu-22.04 -- bash -lc "python3 -m venv ~/venvs/sim &&         ~/venvs/sim/bin/pip install -r backend/requirements.txt joblib gymnasium"
+    ~/venvs/sim/bin/python viz3d/scripts/smoke_engine_lap.py   # from /mnt/c/.../repo
+
+Also runs interlagos_v2 with the tuning forced off (script-side, no backend
+change) as the same-environment baseline for the untuned exports. Results go
+to `viz3d/.cache/smoke_engine_lap.json` (gitignored).
 """
 
 from __future__ import annotations
@@ -48,24 +54,31 @@ DT = 0.1
 MAX_TICKS = 3000          # 300 s of sim time; the README lap is 112.7 s
 README_V2_LAP_S = 112.7
 README_V2_MAX_LAT_M = 4.32
+README_V2_UNTUNED_LAP_S = 126.1
 
 
 def build_tracks():
+    """(label, track, force_untuned). The extra interlagos_v2 row with the
+    tuning forced off is the same-environment counterpart of the README's
+    untuned 126.1 s, so the exports (always untuned) have a like-for-like
+    baseline."""
     import backend.domain.track_resolution as tr
 
-    tracks = [("interlagos_v2 (engine)", tr.load_track_frozen("interlagos", strict=True))]
+    v2 = tr.load_track_frozen("interlagos", strict=True)
+    tracks = [("interlagos_v2 (engine)", v2, False),
+              ("interlagos_v2 (tuning off)", v2, True)]
     original = tr.FROZEN_TRACKS_DIR
     tr.FROZEN_TRACKS_DIR = EXPORTS
     try:
         for f in sorted(EXPORTS.glob("*_v1.json")):
             key = f.name[: -len("_v1.json")]
-            tracks.append((f"{key} (export)", tr.load_track_frozen(key, strict=True)))
+            tracks.append((f"{key} (export)", tr.load_track_frozen(key, strict=True), False))
     finally:
         tr.FROZEN_TRACKS_DIR = original
     return tracks
 
 
-def solo_lap(track) -> dict:
+def solo_lap(track, force_untuned: bool = False) -> dict:
     from backend.domain import BASE_CONDITIONS, CarSpecs, Driver, WeatherKind, WeatherModel
     from backend.engine import RuleBasedRaceController, SimulationConfig, SimulationEngine
     from backend.scripts.run_race_10_cars import place_grid
@@ -75,7 +88,19 @@ def solo_lap(track) -> dict:
                            gui=False, random_seed=SEED)
     wm = WeatherModel(initial=BASE_CONDITIONS[WeatherKind.DRY])
     engine = SimulationEngine(config=cfg, track=track, drivers=[driver], weather_model=wm)
-    ctrl = RuleBasedRaceController(track, seed=SEED)
+    if force_untuned:
+        # Script-side only: blank the class's geometry key for the duration of
+        # the constructor, so `_apply_local_racing_line` finds no match and the
+        # controller keeps its default factor, acceleration and line. The
+        # backend file is untouched and the attribute is restored at once.
+        saved = RuleBasedRaceController.INTERLAGOS_GEOMETRY_SHA256
+        RuleBasedRaceController.INTERLAGOS_GEOMETRY_SHA256 = ""
+        try:
+            ctrl = RuleBasedRaceController(track, seed=SEED)
+        finally:
+            RuleBasedRaceController.INTERLAGOS_GEOMETRY_SHA256 = saved
+    else:
+        ctrl = RuleBasedRaceController(track, seed=SEED)
     engine.setup()
     try:
         place_grid(engine, track, [driver])
@@ -120,14 +145,15 @@ def solo_lap(track) -> dict:
 
 def main() -> int:
     rows = []
-    for label, track in build_tracks():
-        r = {"track": label, **solo_lap(track)}
+    for label, track, untuned in build_tracks():
+        r = {"track": label, **solo_lap(track, force_untuned=untuned)}
         rows.append(r)
         print(f"  {label:<28} lap {r['lapTimeS']} s  max |lat| {r['maxLatM']} m "
               f"(half width {r['halfWidthM']}) at s {r['maxLatAtS']}  edge samples "
               f"{r['edgeSamples']}  Interlagos tuning {'ON' if r['interlagosTuning'] else 'off'} "
               f"(factor {r['lateralGripFactor']}, accel {r['maxTargetAccel']})")
-    print(f"  README baseline, interlagos_v2: {README_V2_LAP_S} s, max |lat| {README_V2_MAX_LAT_M} m")
+    print(f"  README, interlagos_v2: tuned {README_V2_LAP_S} s (max |lat| {README_V2_MAX_LAT_M} m), "
+          f"untuned {README_V2_UNTUNED_LAP_S} s")
     out = ROOT / "viz3d" / ".cache" / "smoke_engine_lap.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(rows, indent=1, ensure_ascii=False), encoding="utf-8")

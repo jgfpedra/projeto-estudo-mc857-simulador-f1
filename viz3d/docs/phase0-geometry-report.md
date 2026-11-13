@@ -22,8 +22,9 @@ dry, kept; 2024 race, wet, compared), with s = 0 at the timing line. Against it,
 interlagos_v2's Hausdorff distance is **27.5 m**, and the MultiViewer stand-in's
 27.45 m holds up as a cross-check (§6). Both Interlagos extractions are exported
 in the engine's frozen format, and the backend's own `load_track_frozen`
-accepts their hashes (§11). The engine smoke lap could not run on this machine
-(no pybullet build for Windows / Python 3.11); the script is ready (§11).
+accepts their hashes (§11). A solo dry lap in the real engine (WSL) completes cleanly on both
+exports: 119.4 s, against 129.4 s for interlagos_v2 under the same untuned
+controller (§11).
 
 Everything below is reproducible. Run it from `viz3d/` (Python env:
 `requirements.txt`; npm deps: `npm ci`). `<cache>` is the group's FastF1 3.8.3
@@ -48,7 +49,7 @@ python scripts/export_frozen_track.py --track public/tracks/interlagos.json \
 python scripts/export_frozen_track.py --track public/tracks/interlagos_2024.json \
     --name "São Paulo Grand Prix (viz3d 2024 race)" --out exports/interlagos_2024_v1.json
 cd .. && python viz3d/scripts/verify_export_backend.py     # backend's own hash check
-python viz3d/scripts/smoke_engine_lap.py                    # needs pybullet (§11)
+python viz3d/scripts/smoke_engine_lap.py                    # needs pybullet: Linux / WSL (§11)
 ```
 
 `vendor/tracks_frozen/` holds byte-exact copies of
@@ -516,26 +517,48 @@ strict=True)` unchanged, with its module-level `FROZEN_TRACKS_DIR` pointed at
 (`PISTA FROZEN CORROMPIDA … esperado fd914dde1a2fa8b5 mas calculado 4d1…`), so
 the check is real.
 
-**Engine smoke test: written, not run here.** `scripts/smoke_engine_lap.py`
-builds a `Track` from each export with `load_track_frozen`, as above. It drives
-exactly the backend's own clean-lap test
-(`test_rule_based_race_controller_clean_lap_interlagos`): VER, Red Bull specs,
-dry weather, `SimulationConfig(num_laps=1, logic_step_hz=10, physics_sub_steps=24,
-gui=False, random_seed=42)`, `place_grid`, `RuleBasedRaceController(seed=42)`,
-0.1 s ticks to lap 1. It reports lap time, max |lateral deviation| and edge
-samples next to the same run on interlagos_v2, which
-`backend/engine/racing_lines/README.md` ("Ritmo de volta") reports as **112.7 s,
-max 4.32 m**. It could not run on this machine: pybullet publishes only Linux
-wheels, building it on Windows needs the MSVC build tools, and there is no
-WSL, Docker or conda here. The backend's `requirements.txt` also omits two
-imports the engine needs, `joblib` and `gymnasium`.
+**Engine smoke test** (`scripts/smoke_engine_lap.py`). It builds a `Track` from
+each export with `load_track_frozen`, as above, and drives it exactly like the
+backend's own clean-lap test (`test_rule_based_race_controller_clean_lap_interlagos`):
+VER, Red Bull specs, dry weather, `SimulationConfig(num_laps=1, logic_step_hz=10,
+physics_sub_steps=24, gui=False, random_seed=42)`, `place_grid`,
+`RuleBasedRaceController(seed=42)`, 0.1 s ticks to lap 1. pybullet publishes only
+Linux wheels, so it ran in WSL (Ubuntu 22.04, Python 3.10) from a venv in the
+Linux home with `backend/requirements.txt` plus `joblib` and `gymnasium`, which
+the engine imports but `requirements.txt` omits: pybullet 3.2.7, numpy 2.2.6,
+pandas 2.3.3, gymnasium 1.4.0. The backend's own controller tests pass in that
+environment (7/7). Run 2026-11-12:
 
-**Expect the Interlagos tuning to stay off on the new geometry.** The
-controller's Interlagos-specific values (lateral factor 0.65, 10 m/s², the local
-racing line from `racing_lines/interlagos_rule_line.json`) activate only when
-the sha256 of the waypoint array equals `INTERLAGOS_GEOMETRY_SHA256`, which is
-interlagos_v2's. The exports therefore run on the conservative defaults (0.58,
-6 m/s²). The closest baseline is therefore the README's **126.1 s**, the same
-run on interlagos_v2 with these defaults before the tuning. 112.7 s is the tuned
-figure, and 116.2–118.1 s is 0.58 with 10 m/s². The script prints which values
-were active for each track.
+| track | Interlagos tuning | lap | max \|lateral\| (half width 6 m) | samples within 0.5 m of the edge |
+|---|---|---|---|---|
+| interlagos_v2 (engine) | **on** (0.65, 10 m/s², local line) | **114.5 s** | 3.20 m | 0 |
+| interlagos_v2, tuning forced off (control) | off (0.58, 6 m/s²) | **129.4 s** | 2.70 m | 0 |
+| interlagos_2023_v1 (export, kept) | off | **119.4 s** | 2.13 m | 0 |
+| interlagos_2024_v1 (export) | off | **119.5 s** | 2.22 m | 0 |
+| README, interlagos_v2 | on / off | 112.7 / 126.1 s | 4.32 m (tuned) | |
+
+- **This environment does not reproduce the README exactly.** interlagos_v2 runs
+  1.8 s slower tuned (114.5 vs 112.7 s, +1.6%) and 3.3 s slower untuned (129.4 vs
+  126.1 s, +2.6%), with 3.20 m max lateral deviation instead of 4.32 m. The README
+  doesn't name its harness or library versions, so the cause isn't established:
+  it could be the platform, the numpy/pybullet builds, or code changed since the
+  measurement. That is why the control row exists. It is the README's untuned run,
+  repeated here with the tuning forced off in the script (the class's geometry
+  key is blanked during construction and restored at once; no backend file
+  changes).
+- **Like for like (untuned, same environment): the exports lap 10.0 s faster than
+  interlagos_v2** (119.4 vs 129.4 s), on a track 65 m *longer* (4225.4 vs 4160.4 m),
+  with less lateral excursion (2.13 vs 2.70 m) and no edge samples. That fits §3:
+  interlagos_v2's marker kinks (57.5° at T10) force speed down where our smooth
+  centreline does not. Against the README's figures the export is 6.7 s under the
+  untuned 126.1 s and 6.7 s over the tuned 112.7 s, and the environment offset
+  above applies to both comparisons.
+- **The tuning stayed off on the exports**, as expected: it is keyed on the
+  sha256 of interlagos_v2's waypoint array, and the script prints the factors
+  actually active. Nothing tuned for interlagos_v2 (its local racing line at
+  1800–2050 m and 2200–2420 m, or the hairpin cap) was carried over, so the
+  export lap times are the controller's untuned behaviour on real geometry.
+- **The two years agree in the engine too**: 119.4 vs 119.5 s, max deviation
+  2.13 vs 2.22 m, both at s ≈ 2710 m (T10, the slowest corner).
+- One seed, one lap, one driver: a smoke test that the exports load, are
+  drivable and stay on track, not a performance validation.
