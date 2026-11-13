@@ -1,6 +1,7 @@
 # PyBullet provides Linux x86-64 wheels for Python 3.11.
 FROM python:3.11-slim
-WORKDIR /app
+WORKDIR /app/backend
+ENV PYTHONPATH=/app/backend:/app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
