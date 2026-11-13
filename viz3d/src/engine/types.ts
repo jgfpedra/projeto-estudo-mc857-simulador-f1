@@ -46,7 +46,20 @@ export interface TickPositionJson {
   d_m: number
   tyre_compound: string
   tyre_life_pct: number
+  /**
+   * The engine's `DriverState.pitting`. Nothing in the engine sets it true
+   * (phase 3b): a stop happens inside `_complete_lap` and clears it at once.
+   */
   pitting: boolean
+  /** Phase 3b recorder only; absent from phase 3 recordings. */
+  fuel_kg?: number
+  /** `DriverState.pit_stop_done`: stops so far. Phase 3b recorder only. */
+  pit_stops?: number
+  /**
+   * `DriverState.pit_penalty_pending_s`: the pit time set at the stop, added to
+   * the *next* completed lap's time and then zeroed. Phase 3b recorder only.
+   */
+  pit_penalty_pending_s?: number
 }
 
 /** Lines 2..n. */
@@ -101,10 +114,49 @@ export interface Recording {
   position: Int16Array
   lap: Int16Array
   pitting: Uint8Array
+  /** `fuel_kg`, NaN where the recording has none. */
+  fuelKg: Float32Array
+  /** `pit_stops`; 0 where the recording has none. */
+  pitStops: Uint8Array
+  /** `pit_penalty_pending_s`; 0 where the recording has none. */
+  pitPenaltyS: Float32Array
+  /** True when the ticks carry `pit_stops` / `pit_penalty_pending_s`. */
+  hasPitFields: boolean
+  /** Every stop inside the recorded window, in tick order. */
+  pitEvents: PitEvent[]
   tyreLifePct: Float32Array
   /** Index into `compounds`. */
   tyreCompound: Uint8Array
   compounds: string[]
   /** Whatever the recorder wrote about itself. */
   meta: Record<string, unknown>
+}
+
+/**
+ * One pit stop as the ticks show it: the first tick on which a car's
+ * `pit_stops` went up (or, in a recording without that field, its tyre life
+ * went up). The engine does the whole stop inside one `_complete_lap` call, so
+ * this is a single tick: tyres and fuel change, the car does not stop.
+ */
+export interface PitEvent {
+  car: number
+  tick: number
+  /** Clock time of `tick` (0 = first recorded tick). */
+  tS: number
+  /** Completed laps when it pitted: the stop is at the end of this lap. */
+  lap: number
+  compoundBefore: string
+  /**
+   * Tyre life on the tick before the stop, i.e. *before* the wear of the lap
+   * that triggered it: the engine wears the tyre, asks `needs_pit` and swaps it
+   * in one `_complete_lap` call, so the worn value below the threshold is never
+   * in a tick.
+   */
+  lifeBefore: number
+  compoundAfter: string
+  lifeAfter: number
+  fuelBeforeKg: number
+  fuelAfterKg: number
+  /** Pending penalty right after the stop, seconds. */
+  penaltyS: number
 }

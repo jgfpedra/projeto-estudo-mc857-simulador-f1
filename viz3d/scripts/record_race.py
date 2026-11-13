@@ -40,6 +40,23 @@ engine's `f1_env` lateral is +left - and both are computed from the rounded
 
 Output: `viz3d/.cache/recordings/` (gitignored). `trim_recording.py` cuts the
 committed test fixture from it.
+
+Phase 3b additions (script-side only, the backend is unchanged):
+
+- `--tracks-dir DIR` points the backend's `FROZEN_TRACKS_DIR` at `DIR` for the
+  one `load_track_frozen` call, as `smoke_engine_lap.py` does, so
+  `--track interlagos_2023 --tracks-dir viz3d/exports` races on our own
+  Interlagos export (hash-checked by the backend's own loader);
+- `--interlagos-tuning off` blanks `RuleBasedRaceController.
+  INTERLAGOS_GEOMETRY_SHA256` while the controller is constructed, so its
+  Interlagos-only line, lateral factor and acceleration never activate, as
+  `smoke_engine_lap.py` does. The header records whether it was applied;
+- every position also carries the engine state that a pit stop changes:
+  `fuel_kg` (the engine's snapshot), `pit_stops` (`pit_stop_done`) and
+  `pit_penalty_pending_s`. The header gains `pit_config` (the thresholds and
+  pit time the engine ran with), per-driver `lap_times_s`, and `pit_events`:
+  the tick on which each driver's `pit_stop_done` went up, with the lap,
+  position, tyres and fuel before and after.
 """
 
 from __future__ import annotations
@@ -142,6 +159,11 @@ def main() -> int:
     ap.add_argument("--hz", type=float, default=10.0, help="run_race_10_cars default")
     ap.add_argument("--sub-steps", type=int, default=24, help="run_race_10_cars default")
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--tracks-dir", type=Path, default=None,
+                    help="point the backend's FROZEN_TRACKS_DIR here for the track load")
+    ap.add_argument("--interlagos-tuning", choices=("auto", "off"), default="auto",
+                    help="off: keep the controller's Interlagos-only tuning from activating")
+    ap.add_argument("--label", default=None, help="output name suffix")
     ap.add_argument("--max-sim-s", type=float, default=3600.0,
                     help="abort if the race has not finished by then (run_race has no cap)")
     args = ap.parse_args()
@@ -159,7 +181,14 @@ def main() -> int:
     assert use_rule_controller and rr.DEFAULT_PROFILE == PROFILE
     seed, variance = rr.resolve_race_randomization(args.seed, None, use_rule_controller)
 
-    track = load_track_frozen(args.track, strict=True)
+    import backend.domain.track_resolution as tr
+    saved_dir = tr.FROZEN_TRACKS_DIR
+    if args.tracks_dir is not None:
+        tr.FROZEN_TRACKS_DIR = args.tracks_dir.resolve()
+    try:
+        track = load_track_frozen(args.track, strict=True)
+    finally:
+        tr.FROZEN_TRACKS_DIR = saved_dir
     drivers = rr.build_grid_drivers()
     if variance not in ("off", "none", "0", ""):
         from backend.domain.racevar import (assign_compounds, parse_variance,
@@ -194,7 +223,16 @@ def main() -> int:
                               weather_model=weather_model)
     engine.setup()
     rr.place_grid(engine, track, drivers, layout="f1", jitter=None)
-    controller = RuleBasedRaceController(track, seed=seed)
+    if args.interlagos_tuning == "off":
+        saved_key = RuleBasedRaceController.INTERLAGOS_GEOMETRY_SHA256
+        RuleBasedRaceController.INTERLAGOS_GEOMETRY_SHA256 = ""
+        try:
+            controller = RuleBasedRaceController(track, seed=seed)
+        finally:
+            RuleBasedRaceController.INTERLAGOS_GEOMETRY_SHA256 = saved_key
+    else:
+        controller = RuleBasedRaceController(track, seed=seed)
+    tuning_applied = bool(getattr(controller, "_interlagos_line_applied", False))
     for drv in drivers:
         engine.set_controller(drv.driver_id, controller)
 
@@ -209,6 +247,9 @@ def main() -> int:
 
     dt = 1.0 / sim_config.logic_step_hz
     ticks: list[str] = []
+    pit_events: list[dict] = []
+    last_pit = {d.driver_id: 0 for d in drivers}
+    before = {d.driver_id: None for d in drivers}   # previous tick's snapshot
     step_wall = 0.0
     t_loop = time.perf_counter()
     engine.race_started = True
@@ -225,6 +266,20 @@ def main() -> int:
             positions = []
             for pos, d in enumerate(ranked, start=1):
                 snap = engine._snapshot_position(d)
+                st = engine.states[d.driver_id]
+                if st.pit_stop_done != last_pit[d.driver_id]:
+                    prev = before[d.driver_id] or {}
+                    pit_events.append({
+                        "driver_id": d.driver_id, "tick": len(ticks),
+                        "sim_ts": round(engine.sim_ts, 4), "lap": st.lap,
+                        "stop": st.pit_stop_done, "position": pos,
+                        "tyre_before": [prev.get("tyre_compound"), prev.get("tyre_life_pct")],
+                        "tyre_after": [snap["tyre_compound"], snap["tyre_life_pct"]],
+                        "fuel_before_kg": prev.get("fuel_kg"), "fuel_after_kg": snap["fuel_kg"],
+                        "penalty_s": round(st.pit_penalty_pending_s, 3),
+                    })
+                    last_pit[d.driver_id] = st.pit_stop_done
+                before[d.driver_id] = snap
                 s_m, d_m = project(d.driver_id, snap["position_xy"], snap["velocity_mps"])
                 positions.append({
                     "driver_id": d.driver_id,
@@ -239,6 +294,9 @@ def main() -> int:
                     "tyre_compound": snap["tyre_compound"],
                     "tyre_life_pct": snap["tyre_life_pct"],
                     "pitting": snap["pitting"],
+                    "fuel_kg": snap["fuel_kg"],
+                    "pit_stops": st.pit_stop_done,
+                    "pit_penalty_pending_s": round(st.pit_penalty_pending_s, 3),
                 })
             ticks.append(json.dumps({
                 "sim_ts": round(engine.sim_ts, 4),
@@ -267,6 +325,8 @@ def main() -> int:
             "name": track.name,
             "source": ident["fonte"],
             "requested": args.track,
+            "tracks_dir": (str(args.tracks_dir.resolve().relative_to(ROOT)).replace("\\", "/")
+                           if args.tracks_dir is not None else None),
             "geometry_sha256": ident["sha256"],
             "frozen_sha256": getattr(track, "frozen_sha256", None),
             "length_m": engine._race_track_length,
@@ -287,6 +347,13 @@ def main() -> int:
             "projector_windowed_fallbacks": project.fallbacks,
             "final_order": [d.driver_id for d in final],
             "final_laps": {d.driver_id: engine.states[d.driver_id].lap for d in final},
+            "interlagos_tuning": {"requested": args.interlagos_tuning, "applied": tuning_applied},
+            "pit_config": {"fuel_threshold_kg": sim_config.fuel_threshold_kg,
+                           "tyre_life_threshold": sim_config.tyre_life_threshold,
+                           "pit_time_s": sim_config.pit_time_s},
+            "pit_events": pit_events,
+            "lap_times_s": {d.driver_id: [round(t, 3) for t in engine.states[d.driver_id].lap_times]
+                            for d in drivers},
             "realtime_factor": rtf,
             "git": git_head(),
             "python": platform.python_version(),
@@ -295,7 +362,8 @@ def main() -> int:
         },
     }
 
-    out = args.out or DEFAULT_OUT / f"{args.track}_seed{seed}_{args.laps}laps.jsonl"
+    suffix = f"_{args.label}" if args.label else ""
+    out = args.out or DEFAULT_OUT / f"{args.track}_seed{seed}_{args.laps}laps{suffix}.jsonl"
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", encoding="utf-8", newline="\n") as fh:
         fh.write(json.dumps(header, separators=(",", ":")) + "\n")
@@ -303,7 +371,9 @@ def main() -> int:
             fh.write(line + "\n")
     digest = hashlib.sha256(out.read_bytes()).hexdigest()[:16]
     print(json.dumps({"out": str(out), "bytes": out.stat().st_size, "sha256": digest,
-                      "ticks": len(ticks), **rtf, "final_order": header["recording"]["final_order"]},
+                      "ticks": len(ticks), **rtf, "final_order": header["recording"]["final_order"],
+                      "interlagos_tuning": header["recording"]["interlagos_tuning"],
+                      "pit_events": [(e["driver_id"], e["lap"], e["sim_ts"]) for e in pit_events]},
                      indent=1))
     return 0
 

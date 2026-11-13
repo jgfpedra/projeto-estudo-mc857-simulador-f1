@@ -1,7 +1,7 @@
 import { MathUtils, Vector3 } from 'three'
 import { PALETTE } from '../cars/field'
 import type { Track } from '../track/types'
-import type { EngineCar, RaceBlockJson, Recording, TickJson } from './types'
+import type { EngineCar, PitEvent, RaceBlockJson, Recording, TickJson } from './types'
 
 const fail = (why: string): never => {
   throw new Error(`recording: ${why}`)
@@ -72,6 +72,10 @@ export function parseRecording(text: string): Recording {
   const position = new Int16Array(size)
   const lap = new Int16Array(size)
   const pitting = new Uint8Array(size)
+  const fuelKg = new Float32Array(size).fill(Number.NaN)
+  const pitStops = new Uint8Array(size)
+  const pitPenaltyS = new Float32Array(size)
+  let hasPitFields = true
   const tyreLifePct = new Float32Array(size)
   const tyreCompound = new Uint8Array(size)
   const compounds: string[] = []
@@ -98,6 +102,13 @@ export function parseRecording(text: string): Recording {
       position[i] = p.position
       lap[i] = p.lap
       pitting[i] = p.pitting ? 1 : 0
+      if (typeof p.fuel_kg === 'number') fuelKg[i] = p.fuel_kg
+      if (typeof p.pit_stops === 'number' && typeof p.pit_penalty_pending_s === 'number') {
+        pitStops[i] = p.pit_stops
+        pitPenaltyS[i] = p.pit_penalty_pending_s
+      } else {
+        hasPitFields = false
+      }
       tyreLifePct[i] = p.tyre_life_pct
       let ci = compounds.indexOf(p.tyre_compound)
       if (ci < 0) ci = compounds.push(p.tyre_compound) - 1
@@ -127,6 +138,15 @@ export function parseRecording(text: string): Recording {
     }
   }
 
+  const pitEvents = findPitEvents(nTicks, nCars, dtS, hasPitFields, {
+    pitStops,
+    pitPenaltyS,
+    tyreLifePct,
+    tyreCompound,
+    fuelKg,
+    lap,
+  }, compounds)
+
   return {
     raceId: block.race_id,
     numLaps: block.num_laps,
@@ -155,11 +175,57 @@ export function parseRecording(text: string): Recording {
     position,
     lap,
     pitting,
+    fuelKg,
+    pitStops,
+    pitPenaltyS,
+    hasPitFields,
+    pitEvents,
     tyreLifePct,
     tyreCompound,
     compounds,
     meta: block.recording ?? {},
   }
+}
+
+/**
+ * Pit stops inside the window. With the phase 3b fields, a stop is the tick on
+ * which `pit_stops` goes up. Without them (phase 3 recordings), the only trace a
+ * stop leaves is fresh tyres, so a rise in `tyre_life_pct` stands in - tyre life
+ * otherwise only falls, once per completed lap.
+ */
+function findPitEvents(
+  nTicks: number,
+  nCars: number,
+  dtS: number,
+  hasPitFields: boolean,
+  ch: Pick<Recording, 'pitStops' | 'pitPenaltyS' | 'tyreLifePct' | 'tyreCompound' | 'fuelKg' | 'lap'>,
+  compounds: string[],
+): PitEvent[] {
+  const out: PitEvent[] = []
+  for (let k = 1; k < nTicks; k++) {
+    for (let c = 0; c < nCars; c++) {
+      const a = (k - 1) * nCars + c
+      const b = k * nCars + c
+      const stopped = hasPitFields
+        ? ch.pitStops[b] > ch.pitStops[a]
+        : ch.tyreLifePct[b] > ch.tyreLifePct[a]
+      if (!stopped) continue
+      out.push({
+        car: c,
+        tick: k,
+        tS: k * dtS,
+        lap: ch.lap[b],
+        compoundBefore: compounds[ch.tyreCompound[a]],
+        lifeBefore: ch.tyreLifePct[a],
+        compoundAfter: compounds[ch.tyreCompound[b]],
+        lifeAfter: ch.tyreLifePct[b],
+        fuelBeforeKg: ch.fuelKg[a],
+        fuelAfterKg: ch.fuelKg[b],
+        penaltyS: ch.pitPenaltyS[b],
+      })
+    }
+  }
+  return out
 }
 
 /**

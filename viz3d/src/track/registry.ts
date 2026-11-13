@@ -21,6 +21,11 @@
  * centreline cannot come from two different geometries. `?recording=<url>`
  * swaps in another recording, e.g. a full one under `.cache/` through Vite's
  * `/@fs/` in `npm run dev`.
+ *
+ * Phase 3b adds `engine_ours`: a 15-lap race of the same grid and seed on our
+ * own Interlagos export (`exports/interlagos_2023_v1.json`, the controller's
+ * Interlagos tuning off by construction), trimmed to a window around the first
+ * pit stop (docs/phase3b-longer-races.md).
  */
 export interface TrackEntry {
   id: string
@@ -56,6 +61,11 @@ export const TRACKS: TrackEntry[] = [
     id: 'engine',
     label: 'Engine race · seed 42',
     recordingUrl: '/recordings/engine-interlagos-seed42.jsonl',
+  },
+  {
+    id: 'engine_ours',
+    label: 'Engine race · our Interlagos · pit',
+    recordingUrl: '/recordings/engine-interlagos2023-seed42-pit.jsonl',
   },
 ]
 

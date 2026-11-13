@@ -25,7 +25,7 @@ import type { Track } from './track/types'
 import { trackTitle } from './track/types'
 import { TRACKS, recordingUrlFor, selectedTrack, urlForTrack } from './track/registry'
 import { loadRecording, trackFromRecording } from './engine/load'
-import { engineSource, lapAtTime, positionAt } from './engine/source'
+import { engineSource, lapAtTime, pitStateAt, positionAt } from './engine/source'
 import type { Recording } from './engine/types'
 import { PROBE_ENABLED, Probe } from './probe'
 
@@ -217,6 +217,7 @@ export default function App() {
         // engine counts *completed* laps; the panel shows the lap being driven.
         lapOf: (car: number) => lapAtTime(recording, clock.current.tS, car) + 1,
         rankOf: (car: number) => positionAt(recording, clock.current.tS, car),
+        pitOf: (car: number) => pitStateAt(recording, clock.current.tS, car),
       }
     }
     if (sourceKind === 'replay' && replay) {
@@ -319,6 +320,7 @@ export default function App() {
   const { frame, checks, camera } = scene
   const { source, lapOf } = motion
   const rankOf = 'rankOf' in motion ? motion.rankOf : undefined
+  const pitOf = 'pitOf' in motion ? motion.pitOf : undefined
   const cars = source.cars
 
   return (
@@ -374,6 +376,7 @@ export default function App() {
         widthM={track.widthM}
         lapAt={lapOf}
         rankAt={rankOf}
+        pitAt={pitOf}
         sourceKind={source.kind}
         wheelMarkers={wheelMarkers}
         onWheelMarkers={setWheelMarkers}

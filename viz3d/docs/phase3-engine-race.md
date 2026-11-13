@@ -218,8 +218,9 @@ recording.
 
 ## 6. Open
 
-- The pit path is unexercised (no pit stop in 3 laps). A longer race, or a lower
-  `tyre_life_threshold`, would be needed to see `pitting: true`.
+- The pit path is unexercised (no pit stop in 3 laps). Done in
+  `docs/phase3b-longer-races.md`: at 15 laps the SOFT starters stop, and
+  `pitting` is never true - the engine does a stop as bookkeeping on one tick.
 - The tick format is the one asked for. There is no `GET /races/{id}` in
   `backend/api` yet (only `POST /races` and the WebSocket), so "shaped like" is
   against the agreed shape, not against a live endpoint.

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { SourceKind } from '../cars/motion'
 import type { Recording } from '../engine/types'
-import { lapAtTime, positionAt } from '../engine/source'
+import { lapAtTime, pitStateAt, positionAt } from '../engine/source'
 import { seekClock, setRate, togglePlay } from './clock'
 import type { ClockState } from './clock'
 import type { Replay } from './types'
@@ -93,10 +93,12 @@ export function Timeline({
         const n = recording.cars.length
         let leader = 0
         for (let k = 0; k < n; k++) leader = Math.max(leader, lapAtTime(recording, c.tS, k))
+        const pit = pitStateAt(recording, c.tS, selected)
         lap.current.textContent =
           `lap ${lapAtTime(recording, c.tS, selected) + 1} (leader ` +
           `${Math.min(leader + 1, recording.numLaps)}/${recording.numLaps}) · ` +
-          `${recording.cars[selected].label} P${positionAt(recording, c.tS, selected)}`
+          `${recording.cars[selected].label} P${positionAt(recording, c.tS, selected)}` +
+          (pit.active ? ` · PIT +${pit.penaltyPendingS.toFixed(0)} s` : pit.pitting ? ' · PITTING' : '')
       } else if (lap.current) {
         const car = kind === 'replay' ? replay?.cars[selected] : undefined
         if (!car) {
@@ -193,10 +195,13 @@ export function Timeline({
           style={{ flex: 1, accentColor: '#ff8a5f' }}
         />
       </div>
+      {kind === 'engine' && recording && recording.pitEvents.length > 0 && (
+        <PitMarks recording={recording} selected={selected} durationS={durationS} />
+      )}
 
       <div style={{ marginTop: 4, display: 'flex', gap: 8 }}>
         <span ref={time} style={{ color: '#fff' }} />
-        <span ref={lap} style={{ opacity: 0.75 }} />
+        <span ref={lap} data-testid="timeline-lap" style={{ opacity: 0.75 }} />
         <span style={{ flex: 1 }} />
         {RATES.map((r) => (
           <button
@@ -228,6 +233,53 @@ export function Timeline({
               BLURB.engine
             : BLURB.synthetic}
       </p>
+    </div>
+  )
+}
+
+/**
+ * One mark per pit stop inside the recording, under the scrub bar: the
+ * followed car's in amber and labelled, the rest dim. A stop is a single tick
+ * in the engine, so each is a line, not a span. Positioned against the slider's
+ * own width (the play button sits left of it), which is close enough for a
+ * cue: the exact tick is in the hover text and the car panel.
+ */
+function PitMarks({
+  recording,
+  selected,
+  durationS,
+}: {
+  recording: Recording
+  selected: number
+  durationS: number
+}) {
+  return (
+    <div
+      data-testid="timeline-pits"
+      style={{ position: 'relative', height: 12, marginLeft: 26, marginTop: 2 }}
+    >
+      {recording.pitEvents.map((e) => {
+        const mine = e.car === selected
+        const car = recording.cars[e.car]
+        return (
+          <span
+            key={`${e.car}-${e.tick}`}
+            title={
+              `${car.label} pit, end of lap ${e.lap}: ${e.compoundBefore} ` +
+              `(${e.lifeBefore.toFixed(1)}% before that lap) → ${e.compoundAfter} ${e.lifeAfter.toFixed(1)}%, ` +
+              `+${e.penaltyS.toFixed(1)} s (sim ${(recording.t0S + e.tS).toFixed(1)} s)`
+            }
+            style={{
+              position: 'absolute',
+              left: `${(e.tS / durationS) * 100}%`,
+              top: 0,
+              width: 2,
+              height: mine ? 12 : 7,
+              background: mine ? '#ffb020' : '#6a6a7a',
+            }}
+          />
+        )
+      })}
     </div>
   )
 }

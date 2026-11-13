@@ -47,5 +47,15 @@
       "D": "No sourced first-corner window, and no corners.",
       "G": "No sourced per-corner handedness, and no corners."
     }
+  },
+  "engine_ours": {
+    "verdicts": { "A": "PASS", "B": "SKIP", "C": "SKIP", "D": "SKIP", "E": "PASS", "F": "PASS", "G": "SKIP" },
+    "why": {
+      "A": "Our Interlagos export (exports/interlagos_2023_v1.json, resampled at <= 4 m from public/tracks/interlagos.json) as the recording's race block: 4225.4 m against the published 4309 m, -1.94%, inside the 2% tolerance (interlagos.json itself: -1.92%).",
+      "B": "No sourced corner count, and the race block carries no corners.",
+      "C": "The race block carries no corners.",
+      "D": "No sourced first-corner window, and no corners.",
+      "G": "No sourced per-corner handedness, and no corners."
+    }
   }
 }
