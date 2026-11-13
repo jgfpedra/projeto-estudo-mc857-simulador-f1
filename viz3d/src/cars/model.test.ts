@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { Box3, Vector3 } from 'three'
+import { Box3, Matrix4, Vector3 } from 'three'
+import { wheelMatrix } from './instance'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { Object3D } from 'three'
 import { RACE_CAR_RED, adaptCarModel, carGeometry, carModelMatrix } from './model'
@@ -141,9 +142,41 @@ describe('raceCarRed.glb', () => {
     expect(box.getCenter(new Vector3()).x).toBeCloseTo(0, 7)
     expect(box.getCenter(new Vector3()).z).toBeCloseTo(0, 7)
     expect(box.min.y).toBeCloseTo(0, 7)
-    const wheels = carGeometry(await loadRaceCarRed(), spec).wheels
+    const rendered = carGeometry(await loadRaceCarRed(), spec)
+    const visibleBounds = new Box3()
+    for (const part of rendered.body) {
+      part.geometry.computeBoundingBox()
+      if (part.geometry.boundingBox) visibleBounds.union(part.geometry.boundingBox)
+    }
+    for (const wheel of rendered.wheels) for (const part of wheel.parts) {
+      part.geometry.computeBoundingBox()
+      if (part.geometry.boundingBox) visibleBounds.union(part.geometry.boundingBox.clone().translate(wheel.centre))
+    }
+    const visibleSize = visibleBounds.getSize(new Vector3())
+    expect(visibleSize.x).toBeCloseTo(1.8, 5)
+    expect(visibleSize.z).toBeCloseTo(5, 5)
+    expect(visibleSize.y).toBeCloseTo(0.7, 5)
+    const wheels = rendered.wheels
     expect(wheels).toHaveLength(4)
-    for (const wheel of wheels) expect(Math.abs(wheel.axle.x)).toBe(1)
+    for (const wheel of wheels) {
+      expect(Math.abs(wheel.axle.x)).toBe(1)
+      const lowestAt = (angle: number) => {
+        const transform = wheelMatrix(new Matrix4(), wheel, angle, new Matrix4())
+        const point = new Vector3()
+        let lowest = Infinity
+        for (const part of wheel.parts) {
+          const positions = part.geometry.getAttribute('position')
+          for (let i = 0; i < positions.count; i++) {
+            point.fromBufferAttribute(positions, i).applyMatrix4(transform)
+            lowest = Math.min(lowest, point.y)
+          }
+        }
+        return lowest
+      }
+      // Resizing the body must not turn the rotating tyre into an ellipse.
+      expect(lowestAt(Math.PI / 2)).toBeCloseTo(lowestAt(0), 5)
+      expect(lowestAt(Math.PI)).toBeCloseTo(lowestAt(0), 5)
+    }
   })
 
   it('drives nose first, with its front-left wheel on its own left', async () => {

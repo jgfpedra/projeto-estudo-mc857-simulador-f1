@@ -1,4 +1,5 @@
 import { MathUtils, Vector3 } from 'three'
+import { signedWheelTravel } from '../cars/odometry'
 import { PALETTE } from '../cars/field'
 import type { Track } from '../track/types'
 import type { EngineCar, PitEvent, RaceBlockJson, Recording, TickJson } from './types'
@@ -125,6 +126,16 @@ export function parseRecording(text: string): Recording {
     }
   }
 
+  // A wheel follows the car's physical displacement, including reverse and
+  // off-track motion, not the centreline projection used for race order.
+  const wheelTravelM = new Float64Array(size)
+  for (let k = 1; k < nTicks; k++) {
+    for (let c = 0; c < nCars; c++) {
+      const i = k * nCars + c
+      const prev = i - nCars
+      wheelTravelM[i] = wheelTravelM[prev] + signedWheelTravel(x[prev], y[prev], headingRad[prev], x[i], y[i], headingRad[i])
+    }
+  }
   // Pace: the rate `progress_m` advances. Fed forward into the chase camera's
   // anchor, which follows `progress_m`; the car's physical `velocity_mps` would
   // leave the camera a steady offset behind wherever the two disagree
@@ -169,6 +180,7 @@ export function parseRecording(text: string): Recording {
     headingRad,
     velocityMps,
     progressM,
+    wheelTravelM,
     paceMps,
     sM,
     dM,

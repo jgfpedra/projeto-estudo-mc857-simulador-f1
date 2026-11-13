@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest'
 import { Vector3 } from 'three'
 import { buildFrame, toWorld } from '../track/frame'
 import { geometrySha256, parseRecording, trackFromRecording } from './load'
-import { pitStateAt, pitText, positionAt, tyreText } from './source'
+import { engineSource, pitStateAt, pitText, positionAt, tyreText } from './source'
+import { newMotionState } from '../cars/motion'
+import { signedWheelTravel } from '../cars/odometry'
 import type { TickJson } from './types'
 
 /**
@@ -106,6 +108,24 @@ describe('pit-stop fixture (our Interlagos, seed 42)', () => {
       const sameLap = rec.lap[k * N + e.car] === e.lap
       expect(st.active !== null, `tick ${k}`).toBe(sameLap)
     }
+  })
+
+  it('keeps wheel travel continuous through the recorded pit event and while scrubbing', () => {
+    const event = rec.pitEvents[0]
+    const beforeIndex = event.tick * N + event.car
+    const afterIndex = beforeIndex + N
+    const expected = signedWheelTravel(rec.x[beforeIndex], rec.y[beforeIndex], rec.headingRad[beforeIndex],
+      rec.x[afterIndex], rec.y[afterIndex], rec.headingRad[afterIndex])
+    expect(rec.wheelTravelM[afterIndex] - rec.wheelTravelM[beforeIndex]).toBeCloseTo(expected, 8)
+    const source = engineSource(rec)
+    const state = newMotionState()
+    const time = (event.tick + 0.5) * rec.dtS
+    source.sampleInto(time, event.car, state)
+    const travel = state.wheelTravelM!
+    expect(travel).toBeCloseTo((rec.wheelTravelM[beforeIndex] + rec.wheelTravelM[afterIndex]) / 2, 8)
+    source.sampleInto(time + 1, event.car, state)
+    source.sampleInto(time, event.car, state)
+    expect(state.wheelTravelM).toBeCloseTo(travel, 8)
   })
 
   it('positionAt still reproduces the recorded order at every tick', () => {

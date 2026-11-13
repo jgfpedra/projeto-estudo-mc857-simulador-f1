@@ -32,6 +32,7 @@ export function LiveRace() {
   const readout = useRef<FollowState>({ s: 0, sUnwrapped: 0, d: 0, speedMps: 0, carIndex: -1, posed: false, x: 0, z: 0, yawRad: 0 })
   const [selected, setSelected] = useState(0)
   const [cameraMode, setCameraMode] = useState<CameraMode>('chase')
+  const [wheelMarkers, setWheelMarkers] = useState(false)
   const [cutKey, setCutKey] = useState(0)
 
   useEffect(() => {
@@ -132,7 +133,7 @@ export function LiveRace() {
       <TrackRibbon frame={scene.frame} widthM={scene.track.widthM} />
       <StartFinishLine track={scene.track} />
       <Suspense fallback={null}>
-        <Grid frame={scene.frame} cars={scene.cars} source={scene.source} modelSpec={scene.modelSpec} clock={clock} selected={selected} readout={readout} />
+        <Grid frame={scene.frame} cars={scene.cars} source={scene.source} modelSpec={scene.modelSpec} clock={clock} selected={selected} readout={readout} wheelMarkers={wheelMarkers} />
         <CameraRig frame={scene.frame} mode={cameraMode} readout={readout} fitted={scene.fitted} orbitFovDeg={45} clock={clock} cutKey={cutKey} />
       </Suspense>
     </Canvas>
@@ -140,7 +141,8 @@ export function LiveRace() {
       <strong>{scene.track.name} · {status}</strong><div>
         <button onClick={() => setCameraMode('chase')}>Seguir</button>{' '}
         <button onClick={() => setCameraMode('onboard')}>A bordo</button>{' '}
-        <button onClick={() => setCameraMode('orbit')}>Pista</button>
+        <button onClick={() => setCameraMode('orbit')}>Pista</button>{' '}
+        <button onClick={() => setWheelMarkers((enabled) => !enabled)}>{wheelMarkers ? 'Ocultar marcas' : 'Marcar rodas'}</button>
       </div><div>Tempo: {tick.sim_ts.toFixed(1)} s</div>
       {tick.positions.map((p) => <div key={p.driver_id}><button onClick={() => { setSelected(scene.cars.findIndex((c) => c.label === p.driver_id)); setCutKey((key) => key + 1) }}>{p.position}. {p.driver_id}</button> · {Math.round(p.velocity_mps * 3.6)} km/h · volta {p.lap + 1}</div>)}
       {tick.collisions?.length > 0 && <div>Contato: {tick.collisions[0].drv_a} / {tick.collisions[0].drv_b}</div>}

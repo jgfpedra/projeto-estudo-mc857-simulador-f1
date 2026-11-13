@@ -55,6 +55,45 @@ describe('live snapshot buffer', () => {
     expect(out.x).toBeCloseTo(25)
   })
 
+  it('uses pose displacement for wheel travel, independent of track progress', () => {
+    const buffer = new LiveBuffer(0.1)
+    const out = newMotionState()
+    const a = tick(0, 0)
+    const b = tick(0.1, 0)
+    b.positions[0].progress_m = 50 // projection jumped but the car did not move
+    buffer.push(a)
+    buffer.sampleInto('a', 0, out)
+    buffer.push(b)
+    buffer.sampleInto('a', 0, out)
+    buffer.sampleInto('a', 100, out)
+    expect(out.sUnwrapped).toBeCloseTo(50)
+    expect(out.wheelTravelM).toBeCloseTo(0)
+    const c = tick(0.2, -2)
+    buffer.push(c)
+    buffer.sampleInto('a', 100, out)
+    buffer.sampleInto('a', 200, out)
+    expect(out.wheelTravelM).toBeCloseTo(-2)
+    buffer.disconnected()
+    buffer.push(tick(1, 100))
+    buffer.sampleInto('a', 300, out)
+    expect(out.wheelTravelM).toBeCloseTo(-2) // do not invent distance across a gap
+  })
+
+  it('keeps the last displayed wheel phase across a reconnect', () => {
+    const buffer = new LiveBuffer(0.1)
+    const out = newMotionState()
+    buffer.push(tick(0, 0))
+    buffer.sampleInto('a', 0, out)
+    buffer.push(tick(0.1, 1))
+    buffer.push(tick(0.2, 2))
+    buffer.sampleInto('a', 50, out)
+    expect(out.wheelTravelM).toBeCloseTo(0.5)
+    buffer.disconnected()
+    buffer.push(tick(0.3, 30))
+    buffer.sampleInto('a', 100, out)
+    expect(out.wheelTravelM).toBeCloseTo(0.5)
+  })
+
   it('plays the final buffered interval when the race ends', () => {
     const buffer = new LiveBuffer()
     const out = newMotionState()

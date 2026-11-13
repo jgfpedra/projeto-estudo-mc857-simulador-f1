@@ -75,10 +75,9 @@ function instanced(part: CarPart, count: number): InstancedMesh {
  * the reason the refactor was worth doing rather than bolting a replay on beside
  * the synthetic field.
  *
- * The wheel odometer is **derived**, `sUnwrapped - originM(car)`, not
- * accumulated. So wheel phase is a function of position, and scrubbing a replay
- * backwards rewinds the wheels instead of leaving them wherever an accumulator
- * had got to.
+ * The wheel odometer is sampled from physical poses when available, with
+ * `sUnwrapped - originM(car)` as the fallback. Scrubbing a recording backwards
+ * rewinds the wheels as well.
  *
  * `MAX_DELTA_S` is applied once, by the clock, instead of twenty times a frame —
  * and `rig.ts` no longer has to agree with a constant `Grid` also uses.
@@ -155,6 +154,7 @@ export function Grid({
     let worstDet = Infinity
 
     for (let i = 0; i < cars.length; i++) {
+      motion.wheelTravelM = undefined
       source.sampleInto(tS, i, motion)
       const arc = wrapS(frame, motion.sUnwrapped)
       // The engine knows where its cars are; everything else is `(s, d)`.
@@ -163,10 +163,8 @@ export function Grid({
       if (!checked.current) worstDet = Math.min(worstDet, car.determinant())
       for (const m of meshes.body) m.setMatrixAt(i, car)
 
-      // Distance travelled, not elapsed time: the wheels must stay tied to the
-      // ground speed, so they slow when the car does. Derived from `sUnwrapped`
-      // rather than accumulated, so it survives a scrub.
-      const travelled = motion.sUnwrapped - source.originM(i)
+      // Wheel travel follows physical pose when available and remains scrubbable.
+      const travelled = motion.wheelTravelM ?? motion.sUnwrapped - source.originM(i)
       for (const w of meshes.wheels) {
         wheelMatrix(car, w.wheel, wheelAngle(travelled, w.wheel.radiusM), wheel)
         if (!checked.current) worstDet = Math.min(worstDet, wheel.determinant())

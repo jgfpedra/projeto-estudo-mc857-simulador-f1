@@ -226,6 +226,7 @@ export function carGeometry(scene: Object3D, spec: CarModelSpec = RACE_CAR_RED):
 
   const body: CarPart[] = []
   const wheels = new Map<string, CarWheel>()
+  const wheelCorrections = new Map<string, Matrix4>()
   const scratch = new Matrix4()
 
   model.traverse((o) => {
@@ -252,10 +253,25 @@ export function carGeometry(scene: Object3D, spec: CarModelSpec = RACE_CAR_RED):
         [size.z, new Vector3(0, 0, 1)],
       ]
       dims.sort((a, b) => a[0] - b[0])
+      // The live chassis is resized independently in length, width and height.
+      // Undo the resulting oval in the rotation plane, keeping the wheel
+      // centre fixed, so the tyre does not bounce as it rotates.
+      let radius = (dims[1][0] + dims[2][0]) / 4
+      if (spec.dimensions) {
+        const diameter = Math.min(dims[1][0], dims[2][0])
+        radius = diameter / 2
+        const scale = new Vector3(1, 1, 1)
+        for (const [size, axis] of dims.slice(1)) {
+          if (axis.x) scale.x = diameter / size
+          if (axis.y) scale.y = diameter / size
+          if (axis.z) scale.z = diameter / size
+        }
+        wheelCorrections.set(node.name, new Matrix4().makeScale(scale.x, scale.y, scale.z))
+      }
       wheel = {
         name: node.name,
         centre: box.getCenter(new Vector3()),
-        radiusM: (dims[1][0] + dims[2][0]) / 4,
+        radiusM: radius,
         axle: dims[0][1],
         parts: [],
       }
@@ -265,6 +281,8 @@ export function carGeometry(scene: Object3D, spec: CarModelSpec = RACE_CAR_RED):
     scratch
       .makeTranslation(-wheel.centre.x, -wheel.centre.y, -wheel.centre.z)
       .multiply(mesh.matrixWorld)
+    const correction = wheelCorrections.get(node.name)
+    if (correction) scratch.premultiply(correction)
     wheel.parts.push(part(mesh, scratch))
   })
 
