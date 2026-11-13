@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
-import type { ElementRef } from 'react'
+import type { ComponentRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import { PerspectiveCamera } from 'three'
@@ -87,11 +87,11 @@ export function CameraRig({
    * A ref on the component rather than `useThree(s => s.controls)`: `makeDefault`
    * publishes the instance from a *passive* effect, so the store slice is still
    * null on the first commit, and it is typed as a bare `EventDispatcher`.
-   * `ElementRef` reads the real type off drei's own `ForwardRefComponent`
+   * `ComponentRef` reads the real type off drei's own `ForwardRefComponent`
    * without importing `three-stdlib`, which is drei's transitive dependency and
    * not one of ours.
    */
-  const controls = useRef<ElementRef<typeof OrbitControls>>(null)
+  const controls = useRef<ComponentRef<typeof OrbitControls>>(null)
   const rig = useRef(newRigState())
   const pose = useRef(newPose())
   const previous = useRef<CameraMode>(mode)
