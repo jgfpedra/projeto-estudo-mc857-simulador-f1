@@ -137,39 +137,84 @@ recording.
   `poseMatrix` instead of `carMatrix`. The synthetic field and the replay
   write `posed = false` and are still placed by `(s, d)`.
 - **`progress_m` for everything along the track.** It is interpolated linearly
-  between ticks and drives `sUnwrapped`: the chase/T-cam anchor and lookahead,
-  the wheel odometer, and the running order (`positionAt`, which ties to the
+  between ticks and drives `sUnwrapped`: the chase camera's damped trail and
+  lookahead, the T-cam's roll, the wheel odometer, and the running order (`positionAt`, which ties to the
   lower grid slot as `ranked_drivers` does). The pose is interpolated linearly
   between ticks, heading the short way round. At 10 Hz that cuts corners by at
   most 73 mm. `speedMps` is the rate `progress_m` advances, not `velocity_mps`,
-  because the rig feeds speed forward into an anchor that follows `progress_m`.
+  because the rig feeds speed forward into a trail that follows `progress_m`.
 - **Panel.** Position (`P4 ·`), `s` (progress within the lap), `d` (= `d_m`),
   speed and the lap being driven. The timeline shows the lap, the leader's lap
   out of `num_laps`, and the driver's position.
-- **Camera caveat.** Because the cameras follow `progress_m` and not the car's
-  own pose, they sit where `progress_m` is. That is within 0.88 m of the car's
-  true s at p99.9, and 3.75 m at worst. The T-cam is 2.6 m behind that point, so
-  in the worst tick it would sit slightly in front of the car's centre.
+- **Cameras held to the pose.** `progress_m` is not where the car is:
+  `toWorld(progress_m, d_m)` lands up to 0.86 m from `position_xy` on the
+  ground over the full race (p99 0.38 m, p99.9 0.65 m; VER at 88.5 s). The
+  3.75 m gap in s from section 3 is smaller on the ground because it happens
+  at d = +5.35 m on the inside of a 7 m radius bend. So for a posed source the
+  rig (`chasePose` / `onboardPose`) works from the car's interpolated pose,
+  which `Grid` copies into `FollowState`; the synthetic field and the replay
+  keep the `(s, d)` path, byte for byte.
+  - **T-cam**: bolted to the pose. Position and aim are the car's `(x, z)`
+    plus `fwdM` / `lookaheadM` along its nose (`yawRad`) and `heightM` /
+    `targetHeightM` above the ground, so it sits 2.60 m behind the car's
+    centre and looks along the car. Before, it took its position and
+    direction from the track at `progress_m`: up to 1.80 m from that spot
+    over the fixture, and on Leclerc's rejoin (stopped at 70.8° to the track,
+    sim 44.4–44.5 s) only 0.80 m behind his centre, looking down the track
+    rather than along the car. Roll still comes from the track curvature at
+    `progress_m`.
+  - **Chase**: the track-based pose (damped `u` trail, lookahead at
+    `progress_m + 25 m`) translated by `position − toWorld(progress_m, d_m)`,
+    so the anchor is on the car and the view direction is unchanged. Taking
+    the direction from the car's heading instead would swing it through 70°
+    as a car rejoins. Over sim 42–45 s around Leclerc's rejoin, simulated at
+    60 fps, the chase heading changes at most 0.164°/frame (p99 0.163, mean
+    0.039) before and after: the same numbers, 1e-14° apart, because only the
+    position moved. The camera's per-frame step went from 0.414 m to 0.431 m
+    at most, the car's own motion off `progress_m`.
+  - **What the T-cam now shows** at the rejoin is the car turning: the
+    engine's heading goes 36° → 67° to the track between 44.0 and 44.2 s, so
+    the T-cam yaws 4.48°/frame there (looking down the track it never
+    exceeded 0.14°/frame over 42–45 s). That is the recording's heading interpolated over two ticks, not
+    camera noise.
+  - **Orbit**: unchanged.
 
 ## 5. Verification
 
-- `npm test`: 97 tests. `src/engine/engine.test.ts` covers the fixture through
+- `npm test`: 102 tests. `src/engine/engine.test.ts` covers the fixture through
   the viewer's own code. The TypeScript `toWorld(s_m, d_m)` lands on
   `position_xy` to 0.71 mm on track and 0.63 mm over the 13 off-track samples.
   `positionAt` reproduces the recorded position at every tick. The pose matrix
   puts every car at `position_xy` with its nose along `heading_deg`
   (determinant 1). The hash is checked, and a 1 mm waypoint edit changes it.
   `tracks.test.ts` builds the engine track from the fixture.
+  `src/engine/camera.test.ts` holds the follow cameras to the pose at every
+  tick, every car: the T-cam at `position_xy` plus its car-local offset and
+  aimed along `heading_deg` (worst 3.8×10⁻¹³ m), also between ticks; the chase
+  anchor on `position_xy` (3.8×10⁻¹³ m) with the trail and aim, relative to
+  it, exactly the `(s, d)` ones. The old `progress_m` T-cam misses the same
+  check by 1.80 m, and an unposed follow is bit-for-bit the `(s, d)` formulas
+  whatever `x`, `z`, `yawRad` hold.
 - `npm run snapshot`: the `engine` run renders orbit, chase and T-cam under the
   engine source and the synthetic field, with checks pinned and check J PASS.
   It then pauses on ticks 0, 205 and 399 (Sainz 9.11 m off track) and reads
   back every car's GPU instance matrix: worst position 2.9×10⁻⁵ m, worst nose
   against heading 4×10⁻⁸. The panel shows the recorded P and `d_m` at each of
-  those ticks.
+  those ticks. On each, the live T-cam is within 6.1×10⁻⁶ m of the followed
+  car's instance pose plus its local offset (tolerance 1 cm), view direction
+  within 7.4×10⁻⁹.
+- Synthetic and replay are unchanged: 27 paused screenshots (Monza synthetic
+  and replay, engine-track synthetic; orbit, chase and T-cam; three clock
+  times) are pixel-identical before and after the change, and two runs of the
+  old build were pixel-identical to each other.
 - **It can fail.** Dropping the minus in `out.z = −y` (cars mirrored, track
   untouched) fails all three placement ticks (44 m, 230 m, 1.7 km) and exits 1.
   A NaN in `progress_m` turns the engine chase and T-cam shots into one flat
   colour (0.000% non-background) and check J logs determinant NaN, also exit 1.
+  Anchoring the T-cam on `progress_m` again fails the T-cam check at all three
+  ticks, exit 1: 2.2 mm / 7.8 cm / 4.9 cm off, view direction 3.3×10⁻² /
+  1.1×10⁻² / 3.5×10⁻² (up to 2°). At tick 0 the position alone would pass
+  the 1 cm tolerance; the direction is what fails it there.
 
 ## 6. Open
 

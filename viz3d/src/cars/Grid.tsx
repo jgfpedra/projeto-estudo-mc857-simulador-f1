@@ -181,6 +181,12 @@ export function Grid({
         out.d = motion.d
         out.speedMps = motion.speedMps
         out.carIndex = selected
+        // The pose the car was just drawn at, so a posed source's cameras are
+        // bolted to the car rather than to where `toWorld(s, d)` would put it.
+        out.posed = motion.posed
+        out.x = motion.x
+        out.z = motion.z
+        out.yawRad = motion.yawRad
       }
     }
 

@@ -41,6 +41,9 @@
  *      read back from the GPU-bound `InstancedMesh`, not recomputed - to sit at
  *      the fixture's `position_xy` (three.z = -y) with its nose along
  *      `heading_deg`, and the car panel to show the recorded position and `d_m`.
+ *      On each of those ticks it then switches to the T-cam and requires the
+ *      live camera at the followed car's instance pose plus the rig's
+ *      car-local offset, looking along the nose.
  *
  * Output: `.cache/snapshots/*.png` (gitignored). Exit code 1 on any failure.
  */
@@ -98,6 +101,13 @@ const ENGINE_TICKS = [0, 205, 399]
 /** Placement tolerance: the stored `position_xy` is rounded to 1 cm. */
 const ENGINE_POS_TOL_M = 1e-3
 const ENGINE_DIR_TOL = 1e-3
+/**
+ * T-cam against the car it is bolted to: 1 cm. Measured at <= 6.1e-6 m (float32
+ * instance matrices). The progress_m-anchored T-cam it replaced was 2.2 mm,
+ * 7.8 cm and 4.9 cm off at these ticks, and up to 2 degrees off in direction
+ * (docs/phase3-engine-race.md section 5).
+ */
+const ENGINE_TCAM_TOL_M = 0.01
 
 /** The one list of known check failures, shared with src/track/tracks.test.ts. */
 const EXPECTED = JSON.parse(readFileSync(join(ROOT, 'src', 'track', 'expected-verdicts.json'), 'utf8'))
@@ -404,6 +414,39 @@ function readBodiesInPage() {
   return out
 }
 
+/**
+ * The live camera against the followed car's body instance matrix, in the page.
+ * Expected: the car's ground point plus `fwdM` along its nose (local -Z,
+ * column 2 negated) and `heightM` up, aimed at `lookaheadM` along the nose at
+ * `targetHeightM`. The matrix carries the ride height in y; the rig measures
+ * heights from the ground, so only x and z are taken from it.
+ */
+function readTcamInPage() {
+  const { camera, scene } = window.__viewer.store()
+  const { fwdM, heightM, lookaheadM, targetHeightM } = window.__viewer.onboard
+  const selected = window.__viewer.readout.carIndex
+  let body = null
+  scene.traverse((o) => {
+    if (o.isInstancedMesh && o.instanceColor && !body) body = o
+  })
+  const m = new body.matrix.constructor()
+  body.getMatrixAt(selected, m)
+  const e = m.elements
+  const fx = -e[8]
+  const fz = -e[10]
+  const fl = Math.hypot(fx, fz)
+  const want = [e[12] + (fwdM * fx) / fl, heightM, e[14] + (fwdM * fz) / fl]
+  const aim = [e[12] + (lookaheadM * fx) / fl, targetHeightM, e[14] + (lookaheadM * fz) / fl]
+  const p = camera.position
+  const wantDir = aim.map((v, i) => v - want[i])
+  const wl = Math.hypot(...wantDir)
+  const d = camera.getWorldDirection(p.clone())
+  return {
+    pos: Math.hypot(p.x - want[0], p.y - want[1], p.z - want[2]),
+    dir: Math.hypot(d.x - wantDir[0] / wl, d.y - wantDir[1] / wl, d.z - wantDir[2] / wl),
+  }
+}
+
 async function engineCheck(page) {
   console.log('\n  engine placement against the recording fixture')
   const { grid, ticks } = readRecording()
@@ -457,6 +500,20 @@ async function engineCheck(page) {
     if (shown.pos === wantPos && shown.d === wantD) pass(`engine panel: ${panelMsg}`)
     else fail(`engine panel: ${panelMsg}`)
     await page.screenshot({ path: join(OUT, `engine-tick-${String(k).padStart(3, '0')}.png`) })
+
+    // The T-cam on the same paused tick: bolted to the followed car's pose as
+    // drawn (its GPU instance matrix), at the rig's offsets in car-local space.
+    await pressKey(page, '3')
+    await waitFrames(page, await frames(page), 3, `engine tick ${k} T-cam`)
+    const cam = await page.evaluate(readTcamInPage)
+    const tcamMsg =
+      `${grid[0]} at tick ${k}: camera ${cam.pos.toExponential(1)} m from the car pose + local offset, ` +
+      `view direction off by ${cam.dir.toExponential(1)}`
+    if (cam.pos < ENGINE_TCAM_TOL_M && cam.dir < ENGINE_DIR_TOL) pass(`engine T-cam: ${tcamMsg}`)
+    else fail(`engine T-cam: ${tcamMsg}`)
+    await page.screenshot({ path: join(OUT, `engine-tick-${String(k).padStart(3, '0')}-onboard.png`) })
+    await pressKey(page, '1')
+    await waitFrames(page, await frames(page), 2, `engine tick ${k} orbit`)
   }
   await page.evaluate(() => {
     window.__viewer.clock.playing = true

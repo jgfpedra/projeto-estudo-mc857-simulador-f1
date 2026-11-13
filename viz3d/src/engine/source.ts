@@ -84,12 +84,14 @@ export function lapAtTime(rec: Recording, tS: number, car: number): number {
  * **`sUnwrapped` is `progress_m`**, interpolated linearly. The frame
  * `trackFromRecording` builds starts at the start/finish waypoint, so
  * `progress_m` is an unwrapped `s` on it and needs no offset. It drives
- * everything that wants a distance along the track: the camera rig's follow
- * anchor and lookahead, the wheel odometer and the running order. `d` is `d_m`,
- * for the camera's lateral and for the panel.
+ * everything that wants a distance along the track: the chase camera's damped
+ * trail, lookahead and the T-cam's roll, the wheel odometer and the running
+ * order. Where the cameras sit relative to the car comes from the pose, not
+ * from here (`rig.ts`, `chasePose` / `onboardPose`). `d` is `d_m`, for the
+ * panel and the chase camera's lateral.
  *
  * `speedMps` is the rate `progress_m` advances, not `velocity_mps`: the rig feeds
- * it forward into an anchor that follows `progress_m`, and the two must agree.
+ * it forward into a trail that follows `progress_m`, and the two must agree.
  */
 export function engineSource(rec: Recording): MotionSource {
   const n = rec.cars.length

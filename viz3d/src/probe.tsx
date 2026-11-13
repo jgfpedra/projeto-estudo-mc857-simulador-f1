@@ -2,7 +2,8 @@ import { useEffect } from 'react'
 import { useThree } from '@react-three/fiber'
 import type { RootState } from '@react-three/fiber'
 import type { ClockState } from './replay/clock'
-import type { FollowState } from './cameras/rig'
+import { ONBOARD } from './cameras/rig'
+import type { FollowState, OnboardConfig } from './cameras/rig'
 
 /**
  * Hook for `scripts/snapshot.mjs`, and nothing else.
@@ -32,6 +33,8 @@ export interface ViewerProbe {
   clock: ClockState
   /** The followed car's state as `Grid` last wrote it. */
   readout: FollowState
+  /** The T-cam's offsets, so the snapshot can check the camera against the car. */
+  onboard: OnboardConfig
 }
 
 declare global {
@@ -58,6 +61,7 @@ export function Probe({ clock, readout }: Props) {
       get readout() {
         return readout.current
       },
+      onboard: ONBOARD,
     }
     return () => {
       delete window.__viewer

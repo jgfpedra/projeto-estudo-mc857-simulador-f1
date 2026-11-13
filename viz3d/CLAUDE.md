@@ -148,8 +148,9 @@ in headless Chromium with `?probe` (which mounts `src/probe.tsx`), and:
   (synthetic, the Monza replay, the engine recording) and fails any canvas
   that is (near enough) one flat colour, measured with the DOM panels hidden;
 - on `?track=engine`, pauses on three fixture ticks and requires every car's
-  GPU instance matrix at the recording's `position_xy` / `heading_deg`, and
-  the car panel to show its position and `d_m`;
+  GPU instance matrix at the recording's `position_xy` / `heading_deg`, the
+  car panel to show its position and `d_m`, and the T-cam at the followed
+  car's pose plus its car-local offset;
 - steps the replay at 0.25x beside a front wheel with the debug wheel markers
   on, checks spin against distance travelled, scrubs the timeline backwards and
   requires the marker to return exactly.
@@ -158,7 +159,8 @@ Screenshots land in `.cache/snapshots/` (gitignored); exit code 1 on any
 failure. Proven able to fail: a NaN in the camera position turns both orbit
 shots into a single colour and the run exits 1; for the engine source, dropping
 the minus in `z = -y` fails placement by 44 m-1.7 km and a NaN `progress_m`
-flattens chase and T-cam (docs/phase3-engine-race.md section 5). First run needs
+flattens chase and T-cam, and anchoring the T-cam on `progress_m` again fails
+the T-cam check (docs/phase3-engine-race.md section 5). First run needs
 `npx playwright install chromium`.
 
 ## Known gotchas
@@ -204,8 +206,11 @@ flattens chase and T-cam (docs/phase3-engine-race.md section 5). First run needs
 - **Engine cars are placed by pose, not `(s, d)`.** The `engine` source is the
   one exception to the position model: the engine is the authority on where its
   cars are (a stopped car rejoining at 70 deg to the track would otherwise be
-  drawn aligned with it). `progress_m` still drives the cameras, odometer and
-  order. `MotionState.posed` selects the path; every source must write it.
+  drawn aligned with it). `progress_m` still drives the odometer, the order
+  and the chase camera's trail and lookahead, but the follow cameras are held
+  to the pose: the T-cam is bolted to it and the chase anchor sits on the car.
+  `MotionState.posed` selects the path (and reaches the rig through
+  `FollowState`); every source must write it.
 - **`run_race_10_cars.py` is not `engine.run()`.** `run()` steps the weather to
   lap 1 first and caps ticks; the 10-car script does neither. The recorder
   reproduces the script's loop, and its realtime can only be turned off there.

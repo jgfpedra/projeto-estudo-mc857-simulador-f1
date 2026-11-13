@@ -51,6 +51,16 @@ export interface FollowState {
   speedMps: number
   /** Which car this is, so the rig can tell a selection change from motion. */
   carIndex: number
+  /**
+   * The car's own world pose, copied from `MotionState` (see there). When
+   * `posed` - the engine recording - the T-cam is bolted to this pose and the
+   * chase camera is anchored on its position; otherwise both follow `(s, d)`
+   * and `x`, `z`, `yawRad` are ignored.
+   */
+  posed: boolean
+  x: number
+  z: number
+  yawRad: number
 }
 
 /** Everything the rig carries between frames. Mutated in place, never allocated. */
@@ -67,6 +77,12 @@ export interface CameraPose {
   position: Vector3
   target: Vector3
   up: Vector3
+  /**
+   * The point on the ground the camera is following: the car. `toWorld(s, d)`
+   * for a source placed by `(s, d)`, the car's own position for a posed one.
+   * Not used to aim the camera; written so tests can hold the rig to the car.
+   */
+  anchor: Vector3
 }
 
 export interface ChaseConfig {
@@ -159,7 +175,12 @@ export function newRigState(): RigState {
 }
 
 export function newPose(): CameraPose {
-  return { position: new Vector3(), target: new Vector3(), up: new Vector3(0, 1, 0) }
+  return {
+    position: new Vector3(),
+    target: new Vector3(),
+    up: new Vector3(0, 1, 0),
+    anchor: new Vector3(),
+  }
 }
 
 /** Taps in the curvature low-pass. Odd, so one of them lands on `s` itself. */
@@ -259,8 +280,10 @@ export function stepRig(
   state.roll = MathUtils.damp(state.roll, roll, 1 / onboard.rollTauS, dt)
 }
 
-/** Reused by `onboardPose`. `toWorld` keeps its own and consumes it before returning. */
+/** Reused by the pose functions. `toWorld` keeps its own and consumes it before returning. */
 const view = new Vector3()
+const shift = new Vector3()
+const forward = new Vector3()
 
 /**
  * Where the chase camera is and what it looks at.
@@ -269,6 +292,17 @@ const view = new Vector3()
  * car's arc length plus the lookahead, so the camera leads the car up the road
  * rather than staring at it. Both go through `toWorld` and nothing else —
  * `frame.ts` stays the one place `(s, d)` becomes world coordinates.
+ *
+ * **A posed car** (the engine recording) is not where `toWorld(s, d)` says:
+ * `progress_m` is the engine's own along-track measure, and on the ground it
+ * sits up to 0.86 m from the car (seed 42; docs/phase3-engine-race.md
+ * section 4). So the whole pose above is translated by the car's position
+ * minus `toWorld(s, d)`. That puts the anchor on the car and leaves everything
+ * else as it was: the view direction is still the track's, `progress_m` plus
+ * the lookahead, and the trail is still the damped `u`. Taking the direction
+ * from the car's heading instead would swing the camera through 70 degrees as
+ * a stopped car turns back onto the track, which is the one thing a chase
+ * camera must not do.
  */
 export function chasePose(
   frame: TrackFrame,
@@ -279,8 +313,33 @@ export function chasePose(
 ): CameraPose {
   toWorld(frame, state.u, follow.d, cfg.heightM, out.position)
   toWorld(frame, follow.sUnwrapped + cfg.lookaheadM, follow.d, cfg.targetHeightM, out.target)
+  toWorld(frame, follow.sUnwrapped, follow.d, 0, out.anchor)
+  if (follow.posed) {
+    shift.set(follow.x - out.anchor.x, 0, follow.z - out.anchor.z)
+    out.anchor.add(shift)
+    out.position.add(shift)
+    out.target.add(shift)
+  }
   out.up.copy(WORLD_UP)
   return out
+}
+
+/**
+ * The T-cam bolted to a posed car: its offsets taken in the car's own frame.
+ *
+ * `fwdM` and `lookaheadM` run along the nose, `heightM` and `targetHeightM` are
+ * above the ground under the car (`toWorld(s, d)`'s height; the engine's track
+ * is flat), and there is no lateral offset - the car is on its own centreline.
+ * The mesh faces local -Z and `yawRad` turns it about +y, so the nose points
+ * along `(-sin yaw, 0, -cos yaw)`.
+ */
+function posedOnboard(follow: FollowState, groundY: number, cfg: OnboardConfig, out: CameraPose) {
+  forward.set(-Math.sin(follow.yawRad), 0, -Math.cos(follow.yawRad))
+  out.anchor.set(follow.x, groundY, follow.z)
+  out.position.copy(out.anchor).addScaledVector(forward, cfg.fwdM)
+  out.position.y += cfg.heightM
+  out.target.copy(out.anchor).addScaledVector(forward, cfg.lookaheadM)
+  out.target.y += cfg.targetHeightM
 }
 
 /**
@@ -292,6 +351,12 @@ export function chasePose(
  * is also what keeps it safe — that rotation preserves the angle between `up`
  * and the view direction by construction, so no amount of roll can drive
  * `Matrix4.lookAt` towards its degenerate case.
+ *
+ * For a posed car, position and aim come from the car's own pose instead
+ * (`posedOnboard`), so the camera stays 2.6 m behind the car's centre and looks
+ * along its nose even where `progress_m` disagrees with the pose or the car is
+ * at an angle to the track. The roll is unchanged: still banked on the track's
+ * curvature at `progress_m`.
  */
 export function onboardPose(
   frame: TrackFrame,
@@ -300,8 +365,13 @@ export function onboardPose(
   cfg: OnboardConfig,
   out: CameraPose,
 ): CameraPose {
-  toWorld(frame, follow.sUnwrapped + cfg.fwdM, follow.d, cfg.heightM, out.position)
-  toWorld(frame, follow.sUnwrapped + cfg.lookaheadM, follow.d, cfg.targetHeightM, out.target)
+  toWorld(frame, follow.sUnwrapped, follow.d, 0, out.anchor)
+  if (follow.posed) {
+    posedOnboard(follow, out.anchor.y, cfg, out)
+  } else {
+    toWorld(frame, follow.sUnwrapped + cfg.fwdM, follow.d, cfg.heightM, out.position)
+    toWorld(frame, follow.sUnwrapped + cfg.lookaheadM, follow.d, cfg.targetHeightM, out.target)
+  }
   view.subVectors(out.target, out.position).normalize()
   out.up.copy(WORLD_UP).applyAxisAngle(view, state.roll)
   return out

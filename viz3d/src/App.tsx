@@ -115,7 +115,17 @@ export default function App() {
    * `carIndex: -1` is the unseeded marker the rig checks: the first frames can
    * legitimately arrive before `Grid` has anything to report.
    */
-  const readout = useRef<FollowState>({ s: 0, sUnwrapped: 0, d: 0, speedMps: 0, carIndex: -1 })
+  const readout = useRef<FollowState>({
+    s: 0,
+    sUnwrapped: 0,
+    d: 0,
+    speedMps: 0,
+    carIndex: -1,
+    posed: false,
+    x: 0,
+    z: 0,
+    yawRad: 0,
+  })
 
   const cycleMode = useCallback(
     () => setMode((m) => CAMERA_MODES[(CAMERA_MODES.indexOf(m) + 1) % CAMERA_MODES.length]),
