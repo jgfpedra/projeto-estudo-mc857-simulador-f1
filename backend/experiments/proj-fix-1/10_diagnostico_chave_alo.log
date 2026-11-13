@@ -1,0 +1,16 @@
+PROJ-FIX-3 — FASE 0: diagnóstico declarado de uma única chave; sem agregações
+chave=(ALO,2130,2132); run=composite_monaco; track=monaco
+replay=backend/experiments/proj-fix-1/1_replay_composite_monaco_s0_v34.csv (SHA esperado do PARE anterior: 6698b55bad9cba1a167c952eab4381ee696a4191545cdecdd3db873e739b2ce7)
+tabela=backend/experiments/fail-forensics-2/veredito/saltos_projecao.csv (SHA esperado do PARE anterior: b9bcb14d9bb38dceabcbfddc9f90cb3b5bd2cc25fa6719a90ded52eb2b9bb739)
+XY_prev=(485.01183904302826,470.9758174228806); XY_cur=(483.54709276497687,472.1250837283386)
+dXY_m=1.8617987807296796; ns_raw=766->772; d_ns_raw=6
+historical.delta_s_wrapped_m=20.175834396520713 (20.175834396521 m)
+historical.delta_cum_dist_m=1.8618781786926775 (1.8618781786926775 m)
+delta_cum_minus_dXY_m=7.93979629978292e-05 (sub-millimetric; values are not exactly equal)
+historical.abs_projection_error_m=18.313956217828036 (18.313956217828 m)
+historical.offtrack=1; authority=rejoin; lat_prev=11.39793668372648; lat=12.23462726140812; speed_mps=9.293553754712804
+historical.segment_prev_derived=767; segment_derived=772
+frozen_track=backend/model_train/tracks_frozen/Monaco_v2.json; internal_sha256=67ca11dc211c8c78; geometry uses waypoints directly (Track.from_waypoints)
+waypoint_span=766->772; polyline_arc_m=23.860952390323; chord_m=20.738853198767
+allowed_single_key_assignment=C5 because dXY<30 and d_ns_raw<8; no other key or class counts examined.
+interpretation=projection proxy advances under offtrack/rejoin context while XY pair remains sub-threshold; no behavior correction proposed.

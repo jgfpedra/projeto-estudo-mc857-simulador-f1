@@ -1,0 +1,38 @@
+{
+  "analysis_output_paths_absent_at_freeze": [
+    "backend/experiments/pass-1/autopsia/1_Q0_TENTATIVAS.csv",
+    "backend/experiments/pass-1/autopsia/2_Q0_INVERSOES.csv",
+    "backend/experiments/pass-1/autopsia/3_PACE_CURVATURA.csv",
+    "backend/experiments/pass-1/autopsia/4_REENTRADA_CONTATOS.csv",
+    "backend/experiments/pass-1/autopsia/5_PRIMEIRA_VOLTA.csv",
+    "backend/experiments/pass-1/autopsia/6_RESUMO.json"
+  ],
+  "base_commit": "9a7852cb8111d354a1206b7c5992540824896467",
+  "base_script_sha256": "90f44bac473878449eb16cf33cbc86998f9a5135e4181daabecf86d4ccd1c623",
+  "census": {
+    "method": "keys and structure only; no record values; exact censo command is in prereg",
+    "path": "backend/experiments/pass-1/autopsia/0_CENSO_SCHEMA_AUDIT_PASS_DIAG_1F.txt",
+    "sha256": "c9532d4d146104947f3e3cbdeb40aff8377c4ebcc89594d772928bfdc46aa731"
+  },
+  "freeze_files": {
+    "backend/experiments/pass-1/autopsia/0_CENSO_SCHEMA_AUDIT_PASS_DIAG_1F.txt": "c9532d4d146104947f3e3cbdeb40aff8377c4ebcc89594d772928bfdc46aa731",
+    "backend/experiments/pass-1/autopsia/0_selftest_v14.log": "cddb0d9573f956e7b2639d8ec2fda982dc0f98b57e913a4edf46a40209a9eee4",
+    "backend/experiments/pass-1/autopsia/PREREG_PASS_DIAG_1F.md": "c9fca6153720c3f9118c50f68a064e8e96650227c0842d4ba057bee198533a49",
+    "backend/scripts/pass_1_diag.py": "85812034fabbb1c6a7c2d2b6f9758bbb77e3d370a5eefcd5f7f64ce5c870af9f"
+  },
+  "geometry_provenance_commit": "8136d54ec45f9f49b38a5893a812928474109535",
+  "schema": "PASS-DIAG-1F freeze manifest v1",
+  "selftest": {
+    "path": "backend/experiments/pass-1/autopsia/0_selftest_v14.log",
+    "sha256": "cddb0d9573f956e7b2639d8ec2fda982dc0f98b57e913a4edf46a40209a9eee4"
+  },
+  "source_pins": {
+    "experiments/pass-1/1_R1_OFF.csv": "5cb49097fea9bb066e9bef5ae62f4ee7c6f9ceb70485448792d33b533ce5cdaa",
+    "experiments/pass-1/1_R1_OFF.log": "f23a79771bd9f05d8e709f9bf67a93be8a93bf2e8129403db03972b0c0c23273",
+    "experiments/pass-1/2_R2_ON.csv": "7d2c49b9b873fc4fc4888b1413cd47ae3b9dde040a4e1af111ac246c90e0a27c",
+    "experiments/pass-1/2_R2_ON.log": "213fb953c98e59a51e2178a9f05171560dd63ed15f675fcf6c2a86b33c783f1b",
+    "experiments/pass-1/4_AUDIT_PASS_1.json": "347216e6cf65f109ec82d927762bab5ffefea85c4913fca024891bf05e1a134b",
+    "experiments/pass-1/5_EXECUCAO_PASS_1.md": "e4f6ac05383d481c862cf679edac171547ccbde81c44557ecd2072f295281a67",
+    "model_train/tracks_frozen/interlagos_v2.json": "c4617650983df9b1141296dac953b0e4be03f0c06c1de006340233c39e308613"
+  }
+}

@@ -1,0 +1,1 @@
+<COUNT> [pass-decision] <DRV>: dict_keys=[aborted_contact,aborted_gap,aborted_rejoin,aborted_target,aborted_timeout,active_attempt,attempts,consumed,engaged,opportunities], attempts_item_keys=[end_s,outcome,start_s,target_id]

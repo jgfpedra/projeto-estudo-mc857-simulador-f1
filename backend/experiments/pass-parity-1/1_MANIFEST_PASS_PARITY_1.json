@@ -1,0 +1,53 @@
+{
+  "cycle": "PASS-PARITY-1",
+  "authoring_head": "e47992e3a12accad7011337524cb9a1f2b70aeb6",
+  "frozen_pass1_code_commit": "3abb98de95fa08b2b06b2ae922bb98d693cb9e5e",
+  "inputs": {
+    "r1_csv": {
+      "tier": "B",
+      "path": "backend/experiments/pass-1/1_R1_OFF.csv",
+      "sha256": "5cb49097fea9bb066e9bef5ae62f4ee7c6f9ceb70485448792d33b533ce5cdaa",
+      "size_bytes": 16118125,
+      "file_lines_including_metadata_and_header": 30002,
+      "data_rows": 30000,
+      "fields": 54,
+      "required_history_fields": ["body_x", "body_y", "ns_raw"]
+    },
+    "pass1_suite_log": {
+      "tier": "B",
+      "path": "backend/experiments/pass-1/2_full_suite.log",
+      "sha256": "89b37f27680092414c7480052b98dc74338ac9fc0c6dc0319ab0d8f6d770905b",
+      "size_bytes": 48038,
+      "file_lines": 953,
+      "published_result": "20 failed, 375 passed, 3 skipped"
+    },
+    "track_geometry": {
+      "tier": "A",
+      "path": "backend/model_train/tracks_frozen/interlagos_v2.json",
+      "sha256": "c4617650983df9b1141296dac953b0e4be03f0c06c1de006340233c39e308613",
+      "size_bytes": 61791,
+      "git_blob_commit": "3abb98de95fa08b2b06b2ae922bb98d693cb9e5e"
+    },
+    "pass1_prereg": {
+      "tier": "A",
+      "path": "backend/experiments/pass-1/PREREG_PASS_1.md",
+      "sha256": "141b91cc58b977b26ca89418e2aad1033fc23fd12b27ee04ee18da2d0c156cc5",
+      "git_blob_commit": "3abb98de95fa08b2b06b2ae922bb98d693cb9e5e"
+    },
+    "pass1_execution_report": {
+      "tier": "B",
+      "path": "backend/experiments/pass-1/5_EXECUCAO_PASS_1.md",
+      "sha256": "e4f6ac05383d481c862cf679edac171547ccbde81c44557ecd2072f295281a67",
+      "size_bytes": 4803,
+      "file_lines": 51
+    }
+  },
+  "planned_outputs": [
+    "backend/experiments/pass-parity-1/0_full_suite.log",
+    "backend/experiments/pass-parity-1/1_R2_PRIME.csv",
+    "backend/experiments/pass-parity-1/1_R2_PRIME.log",
+    "backend/experiments/pass-parity-1/1_R2_PRIME_events.csv",
+    "backend/experiments/pass-parity-1/2_AUDIT_PASS_PARITY_1.json",
+    "backend/experiments/pass-parity-1/EXECUCAO_PASS_PARITY_1.md"
+  ]
+}

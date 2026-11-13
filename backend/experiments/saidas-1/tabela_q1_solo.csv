@@ -1,0 +1,3 @@
+perfil,total_eventos,eventos_solo,pct_solo,ci95_low,ci95_high,pct_solo_10m,pct_solo_20m
+A (v10-cego),180,84,46.7,39.4,53.9,57.2,38.3
+B (composite),219,183,83.6,78.5,88.1,88.1,78.5

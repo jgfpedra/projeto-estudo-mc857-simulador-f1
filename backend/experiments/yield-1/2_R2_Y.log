@@ -1,0 +1,17 @@
+pybullet build time: Sep 11 2026 21:22:29
+[diag] pista FROZEN: São Paulo Grand Prix | 1131 wp | SF wp 729 | sha256 164876196eb12174 | clima=seeded (rng semeado por seed) | variance=off | rejoin_gap=0.0 | launch_cap=False | launch_stagger=False | pguard=False | grid=f1 | rejoin=bearing | anti_glue=False | variedade=0 | prof_repair=False | pass_decision=True
+[Grid] reta antes da SF: 45 m | grid ocupa 42 m
+[Grid] 10 carros no grid estilo F1 (5 fileiras x 2 colunas, NA RETA)
+[diag] controller: PROFESSOR x10 (gate all-professor) | sf_range=homog 0.80 | machine_only=False | track=São Paulo Grand Prix | seed=0
+Traceback (most recent call last):
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/model_train/race_diagnostic.py", line 1842, in <module>
+    main()
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/model_train/race_diagnostic.py", line 1360, in main
+    actions = ctrl.predict_batch(
+              ^^^^^^^^^^^^^^^^^^^
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/model_train/race_diagnostic.py", line 692, in predict_batch
+    a = prof_i.action(traffic,
+        ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/model_train/reference_controller.py", line 758, in action
+    raise RuntimeError(
+RuntimeError: predicado puro de passagem não confirmou o engage no mesmo tick; payload={'context': {'t_s': 76.19999999999995, 'sample_5hz': True, 'allowed': True, 'cars': [{'driver_id': 'VER', 's': 1720.1367322817414, 'lat': 0.8231292626268979, 'speed': 38.132913996153924, 'cum_dist': 3243.0287784554453}, {'driver_id': 'NOR', 's': 1653.2177957318413, 'lat': -1.0410612109750919, 'speed': 26.158608011272253, 'cum_dist': 3171.6727158031767}, {'driver_id': 'LEC', 's': 1508.6356629760935, 'lat': 0.13882915066204587, 'speed': 63.91214379191338, 'cum_dist': 3044.933172852265}, {'driver_id': 'HAM', 's': 1205.4957895563132, 'lat': -0.9481585711334056, 'speed': 32.228453545848666, 'cum_dist': 2754.3894200216982}, {'driver_id': 'PIA', 's': 1601.1572784505788, 'lat': 2.0310492378479785, 'speed': 21.14028570640513, 'cum_dist': 3145.4054144483985}, {'driver_id': 'SAI', 's': 1421.169112796159, 'lat': -0.17128362051284224, 'speed': 59.53476988190628, 'cum_dist': 2976.2986544649366}, {'driver_id': 'PER', 's': 219.96911688191298, 'lat': -182.37710977416017, 'speed': 5.099168303580991, 'cum_dist': 1813.453683026354}, {'driver_id': 'ALO', 's': 1335.9320144449116, 'lat': -0.3303428727777016, 'speed': 50.41900684083928, 'cum_dist': 2897.942930131732}, {'driver_id': 'GAS', 's': 219.6467892504114, 'lat': -184.328562257274, 'speed': 5.270279960243858, 'cum_dist': 1818.4288675970517}], 'ego_cum_dist': 2836.476441050395, 'track_len_s': 4160.436950117386, 'half_width': 6.0, 'contact_pairs': {('GAS', 'PER')}, 'decision_engage_target': 'ALO'}, 'state': {'active': False, 'candidate_id': 'ALO', 'candidate_samples': 1, 'target_id': None, 'started_s': 68.00000000000041, 'start_lat': -2.6335281573190277, 'side': 1.0, 'target_lat': -0.13352815731902767, 'lateral_progress_m': 2.0456070299766087}, 'candidate': {'driver_id': 'ALO', 's': 1335.9320144449116, 'lat': -0.3303428727777016, 'speed': 50.41900684083928, 'cum_dist': 2897.942930131732}, 'allowed': True, 'sample_5hz': True, 'now_s': 76.19999999999995}

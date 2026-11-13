@@ -1,6 +1,6 @@
 numpy>=1.26
 pybullet>=3.2.6
-fastf1>=3.4.0
+fastf1==3.8.3  # NIT (a) ADOCAO-H-2: pinada a versao instalada — 3.9 alpha muda auth (401 livetiming desde ~15/out; fastf1 #978/#982); sem upgrade silencioso
 pytest>=8.0
 fastapi>=0.115
 uvicorn[standard]>=0.30

@@ -1,0 +1,11 @@
+PROJ-FIX-2 — freeze manifest (pre-classification)
+Status: PASS; frozen by commit before reading decomposition/classification numbers.
+
+PREREG_PROJ_FIX_2.md SHA-256: a6eeeed29434a5767617e3c739f1435623d3c289ff6aa22a53bbb6b60baab28d
+proj_fix_2_classify.py SHA-256: 9d73a890964974b3f04d2261fe0806a21ec6b162b111aa89c28c7919c3704d8d
+6_classifier_selftest_v11.log SHA-256: f9f6a84ed8538b1ded286aa0ba65afef17bef166c9c5e73e75285de893b5f521
+5_identidade_run_nit2.log SHA-256: 23f499357abb80d30c4ee17db3bed12e289e059dc5bea4057503c2ebc0e4c179
+
+Review: diff v1.1 vs v1.0 restricted to the PROJ-FIX-2 docstring, VERSION="1.1",
+and PROJECTION_RUN="composite_monaco". Synthetic selftest: PASS.
+No class counts or decomposition measurements were read before this freeze.

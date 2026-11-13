@@ -1,0 +1,17 @@
+PROJ-FIX-5 — corrected pre-analysis freeze manifest v1.0
+Freeze commit: c0dd552c26ba35bd1c91ba5a3b94e45a1564b36d
+Precondition: this commit and manifest precede the only anatomy run.
+The original schema preflight stopped before output; see 20_PARE_schema_preflight.log.
+Frozen artifact | SHA-256 disk | SHA-256 git-show | result
+backend/experiments/proj-fix-1/PREREG_PROJ_FIX_5.md | 5848ecdbaf79103bde079e6e1a8aa2f2f2e054d4711cdedc847b35027c7041a6 | 5848ecdbaf79103bde079e6e1a8aa2f2f2e054d4711cdedc847b35027c7041a6 | PASS
+backend/experiments/proj-fix-1/21_ERRATA_PROJ_FIX_5_preanalysis.md | aaacdd92b5484f1a16cf7437567fa4c56609c9fed94b47fbb8a19293fc45cb78 | aaacdd92b5484f1a16cf7437567fa4c56609c9fed94b47fbb8a19293fc45cb78 | PASS
+backend/scripts/proj_fix_5_anatomy.py | 2e89915a0dfa241f3d156c21cd2db677249aae23d0f11527a477003347695e9d | 2e89915a0dfa241f3d156c21cd2db677249aae23d0f11527a477003347695e9d | PASS
+backend/experiments/proj-fix-1/20_PARE_schema_preflight.log | adf446919341735be476e113f3fa3b59c29b147b30cab3979ac62d21eb5eee6f | adf446919341735be476e113f3fa3b59c29b147b30cab3979ac62d21eb5eee6f | PASS
+backend/experiments/proj-fix-1/22_selftest_proj_fix_5_v1_0_recheck.log | 5a6346a573260bde36e55564a924f313dcb2ca107a5fad0fcea63bdd8c929595 | 5a6346a573260bde36e55564a924f313dcb2ca107a5fad0fcea63bdd8c929595 | PASS
+
+Source | SHA-256 expected | SHA-256 disk | result
+backend/experiments/proj-fix-1/classificacao_v12/mapa_nit2_ge10.csv | 1f75e75b50ac9d6a78f96b12f04ca0ac422cbff8ec1546d8cafb7aa791f5008f | 1f75e75b50ac9d6a78f96b12f04ca0ac422cbff8ec1546d8cafb7aa791f5008f | PASS
+backend/experiments/proj-fix-1/classificacao_v12/resumo_classes.json | 9744db80cb2c55400aac4bc75351af59c89fb7963c0163dbe63b42c5abf5cb05 | 9744db80cb2c55400aac4bc75351af59c89fb7963c0163dbe63b42c5abf5cb05 | PASS
+
+Corrected synthetic selftest PASS; it opens no CSV/JSON.
+No anatomy metrics have been generated as of this manifest.
