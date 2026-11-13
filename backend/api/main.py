@@ -19,7 +19,9 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=['*'], a
 @app.post('/races', response_model=RaceSetupResponse)
 def create_race(req: RaceSetupRequest):
     try:
-        race_id, track, config = race_manager.create_race(req.laps, req.track, req.year)
+        race_id, track, config = race_manager.create_race(
+            req.laps, req.track, req.year, num_drivers=req.num_drivers
+        )
     except redis.RedisError as exc:
         raise HTTPException(status_code=503, detail='Redis indisponível') from exc
     except ValueError as exc:

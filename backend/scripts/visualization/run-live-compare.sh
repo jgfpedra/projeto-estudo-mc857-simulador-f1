@@ -7,6 +7,7 @@ PYTHON_BIN="${F1_PYTHON:-$ROOT_DIR/backend/.venv/bin/python}"
 API_PORT="${F1_API_PORT:-8000}"
 VIZ_PORT="${F1_VIZ_PORT:-5174}"
 LAPS=3
+NUM_DRIVERS=2
 TRACK=interlagos
 YEAR=
 CAMERA=follow
@@ -17,7 +18,7 @@ REDIS_CONTAINER=
 
 usage() {
   cat <<'HELP'
-Uso: backend/scripts/visualization/run-live-compare.sh [--laps N] [--track NOME] [--year ANO] [--camera follow|overview] [--no-browser]
+Uso: backend/scripts/visualization/run-live-compare.sh [--laps N] [--drivers N] [--track NOME] [--year ANO] [--camera follow|overview] [--no-browser]
 
 Inicia uma corrida na engine com a janela do PyBullet e abre a mesma corrida
 no visualizador 3D do navegador. Pressione Ctrl+C para encerrar.
@@ -29,10 +30,10 @@ HELP
 
 while (($#)); do
   case "$1" in
-    --laps|--track|--year|--camera)
+    --laps|--drivers|--track|--year|--camera)
       if (($# < 2)); then printf 'Falta valor para %s\n' "$1" >&2; exit 2; fi
       case "$1" in
-        --laps) LAPS=$2;; --track) TRACK=$2;; --year) YEAR=$2;; --camera) CAMERA=$2;;
+        --laps) LAPS=$2;; --drivers) NUM_DRIVERS=$2;; --track) TRACK=$2;; --year) YEAR=$2;; --camera) CAMERA=$2;;
       esac
       shift 2;;
     --no-browser) OPEN_BROWSER=0; shift;;
@@ -42,6 +43,7 @@ while (($#)); do
 done
 
 [[ "$LAPS" =~ ^[0-9]+$ ]] && ((10#$LAPS >= 1 && 10#$LAPS <= 200)) || { echo 'Voltas devem estar entre 1 e 200.' >&2; exit 2; }
+[[ "$NUM_DRIVERS" =~ ^[0-9]+$ ]] && ((10#$NUM_DRIVERS >= 1 && 10#$NUM_DRIVERS <= 24)) || { echo 'Corredores devem estar entre 1 e 24.' >&2; exit 2; }
 [[ -z "$YEAR" || "$YEAR" =~ ^[0-9]{4}$ ]] || { echo 'Ano inválido.' >&2; exit 2; }
 [[ "$CAMERA" == follow || "$CAMERA" == overview ]] || { echo 'Câmera deve ser follow ou overview.' >&2; exit 2; }
 for port in "$API_PORT" "$VIZ_PORT"; do
@@ -118,7 +120,7 @@ done
 curl -fsS "http://127.0.0.1:$API_PORT/docs" >/dev/null || { echo 'API não ficou pronta.' >&2; exit 1; }
 curl -fsS "http://127.0.0.1:$VIZ_PORT/" >/dev/null || { echo 'Visualizador não ficou pronto.' >&2; exit 1; }
 
-payload=$("$PYTHON_BIN" -c 'import json,sys; print(json.dumps({"laps":int(sys.argv[1]), "track":sys.argv[2] or None, "year":int(sys.argv[3]) if sys.argv[3] else None}))' "$LAPS" "$TRACK" "$YEAR")
+payload=$("$PYTHON_BIN" -c 'import json,sys; print(json.dumps({"laps":int(sys.argv[1]), "num_drivers":int(sys.argv[2]), "track":sys.argv[3] or None, "year":int(sys.argv[4]) if sys.argv[4] else None}))' "$LAPS" "$NUM_DRIVERS" "$TRACK" "$YEAR")
 response=$(curl -fsS -X POST "http://127.0.0.1:$API_PORT/races" -H 'Content-Type: application/json' -d "$payload") || { echo 'Falha ao iniciar a corrida.' >&2; exit 1; }
 race_id=$("$PYTHON_BIN" -c 'import json,sys; print(json.load(sys.stdin)["race_id"])' <<< "$response")
 echo 'Aguardando o primeiro passo da engine e a janela do PyBullet…'

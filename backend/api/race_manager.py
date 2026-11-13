@@ -64,7 +64,9 @@ class RaceManager:
         self.redis = client or redis.Redis.from_url(REDIS_URL, decode_responses=True, socket_connect_timeout=2)
         self._threads = {}
 
-    def create_race(self, laps, track, year):
+    def create_race(self, laps, track, year, num_drivers=2):
+        if not 1 <= num_drivers <= 24:
+            raise ValueError('A quantidade de corredores deve estar entre 1 e 24.')
         self.redis.ping()
         track_obj = load_live_track(track_name=track, year=year)
         race_id = f'race_{uuid.uuid4().hex}'
@@ -75,11 +77,19 @@ class RaceManager:
         config = replace(DEFAULT_INTERLAGOS_CONFIG, race_id=race_id, num_laps=laps,
                          gui=gui, camera_mode=camera_mode, draw_track=gui, draw_track_details=False,
                          realtime=True, track_progress_laps=True)
-        drivers = list(DEFAULT_DRIVERS)
+        drivers = [
+            replace(
+                DEFAULT_DRIVERS[index % len(DEFAULT_DRIVERS)],
+                driver_id=f'drv_{index + 1:02d}',
+                name=(DEFAULT_DRIVERS[index].name if index < len(DEFAULT_DRIVERS)
+                      else f'Piloto {index + 1:02d}'),
+            )
+            for index in range(num_drivers)
+        ]
         geometry_bytes = b''.join(struct.pack('<dd', float(x), float(y)) for x, y in track_obj.waypoints)
         geometry_sha256 = hashlib.sha256(geometry_bytes).hexdigest()[:16]
         meta = {
-            'race_id': race_id, 'num_laps': laps,
+            'race_id': race_id, 'num_laps': laps, 'num_drivers': num_drivers,
             'car_geometry': {'length_m': CHASSIS_LENGTH_M, 'width_m': CHASSIS_WIDTH_M,
                              'height_m': CHASSIS_HEIGHT_M},
             'track': {'name': track_obj.name, 'source': track_obj.source,

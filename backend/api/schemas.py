@@ -15,6 +15,7 @@ class RaceSetupRequest(BaseModel):
     """
 
     laps: int = Field(default=10, ge=1, le=200)
+    num_drivers: int = Field(default=2, ge=1, le=24)
     track: Optional[str] = None
     year: Optional[int] = None
 
