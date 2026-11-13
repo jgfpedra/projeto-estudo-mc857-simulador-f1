@@ -35,8 +35,8 @@ from model_train.prof_pace import (  # noqa: E402
 )
 from model_train.reference_controller import ReferenceController  # noqa: E402
 from model_train.velocity_profile import VelocityProfile  # noqa: E402
-from scripts.prof_lago_anatomy import kappa_interp_fn  # noqa: E402
-from scripts.prof_pace_margin_derivation import (  # noqa: E402
+from scripts.experiments.controller.prof_lago_anatomy import kappa_interp_fn  # noqa: E402
+from scripts.experiments.controller.prof_pace_margin_derivation import (  # noqa: E402
     MARGIN_CONTROLLER,
     propagate_longitudinal,
 )
@@ -76,14 +76,14 @@ def test_chronic_windows_interlagos_real():
 def test_paridade_com_instrumento_pace_margin():
     """O perfil capado da implementação deve ser IDÊNTICO ao do instrumento
     homologado (mesma função build_v_target_cap, mesmos parâmetros)."""
-    from scripts.prof_pace_margin_derivation import build_v_target_cap
+    from scripts.experiments.controller.prof_pace_margin_derivation import build_v_target_cap
     track = json.load(open(BACKEND / "model_train" / "tracks_frozen"
                            / "interlagos_v2.json"))
     wps = np.array(track["waypoints"], dtype=np.float64)
     vp = VelocityProfile(wps, grip_mult=0.788, sf=0.80, ds_target=4.0,
                          smooth_window_m=20.0)
     janelas = {"C01": (2276.239 - 2276.239, 0.0)}  # placeholder real abaixo
-    from scripts.prof_lago_anatomy import kappa_interp_fn  # noqa: E402
+    from scripts.experiments.controller.prof_lago_anatomy import kappa_interp_fn  # noqa: E402
     kappa_smooth_at = kappa_interp_fn(wps)
     from backend.model_train.prof_curva import _instantaneous_kappa_profile
     k_s, k_i = _instantaneous_kappa_profile(wps, ds_target=4.0)
@@ -114,7 +114,7 @@ def test_prevoi_t_base_t_margin_t_cap_com_grip_ref():
     disclosada: o instrumento PACE_MARGIN v2 calculou as passadas com a κ
     suavizada de 30 m (convenção LAGO) — t_cap 105,660; a convenção
     canônica de 20 m dá t_cap ≈ 106,99 (Δ ≈ +1,3 s); ambos ≤ Guarda."""
-    from scripts.prof_pace_margin_derivation import (  # noqa: E402
+    from scripts.experiments.controller.prof_pace_margin_derivation import (  # noqa: E402
         build_v_target_cap, propagate_longitudinal)
     track = json.load(open(BACKEND / "model_train" / "tracks_frozen"
                            / "interlagos_v2.json"))
@@ -238,7 +238,7 @@ def test_equivalencia_alvo_com_cap_inativo():
     s = np.arange(n) * 4.0
     windows = {"C01": (400.0, 800.0)}
     kappa_inst = lambda s: 1e-6  # noqa: E731  v_safe ≈ 2700 m/s → cap não liga
-    from scripts.prof_pace_margin_derivation import propagate_longitudinal
+    from scripts.experiments.controller.prof_pace_margin_derivation import propagate_longitudinal
     seed = np.full(n, MARGIN_CONTROLLER * 30.0)
     v_target_cap = propagate_longitudinal(seed, k_dummy_flat(n), 4.0, 0.7895474400345001)
     # alvo OFF
@@ -273,7 +273,7 @@ def test_extensao_espacial_e_classificacao():
     kappa_inst_at = (lambda s: abs(float(np.interp(float(s) % tot_i, k_s,
                                                    np.abs(k_i)))))
     windows = chronic_windows(wps)
-    from scripts.prof_pace_margin_derivation import build_v_target_cap
+    from scripts.experiments.controller.prof_pace_margin_derivation import build_v_target_cap
     _, v_cap = build_v_target_cap(vp.v_plan, np.abs(vp.kappa_arr), s_arr,
                                   windows, kappa_inst_at, 0.48848, GRIP_REF)
     v_ctrl = MARGIN_CONTROLLER * vp.v_plan

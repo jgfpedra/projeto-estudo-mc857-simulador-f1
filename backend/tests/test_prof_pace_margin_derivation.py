@@ -15,7 +15,7 @@ import pandas as pd
 import pytest
 
 from model_train.velocity_profile import PhysicsParams
-from scripts.prof_pace_margin_derivation import (
+from scripts.experiments.controller.prof_pace_margin_derivation import (
     ETA1,
     ETA2,
     ESCADA_ETA,
@@ -188,7 +188,7 @@ def test_regra_fixa_eta1_eta2():
 def test_ausencia_de_regressao_para_preregistro():
     # a escada é constante de módulo — nenhum campo de derivacao/regressão
     # alimenta os valores de η (estrutura: η vem só de ESCADA_ETA)
-    import scripts.prof_pace_margin_derivation as mod
+    import scripts.experiments.controller.prof_pace_margin_derivation as mod
     assert mod.ETA1 == 0.8 * mod.MAX_RAZAO_LIMPA_CALIBRACAO
     assert mod.ETA2 == 0.40000
     # a escada é literal no módulo (não função de dados)
@@ -198,7 +198,7 @@ def test_ausencia_de_regressao_para_preregistro():
 def test_diagnostico_rotulo_obrigatorio():
     # o rótulo obrigatório existe no módulo (ajuste C01 = diagnóstico
     # indicativo, SEM poder de derivar ou validar η)
-    import scripts.prof_pace_margin_derivation as mod
+    import scripts.experiments.controller.prof_pace_margin_derivation as mod
     assert "sem poder de derivar ou validar η" in mod.DIAG_LABEL
     assert mod.DIAG_LABEL.startswith("diagnóstico indicativo")
 

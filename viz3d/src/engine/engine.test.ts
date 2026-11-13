@@ -29,6 +29,19 @@ const N = rec.cars.length
 const HALF_W = rec.track.widthM / 2
 
 describe('engine recording fixture', () => {
+  it('interpolates wheel travel from physical poses and rewinds consistently', () => {
+    const source = engineSource(rec)
+    const state = newMotionState()
+    source.sampleInto(rec.dtS, 0, state)
+    const first = state.wheelTravelM!
+    source.sampleInto(2 * rec.dtS, 0, state)
+    const second = state.wheelTravelM!
+    source.sampleInto(1.5 * rec.dtS, 0, state)
+    expect(state.wheelTravelM).toBeCloseTo((first + second) / 2, 9)
+    source.sampleInto(rec.dtS, 0, state)
+    expect(state.wheelTravelM).toBeCloseTo(first, 9)
+    expect(first).toBeCloseTo(rec.wheelTravelM[N], 9)
+  })
   it('parses: ten cars in grid order, uniform 10 Hz ticks', () => {
     expect(rec.cars.map((c) => c.gridPosition)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     expect(rec.ticks).toBeGreaterThan(400)

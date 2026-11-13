@@ -47,7 +47,7 @@ def _pose_at_s(track, s):
 @pytest.mark.slow
 def test_deep_rejoin_recovers_40m_in_under_60s():
     from backend.model_train.f1_env import load_track_frozen
-    from backend.scripts.run_race_10_cars import (NeuralRaceController,
+    from backend.scripts.simulation.run_race_10_cars import (NeuralRaceController,
                                                   build_grid_drivers,
                                                   DEFAULT_MAPPINGS_PATH,
                                                   MODEL_DIR)

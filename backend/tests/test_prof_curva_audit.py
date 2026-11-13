@@ -8,7 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scripts.prof_curva_audit import (  # noqa: E402
+from scripts.experiments.controller.prof_curva_audit import (  # noqa: E402
     HISTORICAL_BASELINE_LAP_S,
     RHYTHM_GUARD_MAX_DEGRADATION_PCT,
     parse_log_lap_times,

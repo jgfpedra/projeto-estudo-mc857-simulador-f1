@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from scripts.prof_warning_time_feasibility import (
+from scripts.experiments.controller.prof_warning_time_feasibility import (
     analyze_events,
     group_excursions,
     integrate_vsafe_lap,

@@ -4,7 +4,7 @@ import csv
 import numpy as np
 import pytest
 
-from scripts.composite_corpus import (
+from scripts.training.composite_corpus import (
     CorpusError,
     FrozenTrackProvider,
     _legacy_threshold_split_episode,

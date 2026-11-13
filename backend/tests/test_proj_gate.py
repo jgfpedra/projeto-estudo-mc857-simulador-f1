@@ -3,7 +3,7 @@ import math
 
 import numpy as np
 
-from backend.scripts.run_race_10_cars import (
+from backend.scripts.simulation.run_race_10_cars import (
     NeuralRaceController,
     ProjectionAnchorGate,
 )

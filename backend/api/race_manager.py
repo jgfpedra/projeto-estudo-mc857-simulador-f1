@@ -1,164 +1,137 @@
-"""Gerencia o ciclo de vida das corridas em memória.
-
-Cada corrida roda a :class:`SimulationEngine` numa thread própria (o motor é
-síncrono/bloqueante — ver ``engine/simulation.py::run``). Os eventos que o
-motor publica chegam aqui através de um :class:`Publisher` customizado
-(:class:`BroadcastPublisher`) e são repassados para todas as conexões
-WebSocket inscritas naquele ``race_id``.
-
-Não há Redis envolvido ainda: tudo acontece dentro do mesmo processo Python.
-Se no futuro for preciso escalar para múltiplos processos/instâncias, basta
-trocar o ``BroadcastPublisher`` por ``engine.RedisPublisher`` (já existe no
-projeto) e o ``InMemoryInputSource`` por ``RedisInputSource`` — a interface
-pública (``create_race`` / ``subscribe``) não muda.
-"""
-
+"""Corridas locais e publicação dos estados da engine no Redis."""
 from __future__ import annotations
 
-import asyncio
+import hashlib
+import json
+import logging
+import math
 import os
+import struct
 import sys
 import threading
 import uuid
 from dataclasses import replace
-from typing import Dict, Optional, Set
 
-# Garante que "backend/" (raiz dos pacotes config/engine/domain) está no
-# sys.path, igual ao truque usado em backend/scripts/run_sim.py.
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_BACKEND_ROOT = os.path.dirname(_HERE)
+_BACKEND_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _BACKEND_ROOT not in sys.path:
     sys.path.insert(0, _BACKEND_ROOT)
 
-from config import DEFAULT_DRIVERS, DEFAULT_INTERLAGOS_CONFIG, CircuitLoadError, load_track
-from engine import InMemoryInputSource, NullPublisher, Publisher, SimulationEngine
-from engine.events import Event
+import redis
+from config import DEFAULT_DRIVERS, DEFAULT_INTERLAGOS_CONFIG
+from config.live_tracks import load_live_track
+from engine.physics import CHASSIS_LENGTH_M, CHASSIS_WIDTH_M, CHASSIS_HEIGHT_M
+from engine import InMemoryInputSource, Publisher, RuleBasedRaceController, SimulationEngine
+
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+RACE_TTL = 24 * 60 * 60
+logger = logging.getLogger(__name__)
 
 
-class BroadcastPublisher(Publisher):
-    """Publisher que repassa cada evento aos websockets inscritos na corrida.
+class LivePublisher(Publisher):
+    """Publica cada tick após o solver e guarda o último tick para reconexões."""
+    def __init__(self, client, race_id):
+        self.client, self.race_id = client, race_id
+        self.engine = None
 
-    O motor roda numa thread separada do loop de eventos do asyncio (a thread
-    da engine), então não dá para chamar ``await queue.put(...)`` direto daqui
-    -- usamos ``asyncio.run_coroutine_threadsafe`` para agendar o broadcast de
-    volta na thread principal do FastAPI, que é quem detém o event loop.
-    """
-
-    def __init__(self, race_id: str, manager: "RaceManager", loop: asyncio.AbstractEventLoop) -> None:
-        self.race_id = race_id
-        self.manager = manager
-        self.loop = loop
-
-    def publish(self, event: Event) -> None:
+    def publish(self, event):
         payload = event.to_dict()
-        asyncio.run_coroutine_threadsafe(
-            self.manager.broadcast(self.race_id, payload),
-            self.loop,
-        )
-
-
-class RaceHandle:
-    """Estado interno de uma corrida ativa."""
-
-    def __init__(self, engine: SimulationEngine, thread: threading.Thread) -> None:
-        self.engine = engine
-        self.thread = thread
-        self.subscribers: Set[asyncio.Queue] = set()
+        if event.type == 'tick' and self.engine is not None:
+            for rank, position in enumerate(payload['positions'], 1):
+                state = self.engine.states[position['driver_id']]
+                position['position'] = rank
+                position['position_xy'] = [state.position_x, state.position_y]
+                position['heading_deg'] = math.degrees(state.heading_rad)
+                position['velocity_mps'] = state.velocity_mps
+                position['progress_m'] = self.engine.race_progress_m.get(position['driver_id'], 0.0)
+            # Estes contatos são medidos pelo solver em cada subpasso, não
+            # inferidos a partir da proximidade entre meshes no navegador.
+            contacts = self.engine.physics.contact_collector
+            payload['collisions'] = list(contacts or [])
+            if contacts is not None:
+                contacts.clear()
+        data = json.dumps(payload, ensure_ascii=False, default=str)
+        pipe = self.client.pipeline(transaction=True)
+        if event.type == 'tick':
+            pipe.set(f'race:{self.race_id}:state', data, ex=RACE_TTL)
+        if event.type == 'race_end':
+            pipe.set(f'race:{self.race_id}:result', data, ex=RACE_TTL)
+        pipe.publish(f'race:{self.race_id}:events', data)
+        pipe.execute()
 
 
 class RaceManager:
-    """Registro de corridas ativas + ponte engine -> websockets."""
+    def __init__(self, client=None):
+        self.redis = client or redis.Redis.from_url(REDIS_URL, decode_responses=True, socket_connect_timeout=2)
+        self._threads = {}
 
-    def __init__(self) -> None:
-        self._races: Dict[str, RaceHandle] = {}
-        self._lock = threading.Lock()
-        self.loop: Optional[asyncio.AbstractEventLoop] = None
-
-    def bind_loop(self, loop: asyncio.AbstractEventLoop) -> None:
-        """Chamado no startup do FastAPI para guardar o event loop principal."""
-        self.loop = loop
-
-    # ------------------------------------------------------------------
-    # Criação da corrida
-    # ------------------------------------------------------------------
-
-    def create_race(self, laps: int, track: Optional[str], year: Optional[int]):
-        if self.loop is None:
-            raise RuntimeError("RaceManager.bind_loop() precisa ser chamado no startup")
-
-        track_obj = load_track(track_name=track, year=year)
-
-        race_id = f"race_{uuid.uuid4().hex[:8]}"
-        config = replace(
-            DEFAULT_INTERLAGOS_CONFIG,
-            race_id=race_id,
-            num_laps=laps,
-            gui=False,      # sem janela do PyBullet: isso roda num servidor
-            realtime=True,  # pacing em tempo real, pro front acompanhar "ao vivo"
-        )
-
-        drivers = list(DEFAULT_DRIVERS)
-        input_source = InMemoryInputSource(fallback_race_id=race_id)
-        publisher = BroadcastPublisher(race_id, self, self.loop)
-
-        engine = SimulationEngine(
-            config=config,
-            track=track_obj,
-            drivers=drivers,
-            publisher=publisher,
-            input_source=input_source,
-        )
-
-        thread = threading.Thread(target=self._run_engine, args=(engine,), daemon=True)
-
-        with self._lock:
-            self._races[race_id] = RaceHandle(engine=engine, thread=thread)
-
+    def create_race(self, laps, track, year, num_drivers=2):
+        if not 1 <= num_drivers <= 24:
+            raise ValueError('A quantidade de corredores deve estar entre 1 e 24.')
+        self.redis.ping()
+        track_obj = load_live_track(track_name=track, year=year)
+        race_id = f'race_{uuid.uuid4().hex}'
+        gui = os.environ.get('F1_PYBULLET_GUI', '').lower() in ('1', 'true', 'yes', 'on')
+        camera_mode = os.environ.get('F1_GUI_CAMERA', 'follow') if gui else 'none'
+        if camera_mode not in ('follow', 'overview', 'none'):
+            raise ValueError(f'Modo de câmera inválido: {camera_mode}')
+        config = replace(DEFAULT_INTERLAGOS_CONFIG, race_id=race_id, num_laps=laps,
+                         gui=gui, camera_mode=camera_mode, draw_track=gui, draw_track_details=False,
+                         realtime=True, track_progress_laps=True)
+        drivers = [
+            replace(
+                DEFAULT_DRIVERS[index % len(DEFAULT_DRIVERS)],
+                driver_id=f'drv_{index + 1:02d}',
+                name=(DEFAULT_DRIVERS[index].name if index < len(DEFAULT_DRIVERS)
+                      else f'Piloto {index + 1:02d}'),
+            )
+            for index in range(num_drivers)
+        ]
+        geometry_bytes = b''.join(struct.pack('<dd', float(x), float(y)) for x, y in track_obj.waypoints)
+        geometry_sha256 = hashlib.sha256(geometry_bytes).hexdigest()[:16]
+        meta = {
+            'race_id': race_id, 'num_laps': laps, 'num_drivers': num_drivers,
+            'car_geometry': {'length_m': CHASSIS_LENGTH_M, 'width_m': CHASSIS_WIDTH_M,
+                             'height_m': CHASSIS_HEIGHT_M},
+            'track': {'name': track_obj.name, 'source': track_obj.source,
+                      'geometry_sha256': geometry_sha256,
+                      'length_m': track_obj.length_m, 'width_m': track_obj.width_m,
+                      'start_finish_waypoint': track_obj.start_finish_waypoint,
+                      'waypoints': [[float(x), float(y)] for x, y in track_obj.waypoints]},
+            'drivers': [{'driver_id': d.driver_id, 'name': d.name, 'grid_position': i + 1}
+                        for i, d in enumerate(drivers)],
+        }
+        publisher = LivePublisher(self.redis, race_id)
+        engine = SimulationEngine(config=config, track=track_obj, drivers=drivers,
+                                  publisher=publisher, input_source=InMemoryInputSource(fallback_race_id=race_id))
+        publisher.engine = engine
+        engine.physics.contact_collector = []
+        controller = RuleBasedRaceController(track_obj, seed=config.random_seed)
+        for driver in drivers:
+            engine.set_controller(driver.driver_id, controller)
+        self.redis.set(f'race:{race_id}:meta', json.dumps(meta), ex=RACE_TTL)
+        thread = threading.Thread(target=self._run_engine, args=(engine, publisher), daemon=True)
+        self._threads[race_id] = thread
         thread.start()
         return race_id, track_obj, config
 
-    @staticmethod
-    def _run_engine(engine: SimulationEngine) -> None:
+    def _run_engine(self, engine, publisher):
         try:
             engine.run()
+        except Exception as exc:
+            logger.exception('Falha na corrida %s', engine.config.race_id)
+            data = json.dumps({'type': 'race_error', 'message': str(exc)})
+            try:
+                self.redis.set(f'race:{engine.config.race_id}:result', data, ex=RACE_TTL)
+                self.redis.publish(f'race:{engine.config.race_id}:events', data)
+            except redis.RedisError:
+                pass
         finally:
             engine.teardown()
+            self._threads.pop(engine.config.race_id, None)
 
-    # ------------------------------------------------------------------
-    # Pub/sub para os websockets
-    # ------------------------------------------------------------------
-
-    def exists(self, race_id: str) -> bool:
-        with self._lock:
-            return race_id in self._races
-
-    def subscribe(self, race_id: str) -> asyncio.Queue:
-        queue: asyncio.Queue = asyncio.Queue(maxsize=200)
-        with self._lock:
-            self._races[race_id].subscribers.add(queue)
-        return queue
-
-    def unsubscribe(self, race_id: str, queue: asyncio.Queue) -> None:
-        with self._lock:
-            handle = self._races.get(race_id)
-            if handle is not None:
-                handle.subscribers.discard(queue)
-
-    async def broadcast(self, race_id: str, payload: dict) -> None:
-        with self._lock:
-            handle = self._races.get(race_id)
-            subscribers = set(handle.subscribers) if handle else set()
-        for queue in subscribers:
-            try:
-                queue.put_nowait(payload)
-            except asyncio.QueueFull:
-                # Cliente lento: descarta o evento mais antigo e tenta de novo.
-                try:
-                    queue.get_nowait()
-                    queue.put_nowait(payload)
-                except asyncio.QueueEmpty:
-                    pass
+    def metadata(self, race_id):
+        value = self.redis.get(f'race:{race_id}:meta')
+        return json.loads(value) if value else None
 
 
-# Instância única compartilhada pelo app (ver api/main.py).
 race_manager = RaceManager()

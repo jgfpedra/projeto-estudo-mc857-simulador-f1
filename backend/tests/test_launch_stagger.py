@@ -24,14 +24,14 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from backend.scripts.run_race_10_cars import NeuralRaceController as N
+from backend.scripts.simulation.run_race_10_cars import NeuralRaceController as N
 
 BACKEND = Path(__file__).resolve().parent.parent
 
 
 def _build(launch_stagger=True, n_cars=3):
     from backend.model_train.f1_env import load_track_frozen
-    from backend.scripts.run_race_10_cars import (NeuralRaceController,
+    from backend.scripts.simulation.run_race_10_cars import (NeuralRaceController,
                                                   build_grid_drivers,
                                                   DEFAULT_MAPPINGS_PATH,
                                                   MODEL_DIR)
@@ -113,7 +113,7 @@ def test_t2_hold_de_pose():
 
 def test_t3_exclusao_de_paradas_no_hold():
     """Helper do veredito: episódio held NÃO conta; pós-release conta."""
-    from backend.scripts.largada_lg1b_verdict import count_stops_excl_hold
+    from backend.scripts.experiments.launch.largada_lg1b_verdict import count_stops_excl_hold
     held = np.ones(90, dtype=int)                    # 9 s de hold (v=0) — NÃO conta
     free_stop = np.zeros(25, dtype=int)               # 5 s pós-release (v=0) — conta
     df = pd.DataFrame(dict(

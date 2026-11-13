@@ -19,7 +19,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from backend.scripts.run_race_10_cars import (place_grid, variedade_params,
+from backend.scripts.simulation.run_race_10_cars import (place_grid, variedade_params,
                                              build_grid_drivers)
 from backend.engine.physics import PhysicsCarHandle, PyBulletPhysics
 
@@ -97,7 +97,7 @@ def test_t_v3_scale_mu_nominal():
 
 def test_t_v4_inercia_off_validacao_e_log_nao_schema():
     rr = (Path(__file__).resolve().parent.parent
-          / 'scripts' / 'run_race_10_cars.py').read_text()
+          / 'scripts' / 'simulation' / 'run_race_10_cars.py').read_text()
     rd = (Path(__file__).resolve().parent.parent
           / 'model_train' / 'race_diagnostic.py').read_text()
     # default 0 nos dois runners + fail-loud N<0

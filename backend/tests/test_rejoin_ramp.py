@@ -14,7 +14,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from backend.model_train.f1_env import load_track_frozen  # noqa: E402
-from backend.scripts.run_race_10_cars import (  # noqa: E402
+from backend.scripts.simulation.run_race_10_cars import (  # noqa: E402
     DEFAULT_MAPPINGS_PATH,
     MODEL_DIR,
     NeuralRaceController,
@@ -22,7 +22,7 @@ from backend.scripts.run_race_10_cars import (  # noqa: E402
 
 BACKEND = Path(__file__).resolve().parent.parent
 DIAGNOSTIC = BACKEND / "model_train" / "race_diagnostic.py"
-VISUAL = BACKEND / "scripts" / "run_race_10_cars.py"
+VISUAL = BACKEND / "scripts" / "simulation" / "run_race_10_cars.py"
 
 
 class _FakeVelocityProfile:

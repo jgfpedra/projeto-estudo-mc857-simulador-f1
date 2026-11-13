@@ -10,7 +10,7 @@ _here = Path(__file__).resolve()
 sys.path.insert(0, str(_here.parents[2] / "scripts"))   # backend/scripts
 sys.path.insert(0, str(_here.parents[2]))               # backend/
 
-import track_geometry_free as TGF
+from scripts.tracks import track_geometry_free as TGF
 
 LOG = Path(__file__).resolve().parent / "probe_log.md"
 _n = {"i": 0}

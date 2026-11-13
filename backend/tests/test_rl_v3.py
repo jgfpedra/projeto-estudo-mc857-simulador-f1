@@ -141,7 +141,7 @@ def test_steer_sign_produces_opposite_paths(env):
 def test_npz_parity_keras_vs_numpy(tmp_path):
     """Exporta o ator e confere paridade numérica exata (mesma política)."""
     from backend.model_train.train_multi_context_ppo import MultiContextPPOAgent
-    from backend.scripts.run_race_10_cars import NumpyNeuralActor, ensure_npz_weights_exist
+    from backend.scripts.simulation.run_race_10_cars import NumpyNeuralActor, ensure_npz_weights_exist
     import tensorflow as tf
 
     env_spaces = None
@@ -171,7 +171,7 @@ def test_npz_parity_keras_vs_numpy(tmp_path):
 def test_npz_loader_rejects_incompatible(tmp_path):
     """Um NPZ de arquitetura antiga (sem camada de saída compatível) deve falhar
     com erro informativo, não com lixo silencioso."""
-    from backend.scripts.run_race_10_cars import NumpyNeuralActor
+    from backend.scripts.simulation.run_race_10_cars import NumpyNeuralActor
     np.savez(tmp_path / "bad.npz", foo=np.zeros((4, 4), dtype=np.float32))
     with pytest.raises(ValueError, match="Pesos nao encontrados|Shapes"):
         NumpyNeuralActor(tmp_path / "bad.npz")

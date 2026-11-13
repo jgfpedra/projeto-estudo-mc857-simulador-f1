@@ -437,6 +437,7 @@ function ChecksPanel({ track, checks }: { track: Track; checks: CheckResult[] })
           {skipped > 0 && <span style={{ color: '#9a9aa8' }}> · {skipped} not run</span>}
         </span>
       </button>
+      <div><a href="?live=1">Corrida ao vivo</a></div>
       <TrackPicker />
       {open && (
         <div style={{ marginTop: 6 }}>

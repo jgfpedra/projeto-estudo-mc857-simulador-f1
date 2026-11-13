@@ -17,7 +17,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from backend.model_train.f1_env import load_track_frozen
-from backend.scripts.run_race_10_cars import (
+from backend.scripts.simulation.run_race_10_cars import (
     DEFAULT_MAPPINGS_PATH,
     MODEL_DIR,
     NeuralRaceController,
@@ -127,6 +127,6 @@ def test_composite_branch_assigns_action_before_mute():
 
 
 def test_race_runner_exposes_flag_in_help():
-    source = (BACKEND / "scripts" / "run_race_10_cars.py").read_text(
+    source = (BACKEND / "scripts" / "simulation" / "run_race_10_cars.py").read_text(
         encoding="utf-8")
     assert 'parser.add_argument("--launch-steer-mute"' in source

@@ -13,7 +13,7 @@ import pandas as pd
 import pytest
 
 from model_train.velocity_profile import PhysicsParams
-from scripts.prof_lateral_demand_calibration import (
+from scripts.experiments.controller.prof_lateral_demand_calibration import (
     kappa_path_from_heading,
     pass_summary,
     separation_stats,

@@ -77,6 +77,11 @@ class PhysicsCarHandle:
     last_engine_brake_n: float = 0.0
 
 
+CHASSIS_LENGTH_M = 5.0
+CHASSIS_WIDTH_M = 1.8
+CHASSIS_HEIGHT_M = 0.7
+
+
 class PyBulletPhysics:
     """Wrapper do PyBullet para a simulação de corrida com física de F1.
 
@@ -231,9 +236,9 @@ class PyBulletPhysics:
             raise RuntimeError("physics not initialised; call init() first")
 
         cid = self._client_id
-        half_length = 2.5
-        half_width = 0.9
-        half_height = 0.35
+        half_length = CHASSIS_LENGTH_M / 2.0
+        half_width = CHASSIS_WIDTH_M / 2.0
+        half_height = CHASSIS_HEIGHT_M / 2.0
         wheel_radius = 0.33
 
         # Geometria do chassis
@@ -782,6 +787,7 @@ class PyBulletPhysics:
         start_finish_waypoint: int = 0,
         color: Tuple[float, float, float] = (0.2, 0.8, 0.2),
         track_width_m: float = 12.0,
+        draw_centerline_and_edges: bool = True,
     ) -> None:
         """Desenha a linha central e a linha de chegada no PyBullet.
 
@@ -815,10 +821,11 @@ class PyBulletPhysics:
                 except Exception:
                     pass
 
-        _draw_polyline(waypoints, color, 2.0, 0.05)
+        if draw_centerline_and_edges:
+            _draw_polyline(waypoints, color, 2.0, 0.05)
 
         # Bordas aproximadas pela largura da pista, deslocadas na normal local.
-        if track_width_m > 0.0:
+        if draw_centerline_and_edges and track_width_m > 0.0:
             half_width = track_width_m / 2.0
             left_edge: List[Tuple[float, float]] = []
             right_edge: List[Tuple[float, float]] = []

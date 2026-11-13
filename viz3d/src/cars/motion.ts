@@ -15,13 +15,9 @@
  * to handle: nothing subtracts two wrapped values, so no quantity can jump by a
  * lap length when a car crosses the line.
  *
- * It also removes an integration rather than adding one. `sampleInto` is a pure
- * function of `t`, so the wheel odometer becomes `sUnwrapped - originM(car)`
- * instead of an accumulator — which makes wheel phase a function of position,
- * so scrubbing a replay backwards rewinds the wheels instead of leaving them
- * wherever the accumulator had got to. After this the car path integrates
- * nothing at all; the only remaining integration in the project is the camera
- * rig's damped anchor, and that is a filter rather than kinematics.
+ * Recorded sources sample wheel travel from physical poses so scrubbing
+ * remains repeatable. Sources without poses use `sUnwrapped - originM(car)`.
+ * Live sources consume a bounded stream and may hold their last state.
  */
 
 /**
@@ -45,6 +41,8 @@ export interface CarIdentity {
 export interface MotionState {
   /** Metres since the replay began. Never wrapped — see the module comment. */
   sUnwrapped: number
+  /** Signed wheel travel from source start, when available from physical poses. */
+  wheelTravelM?: number
   /** Lateral offset, metres, positive to the right of the direction of travel. */
   d: number
   /**

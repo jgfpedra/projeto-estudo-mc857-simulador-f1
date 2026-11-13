@@ -11,7 +11,7 @@ import math, sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 import numpy as np
-from backend.scripts.run_race_10_cars import NeuralRaceController as N
+from backend.scripts.simulation.run_race_10_cars import NeuralRaceController as N
 
 
 def test_predicado_gap_segura_e_solta():
@@ -84,7 +84,7 @@ def _pose_at_s(track, s):
 def _build_repair_setup(n_cars):
     """Engine real (pybullet) + controller v10 com --rejoin-gap 20."""
     from backend.model_train.f1_env import load_track_frozen
-    from backend.scripts.run_race_10_cars import (NeuralRaceController,
+    from backend.scripts.simulation.run_race_10_cars import (NeuralRaceController,
                                                   build_grid_drivers,
                                                   DEFAULT_MAPPINGS_PATH,
                                                   MODEL_DIR)

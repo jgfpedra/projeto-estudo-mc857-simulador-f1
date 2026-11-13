@@ -114,6 +114,7 @@ export function syntheticSource(field: CarSpec[]): MotionSource {
     cars: field,
     durationS: Infinity,
     sampleInto(tSeconds: number, carIndex: number, out: MotionState): MotionState {
+      out.wheelTravelM = undefined
       const car = field[carIndex]
       out.sUnwrapped = car.s0 + car.speedMps * tSeconds
       out.d = car.d

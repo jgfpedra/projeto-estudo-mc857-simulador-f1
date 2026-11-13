@@ -153,7 +153,7 @@ export function pitText(p: PitReadout): string {
  * `trackFromRecording` builds starts at the start/finish waypoint, so
  * `progress_m` is an unwrapped `s` on it and needs no offset. It drives
  * everything that wants a distance along the track: the chase camera's damped
- * trail, lookahead and the T-cam's roll, the wheel odometer and the running
+ * trail, lookahead and the T-cam's roll, and the running
  * order. Where the cameras sit relative to the car comes from the pose, not
  * from here (`rig.ts`, `chasePose` / `onboardPose`). `d` is `d_m`, for the
  * panel and the chase camera's lateral.
@@ -169,6 +169,7 @@ export function engineSource(rec: Recording): MotionSource {
     durationS: rec.durationS,
     sampleInto(tSeconds: number, car: number, out: MotionState): MotionState {
       if (car < 0 || car >= n) {
+        out.wheelTravelM = undefined
         out.sUnwrapped = 0
         out.d = 0
         out.speedMps = 0
@@ -180,6 +181,7 @@ export function engineSource(rec: Recording): MotionSource {
       const b = a + n
       const lerp = (ch: Float64Array) => ch[a] + (ch[b] - ch[a]) * f
       out.sUnwrapped = lerp(rec.progressM)
+      out.wheelTravelM = lerp(rec.wheelTravelM)
       out.d = lerp(rec.dM)
       out.speedMps = Math.max(lerp(rec.paceMps), MIN_REPORTED_MPS)
       out.posed = true

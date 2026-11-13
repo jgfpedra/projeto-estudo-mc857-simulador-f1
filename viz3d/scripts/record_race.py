@@ -5,7 +5,7 @@ root, through `viz3d/scripts/record_race.sh`:
 
     bash viz3d/scripts/record_race.sh            # seed 42, 3 laps, interlagos
 
-**Driven exactly as `backend/scripts/run_race_10_cars.py` drives its default
+**Driven exactly as `backend/scripts/simulation/run_race_10_cars.py` drives its default
 `apex-rules` profile.** That script never calls `engine.run()`, and the two are
 not equivalent: `run()` also steps the weather to lap 1 before the first tick,
 publishes a race-start event and caps the tick count, none of which the 10-car

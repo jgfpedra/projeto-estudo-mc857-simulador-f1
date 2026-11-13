@@ -107,6 +107,8 @@ export interface Recording {
   headingRad: Float64Array
   velocityMps: Float64Array
   progressM: Float64Array
+  /** Signed travel calculated from consecutive physical poses, for rolling wheels. */
+  wheelTravelM: Float64Array
   /** Rate `progress_m` advances, central difference. What the camera feeds forward. */
   paceMps: Float64Array
   sM: Float64Array

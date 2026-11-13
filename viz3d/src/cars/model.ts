@@ -22,13 +22,12 @@ export interface CarModelSpec {
   /** Which way is up, in the model's own space. */
   up: Vector3
   /**
-   * The one dimension the uniform scale is pinned to, and what it should
-   * measure. Only one can be honoured: a model whose proportions differ from a
-   * real car cannot match on both, and a non-uniform scale would distort the
-   * mesh rather than just mis-size it. Pick the dimension whose wrongness would
-   * mislead, not the one that is easiest to eyeball.
+   * The dimension used for uniform scaling when no live collision bounds are
+   * supplied. A stylized model cannot match both dimensions without distortion.
    */
   fit: { axis: 'width' | 'length'; metres: number }
+  /** Optional live collision bounds from the physics engine, in metres. */
+  dimensions?: { widthM: number; lengthM: number; heightM: number }
   /**
    * Name of the material carrying the car's paint — the one primitive that
    * takes a per-car colour. Everything else (trim, glass, rims, tyres) stays
@@ -118,7 +117,13 @@ export function carModelMatrix(raw: Box3, spec: CarModelSpec): Matrix4 {
   if (!(measured > 0)) fail(`${spec.url}: zero ${spec.fit.axis}`)
   const k = spec.fit.metres / measured
 
-  const pre = new Matrix4().makeScale(k, k, k).multiply(rot)
+  // Live races supply chassis bounds. The stylized placeholder is stretched
+  // to match those bounds; its detailed shape still differs from the box.
+  const sx = spec.dimensions ? spec.dimensions.widthM / size.x : k
+  const sy = spec.dimensions ? spec.dimensions.heightM / size.y : k
+  const sz = spec.dimensions ? spec.dimensions.lengthM / size.z : k
+  if (![sx, sy, sz].every((scale) => Number.isFinite(scale) && scale > 0)) fail(`${spec.url}: invalid dimensions`)
+  const pre = new Matrix4().makeScale(sx, sy, sz).multiply(rot)
 
   /*
    * Datum. Plan-view centre to the origin so `(s, d)` positions the middle of
@@ -143,8 +148,7 @@ export function adaptCarModel(scene: Object3D, spec: CarModelSpec = RACE_CAR_RED
   const model = scene.clone(true)
   const raw = new Box3().setFromObject(model)
   if (raw.isEmpty()) fail(`${spec.url}: no geometry to measure`)
-  // Uniform scale, rotation and translation only, so the decompose back into
-  // position/quaternion/scale that `applyMatrix4` does is exact.
+  // The configured axes are orthogonal, so Three can decompose this transform.
   model.applyMatrix4(carModelMatrix(raw, spec))
   model.updateMatrixWorld(true)
   return model
@@ -222,6 +226,7 @@ export function carGeometry(scene: Object3D, spec: CarModelSpec = RACE_CAR_RED):
 
   const body: CarPart[] = []
   const wheels = new Map<string, CarWheel>()
+  const wheelCorrections = new Map<string, Matrix4>()
   const scratch = new Matrix4()
 
   model.traverse((o) => {
@@ -248,10 +253,25 @@ export function carGeometry(scene: Object3D, spec: CarModelSpec = RACE_CAR_RED):
         [size.z, new Vector3(0, 0, 1)],
       ]
       dims.sort((a, b) => a[0] - b[0])
+      // The live chassis is resized independently in length, width and height.
+      // Undo the resulting oval in the rotation plane, keeping the wheel
+      // centre fixed, so the tyre does not bounce as it rotates.
+      let radius = (dims[1][0] + dims[2][0]) / 4
+      if (spec.dimensions) {
+        const diameter = Math.min(dims[1][0], dims[2][0])
+        radius = diameter / 2
+        const scale = new Vector3(1, 1, 1)
+        for (const [size, axis] of dims.slice(1)) {
+          if (axis.x) scale.x = diameter / size
+          if (axis.y) scale.y = diameter / size
+          if (axis.z) scale.z = diameter / size
+        }
+        wheelCorrections.set(node.name, new Matrix4().makeScale(scale.x, scale.y, scale.z))
+      }
       wheel = {
         name: node.name,
         centre: box.getCenter(new Vector3()),
-        radiusM: (dims[1][0] + dims[2][0]) / 4,
+        radiusM: radius,
         axle: dims[0][1],
         parts: [],
       }
@@ -261,6 +281,8 @@ export function carGeometry(scene: Object3D, spec: CarModelSpec = RACE_CAR_RED):
     scratch
       .makeTranslation(-wheel.centre.x, -wheel.centre.y, -wheel.centre.z)
       .multiply(mesh.matrixWorld)
+    const correction = wheelCorrections.get(node.name)
+    if (correction) scratch.premultiply(correction)
     wheel.parts.push(part(mesh, scratch))
   })
 

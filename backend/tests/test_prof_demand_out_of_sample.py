@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from model_train.velocity_profile import PhysicsParams
-from scripts.prof_demand_out_of_sample import (
+from scripts.experiments.controller.prof_demand_out_of_sample import (
     classify,
     closed_form_vsafe,
     confusion,
@@ -83,10 +83,10 @@ def test_confusion_perfeita_e_pessima():
 # ------------------------------------------------------ guarda interna
 def test_kamm_unused_guard_nao_existe():
     # o módulo não exporta nada de Kamm (a autoridade aqui é a forma fechada)
-    import scripts.prof_demand_out_of_sample as mod
+    import scripts.experiments.controller.prof_demand_out_of_sample as mod
     assert not hasattr(mod, "kamm_brake_rem")
 
 
 def test_gravity_constante():
-    from scripts.prof_demand_out_of_sample import GRAVITY_MPS
+    from scripts.experiments.controller.prof_demand_out_of_sample import GRAVITY_MPS
     assert GRAVITY_MPS == pytest.approx(9.81)

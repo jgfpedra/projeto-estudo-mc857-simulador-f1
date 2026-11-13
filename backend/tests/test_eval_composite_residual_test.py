@@ -20,7 +20,7 @@ import tempfile
 import numpy as np
 import pytest
 
-from scripts.eval_composite_residual_test import (
+from scripts.training.eval_composite_residual_test import (
     ALLOWED_TEST_SHARDS,
     CANDIDATE_WEIGHTS_ETALON_SHA256,
     DEFAULT_CANDIDATE_PATH,

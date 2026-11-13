@@ -68,7 +68,7 @@ class JSONCircuitDatabase(CircuitDatabase):
             if not self.json_path.exists():
                 raise FileNotFoundError(
                     f"Circuit evolution data file not found at {self.json_path}. "
-                    "Run 'python backend/scripts/fetch_track_layouts.py' first."
+                    "Run 'python backend/scripts/tracks/fetch_track_layouts.py' first."
                 )
             with open(self.json_path, "r", encoding="utf-8") as f:
                 self._data = json.load(f)

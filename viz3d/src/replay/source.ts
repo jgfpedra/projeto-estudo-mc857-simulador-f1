@@ -43,6 +43,7 @@ export function replaySource(replay: Replay): MotionSource {
     cars,
     durationS,
     sampleInto(tSeconds: number, carIndex: number, out: MotionState): MotionState {
+      out.wheelTravelM = undefined
       const car: ReplayCar | undefined = cars[carIndex]
       if (!car) {
         out.sUnwrapped = 0

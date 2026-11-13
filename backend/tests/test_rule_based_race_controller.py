@@ -9,7 +9,7 @@ import pytest
 from backend.domain import CarSpecs, Driver, WeatherKind, WeatherModel, BASE_CONDITIONS
 from backend.model_train.f1_env import resolve_track
 from backend.engine import SimulationConfig, SimulationEngine, RuleBasedRaceController
-from backend.scripts.run_race_10_cars import place_grid
+from backend.scripts.simulation.run_race_10_cars import place_grid
 
 
 def test_rule_based_race_controller_init():
