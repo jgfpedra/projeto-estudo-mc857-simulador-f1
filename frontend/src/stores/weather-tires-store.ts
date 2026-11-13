@@ -2,8 +2,8 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
 import { api } from "@/services/api"
+import type { RaceSetupPayload } from "@/types/race-setup"
 import type {
-  RaceSetupPayload,
   StrategyConfig,
   TireCompound,
   TireStint,

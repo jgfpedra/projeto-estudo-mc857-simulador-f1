@@ -4,3 +4,4 @@ fastf1==3.8.3  # NIT (a) ADOCAO-H-2: pinada a versao instalada — 3.9 alpha mud
 pytest>=8.0
 fastapi>=0.115
 uvicorn[standard]>=0.30
+redis>=5.0,<7
