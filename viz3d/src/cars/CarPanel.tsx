@@ -24,6 +24,12 @@ interface Props {
    * untouched.
    */
   lapAt: (carIndex: number, sUnwrapped: number) => number
+  /**
+   * The followed car's running position, where the source has one: the engine
+   * recording, ranked by interpolated `progress_m`. Polled like everything else
+   * here; absent for the synthetic field and the replay.
+   */
+  rankAt?: (carIndex: number) => number
   /** What is driving the cars, for the one line of prose at the bottom. */
   sourceKind: string
   /** Debug toggle: a stripe on every wheel, so spin can be seen. */
@@ -50,6 +56,7 @@ export function CarPanel({
   lengthM,
   widthM,
   lapAt,
+  rankAt,
   sourceKind,
   wheelMarkers,
   onWheelMarkers,
@@ -57,12 +64,14 @@ export function CarPanel({
   const sRef = useRef<HTMLSpanElement>(null)
   const dRef = useRef<HTMLSpanElement>(null)
   const lapRef = useRef<HTMLSpanElement>(null)
+  const posRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
     const tick = () => {
       const { s, sUnwrapped, d, speedMps } = readout.current
       if (sRef.current) sRef.current.textContent = `${s.toFixed(1)} m`
       if (dRef.current) dRef.current.textContent = `${d >= 0 ? '+' : ''}${d.toFixed(2)} m`
+      if (posRef.current) posRef.current.textContent = rankAt ? `P${rankAt(selected)} · ` : ''
       if (lapRef.current) {
         // Live speed and a real lap count. The old line here estimated a lap time
         // as `lengthM / speedMps`, which assumed a constant speed — true of the
@@ -76,7 +85,7 @@ export function CarPanel({
     tick()
     const id = setInterval(tick, 1000 / READOUT_HZ)
     return () => clearInterval(id)
-  }, [readout, lengthM, selected, lapAt])
+  }, [readout, lengthM, selected, lapAt, rankAt])
 
   const car = cars[selected]
 
@@ -130,8 +139,9 @@ export function CarPanel({
       </div>
 
       <div>
+        <span ref={posRef} data-testid="car-position" style={{ color: '#fff' }} />
         s <span ref={sRef} style={{ color: '#fff' }} /> · d{' '}
-        <span ref={dRef} style={{ color: '#ff8a5f' }} />
+        <span ref={dRef} data-testid="car-d" style={{ color: '#ff8a5f' }} />
       </div>
       <div style={{ opacity: 0.6, marginTop: 4 }}>
         <span ref={lapRef} />
@@ -142,8 +152,12 @@ export function CarPanel({
           ? 'Real telemetry: d is measured against a centreline that is the median ' +
             'of racing lines, so it stays within a metre and the field runs nearly ' +
             'single file.'
-          : 'Cars hold a fixed d and a fixed speed, so the order changes only ' +
-            'because the speeds differ — there is no overtaking logic.'}
+          : sourceKind === 'engine'
+            ? "Engine race: cars sit at the engine's own position and heading. d is " +
+              "d_m, our refined projection of that position; s and P come from the " +
+              "engine's race progress."
+            : 'Cars hold a fixed d and a fixed speed, so the order changes only ' +
+              'because the speeds differ — there is no overtaking logic.'}
       </p>
       {/* Debug. The tyres are uniform grey, so without this a wheel spinning
           the wrong way, or not at all, looks exactly like a correct one. Watch

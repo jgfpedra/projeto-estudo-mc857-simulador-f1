@@ -14,13 +14,23 @@
  * that exact centreline, and `parseReplay` refuses any other (it checks the
  * lap length). Re-projecting the telemetry onto an engine track is a separate
  * piece of work, so those run the synthetic field only.
+ *
+ * Phase 3 adds `engine`: a race recorded from the group's engine
+ * (`scripts/record_race.py`). It has no track JSON - the track is built from the
+ * recording's own race block (`trackFromRecording`), so the cars and the
+ * centreline cannot come from two different geometries. `?recording=<url>`
+ * swaps in another recording, e.g. a full one under `.cache/` through Vite's
+ * `/@fs/` in `npm run dev`.
  */
 export interface TrackEntry {
   id: string
   /** Button text in the checks panel. */
   label: string
-  url: string
+  /** Track JSON. Absent when the track comes from a recording's race block. */
+  url?: string
   replayUrl?: string
+  /** Engine recording (JSONL). The track is built from its first line. */
+  recordingUrl?: string
 }
 
 export const TRACKS: TrackEntry[] = [
@@ -42,6 +52,11 @@ export const TRACKS: TrackEntry[] = [
     url: '/tracks/interlagos_2024.json',
   },
   { id: 'interlagos_v2', label: 'interlagos_v2 · engine', url: '/tracks/interlagos_v2.json' },
+  {
+    id: 'engine',
+    label: 'Engine race · seed 42',
+    recordingUrl: '/recordings/engine-interlagos-seed42.jsonl',
+  },
 ]
 
 export const DEFAULT_TRACK = TRACKS[0]
@@ -52,6 +67,12 @@ export function selectedTrack(search: string): { entry: TrackEntry; unknown: str
   if (id === null) return { entry: DEFAULT_TRACK, unknown: null }
   const entry = TRACKS.find((t) => t.id === id)
   return entry ? { entry, unknown: null } : { entry: DEFAULT_TRACK, unknown: id }
+}
+
+/** The recording to load for an entry: `?recording=` overrides the entry's own. */
+export function recordingUrlFor(entry: TrackEntry, search: string): string | undefined {
+  if (!entry.recordingUrl) return undefined
+  return new URLSearchParams(search).get('recording') ?? entry.recordingUrl
 }
 
 /** Same page, other track: keeps every other parameter (`probe` included). */

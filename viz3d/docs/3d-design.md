@@ -939,6 +939,7 @@ geometry is right.
 | M5 | Cameras | Orbit / chase / onboard switchable, damped follow | done |
 | M6 | Telemetry replay | Real 2024 Italian GP positions projected to `(s, d)` and replayed | done |
 | Phase 0 | Engine geometry | The engine's frozen tracks converted, checked, overlaid and rendered beside ours; see docs/phase0-geometry-report.md | done |
+| Phase 3 | Engine race | A headless 10-car engine race recorded as JSONL ticks, checked, and played by an `engine` motion source on a track built from the recording; see docs/phase3-engine-race.md | done |
 
 M0–M3 is the core of the spike. M4–M6 is where it starts looking like something.
 

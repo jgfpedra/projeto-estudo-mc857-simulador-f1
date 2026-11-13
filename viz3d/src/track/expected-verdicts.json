@@ -37,5 +37,15 @@
       "D": "No sourced first-corner window.",
       "G": "No sourced per-corner handedness."
     }
+  },
+  "engine": {
+    "verdicts": { "A": "FAIL", "B": "SKIP", "C": "SKIP", "D": "SKIP", "E": "PASS", "F": "PASS", "G": "SKIP" },
+    "why": {
+      "A": "interlagos_v2's own waypoints (the recording's race block, rolled to sf_idx 729): 4160.4 m against the published 4309 m, -3.45%, as for interlagos_v2.",
+      "B": "No sourced corner count, and the race block carries no corners.",
+      "C": "The race block carries no corners: the track is built from the recording alone, not from a local track JSON.",
+      "D": "No sourced first-corner window, and no corners.",
+      "G": "No sourced per-corner handedness, and no corners."
+    }
   }
 }

@@ -34,6 +34,13 @@
  *   6. Then moves to each engine track by clicking its link in the viewer's
  *      own track picker, so the selector is exercised rather than bypassed,
  *      and repeats 2-4 with the synthetic field (no replay exists for them).
+ *   7. Phase 3: the `engine` track, built from the committed recording
+ *      fixture's race block, repeats 2-4 under the engine source and the
+ *      synthetic field, then pauses the clock on chosen ticks (one inside
+ *      Sainz's off-track excursion) and requires every car's instance matrix -
+ *      read back from the GPU-bound `InstancedMesh`, not recomputed - to sit at
+ *      the fixture's `position_xy` (three.z = -y) with its nose along
+ *      `heading_deg`, and the car panel to show the recorded position and `d_m`.
  *
  * Output: `.cache/snapshots/*.png` (gitignored). Exit code 1 on any failure.
  */
@@ -77,7 +84,20 @@ const RUNS = [
   { track: 'interlagos', sources: ['synthetic'], wheel: false },
   { track: 'interlagos_2024', sources: ['synthetic'], wheel: false },
   { track: 'interlagos_v2', sources: ['synthetic'], wheel: false },
+  { track: 'engine', sources: ['engine', 'synthetic'], wheel: false, engine: true },
 ]
+
+/** The fixture the `engine` registry entry loads, read here independently. */
+const RECORDING = join(ROOT, 'public', 'recordings', 'engine-interlagos-seed42.jsonl')
+/**
+ * Ticks the engine check pauses on: the first, one mid-window, and one where
+ * Sainz is 9.1 m off the centreline (sim 40.0 s), so the off-track path is on
+ * screen. Clock time is `(tick) * dt`, tick 0 being the first recorded.
+ */
+const ENGINE_TICKS = [0, 205, 399]
+/** Placement tolerance: the stored `position_xy` is rounded to 1 cm. */
+const ENGINE_POS_TOL_M = 1e-3
+const ENGINE_DIR_TOL = 1e-3
 
 /** The one list of known check failures, shared with src/track/tracks.test.ts. */
 const EXPECTED = JSON.parse(readFileSync(join(ROOT, 'src', 'track', 'expected-verdicts.json'), 'utf8'))
@@ -357,6 +377,93 @@ async function wheelCheck(page) {
 }
 
 // ---------------------------------------------------------------------------
+// engine check
+// ---------------------------------------------------------------------------
+
+function readRecording() {
+  const lines = readFileSync(RECORDING, 'utf8').split(/\r?\n/).filter((l) => l.trim())
+  const block = JSON.parse(lines[0])
+  const grid = [...block.drivers].sort((a, b) => a.grid_position - b.grid_position).map((d) => d.driver_id)
+  return { grid, ticks: lines.slice(1).map((l) => JSON.parse(l)) }
+}
+
+/** Every car's body instance matrix, as handed to the GPU. */
+function readBodiesInPage() {
+  const { scene } = window.__viewer.store()
+  let body = null
+  scene.traverse((o) => {
+    if (o.isInstancedMesh && o.instanceColor && !body) body = o
+  })
+  if (!body) return null
+  const m = new body.matrix.constructor()
+  const out = []
+  for (let i = 0; i < body.count; i++) {
+    body.getMatrixAt(i, m)
+    out.push(m.elements.slice())
+  }
+  return out
+}
+
+async function engineCheck(page) {
+  console.log('\n  engine placement against the recording fixture')
+  const { grid, ticks } = readRecording()
+  await selectSource(page, 'engine')
+  await pressKey(page, '1')
+  await page.evaluate(() => {
+    window.__viewer.clock.playing = false
+  })
+  const dt = (ticks.at(-1).sim_ts - ticks[0].sim_ts) / (ticks.length - 1)
+  for (const k of ENGINE_TICKS) {
+    const tick = ticks[k]
+    await setTime(page, k * dt)
+    const mats = await page.evaluate(readBodiesInPage)
+    if (!mats || mats.length !== grid.length) {
+      fail(`engine tick ${k}: found ${mats?.length ?? 0} car instances, recording has ${grid.length}`)
+      continue
+    }
+    let worstPos = 0
+    let worstDir = 0
+    let worstWho = ''
+    let off = []
+    for (const p of tick.positions) {
+      const e = mats[grid.indexOf(p.driver_id)]
+      const [x, y] = p.position_xy
+      const pos = Math.hypot(e[12] - x, e[14] + y)
+      const h = (p.heading_deg * Math.PI) / 180
+      // the nose is local -Z: column 2 negated
+      const dir = Math.hypot(-e[8] - Math.cos(h), -e[9], -e[10] + Math.sin(h))
+      if (pos > worstPos) worstWho = p.driver_id
+      worstPos = Math.max(worstPos, pos)
+      worstDir = Math.max(worstDir, dir)
+      if (Math.abs(p.d_m) > 6) off.push(`${p.driver_id} d ${p.d_m.toFixed(2)} m`)
+    }
+    const msg =
+      `tick ${k} (sim ${tick.sim_ts.toFixed(1)} s): ${grid.length} cars, worst position error ` +
+      `${worstPos.toExponential(1)} m (${worstWho}), worst nose-vs-heading ${worstDir.toExponential(1)}` +
+      (off.length ? `; off-track: ${off.join(', ')}` : '')
+    if (worstPos < ENGINE_POS_TOL_M && worstDir < ENGINE_DIR_TOL) pass(`engine placement: ${msg}`)
+    else fail(`engine placement: ${msg}`)
+
+    // The followed car (grid slot 0 unless changed) in the panel: position and d_m.
+    const me = tick.positions.find((p) => p.driver_id === grid[0])
+    await page.waitForTimeout(250) // the panel polls at 12 Hz
+    const shown = await page.evaluate(() => ({
+      pos: document.querySelector('[data-testid=car-position]')?.textContent ?? '',
+      d: document.querySelector('[data-testid=car-d]')?.textContent ?? '',
+    }))
+    const wantPos = `P${me.position} · `
+    const wantD = `${me.d_m >= 0 ? '+' : ''}${me.d_m.toFixed(2)} m`
+    const panelMsg = `${grid[0]} at tick ${k}: panel "${shown.pos}" "${shown.d}", recording P${me.position} d ${wantD}`
+    if (shown.pos === wantPos && shown.d === wantD) pass(`engine panel: ${panelMsg}`)
+    else fail(`engine panel: ${panelMsg}`)
+    await page.screenshot({ path: join(OUT, `engine-tick-${String(k).padStart(3, '0')}.png`) })
+  }
+  await page.evaluate(() => {
+    window.__viewer.clock.playing = true
+  })
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -456,6 +563,7 @@ async function runTrack(page, run, url, logs) {
   }
 
   if (run.wheel) await wheelCheck(page)
+  if (run.engine) await engineCheck(page)
 }
 
 async function main() {
