@@ -80,7 +80,8 @@ class SimulationConfig:
     random_seed: int = 42
     # Opções de visualização (apenas com gui=True)
     camera_mode: str = "overview"     # "overview" | "follow" | "none"
-    draw_track: bool = False           # desenha racing line em GUI
+    draw_track: bool = False           # desenha a pista em GUI
+    draw_track_details: bool = True    # linhas auxiliares; superfície e S/F independentes
     realtime: bool = False            # pausa para sincronizar com tempo real
     # Opções de input externo
     input_source_type: str = "memory"  # "memory" | "redis"
@@ -309,12 +310,14 @@ class SimulationEngine:
                 self.track.waypoints,
                 start_finish_waypoint=self.track.start_finish_waypoint,
                 track_width_m=self.track.width_m,
+                draw_centerline_and_edges=self.config.draw_track_details,
             )
         if self.config.camera_mode == "overview":
             self.physics.setup_overview_camera((cx, cy), radius)
             print(f"[gui] overview camera set at ({cx:.0f},{cy:.0f}) radius={radius:.0f}m")
-            print(f"[gui] racing line drawn ({len(self.track.waypoints)} waypoints)")
-            print(f"[gui] red line = start/finish")
+            if self.config.draw_track:
+                print(f"[gui] track surface drawn ({len(self.track.waypoints)} waypoints)")
+                print("[gui] red line = start/finish")
         elif self.config.camera_mode == "follow" and self.drivers:
             # Segue o primeiro driver
             handle = self.handles[self.drivers[0].driver_id]
@@ -360,7 +363,7 @@ class SimulationEngine:
 
         # Cap de segurança: 3x o tempo esperado para a corrida
         # (~75s/volta * num_laps * 3 = generoso; evita corrida infinita)
-        max_ticks = int(self.config.num_laps * 200 * 3)
+        max_ticks = int(self.config.num_laps * 200 * 3 / logic_dt)
         tick = 0
         last_real_time = time.time()
 

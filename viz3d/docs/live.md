@@ -17,3 +17,11 @@ scripts/run-live-compare.sh --laps 3 --camera follow
 O script cria uma única corrida, abre a janela do PyBullet e abre no navegador o visualizador conectado à mesma engine. Pressione `Ctrl+C` no terminal para encerrar os processos iniciados pelo script. A visualização no navegador usa um buffer de cerca de 150 ms, de modo que fica um pouco atrás do PyBullet.
 
 É necessário ter `backend/.venv` com `backend/requirements.txt` instalado, Node/npm e uma sessão gráfica com `DISPLAY`. Sem `REDIS_URL`, o script usa Docker para criar um Redis temporário; se `viz3d/node_modules` não existir, instala as dependências com `npm ci`. Use `--no-browser` para abrir o endereço manualmente, `--camera overview` para a câmera geral ou `--help` para as demais opções. As portas padrão podem ser alteradas com `F1_API_PORT` e `F1_VIZ_PORT`.
+
+## Geometria e largada
+
+As corridas ao vivo usam por padrão as linhas derivadas da telemetria de Interlagos 2023 e Monza 2024, em `backend/config/tracks/`. A linha de chegada é o waypoint 0 e o grid é montado atrás dela. Em Interlagos, a linha foi estimada a partir de 980 voltas cronometradas (dispersão MAD de cerca de 3 m); em Monza, a estimativa fica a aproximadamente 1 m da referência de cronometragem. Os traçados representam linhas médias de telemetria, não um levantamento cadastral das bordas da pista. As larguras de 12 m são valores de simulação, não medições de cada ponto do autódromo.
+
+A API envia os próprios waypoints, largura, índice da linha, hash da geometria e dimensões do chassi. A pista do navegador é construída desses dados, com os mesmos pontos e a mesma largura que o PyBullet usa. A linha branca do navegador e a vermelha do PyBullet marcam a mesma posição. A caixa de colisão do backend mede 5,0 × 1,8 × 0,7 m; para a corrida ao vivo, o modelo 3D estilizado é ajustado a essas mesmas dimensões externas. O formato detalhado ainda difere da caixa de colisão e as poses entre ticks são interpoladas.
+
+Para conferir a proveniência das cópias usadas pelo backend, execute `backend/.venv/bin/python scripts/sync_live_tracks.py`. O relatório geométrico e os limites das comparações estão em [phase0-geometry-report.md](phase0-geometry-report.md); os arquivos congelados antigos permanecem disponíveis para reproduzir experimentos anteriores.

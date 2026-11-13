@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import anyio
 import redis
 import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -87,13 +88,16 @@ async def race_websocket(websocket: WebSocket, race_id: str):
             for task in done:
                 task.result()
         finally:
-            for task in tasks:
-                task.cancel()
-            await asyncio.gather(*tasks, return_exceptions=True)
+            # Desconexões podem cancelar o escopo ASGI durante a limpeza.
+            with anyio.CancelScope(shield=True):
+                for task in tasks:
+                    task.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
     except WebSocketDisconnect:
         pass
     except redis.RedisError:
         await websocket.close(code=1011)
     finally:
-        await pubsub.aclose()
-        await client.aclose()
+        with anyio.CancelScope(shield=True):
+            await pubsub.aclose()
+            await client.aclose()

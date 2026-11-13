@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 class RaceSetupRequest(BaseModel):
     """Payload enviado pelo front para configurar/criar uma corrida.
 
-    ``track`` e ``year`` seguem a mesma semântica de ``config.load_track``:
-    omitidos -> usa o preset local de Interlagos.
+    Interlagos 2023 e Monza 2024 usam traçados locais derivados de telemetria;
+    outros anos ou circuitos seguem ``config.load_track``.
     """
 
     laps: int = Field(default=10, ge=1, le=200)

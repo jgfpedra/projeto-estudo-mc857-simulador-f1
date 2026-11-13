@@ -44,3 +44,15 @@ def test_interlagos_track_still_injectable():
     assert len(INTERLAGOS_TRACK.waypoints[0]) == 2
     handle = SimpleNamespace(waypoints=INTERLAGOS_TRACK.waypoints)
     assert handle.waypoints is INTERLAGOS_TRACK.waypoints
+
+
+def test_finish_line_can_be_drawn_without_thousands_of_debug_segments(monkeypatch):
+    physics = PyBulletPhysics(gui=True)
+    physics._client_id = 1
+    calls = []
+    monkeypatch.setattr("engine.physics.p.addUserDebugLine", lambda **kwargs: calls.append(kwargs))
+    physics.draw_track_lines([(0., 0.), (10., 0.), (10., 10.), (0., 10.)],
+                             start_finish_waypoint=2, track_width_m=4.,
+                             draw_centerline_and_edges=False)
+    assert len(calls) == 1
+    assert calls[0]["lineColorRGB"] == (1.0, 0.1, 0.1)

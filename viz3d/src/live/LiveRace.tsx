@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { Sphere, Vector3 } from 'three'
 import { Grid } from '../cars/Grid'
 import { PALETTE } from '../cars/field'
+import { RACE_CAR_RED } from '../cars/model'
 import type { CarIdentity, MotionSource } from '../cars/motion'
 import { CameraRig } from '../cameras/CameraRig'
 import type { CameraMode, FollowState } from '../cameras/rig'
@@ -11,20 +12,12 @@ import type { LiveTick } from './buffer'
 import { newClock } from '../replay/clock'
 import { buildFrame } from '../track/frame'
 import { TrackRibbon } from '../track/TrackRibbon'
-import type { Track } from '../track/types'
+import { trackFromLive } from './track'
+import type { LiveTrack } from './track'
+import { StartFinishLine } from './StartFinishLine'
 
-type Meta = { race_id: string; num_laps: number; track: { name: string; source: string; length_m: number; width_m: number; start_finish_waypoint: number; waypoints: [number, number][] }; drivers: { driver_id: string; name: string; grid_position: number }[] }
+type Meta = { race_id: string; num_laps: number; car_geometry?: { length_m: number; width_m: number; height_m: number }; track: LiveTrack; drivers: { driver_id: string; name: string; grid_position: number }[] }
 const api = (import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8000`).replace(/\/$/, '')
-
-function trackFromMeta(meta: Meta): Track {
-  const t = meta.track
-  const points = t.waypoints.map((_, k) => {
-    const [x, y] = t.waypoints[(k + t.start_finish_waypoint) % t.waypoints.length]
-    return new Vector3(x, 0, -y)
-  })
-  return { circuit: '', name: t.name, variant: t.source, year: null, lengthM: t.length_m,
-    spacingM: t.length_m / points.length, widthM: t.width_m, rotationRad: 0, points, corners: [], startFinishS: 0 }
-}
 
 export function LiveRace() {
   const [raceId, setRaceId] = useState(() => new URLSearchParams(location.search).get('race') || '')
@@ -96,7 +89,7 @@ export function LiveRace() {
 
   const scene = useMemo(() => {
     if (!meta) return null
-    const track = trackFromMeta(meta)
+    const track = trackFromLive(meta.track)
     const frame = buildFrame(track)
     const sphere = new Sphere().setFromPoints(track.points)
     const distance = sphere.radius / Math.sin(Math.PI / 8) * 1.3
@@ -111,7 +104,9 @@ export function LiveRace() {
       },
       originM(car) { return initial.current[ids[car]] ?? 0 },
     }
-    return { track, frame, cars, source, center: sphere.center, distance, fitted: { target: sphere.center, position: sphere.center.clone().add(new Vector3(0, distance, distance * 0.3)), far: distance * 8 } }
+    const geometry = meta.car_geometry
+    const modelSpec = geometry ? { ...RACE_CAR_RED, dimensions: { lengthM: geometry.length_m, widthM: geometry.width_m, heightM: geometry.height_m } } : RACE_CAR_RED
+    return { track, frame, cars, source, modelSpec, center: sphere.center, distance, fitted: { target: sphere.center, position: sphere.center.clone().add(new Vector3(0, distance, distance * 0.3)), far: distance * 8 } }
   }, [meta])
 
   async function start() {
@@ -135,8 +130,9 @@ export function LiveRace() {
     <Canvas camera={{ position: [scene.center.x, scene.distance, scene.center.z + scene.distance * 0.3], fov: 45, near: 1, far: scene.distance * 8 }}>
       <hemisphereLight args={['#ffffff', '#30303c', 1.1]} /><directionalLight position={[600, 1200, 400]} intensity={1.2} />
       <TrackRibbon frame={scene.frame} widthM={scene.track.widthM} />
+      <StartFinishLine track={scene.track} />
       <Suspense fallback={null}>
-        <Grid frame={scene.frame} cars={scene.cars} source={scene.source} clock={clock} selected={selected} readout={readout} />
+        <Grid frame={scene.frame} cars={scene.cars} source={scene.source} modelSpec={scene.modelSpec} clock={clock} selected={selected} readout={readout} />
         <CameraRig frame={scene.frame} mode={cameraMode} readout={readout} fitted={scene.fitted} orbitFovDeg={45} clock={clock} cutKey={cutKey} />
       </Suspense>
     </Canvas>

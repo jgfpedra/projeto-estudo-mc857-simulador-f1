@@ -1,5 +1,7 @@
 """Contract checks for authoritative live snapshots and the Redis bridge."""
+import hashlib
 import json
+import struct
 import os
 from types import SimpleNamespace
 
@@ -59,6 +61,11 @@ def test_real_engine_redis_websocket_roundtrip():
         metadata = http.get(f'/races/{race_id}').json()
         assert len(metadata['track']['waypoints']) > 3
         assert len(metadata['drivers']) == 2
+        assert metadata['car_geometry'] == {'length_m': 5.0, 'width_m': 1.8, 'height_m': 0.7}
+        assert metadata['track']['source'] == 'telemetry'
+        encoded = b''.join(struct.pack('<dd', *point) for point in metadata['track']['waypoints'])
+        assert metadata['track']['geometry_sha256'] == hashlib.sha256(encoded).hexdigest()[:16]
+        assert metadata['track']['start_finish_waypoint'] == 0
         with http.websocket_connect(f'/ws/races/{race_id}') as ws:
             for _ in range(30):
                 tick = ws.receive_json()

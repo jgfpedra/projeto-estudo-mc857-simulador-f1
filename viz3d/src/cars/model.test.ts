@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { Box3, Vector3 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { Object3D } from 'three'
-import { RACE_CAR_RED, adaptCarModel, carModelMatrix } from './model'
+import { RACE_CAR_RED, adaptCarModel, carGeometry, carModelMatrix } from './model'
 import type { CarModelSpec } from './model'
 
 /**
@@ -129,6 +129,21 @@ describe('raceCarRed.glb', () => {
     expect(Math.abs(box.min.y)).toBeLessThan(EPS)
     expect(Math.abs(box.getCenter(new Vector3()).x)).toBeLessThan(EPS)
     expect(Math.abs(box.getCenter(new Vector3()).z)).toBeLessThan(EPS)
+  })
+
+  it('fits the live model to the physics chassis bounds', async () => {
+    const spec: CarModelSpec = { ...RACE_CAR_RED, dimensions: { lengthM: 5, widthM: 1.8, heightM: 0.7 } }
+    const box = new Box3().setFromObject(adaptCarModel(await loadRaceCarRed(), spec))
+    const size = box.getSize(new Vector3())
+    expect(size.z).toBeCloseTo(5, 7)
+    expect(size.x).toBeCloseTo(1.8, 7)
+    expect(size.y).toBeCloseTo(0.7, 7)
+    expect(box.getCenter(new Vector3()).x).toBeCloseTo(0, 7)
+    expect(box.getCenter(new Vector3()).z).toBeCloseTo(0, 7)
+    expect(box.min.y).toBeCloseTo(0, 7)
+    const wheels = carGeometry(await loadRaceCarRed(), spec).wheels
+    expect(wheels).toHaveLength(4)
+    for (const wheel of wheels) expect(Math.abs(wheel.axle.x)).toBe(1)
   })
 
   it('drives nose first, with its front-left wheel on its own left', async () => {

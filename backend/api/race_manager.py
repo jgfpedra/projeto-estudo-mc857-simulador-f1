@@ -1,10 +1,12 @@
 """Corridas locais e publicação dos estados da engine no Redis."""
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import math
 import os
+import struct
 import sys
 import threading
 import uuid
@@ -15,7 +17,9 @@ if _BACKEND_ROOT not in sys.path:
     sys.path.insert(0, _BACKEND_ROOT)
 
 import redis
-from config import DEFAULT_DRIVERS, DEFAULT_INTERLAGOS_CONFIG, load_track
+from config import DEFAULT_DRIVERS, DEFAULT_INTERLAGOS_CONFIG
+from config.live_tracks import load_live_track
+from engine.physics import CHASSIS_LENGTH_M, CHASSIS_WIDTH_M, CHASSIS_HEIGHT_M
 from engine import InMemoryInputSource, Publisher, RuleBasedRaceController, SimulationEngine
 
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
@@ -62,19 +66,24 @@ class RaceManager:
 
     def create_race(self, laps, track, year):
         self.redis.ping()
-        track_obj = load_track(track_name=track, year=year)
+        track_obj = load_live_track(track_name=track, year=year)
         race_id = f'race_{uuid.uuid4().hex}'
         gui = os.environ.get('F1_PYBULLET_GUI', '').lower() in ('1', 'true', 'yes', 'on')
         camera_mode = os.environ.get('F1_GUI_CAMERA', 'follow') if gui else 'none'
         if camera_mode not in ('follow', 'overview', 'none'):
             raise ValueError(f'Modo de câmera inválido: {camera_mode}')
         config = replace(DEFAULT_INTERLAGOS_CONFIG, race_id=race_id, num_laps=laps,
-                         gui=gui, camera_mode=camera_mode, draw_track=gui,
+                         gui=gui, camera_mode=camera_mode, draw_track=gui, draw_track_details=False,
                          realtime=True, track_progress_laps=True)
         drivers = list(DEFAULT_DRIVERS)
+        geometry_bytes = b''.join(struct.pack('<dd', float(x), float(y)) for x, y in track_obj.waypoints)
+        geometry_sha256 = hashlib.sha256(geometry_bytes).hexdigest()[:16]
         meta = {
             'race_id': race_id, 'num_laps': laps,
+            'car_geometry': {'length_m': CHASSIS_LENGTH_M, 'width_m': CHASSIS_WIDTH_M,
+                             'height_m': CHASSIS_HEIGHT_M},
             'track': {'name': track_obj.name, 'source': track_obj.source,
+                      'geometry_sha256': geometry_sha256,
                       'length_m': track_obj.length_m, 'width_m': track_obj.width_m,
                       'start_finish_waypoint': track_obj.start_finish_waypoint,
                       'waypoints': [[float(x), float(y)] for x, y in track_obj.waypoints]},
