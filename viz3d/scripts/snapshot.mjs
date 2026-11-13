@@ -74,6 +74,8 @@ const MODES = [
 const RUNS = [
   { track: 'monza', sources: ['synthetic', 'replay'], wheel: true },
   { track: 'monza_v1', sources: ['synthetic'], wheel: false },
+  { track: 'interlagos', sources: ['synthetic'], wheel: false },
+  { track: 'interlagos_2024', sources: ['synthetic'], wheel: false },
   { track: 'interlagos_v2', sources: ['synthetic'], wheel: false },
 ]
 
@@ -481,15 +483,24 @@ async function main() {
         await page.goto(`${url}?probe&track=${run.track}`)
       } else {
         // Through the viewer's own picker: the link must keep `probe`.
-        const link = page.locator(`a[href*="track=${run.track}"]`)
-        const href = await link.getAttribute('href').catch(() => null)
+        // Match the `track` parameter exactly: a substring selector would also
+        // hit `interlagos_2024` / `interlagos_v2` when looking for `interlagos`.
+        const params = (h) => new URLSearchParams(h.replace(/^\?/, ''))
+        const hrefs = await page
+          .locator('a[href*="track="]')
+          .evaluateAll((as) => as.map((a) => a.getAttribute('href')))
+        const href = hrefs.find((h) => h && params(h).get('track') === run.track) ?? null
         if (!href) {
           fail(`track picker has no link to ${run.track}`)
           continue
         }
-        if (!new URLSearchParams(href.replace(/^\?/, '')).has('probe'))
+        if (!params(href).has('probe'))
           fail(`track picker link to ${run.track} drops ?probe: ${href}`)
-        await Promise.all([page.waitForURL(`**track=${run.track}**`), link.click()])
+        const link = page.locator(`a[href="${href}"]`)
+        await Promise.all([
+          page.waitForURL((u) => u.searchParams.get('track') === run.track),
+          link.click(),
+        ])
       }
       await runTrack(page, run, url, logs)
     }

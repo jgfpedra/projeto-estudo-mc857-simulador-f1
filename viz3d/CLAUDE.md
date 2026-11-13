@@ -6,8 +6,11 @@ The 3D visualisation spike for the F1 race simulator (MC857, group "F1maça").
 It now lives inside the group repo at `viz3d/` (brought in with
 `git subtree`, history kept), but it is **still a separate app**: own
 `package.json`, own `requirements.txt`, no imports from `frontend/` or
-`backend/`, and nothing in it may read files outside `viz3d/`. Run every
-command below from `viz3d/`. The goal is unchanged: one circuit — Monza,
+`backend/`, and nothing in it may read files outside `viz3d/` (typecheck, tests,
+snapshot and extraction never do). The one exception is phase 0b's two
+backend-integration scripts, `verify_export_backend.py` and
+`smoke_engine_lap.py`, which import the backend by design and change nothing in
+it. Run every command below from `viz3d/` unless it says otherwise. The goal is unchanged: one circuit — Monza,
 2024 — rendering in Three.js with cars moving along it.
 
 Design rationale, data pipeline details and the milestone list live in
@@ -24,9 +27,9 @@ not to this spike:
 - "Key moment" cinematic triggers (overtakes, pit stops, incidents)
 - Collision physics or crash animation
 - The Ollama race-engineer agent
-- More than one circuit (phase 0's `interlagos_v2` was explicitly requested as
-  evidence for the geometry-source decision; it is not a second supported
-  circuit)
+- More circuits than asked for. Monza is the circuit; Interlagos (phase 0's
+  `interlagos_v2`, phase 0b's own extraction and its engine-format export) was
+  explicitly requested as evidence for the geometry-source decision
 
 If a task seems to need one of these, say so and propose the smallest stub that
 unblocks the current milestone instead.
@@ -50,10 +53,18 @@ npm test             # vitest, one run
 npm run test:watch
 npm run snapshot     # build, then render-verify in headless Chromium (see below)
 
-# Track extraction (run once per circuit, output is committed)
+# Track extraction (run once per circuit, output is committed). FastF1 3.8.3,
+# always offline: --cache must be an existing cache (outside the repo; read a copy)
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python scripts/extract_track.py --circuit monza --year 2024 --out public/tracks/monza.json
+python scripts/extract_track.py --circuit monza --year 2024 --cache <cache> --out public/tracks/monza.json
+python scripts/extract_replay.py --cache <cache>      # after any monza.json change
+python scripts/extract_track.py --circuit interlagos --year 2023 --start-finish timing-line --cache <cache> --out public/tracks/interlagos.json
+
+# Phase 0b: engine-format export (exports/, never backend/), proof, smoke lap
+python scripts/export_frozen_track.py --track public/tracks/interlagos.json --name "..." --out exports/interlagos_2023_v1.json
+cd .. && python viz3d/scripts/verify_export_backend.py   # backend's own load_track_frozen
+python viz3d/scripts/smoke_engine_lap.py                 # needs the backend's deps incl. pybullet
 
 # Phase 0: the engine's frozen tracks, vendored read-only in vendor/tracks_frozen/
 # (see PROVENANCE.md there) - docs/phase0-geometry-report.md has the full commands
@@ -155,10 +166,16 @@ shots into a single colour and the run exits 1. First run needs
 - **Monza is deliberately flat.** Keep the elevation code path in place and feed
   it `Z = 0` for now. Don't delete it; the next circuits need it.
 - **Monaco is off the table** for this spike — GPS drops in the tunnel.
-- **F1's live-timing archive returns 401** (since at least 2026-11-04), so
-  FastF1 cannot download sessions that are not already in `.fastf1-cache/`.
-  Monza 2024 is cached; São Paulo is not, which is why phase 0 has no
-  Interlagos centreline of ours.
+- **F1's live-timing archive needs a login** (401 since at least 2026-11-04).
+  FastF1 is pinned to the backend's 3.8.3 and `enable_cache` always runs it
+  offline, so only cached sessions load: our Monza cache, and the group's cache
+  (São Paulo 2023/2024, among others). Never commit a cache; read from a copy so
+  FastF1 cannot rewrite the original's pickles.
+- **s = 0 placement.** Default s = 0 is each lap's first position sample, which
+  lands a few metres past the line and moves between FastF1 versions.
+  `--start-finish timing-line` puts it at the timing line instead (Interlagos
+  uses it; Monza keeps the default, ~1 m off). Changing `monza.json` means
+  regenerating the replay and round-trip fixture too.
 - **Engine tracks are marker splines, not centrelines.** `Monza_v1` /
   `interlagos_v2` are centripetal Catmull-Rom through FastF1's corner markers
   (reproduced to 1e-12 m). Their known check failures are pinned in
@@ -174,10 +191,14 @@ scripts/extract_replay.py  # FastF1 → (s, d) replay JSON
 scripts/centreline.py      # the one (s, d) <-> world projector, shared by both
 scripts/convert_frozen_track.py  # engine frozen track -> our JSON (phase 0)
 scripts/overlay_frozen.py  # phase 0 overlay metrics + plots -> docs/phase0/
+scripts/export_frozen_track.py   # our JSON -> engine frozen format (phase 0b)
+scripts/verify_export_backend.py # exports' sha256 via backend load_track_frozen
+scripts/smoke_engine_lap.py      # one solo lap per export in the real engine
 scripts/multiviewer.py     # MultiViewer corner markers / lap outline, cached
 scripts/snapshot.mjs       # headless render verification (npm run snapshot)
 public/tracks/*.json       # committed track geometry
 vendor/tracks_frozen/      # engine frozen tracks, copied byte-exact from feat/bot-ai
+exports/                   # our Interlagos in the engine's frozen format
 src/track/                 # spline, frame, ribbon, checks, ?track= registry
 src/cars/                  # car model loading, instancing, (s,d) placement
 src/cameras/               # orbit / chase / onboard

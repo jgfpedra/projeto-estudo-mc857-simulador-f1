@@ -36,6 +36,23 @@ library, data from F1 live timing via FastF1's cache) is also the source of:
 The raw FastF1 cache (`.fastf1-cache/`, ~85 MB) and any copy of it are never
 committed.
 
+Phase 0b (2026-11-12) regenerated `monza.json`, the replay and the fixture with
+FastF1 3.8.3 in offline mode, from the same cached 2024 Italian GP data. It also
+added two more FastF1-derived files, extracted with the same pipeline from the
+group's FastF1 3.8.3 cache (João Vitor's; it lives outside the repo, was read
+from a copy, and is never committed):
+
+- `public/tracks/interlagos.json`: 2023 São Paulo GP, race, position telemetry
+  (the kept Interlagos centreline).
+- `public/tracks/interlagos_2024.json`: 2024 São Paulo GP, race (wet), the
+  same.
+- `exports/interlagos_{2023,2024}_v1.json`: those two centrelines resampled
+  into the simulation engine's frozen-track format by
+  `scripts/export_frozen_track.py`. They are derived data, not third-party
+  files, and their `source` key records the track file's sha256.
+
+Corner positions in all of them come from FastF1's `circuit_info` (MultiViewer).
+
 Phase 0 (docs/phase0-geometry-report.md) added two more:
 
 - `public/tracks/monza_v1.json` and `public/tracks/interlagos_v2.json` are

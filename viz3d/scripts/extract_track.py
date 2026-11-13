@@ -221,12 +221,23 @@ class StageWriter:
 # --------------------------------------------------------------------------
 
 def enable_cache(path: str = ".fastf1-cache") -> str:
-    """Enable the FastF1 on-disk cache. Must run before the first load; an
-    uncached session.load() costs minutes every iteration."""
+    """Enable the FastF1 on-disk cache, **always in offline mode**.
+
+    F1's live-timing archive now requires an F1 account (401 without one), so
+    every session is read from an existing cache and nothing is fetched.
+    FastF1 is pinned to the backend's 3.8.3 (`requirements.txt`): that is the
+    version that wrote the group's caches, and 3.9.x changed authentication and
+    moves the centreline (docs/phase0-geometry-report.md). A session missing
+    from the cache fails loudly instead of trying the network.
+    """
     import fastf1
 
-    Path(path).mkdir(parents=True, exist_ok=True)
+    if not Path(path).is_dir():
+        raise FileNotFoundError(
+            "FastF1 cache %r does not exist; offline mode needs an existing "
+            "cache (see CLAUDE.md)." % path)
     fastf1.Cache.enable_cache(path)
+    fastf1.Cache.offline_mode(enabled=True)
     return path
 
 
@@ -386,6 +397,94 @@ def smooth_loop(pts: np.ndarray, window: int, polyorder: int) -> np.ndarray:
 
 
 # --------------------------------------------------------------------------
+# Step 6b (optional) - start/finish at the timing line
+# --------------------------------------------------------------------------
+
+def timed_lap_starts(session) -> tuple[np.ndarray, list[str]]:
+    """Where each timed lap began: the car's plan position at `LapStartTime`.
+
+    `LapStartTime` is the session time the car crossed the timing line (it is
+    the previous lap's `Time`). The position stream is ~4 Hz, so the position
+    is *interpolated* between the two samples bracketing that instant rather
+    than taken from the first sample after it - which is what step 3's
+    `get_pos_data` slice starts on, and what puts the default s = 0 a fraction
+    of a sample (metres) past the line, by an amount that varies by session and
+    FastF1 version.
+
+    Uses step 2's quality filters (no in/out laps, no SC/VSC/red, FastF1's
+    accuracy flag) but neither the quick-lap cut nor the per-driver cap: every
+    clean timed lap is a measurement of the same line. Lap 1 is excluded - it
+    starts from the grid, not the line. Returns (M, 2) FastF1 plan metres and
+    one label per row.
+    """
+    laps = session.laps
+    laps = laps.pick_wo_box().pick_track_status("456", how="none").pick_accurate()
+    rows, labels = [], []
+    for _, lap in laps.iterrows():
+        t0 = lap["LapStartTime"]
+        if int(lap["LapNumber"]) <= 1 or t0 is None or not np.isfinite(
+                t0.total_seconds() if hasattr(t0, "total_seconds") else np.nan):
+            continue
+        pos = session.pos_data.get(str(lap["DriverNumber"]))
+        if pos is None or len(pos) < 2:
+            continue
+        t = pos["SessionTime"].dt.total_seconds().to_numpy()
+        tq = t0.total_seconds()
+        i = int(np.searchsorted(t, tq))
+        if i <= 0 or i >= len(t) or t[i] - t[i - 1] > 1.0:
+            continue
+        a, b = pos.iloc[i - 1], pos.iloc[i]
+        if "Status" in pos.columns and not (
+                a["Status"] == "OnTrack" and b["Status"] == "OnTrack"):
+            continue
+        pa = np.array([a["X"], a["Y"]], dtype=float)
+        pb = np.array([b["X"], b["Y"]], dtype=float)
+        if not (np.isfinite(pa).all() and np.isfinite(pb).all()) or \
+                not pa.any() or not pb.any():
+            continue
+        f = (tq - t[i - 1]) / (t[i] - t[i - 1])
+        rows.append((pa + f * (pb - pa)) / 10.0)   # 1/10 m -> m
+        labels.append("%s L%d" % (lap["Driver"], int(lap["LapNumber"])))
+    if not rows:
+        raise RuntimeError("No timed lap start could be located.")
+    return np.vstack(rows), labels
+
+
+def locate_timing_line(loop_ff1: np.ndarray,
+                       starts_ff1: np.ndarray) -> tuple[float, np.ndarray, np.ndarray]:
+    """Project each lap start onto the closed loop with the shared projector;
+    the timing line is the median `s`. Returns (s_line, s per start, d per
+    start), with `s` wrapped into (-L/2, L/2] about the loop's current point 0
+    so a line near the seam does not average 5 m with 4300 m."""
+    frame = frame_from_three(to_three(loop_ff1))
+    length = float(frame.length_m)
+    zeros = np.zeros((len(starts_ff1), 1))
+    plan = ground(to_three(np.hstack([starts_ff1, zeros])), "three")
+    sd = np.array([project_global(frame, p)[:2] for p in plan])
+    s = np.where(sd[:, 0] > length / 2, sd[:, 0] - length, sd[:, 0])
+    return float(np.median(s)) % length, s, sd[:, 1]
+
+
+def start_at(loop: np.ndarray, s0: float) -> np.ndarray:
+    """Roll the closed loop so it starts at arc length `s0`: a point is
+    interpolated exactly there and becomes point 0; every other point is kept.
+    Step 7 then resamples uniformly from it, so s = 0 *is* that point."""
+    cum = _cumulative(loop, closed=True)
+    total = float(cum[-1])
+    s0 = s0 % total
+    i = int(np.searchsorted(cum, s0, side="right")) - 1
+    a, b = loop[i], loop[(i + 1) % len(loop)]
+    seg = cum[i + 1] - cum[i]
+    p = a + (s0 - cum[i]) / seg * (b - a) if seg > 0 else a
+    rest = np.vstack([loop[i + 1:], loop[:i + 1]])
+    if np.linalg.norm(rest[-1, :2] - p[:2]) < 1e-9:
+        rest = rest[:-1]
+    if np.linalg.norm(rest[0, :2] - p[:2]) < 1e-9:
+        rest = rest[1:]
+    return np.vstack([p[None, :], rest])
+
+
+# --------------------------------------------------------------------------
 # Step 7 - resample by arc length
 # --------------------------------------------------------------------------
 
@@ -534,9 +633,10 @@ def build_doc(centreline_ff1: np.ndarray, corners: list[dict], *,
     The written centreline goes through `to_three` here, and the mapping
     itself lives only in `to_three` (step 10 and the checks call it too, so
     they see exactly what ships). `startFinishS` is 0 by
-    construction: s = 0 is point 0 of the median lap, i.e. the lap-timing
-    boundary. That is close to the painted line but not surveyed to it -
-    adequate for the spike, worth knowing before anyone measures against it.
+    construction. By default s = 0 is point 0 of the median lap - each lap's
+    first position sample, which lands a fraction of a sample past the timing
+    line. With `--start-finish timing-line` it is the timing line itself,
+    located in step 6b from the timed laps' interpolated start positions.
     """
     three = to_three(centreline_ff1)
     length = polyline_length(ground(three, "three"), closed=True)
@@ -809,6 +909,25 @@ def run_pipeline(args) -> dict:
     smoothed = smooth_loop(median, args.savgol_window, args.savgol_polyorder)
     stages.array("06_smoothed", smoothed)
 
+    timing = None
+    if args.start_finish == "timing-line":
+        starts, labels = timed_lap_starts(session)
+        s_line, s_each, d_each = locate_timing_line(smoothed, starts)
+        spread = s_each - np.median(s_each)
+        timing = {"laps": len(starts), "sOffsetM": round(float(np.median(s_each)), 2),
+                  "sP10P90M": [round(float(v), 2) for v in np.percentile(spread, [10, 90])],
+                  "sMadM": round(float(np.median(np.abs(spread))), 2),
+                  "dMedianM": round(float(np.median(d_each)), 2)}
+        stages.doc("06b_timing_line", {**timing, "starts": [
+            {"lap": l, "s": round(float(s), 2), "d": round(float(d), 2)}
+            for l, s, d in zip(labels, s_each, d_each)]})
+        print("  step 6b    timing line from %d timed lap starts: %+.2f m from "
+              "the first-sample start (MAD %.2f m, p10..p90 %+.2f..%+.2f m, "
+              "median d %+.2f m)" % (timing["laps"], timing["sOffsetM"],
+                                     timing["sMadM"], *timing["sP10P90M"],
+                                     timing["dMedianM"]))
+        smoothed = start_at(smoothed, s_line)
+
     arclen = resample_arclength(smoothed, args.spacing)
     stages.array("07_arclen", arclen)
     print("  step 7     %d points at %.3f m spacing"
@@ -836,6 +955,10 @@ def run_pipeline(args) -> dict:
     doc = build_doc(final, corners, circuit=args.circuit, name=ref.name,
                     year=args.year,
                     width=args.width, rotation_deg=rotation)
+    if timing is not None:
+        # Extra key; parseTrack ignores keys it does not know (cf. `source`
+        # on the engine tracks). Absent with the default start/finish.
+        doc["startFinish"] = {"method": "timing-line", **timing}
     # Checks run on the Three.js-space output - the artefact that actually
     # ships - not on the ff1-space intermediate, so a mistake in to_three()
     # cannot slip past them.
@@ -883,6 +1006,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-laps", type=int, default=20)
     p.add_argument("--per-driver", type=int, default=3)
     p.add_argument("--elevation", default="zero", choices=["zero", "telemetry"])
+    p.add_argument("--start-finish", default="first-sample",
+                   choices=["first-sample", "timing-line"],
+                   help="where s = 0 goes: point 0 of the median lap (the "
+                        "first position sample of each lap, the original "
+                        "behaviour) or the timing line, interpolated from "
+                        "every clean timed lap's LapStartTime (step 6b)")
     p.add_argument("--dry-run", action="store_true",
                    help="run everything and report checks, but write no JSON")
     return p

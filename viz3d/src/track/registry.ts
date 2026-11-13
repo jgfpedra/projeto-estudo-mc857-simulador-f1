@@ -6,6 +6,10 @@
  * one committed JSON under `public/tracks/`; `circuit` inside that file, not
  * the id here, decides which reference facts it is checked against.
  *
+ * Phase 0b adds our own Interlagos centrelines, extracted offline from the 2023
+ * (dry, kept) and 2024 (wet) races; `interlagos_2024` is there as the second
+ * extraction the report compares against, not as a second supported layout.
+ *
  * Only our own Monza has a replay: `monza-2024-race.json` was projected onto
  * that exact centreline, and `parseReplay` refuses any other (it checks the
  * lap length). Re-projecting the telemetry onto an engine track is a separate
@@ -27,6 +31,16 @@ export const TRACKS: TrackEntry[] = [
     replayUrl: '/replays/monza-2024-race.json',
   },
   { id: 'monza_v1', label: 'Monza_v1 · engine', url: '/tracks/monza_v1.json' },
+  {
+    id: 'interlagos',
+    label: 'Interlagos 2023 · telemetry',
+    url: '/tracks/interlagos.json',
+  },
+  {
+    id: 'interlagos_2024',
+    label: 'Interlagos 2024 (wet) · telemetry',
+    url: '/tracks/interlagos_2024.json',
+  },
   { id: 'interlagos_v2', label: 'interlagos_v2 · engine', url: '/tracks/interlagos_v2.json' },
 ]
 

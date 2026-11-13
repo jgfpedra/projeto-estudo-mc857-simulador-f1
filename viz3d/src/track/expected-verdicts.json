@@ -10,6 +10,24 @@
       "F": "0.940 turns. The loop does turn exactly once (sum of vertex headings); buildFrame's per-sample curvature cannot represent the single 120.4 deg vertex at the T11 marker."
     }
   },
+  "interlagos": {
+    "verdicts": { "A": "PASS", "B": "SKIP", "C": "PASS", "D": "SKIP", "E": "PASS", "F": "PASS", "G": "SKIP" },
+    "why": {
+      "A": "4226.1 m against the published 4309 m, -1.92%: passes, 3.5 m inside the 2% tolerance.",
+      "B": "No sourced corner count.",
+      "D": "No sourced first-corner window.",
+      "G": "No sourced per-corner handedness."
+    }
+  },
+  "interlagos_2024": {
+    "verdicts": { "A": "PASS", "B": "SKIP", "C": "PASS", "D": "SKIP", "E": "PASS", "F": "PASS", "G": "SKIP" },
+    "why": {
+      "A": "4226.5 m against the published 4309 m, -1.91%: passes, 4 m inside the 2% tolerance.",
+      "B": "No sourced corner count.",
+      "D": "No sourced first-corner window.",
+      "G": "No sourced per-corner handedness."
+    }
+  },
   "interlagos_v2": {
     "verdicts": { "A": "FAIL", "B": "SKIP", "C": "FAIL", "D": "SKIP", "E": "PASS", "F": "PASS", "G": "SKIP" },
     "why": {

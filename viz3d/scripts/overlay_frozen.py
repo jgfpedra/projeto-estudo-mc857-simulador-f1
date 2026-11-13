@@ -21,11 +21,12 @@ What is measured, and how
   interpolant through those markers reproduces it; (3) does its curvature peak
   *at* the markers, and is it non-zero on the straights. A spline through
   apex markers should do both; a centreline fitted to driven laps should not.
-- **Interlagos has no telemetry centreline of ours**: F1's live-timing archive
-  answers 401, so `extract_track.py` cannot fetch São Paulo. MultiViewer's
-  single recorded lap outline stands in, and its error is measured first on
-  Monza, against our real centreline, so the Interlagos numbers carry error
-  bars.
+- **Interlagos**: since phase 0b, our own centreline
+  (`public/tracks/interlagos.json`, 2023 race, extracted offline from the
+  group's FastF1 3.8.3 cache) is the reference, exactly as for Monza; the 2024
+  race is measured as a second extraction. MultiViewer's single recorded lap
+  outline, which stood in before, is kept as a cross-check
+  (`multiviewerStandIn`).
 
 Everything is in Three.js plan space `(x, z)`; FastF1 `(X, Y)` inputs go
 through `convert_frozen_track.to_three`.
@@ -510,6 +511,15 @@ def monza(frozen_dir: Path) -> dict:
 
 
 def interlagos(frozen_dir: Path) -> dict:
+    """Phase 0b: our own Interlagos centreline (2023 race, dry - the kept one;
+    `public/tracks/interlagos.json`) against interlagos_v2, the same way
+    `monza()` does Monza. The 2024 race (wet, red flag;
+    `interlagos_2024.json`) is measured against both as a second extraction.
+    The MultiViewer lap outline that stood in before phase 0b is kept as a
+    cross-check under `multiviewerStandIn`, now measured against ours."""
+    ours = load_centre_frame("public/tracks/interlagos.json")
+    ours.width_m = 13.0
+    alt = load_centre_frame("public/tracks/interlagos_2024.json")
     v2 = load_centre_frame("public/tracks/interlagos_v2.json")
     raw = np.asarray(json.loads((frozen_dir / "interlagos_v2.json").read_text())["waypoints"])
     mv = fetch("interlagos")
@@ -518,39 +528,63 @@ def interlagos(frozen_dir: Path) -> dict:
     outline.width_m = 0.0
     steps = np.linalg.norm(np.diff(outline.points, axis=0), axis=1)
 
-    m = {"lengthM": {"frozen": round(v2.length_m, 1), "published": 4309.0,
-                     "mvOutline": round(outline.length_m, 1)},
-         "multiviewer": {"lap": mv.outline_lap, "points": len(mv.outline_xy),
-                         "medianStepM": round(float(np.median(steps)), 1),
-                         "maxStepM": round(float(steps.max()), 1),
-                         "openingGapM": round(float(np.linalg.norm(outline.points[0] - outline.points[-1])), 1),
-                         "datasetYear": mv.year}}
-    m["overlay"] = both_ways(outline, v2, "mv", "frozen")
-    # The stand-in's first sample is the start of a timed lap - the timing
-    # line, to within a sample (validated on Monza: lapStartOnOurs).
-    m["timingLine"] = sf_offset(outline, v2, pa=outline.points[0])["aOnB"]
+    m = {"lengthM": {"ours": round(ours.length_m, 1), "ours2024": round(alt.length_m, 1),
+                     "frozen": round(v2.length_m, 1), "published": 4309.0,
+                     "diff": round(v2.length_m - ours.length_m, 1),
+                     "mvOutline": round(outline.length_m, 1)}}
+    m["overlay"] = both_ways(ours, v2, "ours", "frozen")
+    m["startFinish"] = sf_offset(ours, v2)
+    by_num = {c["number"]: c for c in v2.corners}
+    m["corners"] = [{"number": a["number"], "name": a["name"], "oursS": a["s"],
+                     "frozenS": by_num[a["number"]]["s"],
+                     "deltaS": round(signed_s(by_num[a["number"]]["s"] - a["s"], v2.length_m), 1)}
+                    for a in ours.corners if a["number"] in by_num]
     m["markersAreVertices"] = markers_are_vertices(raw, mv.corners_xy)
     m["splineFit"] = spline_sweep(raw, mv.corners_xy)
     m["reproduction"] = reproduction(raw, mv.corners_xy)
     turns = vertex_turns_deg(v2)
     m["vertexTurnDeg"] = {"frozenMaxAbs": round(float(np.abs(turns).max()), 1),
-                          "frozenAtS": round(float(v2.s[np.argmax(np.abs(turns))]), 1)}
-    m["peaksAtMarkers"] = {"frozen": peaks_at_markers(v2, v2.corners)}
+                          "frozenAtS": round(float(v2.s[np.argmax(np.abs(turns))]), 1),
+                          "oursMaxAbs": round(float(np.abs(vertex_turns_deg(ours)).max()), 1)}
+    m["peaksAtMarkers"] = {"frozen": peaks_at_markers(v2, v2.corners),
+                           "ours": peaks_at_markers(ours, ours.corners)}
+    m["straights"] = straights(ours, v2)
+    m["ours2024"] = {"vsOurs": strip(both_ways(ours, alt, "ours", "ours2024")),
+                     "vsFrozen": strip(both_ways(alt, v2, "ours2024", "frozen")),
+                     "startFinishOnOurs": sf_offset(ours, alt)["bOnA"],
+                     "cornerDeltaS": [round(signed_s(b["s"] - a["s"], ours.length_m), 1)
+                                      for a, b in zip(ours.corners, alt.corners)]}
+    m["multiviewerStandIn"] = {"lap": mv.outline_lap, "points": len(mv.outline_xy),
+                               "medianStepM": round(float(np.median(steps)), 1),
+                               "maxStepM": round(float(steps.max()), 1),
+                               "openingGapM": round(float(np.linalg.norm(outline.points[0] - outline.points[-1])), 1),
+                               "datasetYear": mv.year,
+                               "vsOurs": strip(both_ways(ours, outline, "ours", "mv")),
+                               "vsFrozen": strip(both_ways(v2, outline, "frozen", "mv")),
+                               "lapStartOnOurs": sf_offset(ours, outline, pb=outline.points[0])["bOnA"],
+                               "lapStartOnFrozen": sf_offset(outline, v2, pa=outline.points[0])["aOnB"]}
 
-    ov = m["overlay"]["frozen->mv"]
-    worst = (v2.points[np.argmin(np.abs(v2.s - ov["maxAtS"]))], ov["max"])
-    plot_overlay(OUT / "interlagos-overlay.png", outline,
-                 "MultiViewer lap outline (stand-in)", C_MV, v2, "interlagos_v2 (engine)",
-                 markers, "Interlagos: engine interlagos_v2 vs a recorded lap (stand-in reference)",
-                 sf_ref=outline.points[0], ref_dashed=True, worst=worst)
+    ov = m["overlay"]["ours->frozen"]
+    worst = (ours.points[np.argmin(np.abs(ours.s - ov["maxAtS"]))], ov["max"])
+    zoom = lambda a, b, half: (np.mean([to_world(ours, c["s"]) for c in ours.corners
+                                         if a <= c["number"] <= b], axis=0), half)
+    plot_overlay(OUT / "interlagos-overlay.png", ours, "ours (2023 telemetry)", C_OURS, v2,
+                 "interlagos_v2 (engine)", markers,
+                 "Interlagos: our telemetry centreline vs the engine's interlagos_v2", worst=worst,
+                 zooms=[("T1-T3", *zoom(1, 3, 160)),
+                        ("largest gap, T3-T4 straight", worst[0], 160),
+                        ("T9-T10", *zoom(9, 10, 160))])
+    k_o, note_o, _ = clipped(ours.curvature, 0.08)
     k_f, note_f, i_f = clipped(v2.curvature, 0.08)
-    d = m["overlay"]["frozen->mv"]
+    d = m["overlay"]["ours->frozen"]
     plot_profiles(OUT / "interlagos-curvature.png", [
-        ("interlagos_v2: signed curvature (positive = right) - dashed lines are the markers' s",
+        ("ours (2023): signed curvature (positive = right)", ours.s, k_o, C_OURS, ours.corners,
+         "kappa (1/m)", (-0.085, 0.085), note_o),
+        ("interlagos_v2: signed curvature - dashed lines are the corner markers' s",
          v2.s, k_f, C_FROZEN, v2.corners, "kappa (1/m)", (-0.085, 0.085),
          note_f.format(s=v2.s[i_f])),
-        ("distance from interlagos_v2 to the MultiViewer outline (point-to-polyline)",
-         d["_s"], d["_d"], INK_2, v2.corners, "metres", None,
+        ("distance from our centreline to interlagos_v2 (point-to-polyline)",
+         d["_s"], d["_d"], INK_2, ours.corners, "metres", None,
          f"p50 {d['p50']} m, p90 {d['p90']} m, max {d['max']} m"),
     ], "Interlagos: interlagos_v2's curvature is spikes at 180 spline knots, largest at the markers")
     return m
