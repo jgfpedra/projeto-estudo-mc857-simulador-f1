@@ -118,6 +118,7 @@ export function syntheticSource(field: CarSpec[]): MotionSource {
       out.sUnwrapped = car.s0 + car.speedMps * tSeconds
       out.d = car.d
       out.speedMps = car.speedMps
+      out.posed = false
       return out
     },
     originM(carIndex: number): number {

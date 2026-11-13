@@ -48,6 +48,7 @@ export function replaySource(replay: Replay): MotionSource {
         out.sUnwrapped = 0
         out.d = 0
         out.speedMps = 0
+        out.posed = false
         return out
       }
 
@@ -61,6 +62,7 @@ export function replaySource(replay: Replay): MotionSource {
       out.d = car.d[i] + (car.d[i + 1] - car.d[i]) * f
       const speed = car.speedMps[i] + (car.speedMps[i + 1] - car.speedMps[i]) * f
       out.speedMps = Math.max(speed, MIN_REPORTED_MPS)
+      out.posed = false
       return out
     },
     originM(carIndex: number): number {

@@ -8,7 +8,6 @@ import { OrientationAids } from './track/OrientationAids'
 import { Grid } from './cars/Grid'
 import { CarPanel } from './cars/CarPanel'
 import { buildField, syntheticSource } from './cars/field'
-import { SOURCE_KINDS } from './cars/motion'
 import type { SourceKind } from './cars/motion'
 import { lapAt, loadReplay } from './replay/load'
 import { replaySource } from './replay/source'
@@ -24,7 +23,10 @@ import { logChecks, verifyOrientation } from './track/verify'
 import type { CheckResult } from './track/verify'
 import type { Track } from './track/types'
 import { trackTitle } from './track/types'
-import { TRACKS, selectedTrack, urlForTrack } from './track/registry'
+import { TRACKS, recordingUrlFor, selectedTrack, urlForTrack } from './track/registry'
+import { loadRecording, trackFromRecording } from './engine/load'
+import { engineSource, lapAtTime, pitStateAt, positionAt } from './engine/source'
+import type { Recording } from './engine/types'
 import { PROBE_ENABLED, Probe } from './probe'
 
 /**
@@ -35,6 +37,15 @@ import { PROBE_ENABLED, Probe } from './probe'
  * last of those has already cost time once (docs/3d-design.md section 7).
  */
 const { entry: TRACK, unknown: UNKNOWN_TRACK } = selectedTrack(window.location.search)
+/** Set for a track that comes from an engine recording rather than a track JSON. */
+const RECORDING_URL = recordingUrlFor(TRACK, window.location.search)
+/** What the loading and error overlays name. */
+const TRACK_SOURCE_URL = RECORDING_URL ?? TRACK.url ?? '(no url)'
+/**
+ * The sources this track offers. Synthetic everywhere; the replay only on our
+ * Monza, the engine recording only on the track built from it.
+ */
+const KINDS: SourceKind[] = ['synthetic', RECORDING_URL ? 'engine' : 'replay']
 
 const FOV_DEG = 45
 /**
@@ -79,9 +90,11 @@ export default function App() {
    * replaced: it is the only thing on screen that spreads `d` across the ribbon,
    * because real telemetry against a median centreline barely varies laterally.
    */
-  const [sourceKind, setSourceKind] = useState<SourceKind>('synthetic')
+  const [sourceKind, setSourceKind] = useState<SourceKind>(RECORDING_URL ? 'engine' : 'synthetic')
   const [replay, setReplay] = useState<Replay | null>(null)
   const [replayError, setReplayError] = useState<string | null>(null)
+  /** The engine recording, when this track came from one. Loaded before the track. */
+  const [recording, setRecording] = useState<Recording | null>(null)
   /** Debug: a stripe on every wheel so spin is visible. Off by default. */
   const [wheelMarkers, setWheelMarkers] = useState(false)
   /**
@@ -102,7 +115,17 @@ export default function App() {
    * `carIndex: -1` is the unseeded marker the rig checks: the first frames can
    * legitimately arrive before `Grid` has anything to report.
    */
-  const readout = useRef<FollowState>({ s: 0, sUnwrapped: 0, d: 0, speedMps: 0, carIndex: -1 })
+  const readout = useRef<FollowState>({
+    s: 0,
+    sUnwrapped: 0,
+    d: 0,
+    speedMps: 0,
+    carIndex: -1,
+    posed: false,
+    x: 0,
+    z: 0,
+    yawRad: 0,
+  })
 
   const cycleMode = useCallback(
     () => setMode((m) => CAMERA_MODES[(CAMERA_MODES.indexOf(m) + 1) % CAMERA_MODES.length]),
@@ -112,7 +135,7 @@ export default function App() {
   const cycleSource = useCallback(
     () =>
       setSourceKind((k) => {
-        const next = SOURCE_KINDS[(SOURCE_KINDS.indexOf(k) + 1) % SOURCE_KINDS.length]
+        const next = KINDS[(KINDS.indexOf(k) + 1) % KINDS.length]
         // Nothing to switch to until the replay has loaded.
         return next === 'replay' && !replay ? k : next
       }),
@@ -120,6 +143,30 @@ export default function App() {
   )
 
   useEffect(() => {
+    if (RECORDING_URL) {
+      // The track comes from the recording's own race block, never from a local
+      // track JSON: the cars were driven on exactly those waypoints.
+      loadRecording(RECORDING_URL).then(
+        (rec) => {
+          const built = trackFromRecording(rec)
+          // Rolled to the start/finish waypoint, the frame must measure exactly
+          // the engine's lap: `progress_m` is an unwrapped `s` on it only then.
+          const lengthM = buildFrame(built).lengthM
+          if (Math.abs(lengthM - rec.track.lengthM) > 1e-6) {
+            setError(`race block says ${rec.track.lengthM} m, frame measures ${lengthM} m`)
+            return
+          }
+          setRecording(rec)
+          setTrack(built)
+        },
+        (e: Error) => setError(e.message),
+      )
+      return
+    }
+    if (!TRACK.url) {
+      setError('registry entry has neither a track JSON nor a recording')
+      return
+    }
     loadTrack(TRACK.url).then(setTrack, (e: Error) => setError(e.message))
   }, [])
 
@@ -142,7 +189,7 @@ export default function App() {
   // beside it. Failure is not fatal: the synthetic field still works, and the
   // timeline shows why the replay button is disabled.
   useEffect(() => {
-    if (!scene) return
+    if (!scene || RECORDING_URL) return
     if (!TRACK.replayUrl) {
       setReplayError(
         'none for this track - the 2024 replay was projected onto our Monza centreline',
@@ -162,6 +209,17 @@ export default function App() {
    */
   const motion = useMemo(() => {
     if (!scene) return null
+    if (sourceKind === 'engine' && recording) {
+      return {
+        source: engineSource(recording),
+        // Both read the clock, not `sUnwrapped`: the engine's lap counter and its
+        // running order are per tick, and the panel polls between frames. The
+        // engine counts *completed* laps; the panel shows the lap being driven.
+        lapOf: (car: number) => lapAtTime(recording, clock.current.tS, car) + 1,
+        rankOf: (car: number) => positionAt(recording, clock.current.tS, car),
+        pitOf: (car: number) => pitStateAt(recording, clock.current.tS, car),
+      }
+    }
     if (sourceKind === 'replay' && replay) {
       return {
         source: replaySource(replay),
@@ -178,7 +236,7 @@ export default function App() {
       source: syntheticSource(scene.field),
       lapOf: (_car: number, s: number) => 1 + Math.floor(s / lengthM),
     }
-  }, [scene, sourceKind, replay])
+  }, [scene, sourceKind, replay, recording])
 
   useEffect(() => {
     clock.current.tS = 0
@@ -216,7 +274,8 @@ export default function App() {
           return
         case 'ArrowLeft':
         case 'ArrowRight': {
-          const step = (replay?.dtS ?? 0.2) * (e.key === 'ArrowRight' ? 1 : -1)
+          const tick = sourceKind === 'engine' ? recording?.dtS : replay?.dtS
+          const step = (tick ?? 0.2) * (e.key === 'ArrowRight' ? 1 : -1)
           seekClock(clock.current, clock.current.tS + step, duration)
           cut()
           return
@@ -244,7 +303,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [cycleMode, cycleSource, motion, replay, selected, cut])
+  }, [cycleMode, cycleSource, motion, replay, recording, sourceKind, selected, cut])
 
   // Logged from an effect, and guarded, so StrictMode's double render doesn't
   // print the table four times.
@@ -255,11 +314,13 @@ export default function App() {
     logChecks(track, scene.checks)
   }, [track, scene])
 
-  if (error) return <Overlay>Failed to load {TRACK.url}: {error}</Overlay>
-  if (!track || !scene || !motion) return <Overlay>Loading {TRACK.url}…</Overlay>
+  if (error) return <Overlay>Failed to load {TRACK_SOURCE_URL}: {error}</Overlay>
+  if (!track || !scene || !motion) return <Overlay>Loading {TRACK_SOURCE_URL}…</Overlay>
 
   const { frame, checks, camera } = scene
   const { source, lapOf } = motion
+  const rankOf = 'rankOf' in motion ? motion.rankOf : undefined
+  const pitOf = 'pitOf' in motion ? motion.pitOf : undefined
   const cars = source.cars
 
   return (
@@ -314,16 +375,20 @@ export default function App() {
         lengthM={frame.lengthM}
         widthM={track.widthM}
         lapAt={lapOf}
+        rankAt={rankOf}
+        pitAt={pitOf}
         sourceKind={source.kind}
         wheelMarkers={wheelMarkers}
         onWheelMarkers={setWheelMarkers}
       />
       <Timeline
         kind={sourceKind}
+        kinds={KINDS}
         onKind={setSourceKind}
         clock={clock}
         replay={replay}
         replayError={replayError}
+        recording={recording}
         durationS={source.durationS}
         selected={selected}
         onCut={cut}

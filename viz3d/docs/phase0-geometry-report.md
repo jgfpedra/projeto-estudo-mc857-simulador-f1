@@ -13,16 +13,43 @@ markers. Monza_v1's Hausdorff distance to our centreline is **105.5 m**. The
 viewer renders them without code changes, but it renders their shape faithfully,
 and that shape is not Monza.
 
+**Phase 0b (2026-11-12): real Interlagos and Monza from FastF1 caches.** FastF1
+is now pinned to the backend's 3.8.3 and always runs offline (§6b). Monza was
+regenerated from our own cache. Its shape moved at most 0.50 m, but s = 0 moved
+2.5 m along the track, and all checks still pass. Interlagos now has
+**our own telemetry centreline**, extracted from the group's cache (2023 race,
+dry, kept; 2024 race, wet, compared), with s = 0 at the timing line. Against it,
+interlagos_v2's Hausdorff distance is **27.5 m**, and the MultiViewer stand-in's
+27.45 m holds up as a cross-check (§6). Both Interlagos extractions are exported
+in the engine's frozen format, and the backend's own `load_track_frozen`
+accepts their hashes (§11). A solo dry lap in the real engine (WSL) completes cleanly on both
+exports: 119.4 s, against 129.4 s for interlagos_v2 under the same untuned
+controller (§11).
+
 Everything below is reproducible. Run it from `viz3d/` (Python env:
-`requirements.txt`; npm deps: `npm ci`):
+`requirements.txt`; npm deps: `npm ci`). `<cache>` is the group's FastF1 3.8.3
+cache (outside the repo, never committed; read from a copy, see §6b), and
+`<ours>` is our own Monza cache:
 
 ```bash
+python scripts/extract_track.py --circuit monza --year 2024 --cache <ours>
+python scripts/extract_replay.py --cache <ours>
+python scripts/extract_track.py --circuit interlagos --year 2023 --start-finish timing-line \
+    --cache <cache> --out public/tracks/interlagos.json
+python scripts/extract_track.py --circuit interlagos --year 2024 --start-finish timing-line \
+    --cache <cache> --out public/tracks/interlagos_2024.json
 python scripts/convert_frozen_track.py --circuit monza --frozen vendor/tracks_frozen/Monza_v1.json \
     --corners-from public/tracks/monza.json --out public/tracks/monza_v1.json
 python scripts/convert_frozen_track.py --circuit interlagos --frozen vendor/tracks_frozen/interlagos_v2.json \
     --corners-from-multiviewer --out public/tracks/interlagos_v2.json
 python scripts/overlay_frozen.py --frozen-dir vendor/tracks_frozen   # -> docs/phase0/metrics.json + plots
 npm run typecheck && npm test && npm run snapshot
+python scripts/export_frozen_track.py --track public/tracks/interlagos.json \
+    --name "São Paulo Grand Prix (viz3d 2023 race)" --out exports/interlagos_2023_v1.json
+python scripts/export_frozen_track.py --track public/tracks/interlagos_2024.json \
+    --name "São Paulo Grand Prix (viz3d 2024 race)" --out exports/interlagos_2024_v1.json
+cd .. && python viz3d/scripts/verify_export_backend.py     # backend's own hash check
+python viz3d/scripts/smoke_engine_lap.py                    # needs pybullet: Linux / WSL (§11)
 ```
 
 `vendor/tracks_frozen/` holds byte-exact copies of
@@ -53,7 +80,7 @@ the committed `source` blocks: they record the true origin.
 | Monza_v1 = 5641.9 m | ✅ 5641.92 m |
 | engine lateral is +left, ours +right | ✅ `_project_on_path` signs by `cross(segment, p − foot)` in the FastF1 (X, Y) plane, and `test_rl_v2.py:109` asserts "esquerda = positivo". So **`d_ours = −d_engine`**. Caveat: the engine measures against the **segment** normal, which is our `project_naive`, not the refined projector (§5). |
 | engine uses the waypoints verbatim | ✅ `Track.from_waypoints` normalises the points and never resamples them |
-| same frame as our `monza.json` | ✅ **Established.** All 11 FastF1 corner markers are vertices of Monza_v1 (§3), and a recorded lap in the FastF1 frame matches our centreline to 1.43 m (§4). The two lines differ in **shape**, not in frame. |
+| same frame as our `monza.json` | ✅ **Established.** All 11 FastF1 corner markers are vertices of Monza_v1 (§3), and a recorded lap in the FastF1 frame matches our centreline to 1.39 m (§4). The two lines differ in **shape**, not in frame. |
 
 `interlagos_v1`, `_v2` and `_sf729_v2` share identical waypoints and the same
 `sf_idx` (729). Only their metadata differs.
@@ -74,7 +101,7 @@ the committed `source` blocks: they record the true origin.
 - **Corners.** For Monza_v1, each of our corners' points *on our centreline* is
   projected onto the frozen line with `centreline.project_global`. For
   interlagos_v2, MultiViewer's corner markers are projected (FastF1's
-  `circuit_info` source; we have no Interlagos centreline, §6). Every projection
+  `circuit_info` source; we had no Interlagos centreline before Phase 0b, §6). Every projection
   bracketed a segment. The residual `d` on Monza_v1 is 0.29–0.72 m, which is just
   the offset of our centreline from the markers.
 - **No geometric gate.** It writes the file even when reference checks fail, since
@@ -86,7 +113,8 @@ the committed `source` blocks: they record the true origin.
   Monza facts whatever it is called (asserted in `tracks.test.ts`). The optional
   fields added are `variant`, `uniformSpacing`, `spacingMinM`/`MaxM` and `source`.
   `monza.json` was regenerated with the parameterised extractor and is identical
-  apart from the new `circuit` key.
+  apart from the new `circuit` key. (Phase 0b later regenerated it with FastF1
+  3.8.3, §6b. The numbers in §3–§4 are re-measured on that version.)
 
 ## 3. The central finding: the frozen tracks are a spline through the corner markers
 
@@ -131,9 +159,10 @@ predicted peaks at the markers and non-zero curvature on the straights.
 - **Peaks at the markers: confirmed.** On Monza_v1, 7 of 11 markers carry their
   local |κ| maximum (within ±50 m) exactly (≤ 0.2 m), T2 is within 2.6 m, and T4,
   T5 and T9 peak 7–40 m away. On interlagos_v2, 13 of 15 sit exactly. On **our**
-  centreline only T4 and T10 do (within 2 m); the other nine peak 6–50 m from
-  their marker, because a fitted centreline peaks at the real apex, not at an
-  annotation.
+  Monza centreline only T10 does (0.8 m) and T4 comes close (3.9 m); the other
+  nine peak 6–47 m from their marker, because a fitted centreline peaks at the
+  real apex, not at an annotation. Our Interlagos centreline behaves the same
+  way: T4, T5 and T10 peak within 2.8–4.2 m, and the other twelve 5.8–49 m away.
 - **Non-zero curvature on the straights: not as predicted.** Between knots the
   frozen line is exactly straight (κ ≈ 10⁻⁸ /m, from step 2 above). Its curvature
   is a train of spikes at the knots, which are 30 m apart at p50 and up to 166 m.
@@ -142,11 +171,16 @@ predicted peaks at the markers and non-zero curvature on the straights.
 
 | our straight (s, m) | length | ours | Monza_v1 |
 |---|---|---|---|
-| T11 Parabolica exit → T1 (main straight) | 1095 m | 8.1 m | **18.5 m** |
-| T10 → T11 (Ascari → Parabolica) | 805 m | 0.6 m | **5.1 m** |
-| Lesmo 2 → T8 Ascari | 555 m | 1.3 m | **7.0 m** |
-| after Lesmo 2 | 270 m | 1.9 m | **7.9 m** |
-| Curva Grande → Roggia | 290 m | 2.7 m | 1.1 m |
+| T11 Parabolica exit → T1 (main straight) | 1095 m | 7.9 m | **18.5 m** |
+| T10 → T11 (Ascari → Parabolica) | 805 m | 0.7 m | **5.0 m** |
+| Lesmo 2 → T8 Ascari | 560 m | 1.4 m | **7.2 m** |
+| after Lesmo 2 | 265 m | 1.9 m | **7.7 m** |
+| Curva Grande → Roggia | 320 m | 3.6 m | 2.0 m |
+
+The same measurement on Interlagos, our 2023 centreline against interlagos_v2: the
+straight from T3 into T4 (495 m) deviates 2.2 m from its chord on ours and
+**18.1 m** on interlagos_v2. The main straight, T15 → T1 (395 m), deviates 3.9 m on
+ours and **11.6 m** on interlagos_v2.
 
 **(e) Kinks at the markers.** A spline forced through apex markers corners at
 them. The largest single-vertex heading change is **120.4° on Monza_v1 at the T11
@@ -162,25 +196,28 @@ projector's `d`, which assumes a nearby, well-conditioned foot point.
 
 | | max | p50 | p90 | where the max is |
 |---|---|---|---|---|
-| ours → Monza_v1 | 105.49 m | 21.94 m | 74.83 m | our s 5451.8, Parabolica exit (T11 +271 m) |
-| Monza_v1 → ours | 105.49 m | 19.55 m | 72.97 m | frozen s 5279.0 (T11 +218 m) |
-| **Hausdorff** | **105.49 m** | | | |
+| ours → Monza_v1 | 105.47 m | 22.44 m | 74.98 m | our s 5451.7, Parabolica exit (T11 +268 m) |
+| Monza_v1 → ours | 105.47 m | 19.53 m | 72.98 m | frozen s 5278.1 (T11 +217 m) |
+| **Hausdorff** | **105.47 m** | | | |
 
-- **Length.** Ours 5756.9 m, Monza_v1 5641.9 m: **−115.0 m**. Published 5793 m.
-- **Corners.** Every corner is 67–120 m earlier on Monza_v1, because the shortage
-  accumulates: T1 888.9 → 822.0 (−66.9 m), T3 −83.6, T4–T6 −87.4 to −88.2,
-  T8–T10 −79.2 to −81.0, T11 5181.1 → 5061.3 (**−119.8 m**).
-- **Start/finish.** The two `s = 0` points are **95.7 m apart**. Our s = 0 projects
-  onto Monza_v1 at s **−61.3 m, d −73.5 m**. Monza_v1's s = 0 projects onto ours at
-  s **+70.8 m, d +64.4 m**. The lateral component is the bowed main straight. Our
-  s = 0 is the timing line: MultiViewer's timed-lap start lands at −18.0 m on it.
+- **Length.** Ours 5756.8 m, Monza_v1 5641.9 m: **−114.9 m**. Published 5793 m.
+- **Corners.** Every corner is 69–122 m earlier on Monza_v1, because the shortage
+  accumulates: T1 891.4 → 822.0 (−69.4 m), T3 −86.2, T4–T6 −90.0 to −90.8,
+  T8–T10 −81.7 to −83.6, T11 5183.5 → 5061.3 (**−122.2 m**).
+- **Start/finish.** The two `s = 0` points are **97.5 m apart**. Our s = 0 projects
+  onto Monza_v1 at s **−63.7 m, d −73.8 m**. Monza_v1's s = 0 projects onto ours at
+  s **+73.3 m, d +64.4 m**. The lateral component is the bowed main straight. Our
+  s = 0 is within about a metre of the timing line: the replay's lap boundaries
+  (check Q in `extract_replay.py`) average −1.0 m from it. MultiViewer's timed-lap
+  start lands at −15.5 m (on Interlagos at +20.6 m, §6), so it marks the timing
+  line only to ±20 m.
 - **Chicanes** (zooms). Rettifilo and Roggia agree within a few metres *between*
   their two markers and diverge immediately outside them. Ascari follows the
   markers and cuts between them. The Rettifilo's left half is **not** smoothed
   away (check G passes, §7), contrary to the expectation going in.
 - **Stand-in validation, used in §6.** MultiViewer's recorded lap (one 2021 FP1
-  lap, 752 points, 6.8 m median step) against our centreline: **Hausdorff 1.43 m,
-  p50 0.06 m, p90 0.46 m**. Against Monza_v1 it gives 105.76 m, the same picture
+  lap, 752 points, 6.8 m median step) against our centreline: **Hausdorff 1.39 m,
+  p50 0.06 m, p90 0.47 m**. Against Monza_v1 it gives 105.76 m, the same picture
   as ours.
 
 ## 5. Projector preconditions on the frozen geometry
@@ -206,58 +243,122 @@ our `d` are not just sign-flipped copies of each other.
 
 ![Interlagos overlay](phase0/interlagos-overlay.png)
 
-**Our São Paulo extraction is blocked, not tuned.** `extract_track.py` is now
-parameterised by circuit (references only; every pipeline parameter is
-unchanged, and the window stays 43 m via `--n-resample 1500`). But **F1's
-live-timing archive answers HTTP 401** to every unauthenticated request. That
-includes the Monza 2024 URLs: our `monza.json` still builds only because
-`.fastf1-cache/` holds that session, downloaded 2026-09-18, both as FastF1
-pickles and as raw HTTP responses in `fastf1_http_cache.sqlite`. That cache
-contains **no São Paulo session**, and no other FastF1 cache exists on this
-machine (the group repo's included). So there is **no Interlagos telemetry
-centreline of ours**.
+**Phase 0b: our own centreline.** Phase 0 had no São Paulo telemetry (§6b
+explains why). The group's FastF1 3.8.3 cache has both the 2023 race (dry) and
+the 2024 race (wet, red flag). Both went through the **unchanged pipeline**:
+same defaults as Monza (20 quick laps, 2000-point grid, 15-point Savitzky–Golay
+window, which is 32 m here, 5 m spacing), with one added step that is off by
+default.
 
-Retried on 2026-11-05 with the **latest FastF1, 3.9.2** (in place of the
-pinned 3.4.4), against an empty cache, for both Monza 2024 and São Paulo 2024
-Race. It is still blocked; only the failure mode differs:
+**s = 0 at the timing line (step 6b, `--start-finish timing-line`).** The
+default s = 0 is point 0 of the median lap: each lap's *first position sample*,
+which lands a fraction of a sample past the line. How far past depends on the
+session and the FastF1 version: it is what moved between 3.4.4 and 3.8.3 on Monza
+(§6b), and it put the 2023 and 2024 extractions 6.5 m apart. Step 6b instead
+takes every clean timed lap (step 2's filters without the quick-lap cut or the
+per-driver cap, lap 1 excluded) and interpolates the car's position at its
+`LapStartTime`, the instant it crossed the timing line, between the two
+bracketing position samples. These are projected with the shared projector, and
+the loop is rolled so that s = 0 is their median before step 7 resamples.
 
-- 3.9.2 first tries to sign in to an F1 account and logs: `Failed to
-  authenticate with Formula 1 account, continuing without authentication: No
-  F1 account credentials available. Set the environment variables F1_USERNAME
-  and F1_PASSWORD.`
-- `livetiming.formula1.com/static/2024/…/SessionInfo.jsonStream` (and every
-  other feed) then returns `requests.exceptions.HTTPError: 401 Client Error:
-  Unauthorized`.
-- 3.9.2 falls back to its own mirror, `livetiming-mirror.fastf1.dev`, which
-  returns **HTTP 404** for both sessions. FastF1 raises
-  `SessionNotAvailableError: No data for this session!`, and `session.laps`
-  then raises `DataNotLoadedError`.
+| | 2023 race (dry) | 2024 race (wet, red flag) |
+|---|---|---|
+| step 2 laps | 20 from 17 drivers, laps 17–68 | 20 from 18 drivers, mostly laps 59–69, a few 19–21 |
+| worst / median lap deviation (check I) | 9.6 / 3.7 m | 13.6 / 5.2 m |
+| length (check A, published 4309 m) | 4226.1 m, −1.92% | 4226.5 m, −1.91% |
+| timed lap starts used | 980 | 939 |
+| timing line vs first-sample s = 0 | −0.57 m | −1.79 m |
+| per-lap scatter (MAD; p10..p90) | 3.1 m; −3.7..+7.9 m | 3.4 m; −4.8..+7.5 m |
+| T1 | 365.3 m | 360.1 m |
+| extraction checks A–K | 11/11 | 11/11 |
+| viewer checks (§7) | A C E F pass; B D G not run | A C E F pass; B D G not run |
 
-Unblocking it would take an F1 account's credentials in those environment
-variables. Separately, 3.9.2 does not reproduce `monza.json` from the same
-cached raw data: the centreline moves by up to 2.75 m and the corners by
-about 2.5 m (T1 888.9 → 891.4 m). So the venv was returned to the pinned 3.4.4,
-which reproduces `monza.json` exactly.
+**The two years against each other.** Hausdorff distance **0.51 m** (p50 0.04 m,
+p90 0.16 m): the same shape to within the pipeline's own noise. Their timing
+lines are **5.3 m apart** along the track, so every corner of 2024 sits 4.8–5.2 m
+earlier. The per-lap scatter (MAD ~3 m, about 0.04 s at straight-line speed) is
+the position stream's timing jitter against `LapStartTime`. With ~950 laps the
+median's statistical error is well under a metre, so the 5.3 m is a systematic
+per-session offset between the position and timing clocks. **Read s = 0 as
+"the timing line ± ~3 m"**, not surveyed.
 
-The overlay instead uses **MultiViewer's recorded lap** (driver 3, 2021 FP1
-lap 2, 283 points, 13.9 m median step, max 38.6 m). It is labelled as a stand-in
-everywhere. It is twice as sparse as the Monza one validated at 1.43 m (§4), so
-read these numbers to a few metres:
+**Kept: 2023.** It is a dry race with normal racing lines, and its laps scatter
+less (median deviation 3.7 m vs 5.2 m, worst 9.6 m vs 13.6 m). The 2024 race was
+run largely on a wet or drying track behind a red flag. Its clean laps come mostly
+from the last ten laps, and wet lines are not the dry centreline. Geometrically
+the choice hardly matters (0.51 m), so it comes down to which data is cleaner.
+2023 is `public/tracks/interlagos.json` (`?track=interlagos`). 2024 stays in the
+viewer as `?track=interlagos_2024`, as the second extraction this comparison
+rests on, not as a second layout.
+
+**Against interlagos_v2** (replacing the stand-in numbers):
 
 | | max | p50 | p90 | where |
 |---|---|---|---|---|
-| stand-in → interlagos_v2 | 27.45 m | 5.15 m | 16.90 m | |
-| interlagos_v2 → stand-in | 27.45 m | 4.97 m | 16.74 m | frozen s 2253.8: the straight from T3 into T4 (T4 −286 m) |
-| **Hausdorff** | **27.45 m** | | | |
+| ours → interlagos_v2 | 27.50 m | 5.14 m | 17.20 m | our s 1118.0: the straight from T3 into T4 (T4 −284 m) |
+| interlagos_v2 → ours | 27.51 m | 4.94 m | 16.69 m | frozen s 2253.8 (T4 −286 m) |
+| **Hausdorff** | **27.51 m** | | | |
+| 2024 → interlagos_v2 (cross-check) | 27.48 m | 5.10 m | 16.99 m | same place |
 
-- **Length.** interlagos_v2 4160.4 m, published 4309 m (**−148.6 m, −3.45%**). The
-  sparse stand-in polygon measures 4231.5 m and under-reads by construction.
-- **Start/finish.** The stand-in's timed lap starts at interlagos_v2 **s = +1166.0
-  m** (d −7.3 m), which is 339 m before T1 (s 1505.3). So the engine's `sf_idx`
-  729 is **1166 m (28% of a lap) before the timing line**, between T11 and T12.
-  The group's `PROJECT_STATE.md` calls 729 "a linha FIA real". This measurement
-  disagrees, unless 729 is meant as a start (grid) line distinct from the timing
-  line. That is a question for the engine owner (§9).
+- **Length.** Ours 4226.1 m, interlagos_v2 4160.4 m: **−65.6 m**. Published 4309 m:
+  ours −1.92%, interlagos_v2 −3.45%.
+- **Corners.** With the 1151 m start/finish offset removed (below), interlagos_v2's
+  corners run 11 m early at T1, 24 m by T9, 52–58 m by T10–T11, and 70–73 m by
+  T12–T15. The shortage accumulates from the engine's s = 0 the same way Monza's
+  does (§4).
+- **Start/finish.** Our s = 0 (the timing line) projects onto interlagos_v2 at
+  **s = +1145.4 m** (d −7.2 m), and interlagos_v2's s = 0 onto ours at **−1151.0 m**
+  (d −10.7 m). So the engine's `sf_idx` 729 is **~1150 m (27% of a lap) before
+  the timing line**, between T11 and T12. That confirms Phase 0's stand-in figure
+  (1166 m), which was 20 m too long because MultiViewer's lap starts 20.6 m past
+  the line.
+- **Curvature** ([interlagos-curvature.png](phase0/interlagos-curvature.png)). Ours
+  is smooth, with a largest vertex turn of 15.2°. interlagos_v2 is spikes at its
+  180 knots, with 57.5° at T10. The distance profile peaks on the T3–T4 straight
+  (27.5 m) and in the infield after T9 (15–20 m).
+
+**The MultiViewer stand-in, kept as a cross-check.** The recorded lap (driver 3,
+2021 FP1 lap 2, 283 points, 13.9 m median step) against **our** centreline:
+**Hausdorff 0.93 m**, p50 0.07 m, p90 0.27 m. Against interlagos_v2 it gave
+**27.45 m** (p50 4.97 / 5.15 m, p90 16.74 / 16.90 m), and ours gives 27.51 m.
+So Phase 0's Interlagos conclusions stand. Its polygon measured 4231.5 m, against
+our 4226.1 m.
+
+## 6b. FastF1 version and caches
+
+**Phase 0's blocker.** F1's live-timing archive answers HTTP 401 without an F1
+account. Phase 0 had only our own Monza cache (downloaded 2026-09-18 with
+FastF1 3.4.4) and no São Paulo session. On 2026-11-05 it retried with FastF1
+3.9.2: 3.9.2 tries to sign in, gets 401, falls back to `livetiming-mirror.fastf1.dev`,
+gets 404, and raises `SessionNotAvailableError`. 3.9.2 also moved `monza.json` by up
+to 2.75 m, so the venv went back to 3.4.4.
+
+**Phase 0b: FastF1 3.8.3, offline.** The backend pins `fastf1==3.8.3` (F1 now
+needs a login, and 3.8.3 is the version that wrote the group's cache).
+`requirements.txt` follows it, and `extract_track.enable_cache` always calls
+`Cache.offline_mode(True)` and refuses a cache directory that does not exist.
+Nothing is fetched. Both caches live outside the repo, and both were read from
+copies so that FastF1 could not write into the originals. 3.8.3 re-parses the
+3.4.4 pickles from the raw HTTP responses in the cache's sqlite.
+
+**Monza regenerated with 3.8.3, from our own cache.** All 11 extraction checks and
+all 7 viewer checks pass, so the result is kept.
+
+| | vs committed 3.4.4 `monza.json` |
+|---|---|
+| shape (point-to-polyline, both ways) | **max 0.50 m**, p50 0.02 m, p99 0.26 m |
+| length | 5756.9 → 5756.8 m (−0.10 m) |
+| s = 0 | moved **2.49 m** along the track |
+| corners | all +2.4 to +2.7 m (T1 888.9 → 891.4 m) |
+| index-for-index displacement | max 2.79 m, p50 2.67 m |
+
+So the "2.75 m" that 3.9.2 produced was the same kind of number. Index for index,
+it reads a 2.5 m shift of the lap's start sample as movement of the track. The
+shape itself moves by half a metre. The replay (`monza-2024-race.json`) and the
+round-trip fixture were regenerated against the new centreline, with all
+10 replay checks passing. The replay's check Q puts the timing boundaries
+1.0 m before the new s = 0. Monza keeps the default s = 0 (the unchanged
+pipeline). Moving it to the timing line would shift it by about 1 m.
 
 ## 7. The seven checks
 
@@ -267,15 +368,15 @@ Run by the viewer's own `verify.ts`, against the external references in
 `npm run snapshot` both read. A verdict that changes in either direction fails
 both. Known failures print as XFAIL with their measured value.
 
-| check | ours (Monza) | Monza_v1 | interlagos_v2 |
-|---|---|---|---|
-| A length vs published (±2%) | ✓ −0.62% | ✗ **−2.61%** (5641.9 vs 5793) | ✗ **−3.45%** (4160.4 vs 4309) |
-| B corner count | ✓ 11 | ✓ 11 | – not run (no sourced count) |
-| C corner order from T1 | ✓ | ✓ | ✗ **T12 first**: s order T12..T15, T1..T11 |
-| D first corner 700–1050 m | ✓ 888.9 | ✓ 822.0 | – not run (no sourced window) |
-| E sense | ✓ clockwise | ✓ clockwise | ✓ anticlockwise |
-| F one revolution | ✓ +1.001 | ✗ **+0.940** | ✓ +1.004 |
-| G handedness RLRLRRRLRLR | ✓ | ✓ **all 11** | – not run (no sourced handedness) |
+| check | ours (Monza) | Monza_v1 | ours (Interlagos 2023) | ours (Interlagos 2024) | interlagos_v2 |
+|---|---|---|---|---|---|
+| A length vs published (±2%) | ✓ −0.62% | ✗ **−2.61%** (5641.9 vs 5793) | ✓ −1.92% (4226.1) | ✓ −1.91% (4226.5) | ✗ **−3.45%** (4160.4 vs 4309) |
+| B corner count | ✓ 11 | ✓ 11 | – not run | – not run | – not run (no sourced count) |
+| C corner order from T1 | ✓ | ✓ | ✓ T1 365 .. T15 3987 m | ✓ T1 360 .. T15 3982 m | ✗ **T12 first**: s order T12..T15, T1..T11 |
+| D first corner (Monza 700–1050 m) | ✓ 891.4 | ✓ 822.0 | – not run | – not run | – not run (no sourced window) |
+| E sense | ✓ clockwise | ✓ clockwise | ✓ anticlockwise | ✓ anticlockwise | ✓ anticlockwise |
+| F one revolution | ✓ +1.001 | ✗ **+0.940** | ✓ +1.001 | ✓ +1.002 | ✓ +1.004 |
+| G handedness (Monza RLRLRRRLRLR) | ✓ | ✓ **all 11** | – not run | – not run | – not run (no sourced handedness) |
 
 - **Monza_v1 F.** The loop does turn exactly once: vertex headings sum to 1.0000
   revolution. `buildFrame` estimates curvature from neighbouring tangents and
@@ -283,11 +384,16 @@ both. Known failures print as XFAIL with their measured value.
   information. The viewer's curvature, which also drives camera roll and check G,
   is wrong at Parabolica.
 - **interlagos_v2 C.** This follows from §6: s = 0 sits after T11.
+- **Our Interlagos A** passes with little room: −1.92% against a 2% tolerance,
+  3.5 m inside it. Monza is −0.62%. Interlagos is twistier, so the median of racing
+  lines plus smoothing shortens it more. The tolerance was not touched.
 - **Interlagos references and their sources.** 4309 m for the 1999–present layout
   ([Wikipedia, "Interlagos Circuit"](https://en.wikipedia.org/wiki/Interlagos_Circuit)),
   and anticlockwise (the same page, plus
   [Ferrari's circuit page](https://www.ferrari.com/hypercar/sao-paulo)). Nothing
-  else was sourced, so B, D and G show as *not run*, never as passed.
+  else was sourced, so B, D and G show as *not run*, never as passed. Phase 0b
+  ran the checks with these two references only: `circuit_info` supplies 15
+  numbered corners, but that is the artefact's own data, not a reference.
 - **A bug fixed along the way.** Check E's text named the direction *relative to*
   the reference, so on Interlagos it printed "−0.400 km² → clockwise". The
   pass/fail logic was correct; only the label was wrong, and it never showed on
@@ -296,10 +402,13 @@ both. Known failures print as XFAIL with their measured value.
 ## 8. Rendering (`npm run snapshot`)
 
 All green: our Monza at 7/7 with both motion sources and the wheel check, and
-Monza_v1 and interlagos_v2 with the synthetic field (no replay exists for them).
-The snapshot reaches each engine track by **clicking the viewer's own track
-picker**, so the selector is exercised too. Non-background share, orbit / chase /
-T-cam: Monza_v1 0.55 / 26.80 / 28.47%, interlagos_v2 1.78 / 18.31 / 26.30%.
+Monza_v1, our two Interlagos and interlagos_v2 with the synthetic field (no
+replay exists for them). The snapshot reaches each track after the first by
+**clicking the viewer's own track picker**, so the selector is exercised too.
+Phase 0b made that lookup match the `track` parameter exactly, because a
+substring match for `interlagos` also hit `interlagos_2024` and `interlagos_v2`.
+Non-background share, orbit / chase / T-cam: Monza_v1 0.55 / 26.80 / 28.47%,
+Interlagos 2023 1.90 / 27.41 / 28.85%, interlagos_v2 1.78 / 19.85 / 25.94%.
 
 Parabolica, same overhead camera on the T11 marker:
 
@@ -321,12 +430,13 @@ loses is the circuit's **shape between the corners**. The 3D would show a Monza
 whose straights bow up to 18 m off their chord and sit up to 105 m from where the
 cars really ran, and whose Parabolica is a 4 m-radius V on which the ribbon folds
 and the camera's curvature model breaks (check F). The lap is 115 m short with
-every corner 67–120 m early, and Interlagos is 149 m short with a 27 m bow on the
-straight from T3 into T4. Real telemetry could no longer be shown on the same
+every corner 69–122 m early. Interlagos is 149 m short of the published length
+(66 m short of our centreline), with corners up to 73 m early and a 27.5 m bow on
+the straight from T3 into T4. Real telemetry could no longer be shown on the same
 geometry. M6's replay would project onto this line with |d| up to about 100 m,
 so the only data-driven validation the spike has (projection identity, speed bias
 against FastF1's independent `Speed` channel to 0.4%) has nothing to run against.
-Interlagos' `s = 0` would also be 1166 m from the timing line. None of this is
+Interlagos' `s = 0` would also be ~1150 m from the timing line. None of this is
 the 3D's to fix: rendering the frozen tracks faithfully means rendering marker
 splines faithfully.
 
@@ -343,7 +453,9 @@ Facts:
   records (line 564) that the cached Spa is **incomplete: 4352 m against an
   official 7004 m**.
 - Our telemetry centreline for Monza exists, passes all seven checks, and is in the
-  same frame as the engine's tracks (§1, §4).
+  same frame as the engine's tracks (§1, §4). Since Phase 0b so does one for
+  Interlagos, passing every check that has a sourced reference (§6, §7), and it
+  is exported in the engine's own format with a hash the engine accepts (§11).
 
 Questions for the engine owner. These are open, not conclusions:
 
@@ -353,11 +465,100 @@ Questions for the engine owner. These are open, not conclusions:
    incomplete. Whether that carries over to a real centreline, with real straights
    and no 4 m kinks, is untested.
 2. Is `sf_idx` 729 on Interlagos the timing line, a start (grid) line, or a
-   training-specific anchor? It measures 1166 m before the timing line (§6).
+   training-specific anchor? It measures ~1150 m before the timing line (§6).
 3. If the frozen tracks stay the source, are the corner kinks (120° at Monza
    T11, 57° at Interlagos T10) intended, or should the generator smooth through
    the markers rather than corner at them?
 
-Until those are answered, the viewer keeps both. `?track=monza` is our telemetry
-centreline, and `?track=monza_v1` / `?track=interlagos_v2` are the engine's,
+Until those are answered, the viewer keeps both. `?track=monza` and
+`?track=interlagos` (with `?track=interlagos_2024`) are our telemetry
+centrelines, and `?track=monza_v1` / `?track=interlagos_v2` are the engine's,
 selectable from the checks panel.
+
+## 11. Phase 0b: our Interlagos in the engine's format
+
+**Export** (`scripts/export_frozen_track.py`, to `exports/`, never into
+`backend/`). Both Interlagos extractions are exported, one file each, named
+`<key>_v1.json` so that `load_track_frozen('<key>')` resolves them:
+
+| | `interlagos_2023_v1.json` (kept) | `interlagos_2024_v1.json` |
+|---|---|---|
+| `name` | São Paulo Grand Prix (viz3d 2023 race) | São Paulo Grand Prix (viz3d 2024 race) |
+| `n_wp` | 1057 | 1057 |
+| spacing | 3.968–3.998 m (uniform; max 4 m) | 3.969–3.999 m |
+| length | 4225.4 m (source 4226.1 m) | 4225.9 m (source 4226.5 m) |
+| vertex cut, max / p99 | 0.25 / 0.15 m | 0.22 / 0.15 m |
+| `sf_idx` | 0 (the timing line) | 0 |
+| `width_m` | 12.0 | 12.0 |
+| `sha256` | `fd914dde1a2fa8b5` | `61fbf22bd5e55cc9` |
+
+- `waypoints` are `[[x, y]]` in metres in the FastF1 plan frame of the existing
+  frozen files (`x = three.x`, `y = −three.z`), in the direction of travel.
+- **Spacing.** Our centreline is uniform 5 m. It is resampled uniformly along its
+  own polyline at L / ceil(L / 4 m). Every waypoint lies on the viewer's
+  polyline, and only the vertex corners are cut, by at most 0.25 m. This is
+  deliberately not finer: the rule-based controller smooths over 9 *waypoints*,
+  so the grid spacing sets its smoothing length. ~4 m keeps it near
+  interlagos_v2's 3.7 m mean.
+- `sf_idx` 0. Our s = 0 is the timing line and resampling starts there.
+  `sf_method` records how it was located, and `source` records the track
+  file's sha256 and the pipeline. The engine tolerates extra keys (interlagos_v2
+  carries `sf_method`, `sf_frac` and `sf_original_v1`), and the hash covers them.
+- `sha256` is computed with `convert_frozen_track.engine_hash`, the same function
+  Phase 0 verified the existing files with. The files are written ASCII-escaped:
+  `load_track_frozen` reads with `Path.read_text()`, i.e. cp1252 on Windows, which
+  would mis-decode a raw UTF-8 "ã" and change the hash.
+
+**Hash proven with the backend's own function** (`scripts/verify_export_backend.py`,
+run from the repo root). It calls `backend.domain.track_resolution.load_track_frozen(key,
+strict=True)` unchanged, with its module-level `FROZEN_TRACKS_DIR` pointed at
+`viz3d/exports/` for the call. Both files load, with hash, `n_wp`, `sf_idx` and
+`width_m` as written. A copy with one coordinate changed by 1 mm is refused
+(`PISTA FROZEN CORROMPIDA … esperado fd914dde1a2fa8b5 mas calculado 4d1…`), so
+the check is real.
+
+**Engine smoke test** (`scripts/smoke_engine_lap.py`). It builds a `Track` from
+each export with `load_track_frozen`, as above, and drives it exactly like the
+backend's own clean-lap test (`test_rule_based_race_controller_clean_lap_interlagos`):
+VER, Red Bull specs, dry weather, `SimulationConfig(num_laps=1, logic_step_hz=10,
+physics_sub_steps=24, gui=False, random_seed=42)`, `place_grid`,
+`RuleBasedRaceController(seed=42)`, 0.1 s ticks to lap 1. pybullet publishes only
+Linux wheels, so it ran in WSL (Ubuntu 22.04, Python 3.10) from a venv in the
+Linux home with `backend/requirements.txt` plus `joblib` and `gymnasium`, which
+the engine imports but `requirements.txt` omits: pybullet 3.2.7, numpy 2.2.6,
+pandas 2.3.3, gymnasium 1.4.0. The backend's own controller tests pass in that
+environment (7/7). Run 2026-11-12:
+
+| track | Interlagos tuning | lap | max \|lateral\| (half width 6 m) | samples within 0.5 m of the edge |
+|---|---|---|---|---|
+| interlagos_v2 (engine) | **on** (0.65, 10 m/s², local line) | **114.5 s** | 3.20 m | 0 |
+| interlagos_v2, tuning forced off (control) | off (0.58, 6 m/s²) | **129.4 s** | 2.70 m | 0 |
+| interlagos_2023_v1 (export, kept) | off | **119.4 s** | 2.13 m | 0 |
+| interlagos_2024_v1 (export) | off | **119.5 s** | 2.22 m | 0 |
+| README, interlagos_v2 | on / off | 112.7 / 126.1 s | 4.32 m (tuned) | |
+
+- **This environment does not reproduce the README exactly.** interlagos_v2 runs
+  1.8 s slower tuned (114.5 vs 112.7 s, +1.6%) and 3.3 s slower untuned (129.4 vs
+  126.1 s, +2.6%), with 3.20 m max lateral deviation instead of 4.32 m. The README
+  doesn't name its harness or library versions, so the cause isn't established:
+  it could be the platform, the numpy/pybullet builds, or code changed since the
+  measurement. That is why the control row exists. It is the README's untuned run,
+  repeated here with the tuning forced off in the script (the class's geometry
+  key is blanked during construction and restored at once; no backend file
+  changes).
+- **Like for like (untuned, same environment): the exports lap 10.0 s faster than
+  interlagos_v2** (119.4 vs 129.4 s), on a track 65 m *longer* (4225.4 vs 4160.4 m),
+  with less lateral excursion (2.13 vs 2.70 m) and no edge samples. That fits §3:
+  interlagos_v2's marker kinks (57.5° at T10) force speed down where our smooth
+  centreline does not. Against the README's figures the export is 6.7 s under the
+  untuned 126.1 s and 6.7 s over the tuned 112.7 s, and the environment offset
+  above applies to both comparisons.
+- **The tuning stayed off on the exports**, as expected: it is keyed on the
+  sha256 of interlagos_v2's waypoint array, and the script prints the factors
+  actually active. Nothing tuned for interlagos_v2 (its local racing line at
+  1800–2050 m and 2200–2420 m, or the hairpin cap) was carried over, so the
+  export lap times are the controller's untuned behaviour on real geometry.
+- **The two years agree in the engine too**: 119.4 vs 119.5 s, max deviation
+  2.13 vs 2.22 m, both at s ≈ 2710 m (T10, the slowest corner).
+- One seed, one lap, one driver: a smoke test that the exports load, are
+  drivable and stay on track, not a performance validation.

@@ -120,8 +120,11 @@ const ON_CAR_TOL_M = 0.6
 
 const EPS = 1e-9
 
+/** Placed by `(s, d)`, as the synthetic field and the replay are. */
+const UNPOSED = { posed: false, x: 0, z: 0, yawRad: 0 }
+
 function newFollow(sUnwrapped: number, carIndex = 0): FollowState {
-  return { s: 0, sUnwrapped, d: TEST_D, speedMps: SPEED_MPS, carIndex }
+  return { s: 0, sUnwrapped, d: TEST_D, speedMps: SPEED_MPS, carIndex, ...UNPOSED }
 }
 
 function newSample(): Sample {
@@ -497,7 +500,7 @@ describe('switching the followed car', () => {
     // has, and StrictMode runs that path twice, so the first frames can arrive
     // zeroed. Seeding from one would drop the camera at the world origin.
     const state = newRigState()
-    stepRig(state, frame, { s: 0, sUnwrapped: 0, d: 0, speedMps: 0, carIndex: 0 }, DT_S)
+    stepRig(state, frame, { s: 0, sUnwrapped: 0, d: 0, speedMps: 0, carIndex: 0, ...UNPOSED }, DT_S)
     expect(state.carIndex, 'seeded from a stationary car').toBe(-1)
   })
 })

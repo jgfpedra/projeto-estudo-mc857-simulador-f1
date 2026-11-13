@@ -14,8 +14,6 @@ from .events import (
     TickEvent,
     TyreWornEvent,
     WeatherChangedEvent,
-    OffTrackEvent,
-    OnTrackEvent
 )
 from .publisher import (
     JSONLPublisher,
@@ -33,6 +31,7 @@ from .controllers import (
     InputSourceController,
     ManualController,
 )
+from .rule_based_race_controller import RuleBasedRaceController
 from .input_source import (
     FileInputSource,
     InputEntry,
@@ -53,8 +52,6 @@ __all__ = [
     "PitStopEvent",
     "PositionUpdateEvent",
     "TickEvent",
-    "OnTrackEvent",
-    "OffTrackEvent",
     # Publishers
     "Publisher",
     "JSONLPublisher",
@@ -73,6 +70,7 @@ __all__ = [
     "ManualController",
     "ExternalController",
     "InputSourceController",
+    "RuleBasedRaceController",
     # Input sources
     "InputEntry",
     "InputSource",

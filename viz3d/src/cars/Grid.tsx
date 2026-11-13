@@ -8,7 +8,7 @@ import type { TrackFrame } from '../track/frame'
 import type { FollowState } from '../cameras/rig'
 import { RACE_CAR_RED, carGeometry } from './model'
 import type { CarPart } from './model'
-import { carMatrix, wheelAngle, wheelMatrix } from './instance'
+import { carMatrix, poseMatrix, wheelAngle, wheelMatrix } from './instance'
 import { newMotionState } from './motion'
 import { wheelMarkerGeometry, wheelMarkerMaterial } from './wheelMarker'
 import type { CarIdentity, MotionSource } from './motion'
@@ -155,7 +155,9 @@ export function Grid({
     for (let i = 0; i < cars.length; i++) {
       source.sampleInto(tS, i, motion)
       const arc = wrapS(frame, motion.sUnwrapped)
-      carMatrix(frame, arc, motion.d, RIDE_HEIGHT_M, car)
+      // The engine knows where its cars are; everything else is `(s, d)`.
+      if (motion.posed) poseMatrix(motion.x, motion.z, motion.yawRad, RIDE_HEIGHT_M, car)
+      else carMatrix(frame, arc, motion.d, RIDE_HEIGHT_M, car)
       if (!checked.current) worstDet = Math.min(worstDet, car.determinant())
       for (const m of meshes.body) m.setMatrixAt(i, car)
 
@@ -179,6 +181,12 @@ export function Grid({
         out.d = motion.d
         out.speedMps = motion.speedMps
         out.carIndex = selected
+        // The pose the car was just drawn at, so a posed source's cameras are
+        // bolted to the car rather than to where `toWorld(s, d)` would put it.
+        out.posed = motion.posed
+        out.x = motion.x
+        out.z = motion.z
+        out.yawRad = motion.yawRad
       }
     }
 

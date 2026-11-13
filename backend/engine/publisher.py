@@ -114,8 +114,7 @@ class RedisPublisher(Publisher):
             self._connected = True
             return True
         except Exception as exc:  # noqa: BLE001
-            print(f"[RedisPublisher] could not connect to {
-                  self.host}:{self.port}: {exc}")
+            print(f"[RedisPublisher] could not connect to {self.host}:{self.port}: {exc}")
             self._connected = False
             return False
 

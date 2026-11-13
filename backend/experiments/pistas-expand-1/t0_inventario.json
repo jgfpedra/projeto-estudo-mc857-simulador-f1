@@ -1,0 +1,1208 @@
+{
+ "gerado_em": "2026-10-23T11:00:07.073706",
+ "tracks_frozen": [
+  {
+   "arquivo": "Hungaroring_v1.json",
+   "chave": "Hungaroring",
+   "sha_embutido": "24c7cd7f33653781",
+   "sha_recalculado": "24c7cd7f33653781",
+   "wp": 1138,
+   "L_m": 4177.7,
+   "sf_idx": 866,
+   "loader_resolve": "Hungaroring_v1.json",
+   "integro": true
+  },
+  {
+   "arquivo": "Monaco_v2.json",
+   "chave": "Monaco",
+   "sha_embutido": "67ca11dc211c8c78",
+   "sha_recalculado": "67ca11dc211c8c78",
+   "wp": 834,
+   "L_m": 3335.2,
+   "sf_idx": 0,
+   "loader_resolve": "Monaco_v2.json",
+   "integro": true
+  },
+  {
+   "arquivo": "Monza_v1.json",
+   "chave": "Monza",
+   "sha_embutido": "6ed5fac92bc2fb17",
+   "sha_recalculado": "6ed5fac92bc2fb17",
+   "wp": 1477,
+   "L_m": 5641.9,
+   "sf_idx": 1268,
+   "loader_resolve": "Monza_v1.json",
+   "integro": true
+  },
+  {
+   "arquivo": "Spa_v2.json",
+   "chave": "Spa",
+   "sha_embutido": "4b05f2c3bbc625fc",
+   "sha_recalculado": "4b05f2c3bbc625fc",
+   "wp": 1751,
+   "L_m": 7003.2,
+   "sf_idx": 0,
+   "loader_resolve": "Spa_v2.json",
+   "integro": true
+  },
+  {
+   "arquivo": "Suzuka_v1.json",
+   "chave": "Suzuka",
+   "sha_embutido": "4323ecb67e12d18e",
+   "sha_recalculado": "4323ecb67e12d18e",
+   "wp": 1485,
+   "L_m": 5534.8,
+   "sf_idx": 1252,
+   "loader_resolve": "Suzuka_v1.json",
+   "integro": true
+  },
+  {
+   "arquivo": "Zandvoort_v1.json",
+   "chave": "Zandvoort",
+   "sha_embutido": "0fb026c95f674eab",
+   "sha_recalculado": "0fb026c95f674eab",
+   "wp": 1099,
+   "L_m": 4053.2,
+   "sf_idx": 914,
+   "loader_resolve": "Zandvoort_v1.json",
+   "integro": true
+  },
+  {
+   "arquivo": "interlagos_sf729_v2.json",
+   "chave": "interlagos_sf729",
+   "sha_embutido": "e836910429769c27",
+   "sha_recalculado": "e836910429769c27",
+   "wp": 1131,
+   "L_m": 4160.4,
+   "sf_idx": 729,
+   "loader_resolve": "interlagos_sf729_v2.json",
+   "integro": true
+  },
+  {
+   "arquivo": "interlagos_v1.json",
+   "chave": "interlagos",
+   "sha_embutido": "e1857ffda5fe617f",
+   "sha_recalculado": "e1857ffda5fe617f",
+   "wp": 1131,
+   "L_m": 4160.4,
+   "sf_idx": 729,
+   "loader_resolve": "interlagos_v2.json",
+   "integro": true
+  },
+  {
+   "arquivo": "interlagos_v2.json",
+   "chave": "interlagos",
+   "sha_embutido": "164876196eb12174",
+   "sha_recalculado": "164876196eb12174",
+   "wp": 1131,
+   "L_m": 4160.4,
+   "sf_idx": 729,
+   "loader_resolve": "interlagos_v2.json",
+   "integro": true
+  }
+ ],
+ "canonicos": {
+  "interlagos": {
+   "esperado": "164876196eb12174",
+   "obtido": "164876196eb12174",
+   "ok": true
+  },
+  "Monaco": {
+   "esperado": "67ca11dc211c8c78",
+   "obtido": "67ca11dc211c8c78",
+   "ok": true
+  },
+  "Spa": {
+   "esperado": "4b05f2c3bbc625fc",
+   "obtido": "4b05f2c3bbc625fc",
+   "ok": true
+  }
+ },
+ "f1db": {
+  "Hungaroring": {
+   "ancora_km": 4.381,
+   "races": [
+    {
+     "id": 1090,
+     "year": 2023,
+     "round": 11,
+     "date": "2023-07-23",
+     "gp": "Hungary",
+     "circuit": "Hungaroring",
+     "course_length": 4.381,
+     "laps": 70,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 2,
+       "num": "4",
+       "abbr": "NOR",
+       "nome": "Lando Norris"
+      },
+      {
+       "pos": 3,
+       "num": "11",
+       "abbr": "PER",
+       "nome": "Sergio Michel P\u00e9rez Mendoza"
+      }
+     ]
+    },
+    {
+     "id": 1114,
+     "year": 2024,
+     "round": 13,
+     "date": "2024-07-21",
+     "gp": "Hungary",
+     "circuit": "Hungaroring",
+     "course_length": 4.381,
+     "laps": 70,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "81",
+       "abbr": "PIA",
+       "nome": "Oscar Jack Piastri"
+      },
+      {
+       "pos": 2,
+       "num": "4",
+       "abbr": "NOR",
+       "nome": "Lando Norris"
+      },
+      {
+       "pos": 3,
+       "num": "44",
+       "abbr": "HAM",
+       "nome": "Lewis Carl Davidson Hamilton"
+      },
+      {
+       "pos": 4,
+       "num": "16",
+       "abbr": "LEC",
+       "nome": "Charles Marc Herv\u00e9 Perceval Leclerc"
+      },
+      {
+       "pos": 5,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 6,
+       "num": "55",
+       "abbr": "SAI",
+       "nome": "Carlos Sainz V\u00e1zquez de Castro"
+      },
+      {
+       "pos": 7,
+       "num": "11",
+       "abbr": "PER",
+       "nome": "Sergio Michel P\u00e9rez Mendoza"
+      },
+      {
+       "pos": 8,
+       "num": "63",
+       "abbr": "RUS",
+       "nome": "George William Russell"
+      },
+      {
+       "pos": 9,
+       "num": "22",
+       "abbr": "TSU",
+       "nome": "Yuki Tsunoda"
+      },
+      {
+       "pos": 10,
+       "num": "18",
+       "abbr": "STR",
+       "nome": "Lance Strulovitch"
+      }
+     ]
+    }
+   ]
+  },
+  "Silverstone": {
+   "ancora_km": 5.891,
+   "races": [
+    {
+     "id": 1089,
+     "year": 2023,
+     "round": 10,
+     "date": "2023-07-09",
+     "gp": "Great Britain",
+     "circuit": "Silverstone",
+     "course_length": 5.891,
+     "laps": 52,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 2,
+       "num": "4",
+       "abbr": "NOR",
+       "nome": "Lando Norris"
+      },
+      {
+       "pos": 3,
+       "num": "44",
+       "abbr": "HAM",
+       "nome": "Lewis Carl Davidson Hamilton"
+      }
+     ]
+    },
+    {
+     "id": 1113,
+     "year": 2024,
+     "round": 12,
+     "date": "2024-07-07",
+     "gp": "Great Britain",
+     "circuit": "Silverstone",
+     "course_length": 5.891,
+     "laps": 52,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "44",
+       "abbr": "HAM",
+       "nome": "Lewis Carl Davidson Hamilton"
+      },
+      {
+       "pos": 2,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 3,
+       "num": "4",
+       "abbr": "NOR",
+       "nome": "Lando Norris"
+      },
+      {
+       "pos": 4,
+       "num": "81",
+       "abbr": "PIA",
+       "nome": "Oscar Jack Piastri"
+      },
+      {
+       "pos": 5,
+       "num": "55",
+       "abbr": "SAI",
+       "nome": "Carlos Sainz V\u00e1zquez de Castro"
+      },
+      {
+       "pos": 6,
+       "num": "27",
+       "abbr": "HUL",
+       "nome": "Nicolas H\u00fclkenberg"
+      },
+      {
+       "pos": 7,
+       "num": "18",
+       "abbr": "STR",
+       "nome": "Lance Strulovitch"
+      },
+      {
+       "pos": 8,
+       "num": "14",
+       "abbr": "ALO",
+       "nome": "Fernando Alonso D\u00edaz"
+      },
+      {
+       "pos": 9,
+       "num": "23",
+       "abbr": "ALB",
+       "nome": "Alexander Philippe Albon Ansusinha"
+      },
+      {
+       "pos": 10,
+       "num": "22",
+       "abbr": "TSU",
+       "nome": "Yuki Tsunoda"
+      }
+     ]
+    }
+   ]
+  },
+  "Montreal": {
+   "ancora_km": 4.361,
+   "races": [
+    {
+     "id": 1087,
+     "year": 2023,
+     "round": 8,
+     "date": "2023-06-18",
+     "gp": "Canada",
+     "circuit": "Gilles Villeneuve",
+     "course_length": 4.361,
+     "laps": 70,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 2,
+       "num": "14",
+       "abbr": "ALO",
+       "nome": "Fernando Alonso D\u00edaz"
+      },
+      {
+       "pos": 3,
+       "num": "44",
+       "abbr": "HAM",
+       "nome": "Lewis Carl Davidson Hamilton"
+      }
+     ]
+    },
+    {
+     "id": 1110,
+     "year": 2024,
+     "round": 9,
+     "date": "2024-06-09",
+     "gp": "Canada",
+     "circuit": "Gilles Villeneuve",
+     "course_length": 4.361,
+     "laps": 70,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 2,
+       "num": "4",
+       "abbr": "NOR",
+       "nome": "Lando Norris"
+      },
+      {
+       "pos": 3,
+       "num": "63",
+       "abbr": "RUS",
+       "nome": "George William Russell"
+      },
+      {
+       "pos": 4,
+       "num": "44",
+       "abbr": "HAM",
+       "nome": "Lewis Carl Davidson Hamilton"
+      },
+      {
+       "pos": 5,
+       "num": "81",
+       "abbr": "PIA",
+       "nome": "Oscar Jack Piastri"
+      },
+      {
+       "pos": 6,
+       "num": "14",
+       "abbr": "ALO",
+       "nome": "Fernando Alonso D\u00edaz"
+      },
+      {
+       "pos": 7,
+       "num": "18",
+       "abbr": "STR",
+       "nome": "Lance Strulovitch"
+      },
+      {
+       "pos": 8,
+       "num": "3",
+       "abbr": "RIC",
+       "nome": "Daniel Joseph Ricciardo"
+      },
+      {
+       "pos": 9,
+       "num": "10",
+       "abbr": "GAS",
+       "nome": "Pierre Jean-Jacques Gasly"
+      },
+      {
+       "pos": 10,
+       "num": "31",
+       "abbr": "OCO",
+       "nome": "Esteban Jos\u00e9 Jean-Pierre Ocon-Khelfane"
+      }
+     ]
+    }
+   ]
+  },
+  "Bahrain": {
+   "ancora_km": 5.412,
+   "races": [
+    {
+     "id": 1080,
+     "year": 2023,
+     "round": 1,
+     "date": "2023-03-05",
+     "gp": "Bahrain",
+     "circuit": "Bahrain",
+     "course_length": 5.412,
+     "laps": 57,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 2,
+       "num": "11",
+       "abbr": "PER",
+       "nome": "Sergio Michel P\u00e9rez Mendoza"
+      },
+      {
+       "pos": 3,
+       "num": "14",
+       "abbr": "ALO",
+       "nome": "Fernando Alonso D\u00edaz"
+      }
+     ]
+    },
+    {
+     "id": 1102,
+     "year": 2024,
+     "round": 1,
+     "date": "2024-03-02",
+     "gp": "Bahrain",
+     "circuit": "Bahrain",
+     "course_length": 5.412,
+     "laps": 57,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 2,
+       "num": "11",
+       "abbr": "PER",
+       "nome": "Sergio Michel P\u00e9rez Mendoza"
+      },
+      {
+       "pos": 3,
+       "num": "55",
+       "abbr": "SAI",
+       "nome": "Carlos Sainz V\u00e1zquez de Castro"
+      },
+      {
+       "pos": 4,
+       "num": "16",
+       "abbr": "LEC",
+       "nome": "Charles Marc Herv\u00e9 Perceval Leclerc"
+      },
+      {
+       "pos": 5,
+       "num": "63",
+       "abbr": "RUS",
+       "nome": "George William Russell"
+      },
+      {
+       "pos": 6,
+       "num": "4",
+       "abbr": "NOR",
+       "nome": "Lando Norris"
+      },
+      {
+       "pos": 7,
+       "num": "44",
+       "abbr": "HAM",
+       "nome": "Lewis Carl Davidson Hamilton"
+      },
+      {
+       "pos": 8,
+       "num": "81",
+       "abbr": "PIA",
+       "nome": "Oscar Jack Piastri"
+      },
+      {
+       "pos": 9,
+       "num": "14",
+       "abbr": "ALO",
+       "nome": "Fernando Alonso D\u00edaz"
+      },
+      {
+       "pos": 10,
+       "num": "18",
+       "abbr": "STR",
+       "nome": "Lance Strulovitch"
+      }
+     ]
+    }
+   ]
+  },
+  "Mexico": {
+   "ancora_km": 4.304,
+   "races": [
+    {
+     "id": 1098,
+     "year": 2023,
+     "round": 19,
+     "date": "2023-10-29",
+     "gp": "Mexico",
+     "circuit": "Hermanos Rodr\u00edguez",
+     "course_length": 4.304,
+     "laps": 71,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 2,
+       "num": "44",
+       "abbr": "HAM",
+       "nome": "Lewis Carl Davidson Hamilton"
+      },
+      {
+       "pos": 3,
+       "num": "16",
+       "abbr": "LEC",
+       "nome": "Charles Marc Herv\u00e9 Perceval Leclerc"
+      }
+     ]
+    },
+    {
+     "id": 1121,
+     "year": 2024,
+     "round": 20,
+     "date": "2024-10-27",
+     "gp": "Mexico",
+     "circuit": "Hermanos Rodr\u00edguez",
+     "course_length": 4.304,
+     "laps": 71,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "55",
+       "abbr": "SAI",
+       "nome": "Carlos Sainz V\u00e1zquez de Castro"
+      },
+      {
+       "pos": 2,
+       "num": "4",
+       "abbr": "NOR",
+       "nome": "Lando Norris"
+      },
+      {
+       "pos": 3,
+       "num": "16",
+       "abbr": "LEC",
+       "nome": "Charles Marc Herv\u00e9 Perceval Leclerc"
+      },
+      {
+       "pos": 4,
+       "num": "44",
+       "abbr": "HAM",
+       "nome": "Lewis Carl Davidson Hamilton"
+      },
+      {
+       "pos": 5,
+       "num": "63",
+       "abbr": "RUS",
+       "nome": "George William Russell"
+      },
+      {
+       "pos": 6,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 7,
+       "num": "20",
+       "abbr": "MAG",
+       "nome": "Kevin Jan Magnussen"
+      },
+      {
+       "pos": 8,
+       "num": "81",
+       "abbr": "PIA",
+       "nome": "Oscar Jack Piastri"
+      },
+      {
+       "pos": 9,
+       "num": "27",
+       "abbr": "HUL",
+       "nome": "Nicolas H\u00fclkenberg"
+      },
+      {
+       "pos": 10,
+       "num": "10",
+       "abbr": "GAS",
+       "nome": "Pierre Jean-Jacques Gasly"
+      }
+     ]
+    }
+   ]
+  },
+  "Zandvoort": {
+   "ancora_km": 4.259,
+   "races": [
+    {
+     "id": 1092,
+     "year": 2023,
+     "round": 13,
+     "date": "2023-08-27",
+     "gp": "Netherlands",
+     "circuit": "Zandvoort",
+     "course_length": 4.259,
+     "laps": 72,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 2,
+       "num": "14",
+       "abbr": "ALO",
+       "nome": "Fernando Alonso D\u00edaz"
+      },
+      {
+       "pos": 3,
+       "num": "10",
+       "abbr": "GAS",
+       "nome": "Pierre Jean-Jacques Gasly"
+      }
+     ]
+    },
+    {
+     "id": 1116,
+     "year": 2024,
+     "round": 15,
+     "date": "2024-08-25",
+     "gp": "Netherlands",
+     "circuit": "Zandvoort",
+     "course_length": 4.259,
+     "laps": 72,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "4",
+       "abbr": "NOR",
+       "nome": "Lando Norris"
+      },
+      {
+       "pos": 2,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 3,
+       "num": "16",
+       "abbr": "LEC",
+       "nome": "Charles Marc Herv\u00e9 Perceval Leclerc"
+      },
+      {
+       "pos": 4,
+       "num": "81",
+       "abbr": "PIA",
+       "nome": "Oscar Jack Piastri"
+      },
+      {
+       "pos": 5,
+       "num": "55",
+       "abbr": "SAI",
+       "nome": "Carlos Sainz V\u00e1zquez de Castro"
+      },
+      {
+       "pos": 6,
+       "num": "11",
+       "abbr": "PER",
+       "nome": "Sergio Michel P\u00e9rez Mendoza"
+      },
+      {
+       "pos": 7,
+       "num": "63",
+       "abbr": "RUS",
+       "nome": "George William Russell"
+      },
+      {
+       "pos": 8,
+       "num": "44",
+       "abbr": "HAM",
+       "nome": "Lewis Carl Davidson Hamilton"
+      },
+      {
+       "pos": 9,
+       "num": "10",
+       "abbr": "GAS",
+       "nome": "Pierre Jean-Jacques Gasly"
+      },
+      {
+       "pos": 10,
+       "num": "14",
+       "abbr": "ALO",
+       "nome": "Fernando Alonso D\u00edaz"
+      }
+     ]
+    }
+   ]
+  },
+  "Suzuka": {
+   "ancora_km": 5.807,
+   "races": [
+    {
+     "id": 1095,
+     "year": 2023,
+     "round": 16,
+     "date": "2023-09-24",
+     "gp": "Japan",
+     "circuit": "Suzuka",
+     "course_length": 5.807,
+     "laps": 53,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 2,
+       "num": "4",
+       "abbr": "NOR",
+       "nome": "Lando Norris"
+      },
+      {
+       "pos": 3,
+       "num": "81",
+       "abbr": "PIA",
+       "nome": "Oscar Jack Piastri"
+      }
+     ]
+    },
+    {
+     "id": 1105,
+     "year": 2024,
+     "round": 4,
+     "date": "2024-04-07",
+     "gp": "Japan",
+     "circuit": "Suzuka",
+     "course_length": 5.807,
+     "laps": 53,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 2,
+       "num": "11",
+       "abbr": "PER",
+       "nome": "Sergio Michel P\u00e9rez Mendoza"
+      },
+      {
+       "pos": 3,
+       "num": "55",
+       "abbr": "SAI",
+       "nome": "Carlos Sainz V\u00e1zquez de Castro"
+      },
+      {
+       "pos": 4,
+       "num": "16",
+       "abbr": "LEC",
+       "nome": "Charles Marc Herv\u00e9 Perceval Leclerc"
+      },
+      {
+       "pos": 5,
+       "num": "4",
+       "abbr": "NOR",
+       "nome": "Lando Norris"
+      },
+      {
+       "pos": 6,
+       "num": "14",
+       "abbr": "ALO",
+       "nome": "Fernando Alonso D\u00edaz"
+      },
+      {
+       "pos": 7,
+       "num": "63",
+       "abbr": "RUS",
+       "nome": "George William Russell"
+      },
+      {
+       "pos": 8,
+       "num": "81",
+       "abbr": "PIA",
+       "nome": "Oscar Jack Piastri"
+      },
+      {
+       "pos": 9,
+       "num": "44",
+       "abbr": "HAM",
+       "nome": "Lewis Carl Davidson Hamilton"
+      },
+      {
+       "pos": 10,
+       "num": "22",
+       "abbr": "TSU",
+       "nome": "Yuki Tsunoda"
+      }
+     ]
+    }
+   ]
+  },
+  "LasVegas": {
+   "ancora_km": 6.201,
+   "races": [
+    {
+     "id": 1100,
+     "year": 2023,
+     "round": 21,
+     "date": "2023-11-19",
+     "gp": "Las Vegas",
+     "circuit": "Las Vegas",
+     "course_length": 6.201,
+     "laps": 50,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 2,
+       "num": "16",
+       "abbr": "LEC",
+       "nome": "Charles Marc Herv\u00e9 Perceval Leclerc"
+      },
+      {
+       "pos": 3,
+       "num": "11",
+       "abbr": "PER",
+       "nome": "Sergio Michel P\u00e9rez Mendoza"
+      }
+     ]
+    },
+    {
+     "id": 1123,
+     "year": 2024,
+     "round": 22,
+     "date": "2024-11-24",
+     "gp": "Las Vegas",
+     "circuit": "Las Vegas",
+     "course_length": 6.201,
+     "laps": 50,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "63",
+       "abbr": "RUS",
+       "nome": "George William Russell"
+      },
+      {
+       "pos": 2,
+       "num": "44",
+       "abbr": "HAM",
+       "nome": "Lewis Carl Davidson Hamilton"
+      },
+      {
+       "pos": 3,
+       "num": "55",
+       "abbr": "SAI",
+       "nome": "Carlos Sainz V\u00e1zquez de Castro"
+      },
+      {
+       "pos": 4,
+       "num": "16",
+       "abbr": "LEC",
+       "nome": "Charles Marc Herv\u00e9 Perceval Leclerc"
+      },
+      {
+       "pos": 5,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 6,
+       "num": "4",
+       "abbr": "NOR",
+       "nome": "Lando Norris"
+      },
+      {
+       "pos": 7,
+       "num": "81",
+       "abbr": "PIA",
+       "nome": "Oscar Jack Piastri"
+      },
+      {
+       "pos": 8,
+       "num": "27",
+       "abbr": "HUL",
+       "nome": "Nicolas H\u00fclkenberg"
+      },
+      {
+       "pos": 9,
+       "num": "22",
+       "abbr": "TSU",
+       "nome": "Yuki Tsunoda"
+      },
+      {
+       "pos": 10,
+       "num": "11",
+       "abbr": "PER",
+       "nome": "Sergio Michel P\u00e9rez Mendoza"
+      }
+     ]
+    }
+   ]
+  },
+  "Miami": {
+   "ancora_km": 5.412,
+   "races": [
+    {
+     "id": 1084,
+     "year": 2023,
+     "round": 5,
+     "date": "2023-05-07",
+     "gp": "Miami",
+     "circuit": "Miami",
+     "course_length": 5.412,
+     "laps": 57,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 2,
+       "num": "11",
+       "abbr": "PER",
+       "nome": "Sergio Michel P\u00e9rez Mendoza"
+      },
+      {
+       "pos": 3,
+       "num": "14",
+       "abbr": "ALO",
+       "nome": "Fernando Alonso D\u00edaz"
+      }
+     ]
+    },
+    {
+     "id": 1107,
+     "year": 2024,
+     "round": 6,
+     "date": "2024-05-05",
+     "gp": "Miami",
+     "circuit": "Miami",
+     "course_length": 5.412,
+     "laps": 57,
+     "ladder": [
+      {
+       "pos": 1,
+       "num": "4",
+       "abbr": "NOR",
+       "nome": "Lando Norris"
+      },
+      {
+       "pos": 2,
+       "num": "1",
+       "abbr": "VER",
+       "nome": "Max Emilian Verstappen"
+      },
+      {
+       "pos": 3,
+       "num": "16",
+       "abbr": "LEC",
+       "nome": "Charles Marc Herv\u00e9 Perceval Leclerc"
+      },
+      {
+       "pos": 4,
+       "num": "11",
+       "abbr": "PER",
+       "nome": "Sergio Michel P\u00e9rez Mendoza"
+      },
+      {
+       "pos": 5,
+       "num": "55",
+       "abbr": "SAI",
+       "nome": "Carlos Sainz V\u00e1zquez de Castro"
+      },
+      {
+       "pos": 6,
+       "num": "44",
+       "abbr": "HAM",
+       "nome": "Lewis Carl Davidson Hamilton"
+      },
+      {
+       "pos": 7,
+       "num": "22",
+       "abbr": "TSU",
+       "nome": "Yuki Tsunoda"
+      },
+      {
+       "pos": 8,
+       "num": "63",
+       "abbr": "RUS",
+       "nome": "George William Russell"
+      },
+      {
+       "pos": 9,
+       "num": "14",
+       "abbr": "ALO",
+       "nome": "Fernando Alonso D\u00edaz"
+      },
+      {
+       "pos": 10,
+       "num": "31",
+       "abbr": "OCO",
+       "nome": "Esteban Jos\u00e9 Jean-Pierre Ocon-Khelfane"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "classificacao": [
+  {
+   "pista": "Hungaroring",
+   "esperada": "(c)",
+   "real": "(b)",
+   "congelamento": "COMPARADO sem congelar (b)",
+   "t0_reclassifica": true
+  },
+  {
+   "pista": "Silverstone",
+   "esperada": "(c)",
+   "real": "(c)",
+   "congelamento": "AGUARDA_DONO (candidato fora do frozen)",
+   "t0_reclassifica": false
+  },
+  {
+   "pista": "Montreal",
+   "esperada": "(c)",
+   "real": "(c)",
+   "congelamento": "CONGELA (OK)",
+   "t0_reclassifica": false
+  },
+  {
+   "pista": "Bahrain",
+   "esperada": "(c)",
+   "real": "(c)",
+   "congelamento": "CONGELA (OK)",
+   "t0_reclassifica": false
+  },
+  {
+   "pista": "Mexico",
+   "esperada": "(c)",
+   "real": "(c)",
+   "congelamento": "CONGELA (OK)",
+   "t0_reclassifica": false
+  },
+  {
+   "pista": "Zandvoort",
+   "esperada": "(c)",
+   "real": "(b)",
+   "congelamento": "COMPARADO sem congelar (b)",
+   "t0_reclassifica": true
+  },
+  {
+   "pista": "Suzuka",
+   "esperada": "(b)",
+   "real": "(b)",
+   "congelamento": "COMPARADO sem congelar (b)",
+   "t0_reclassifica": false
+  },
+  {
+   "pista": "LasVegas",
+   "esperada": "(c)",
+   "real": "(c)",
+   "congelamento": "CONGELA se teto deixar (stretch)",
+   "t0_reclassifica": false
+  },
+  {
+   "pista": "Miami",
+   "esperada": "(c)",
+   "real": "(c)",
+   "congelamento": "CONGELA se teto deixar (stretch)",
+   "t0_reclassifica": false
+  }
+ ],
+ "oficiais": [
+  {
+   "pista": "Hungaroring",
+   "ancora_km": 4.381,
+   "f1db_2024_km": 4.381,
+   "status": "CONFIRMA"
+  },
+  {
+   "pista": "Silverstone",
+   "ancora_km": 5.891,
+   "f1db_2024_km": 5.891,
+   "status": "CONFIRMA"
+  },
+  {
+   "pista": "Montreal",
+   "ancora_km": 4.361,
+   "f1db_2024_km": 4.361,
+   "status": "CONFIRMA"
+  },
+  {
+   "pista": "Bahrain",
+   "ancora_km": 5.412,
+   "f1db_2024_km": 5.412,
+   "status": "CONFIRMA"
+  },
+  {
+   "pista": "Mexico",
+   "ancora_km": 4.304,
+   "f1db_2024_km": 4.304,
+   "status": "CONFIRMA"
+  },
+  {
+   "pista": "Zandvoort",
+   "ancora_km": 4.259,
+   "f1db_2024_km": 4.259,
+   "status": "CONFIRMA"
+  },
+  {
+   "pista": "Suzuka",
+   "ancora_km": 5.807,
+   "f1db_2024_km": 5.807,
+   "status": "CONFIRMA"
+  },
+  {
+   "pista": "LasVegas",
+   "ancora_km": 6.201,
+   "f1db_2024_km": 6.201,
+   "status": "CONFIRMA"
+  },
+  {
+   "pista": "Miami",
+   "ancora_km": 5.412,
+   "f1db_2024_km": 5.412,
+   "status": "CONFIRMA"
+  }
+ ],
+ "ratificacao": []
+}

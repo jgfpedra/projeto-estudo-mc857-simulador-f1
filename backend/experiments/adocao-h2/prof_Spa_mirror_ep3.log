@@ -1,0 +1,42 @@
+pybullet build time: Sep 11 2026 21:22:29
+[diag] CANÁRIA: campo de 1 carro(s)
+[diag] pista FROZEN: Spa-Francorchamps (mirror 2007-2026) | 1751 wp | SF wp 0 | sha256 4b05f2c3bbc625fc | clima=seeded (rng semeado por seed) | variance=off | rejoin_gap=0.0 | launch_cap=False | launch_stagger=False
+[Grid] reta antes da SF: 295 m | grid ocupa 42 m
+[Grid] 10 carros no grid estilo F1 (5 fileiras x 2 colunas, NA RETA)
+[diag] controller: PROFESSOR x1 (gate all-professor) | sf_range=homog 0.80 | machine_only=False | track=Spa-Francorchamps (mirror 2007-2026) | seed=0
+[diag] 2231 linhas -> experiments/adocao-h2/prof_Spa_mirror_ep3.csv (instrumento race_diag_v3_contact_solver_v1)
+
+===== ESTADO FINAL POR CARRO =====
+drv  speed       s   lat   th  brk  steer_rad
+VER    9.1 6457.94 34.89 0.35  0.0      -0.79
+
+===== CLIMA (transições reais: 0) =====
+  nenhuma transição de kind (grip constante)
+
+===== IMOBILIZACAO (v < 2 m/s) =====
+VER: 2 amostras v<2 | primeiro tick lento=0 (s=6997m) | brake medio apos=0.04
+
+===== EPISODIOS DE PARADA >= 3 s (como terminaram) =====
+  nenhuma parada >= 3 s
+
+===== SAIDA DE PISTA / CORTES =====
+amostras com centro fora do asfalto: 713 de 2231 (32.0%)
+  VER: 713 amostras fora | lat max=66.8 m | trechos: [0.0, 200.0, 6200.0, 6400.0, 6600.0, 6800.0]
+
+contatos c/ SOLO (todo tick, esperado): 6814 | contatos CARRO-CARRO: 0 amostras, impulso medio 0 N | dv medio 0.00 m/s
+
+===== R3: FORA-PILOTAGEM vs FORA-PRESO (janelas 30 s) =====
+  VER: pilotagem=  48 ticks | preso= 665 ticks  <== CARRO-PRESO
+  TOTAL fora: 713 ticks (32.0%) | FORA-PILOTAGEM: 48 (6.7% do fora) | FORA-PRESO: 665 (93.3% do fora)
+  CARROS-PRESO na sessão: 1 (VER — gate exige 0)
+  HESITAÇÕES (v<0,5 m/s por 0,3-3 s, pós-largada): 0 (gate: <=3)
+
+===== GATE ALL-PROFESSOR (v14) =====
+carros com >=1 volta: 1/1 (meta >=9/10 FALHOU)
+  VER: 2 voltas | tempos=[230.2, 215.9]
+contatos carro-carro (amostras 5 Hz): 0 (meta < 400 OK) | baseline aluno-cego: 1333
+paradas >= 3 s: 0 (meta 0 OK)
+ultrapassagens liquidas (trocas com histerese 10 m): 0 -> FILA (sem ultrapassagem; teto v14 = evita colisoes)
+% de tempo em modo follow por carro (cap+close / total):
+  VER: follow 0.0% (colado 0.0%)
+tempo mediano de volta COM trafego: 223.1s (todas; n=2) | 215.9s (excl. volta 1, largada rolando) | solo professor: ~107s, aluno: ~112s

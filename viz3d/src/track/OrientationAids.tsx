@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { CSSProperties } from 'react'
 import { BufferAttribute, BufferGeometry, Vector3 } from 'three'
+import { useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import { curvatureAt, toWorld } from './frame'
 import type { TrackFrame } from './frame'
@@ -70,6 +71,18 @@ interface Props {
  */
 export function OrientationAids({ track, frame }: Props) {
   const half = track.widthM / 2
+  /**
+   * drei's `<Html>` appends to `events.connected`, falling back to the canvas's
+   * parent. R3F 9 connects events in the Canvas's own layout effect, which runs
+   * after its children's, so a label mounted straight away sees the fallback
+   * first and re-targets one commit later. drei 10 handles that by unmounting
+   * its private React root and creating a new one on the same element, and
+   * under React 19 the deferred unmount wipes the new root's content: the
+   * label's box is placed but empty (the S/F label vanished this way). Mounting
+   * the labels only once events are connected gives them their final target
+   * from the first render.
+   */
+  const connected = useThree((s) => s.events.connected)
 
   const chevrons = useMemo(() => {
     const pos: number[] = []
@@ -119,15 +132,19 @@ export function OrientationAids({ track, frame }: Props) {
         <meshBasicMaterial color="#7a7a88" />
       </mesh>
 
-      <Html position={sfLabel} center style={labelStyle('#ffffff')}>
-        S/F · s=0
-      </Html>
-      {labels.map(({ corner, hand, position }) => (
-        <Html key={corner.number} position={position} center style={labelStyle('#ffd400')}>
-          T{corner.number} {hand === 'right' ? '→' : '←'}
-          <span style={{ opacity: 0.65, marginLeft: 6 }}>{corner.name}</span>
-        </Html>
-      ))}
+      {connected ? (
+        <>
+          <Html position={sfLabel} center style={labelStyle('#ffffff')}>
+            S/F · s=0
+          </Html>
+          {labels.map(({ corner, hand, position }) => (
+            <Html key={corner.number} position={position} center style={labelStyle('#ffd400')}>
+              T{corner.number} {hand === 'right' ? '→' : '←'}
+              <span style={{ opacity: 0.65, marginLeft: 6 }}>{corner.name}</span>
+            </Html>
+          ))}
+        </>
+      ) : null}
     </group>
   )
 }

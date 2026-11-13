@@ -1,0 +1,140 @@
+PROJ-GATE-1 — FASE 0 — pré-pinos antes do freeze
+Data: 2026-10-23 America/Sao_Paulo
+Base: a4572410e36f9e157e04dc0160997af6ea96212b
+Árvore inicial: somente o arquivo preexistente não rastreado
+backend/backend/ANEXO_SAIDAS_1_ERRATAS.md.
+
+COMANDOS FIXADOS
+
+1) Proveniência dupla (hash do arquivo no disco e de `git show HEAD:<path>`):
+
+python - <<'PY'
+from pathlib import Path
+import hashlib, subprocess
+paths = [
+  'backend/model_train/tracks_frozen/Monaco_v2.json',
+  'backend/experiments/proj-fix-1/DOSSIÊ_PROJ_GATE.md',
+  'backend/experiments/fail-forensics-2/4_composite_monaco_s0.csv',
+  'backend/experiments/fail-forensics-2/4_composite_monaco_s0_events.csv',
+  'backend/experiments/fail-forensics-2/4_composite_monaco_s0.log',
+  'backend/experiments/fail-forensics-2/EXECUCAO_FAIL_FORENSICS_1B.md',
+  'backend/model_train/race_diagnostic.py',
+  'backend/scripts/run_race_10_cars.py',
+]
+for rel in paths:
+  p = Path(rel)
+  disk = hashlib.sha256(p.read_bytes()).hexdigest()
+  pinned = subprocess.run(['git','show','HEAD:'+rel], check=True,
+                          capture_output=True).stdout
+  via_git = hashlib.sha256(pinned).hexdigest()
+  print(rel, 'disk='+disk, 'git-show='+via_git, 'match='+str(disk==via_git))
+PY
+
+Resultado (todos match=True):
+Monaco_v2.json
+  disco = git-show = af3125959ade1f82062d9c9fe0dfa8020d31e431d919408ae4d293f0fac20bf2
+DOSSIÊ_PROJ_GATE.md
+  disco = git-show = 663d4ad9ff561080d4c2e1fe8d981dd00da01a10a919bb21e1b418a44c80185f
+4_composite_monaco_s0.csv (v3.3 histórico)
+  disco = git-show = 6360706f1b3dbf46ed3ad4998e3e3103cae14ea1054a084297cf2a5f423f1022
+4_composite_monaco_s0_events.csv
+  disco = git-show = b99007d0673b2b11727f50287451ffd1fe5439db1997065f4884f60b33252ce4
+4_composite_monaco_s0.log
+  disco = git-show = cf0ce8b125f6107af163fefdc809a49491bc584067185df4d863a39a5d1210e3
+EXECUCAO_FAIL_FORENSICS_1B.md
+  disco = git-show = 35dbf5dee400d42bee76752545c1c448b7373f6589ca8f7d891de345eac6ed11
+race_diagnostic.py
+  disco = git-show = 12dcb40d8df1fc706d3132fd13eebbfa8297be6833cf3729c4c843c9442ee4a0
+run_race_10_cars.py
+  disco = git-show = 7196aabe85a3f4544130107de46ad9850464bd61ba1bdc647af6b7d9c494e143
+
+2) Linhas e contagens do arquivo de corrida R4:
+
+wc -l experiments/fail-forensics-2/4_composite_monaco_s0_events.csv
+Resultado: 110796 linhas totais. O preregistro conserva literalmente o pino
+do dono `linhas - 1 header = 110795` para o gate de contatos. A leitura CSV,
+ignorando o comentário `# race_diag...` e a linha de nomes, encontra 110794
+registros solver-side, igual ao número emitido pelo runner e ao relatório R4.
+Os dois números ficam visíveis; o gate usa a regra de linha declarada no
+preregistro e aplica a mesma regra à saída R2.
+
+3) Recontagem apenas das métricas de gate R4 a partir do CSV, sem classificar
+eventos de projeção e sem reexecutar a anatomia 112/50/45:
+
+cd backend
+python - <<'PY'
+import numpy as np, pandas as pd
+df = pd.read_csv('experiments/fail-forensics-2/4_composite_monaco_s0.csv', comment='#')
+print('rows/ticks/cars', len(df), df.tick.nunique(), df.drv.nunique())
+print('outside', int(df.offtrack.sum()), '/', len(df), 100*df.offtrack.mean())
+episodes = windows = 0
+for _, g in df.groupby('drv', sort=True):
+  g = g.sort_values('tick')
+  off = g.offtrack.to_numpy(dtype=int)
+  episodes += int(np.sum((off == 1) & np.r_[True, off[:-1] == 0]))
+  t, lat = g.t_s.to_numpy(float), np.abs(g.lat.to_numpy(float))
+  cum = g.cum_dist.to_numpy(float)
+  for w0 in np.arange(0.0, float(t.max()), 30.0):
+    m = (t >= w0) & (t < w0 + 30.0)
+    if m.any() and off[m].any() and (lat[m].max() > 20.0 or
+                                     cum[m].max()-cum[m].min() < 5.0):
+      windows += 1
+hesitations = 0
+for _, g in df.groupby('drv', sort=True):
+  g = g.sort_values('t_s')
+  t, v = g.t_s.to_numpy(float), g.speed.to_numpy(float)
+  m = t > 20.0
+  t, v = t[m], v[m]
+  i = 0
+  while i < len(v):
+    if v[i] >= 0.5:
+      i += 1
+      continue
+    j = i
+    while j < len(v) and v[j] < 0.5:
+      j += 1
+    duration = t[min(j, len(t)-1)] - t[i] if j > i else 0.0
+    hesitations += int(0.3 <= duration < 3.0)
+    i = j
+print('episodes/windows/hesitations', episodes, windows, hesitations)
+PY
+
+Resultado:
+rows/sampled-ticks/cars = 30000 / 3000 / 10
+O CLI recebe `--ticks 6000`, mas o CSV v3.3 registra a cada 2 ticks lógicos:
+`tick=0,2,...,5998` e `t_s=0,0.2,...,599.8`. Cada carro tem 3000 linhas.
+outside = 12945 / 30000 = 43.15%
+off-track episodes = 346
+stuck 30-second windows = 120
+hesitations = 12 (mesma regra do resumo race_diagnostic.py:1148-1167)
+clima = 0 transições (4_composite_monaco_s0.log)
+
+4) Baseline público e motivação:
+EXECUCAO_FAIL_FORENSICS_1B.md e DOSSIÊ_PROJ_GATE.md já commitados, ambos com
+proveniência dupla acima. Os números 112/50/45 e classes C3/C5 são citados
+dos artefatos congelados e NÃO foram reclassificados nem medidos de novo.
+
+5) Alvos congelados pelo pedido do dono para as duas corridas:
+R1 CSV SHA-256 = 6698b55bad9cba1a167c952eab4381ee696a4191545cdecdd3db873e739b2ce7
+R1 events SHA-256 = b99007d0673b2b11727f50287451ffd1fe5439db1997065f4884f60b33252ce4
+R1 é writer v3.4 (71 colunas Composite) e não é o CSV v3.3 histórico R4 com
+68 colunas e SHA 6360706f... . O sidecar de eventos é byte idêntico ao pin R4.
+R2 liga somente `--proj-gate`; os demais argumentos/locks são iguais a R1.
+
+6) Inventário de pontos no checkout inicial (linhas atuais, antes de edição):
+- projeção global e ponto/s do runner: run_race_10_cars.py:724-740;
+- off-track, primeiro consumidor de alvo de gap-check: run_race_10_cars.py:919-920, 1049-1057;
+- alvo principal de rejoin por bearing: run_race_10_cars.py:1073-1105;
+- amostragem v3.4 XY/ns_raw e escrita do CSV: race_diagnostic.py:981-1005;
+- integração da flag no CLI/runner: race_diagnostic.py:476-575, 727-825;
+- alvo de pure-pursuit do professor em pista: reference_controller.py:389-395, 424-445;
+- projeção do ambiente, fora do escopo do braço runner: f1_env.py:607-627.
+
+Conclusão FASE 0: hashes de disco e Git coincidem; as contagens R4 foram
+reconciliadas segundo as definições fixadas. Nenhuma corrida ou smoke foi feita.
+
+ERRATA PRÉ-R1 (antes do commit de implementação): “6000 ticks” no comando é
+ticks lógicos; o CSV de diagnóstico amostra a 5 Hz e contém 3000 ticks
+observados. Portanto a completude ≥ R4 é 30000 linhas, 3000 ticks amostrados,
+10 carros, com sequência completa 0,2,...,5998 para cada carro. O limite de
+corrida permanece 6000 ticks; nenhum número de gate de resultado foi alterado.

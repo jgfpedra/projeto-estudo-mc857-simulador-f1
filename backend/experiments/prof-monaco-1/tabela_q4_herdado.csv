@@ -1,0 +1,4 @@
+perfil,fora_pct,ci_low,ci_high,veredito
+PROFESSOR (solo-frozen),56.93,56.93,56.93,
+ALUNO (v10-cego),45.0,45.0,45.0,
+VEREDITO,0.0,0.0,0.0,FALSIDICAÇÃO-Q4 — aluno ABAIXO do professor com ICs DISJUNTOS (rótulos inconsistentes) -> PARE IMEDIATO

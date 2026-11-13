@@ -53,12 +53,30 @@ export interface MotionState {
    * `dtS` instead, so this field keeps one meaning for every consumer.
    */
   speedMps: number
+  /**
+   * True when the source knows the car's world pose itself and `x`, `z`,
+   * `yawRad` are set - the engine recording, whose cars are placed where the
+   * engine put them. False for the synthetic field and the replay, which are
+   * placed by `(s, d)` through `toWorld`. Every source writes this on every call:
+   * `Grid` reuses one `MotionState` across a source switch.
+   */
+  posed: boolean
+  /** Three.js world x, metres. Only meaningful when `posed`. */
+  x: number
+  /** Three.js world z, metres (`-y` of the engine plan). Only when `posed`. */
+  z: number
+  /** Rotation of the mesh about +y, radians; 0 faces -Z. Only when `posed`. */
+  yawRad: number
 }
 
-export type SourceKind = 'synthetic' | 'replay'
+export type SourceKind = 'synthetic' | 'replay' | 'engine'
 
-/** In the order the panel and the `m` key present them. */
-export const SOURCE_KINDS: readonly SourceKind[] = ['synthetic', 'replay']
+/**
+ * In the order the panel and the `m` key present them. A track offers
+ * `synthetic` plus at most one of `replay` (our Monza) or `engine` (a
+ * recording), never both: each was made against exactly one centreline.
+ */
+export const SOURCE_KINDS: readonly SourceKind[] = ['synthetic', 'replay', 'engine']
 
 export interface MotionSource {
   readonly kind: SourceKind
@@ -75,5 +93,5 @@ export interface MotionSource {
 }
 
 export function newMotionState(): MotionState {
-  return { sUnwrapped: 0, d: 0, speedMps: 0 }
+  return { sUnwrapped: 0, d: 0, speedMps: 0, posed: false, x: 0, z: 0, yawRad: 0 }
 }

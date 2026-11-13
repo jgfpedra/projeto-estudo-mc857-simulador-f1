@@ -83,8 +83,7 @@ class PhysicsParams:
 
 
 def compute_kappa_profile(wps: np.ndarray, ds_target: float = 4.0,
-                          smooth_window_m: float = 30.0,
-                          return_raw: bool = False):
+                          smooth_window_m: float = 30.0) -> Tuple[np.ndarray, np.ndarray]:
     """Curvatura assinada suavizada ao longo da pista.
 
     Reamostra a polilinha em `ds_target` e computa kappa via diferença de
@@ -92,8 +91,6 @@ def compute_kappa_profile(wps: np.ndarray, ds_target: float = 4.0,
     ±60 km/h vista com janela de 20 m).
 
     Retorna (s_arr, kappa_arr) — arrays de mesmo comprimento (fechado).
-    Com ``return_raw=True`` retorna também ``kappa_raw`` (sem suavização),
-    usado para o cap de hairpins que a suavização dilui.
     """
     # comprimento de arco
     closed = np.vstack([wps, wps[:1]])
@@ -157,17 +154,13 @@ def compute_kappa_profile(wps: np.ndarray, ds_target: float = 4.0,
     # clamp (remove picos numéricos de splines)
     kmax_physical = 0.25  # R=4m é o mínimo físico plausível
     kappa = np.clip(kappa, -kmax_physical, kmax_physical)
-    kappa_raw = np.clip(kappa_raw, -kmax_physical, kmax_physical)
 
-    if return_raw:
-        return s_arr, kappa, kappa_raw
     return s_arr, kappa
 
 
 def compute_v_plan(s_arr: np.ndarray, kappa_arr: np.ndarray,
                    grip_mult: float = 1.0, sf: float = 0.85,
-                   ds: Optional[float] = None,
-                   kappa_raw: Optional[np.ndarray] = None) -> np.ndarray:
+                   ds: Optional[float] = None) -> np.ndarray:
     """Forward-backward velocity profile com física real.
 
     Args:
@@ -211,28 +204,6 @@ def compute_v_plan(s_arr: np.ndarray, kappa_arr: np.ndarray,
             #  é o VETOR VELOCIDADE desalinhado na APROXIMAÇÃO — ver (2b) abaixo)
             # senão: sem limite (o downforce segura a curva em qualquer velocidade)
 
-    # --- 1b. CAP POR CURVATURA BRUTA (kinks que a suavização dilui) -----
-    # Um kink de 57° em 3 m (kappa_raw≈0,33, R≈3 m) vira 0,089 após a
-    # suavização — abaixo de KAPPA_EXTREME (0,12). O mesmo vale para os
-    # kinks de 37°/21° (R≈5/8,6 m) em interlagos_v1: a reamostragem dilui
-    # todos. Resultado medido: os carros chegavam a 40-50 km/h nesses
-    # pontos e saíam da pista. Aqui o cap usa a curvatura BRUTA e o RAIO
-    # local (v = sqrt(a_lat·R), a_lat conservador) diluído ±1 amostra.
-    # A passada backward abaixo propaga a frenagem para trás.
-    if kappa_raw is not None:
-        KAPPA_KINK_RAW = 0.08      # R < 12,5 m
-        A_LAT_KINK = 5.3           # m/s² conservador (grip + atraso/slip)
-        V_KINK_MIN = 4.0           # m/s
-        V_KINK_MAX = 12.0          # m/s — kinks largos não capam abaixo disso
-        k_raw = np.abs(np.asarray(kappa_raw, dtype=float))
-        kink = k_raw >= KAPPA_KINK_RAW
-        v_kink = np.clip(np.sqrt(A_LAT_KINK / np.maximum(k_raw, 1e-6)),
-                         V_KINK_MIN, V_KINK_MAX)
-        kink_d = kink | np.roll(kink, 1) | np.roll(kink, -1)
-        v_kink_d = np.minimum(np.minimum(np.roll(v_kink, 1), v_kink),
-                              np.roll(v_kink, -1))
-        v_plan = np.minimum(v_plan, np.where(kink_d, v_kink_d, 200.0))
-
     # --- 2. passada BACKWARD (frenagem, com CÍRCULO DE ATRITO) ---
     # CÍRCULO DE ATRITO (bug de Monaco): durante a frenagem pré-curva, a
     # curvatura de ENTRADA já consome parte do orçamento de atrito. Sem
@@ -266,12 +237,10 @@ def compute_v_plan(s_arr: np.ndarray, kappa_arr: np.ndarray,
     # para fora e o carro DESLIZA lateralmente (medido: lat +0,63→−7,04).
     # Solução: ESTENDER a velocidade do hairpin para trás por ~10m — o carro
     # já está lento e alinhado ANTES da curva começar.
-    HAIRPIN_APPROACH_M = 20.0   # metros de zona lenta antes do hairpin
+    HAIRPIN_APPROACH_M = 10.0   # metros de zona lenta antes do hairpin
     n_appr = int(HAIRPIN_APPROACH_M / ds)
     for i in range(n):
-        k_ext = abs(kappa_arr[i]) > KAPPA_EXTREME or (
-            kappa_raw is not None and abs(kappa_raw[i]) > 0.08)
-        if k_ext:
+        if abs(kappa_arr[i]) > KAPPA_EXTREME:
             # propaga v_plan[i] para trás (até n_appr pontos antes)
             v_here = v_plan[i]
             for j in range(1, min(n_appr + 1, i + 1)):
@@ -306,18 +275,10 @@ class VelocityProfile:
     """Wrapper com lookup O(1) por s (interpolação linear)."""
 
     def __init__(self, wps: np.ndarray, grip_mult: float = 1.0, sf: float = 0.85,
-                 ds_target: float = 4.0, smooth_window_m: float = 30.0,
-                 raw_kappa_cap: bool = False):
-        if raw_kappa_cap:
-            self.s_arr, self.kappa_arr, self.kappa_raw = compute_kappa_profile(
-                wps, ds_target, smooth_window_m, return_raw=True)
-        else:
-            self.s_arr, self.kappa_arr = compute_kappa_profile(
-                wps, ds_target, smooth_window_m)
-            self.kappa_raw = None
+                 ds_target: float = 4.0, smooth_window_m: float = 30.0):
+        self.s_arr, self.kappa_arr = compute_kappa_profile(wps, ds_target, smooth_window_m)
         self.v_plan = compute_v_plan(self.s_arr, self.kappa_arr, grip_mult, sf,
-                                     ds=float(self.s_arr[1] - self.s_arr[0]),
-                                     kappa_raw=self.kappa_raw)
+                                     ds=float(self.s_arr[1] - self.s_arr[0]))
         self.total_s = float(self.s_arr[-1] + (self.s_arr[1] - self.s_arr[0]))
 
     def at(self, s: float) -> float:

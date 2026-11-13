@@ -35,7 +35,7 @@ const SPEED_MPS = 70
 const FRAME_S = 1 / 60
 
 function follow(sUnwrapped: number, speedMps = SPEED_MPS): FollowState {
-  return { s: sUnwrapped, sUnwrapped, d: 0, speedMps, carIndex: 0 }
+  return { s: sUnwrapped, sUnwrapped, d: 0, speedMps, carIndex: 0, posed: false, x: 0, z: 0, yawRad: 0 }
 }
 
 /**

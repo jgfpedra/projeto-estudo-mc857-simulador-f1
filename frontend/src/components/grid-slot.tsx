@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react"
 import { ArrowLeftRight, ChevronDown, Search, X } from "lucide-react"
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,47 +9,53 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { useDriverStore } from "@/stores/driver-store"
 
-import { NULL_DRIVER_ID, type Driver, flag } from "@/data/pilots"
-
-export type GridSlotValue = {
+ type GridSlotProps = {
+  /** Posição visual do grid, começando em 1. */
   position: number
-  driverId: string
-}
-
-type GridSlotProps = {
-  slot: GridSlotValue
-  drivers: Driver[]
-  selectedDriverIds: Set<string>
   disabled?: boolean
-  onSelect: (position: number, driverId: string) => void
 }
 
-export function GridSlot({
-  slot,
-  drivers,
-  selectedDriverIds,
-  disabled = false,
-  onSelect,
-}: GridSlotProps) {
+function flag(countryCode: string): string {
+  const code = countryCode.trim().toUpperCase()
+  if (!/^[A-Z]{2}$/.test(code)) return ""
+
+  return String.fromCodePoint(
+    ...[...code].map((character) => 127397 + character.charCodeAt(0)),
+  )
+}
+
+export function GridSlot({ position, disabled = false }: GridSlotProps) {
   const [search, setSearch] = useState("")
 
-  const driver = drivers.find((pilot) => pilot.id === slot.driverId)
-  const isEmpty = slot.driverId === NULL_DRIVER_ID
+  // `drivers` representa o grid ordenado; `availableDrivers` contém a temporada toda.
+  const driver = useDriverStore((state) => state.drivers[position - 1] ?? null)
+  const grid = useDriverStore((state) => state.drivers)
+  const availableDrivers = useDriverStore((state) => state.availableDrivers)
+  const updateDriverAtPosition = useDriverStore(
+    (state) => state.updateDriverAtPosition,
+  )
+
+  const isEmpty = driver === null
   const normalizedSearch = search.trim().toLocaleLowerCase()
 
-  const availableDrivers = useMemo(() => {
-    return drivers
-      .filter((pilot) => {
-        const isCurrentDriver = pilot.id === slot.driverId
-        if (isCurrentDriver) return false
+  const selectedDriverIds = useMemo(
+    () => new Set(grid.flatMap((item) => (item ? [item.id] : []))),
+    [grid],
+  )
+
+  const filteredDrivers = useMemo(() => {
+    return availableDrivers
+      .filter((item) => {
+        if (item.id === driver?.id) return false
 
         return (
           !normalizedSearch ||
-          pilot.name.toLocaleLowerCase().includes(normalizedSearch) ||
-          pilot.shortName.toLocaleLowerCase().includes(normalizedSearch) ||
-          pilot.teamName.toLocaleLowerCase().includes(normalizedSearch) ||
-          pilot.nationality.toLocaleLowerCase().includes(normalizedSearch)
+          item.name.toLocaleLowerCase().includes(normalizedSearch) ||
+          item.shortName.toLocaleLowerCase().includes(normalizedSearch) ||
+          item.teamName.toLocaleLowerCase().includes(normalizedSearch) ||
+          item.country.toLocaleLowerCase().includes(normalizedSearch)
         )
       })
       .sort((a, b) => {
@@ -58,11 +65,14 @@ export function GridSlot({
         if (aSelected !== bSelected) return aSelected ? 1 : -1
         return a.name.localeCompare(b.name, "pt-BR")
       })
-  }, [drivers, normalizedSearch, selectedDriverIds, slot.driverId])
+  }, [availableDrivers, normalizedSearch, selectedDriverIds, driver?.id])
 
   const handleOpenChange = (open: boolean) => {
     if (!open) setSearch("")
   }
+
+  // O store usa índice começando em zero; a posição visual começa em um.
+  const index = position - 1
 
   return (
     <DropdownMenu onOpenChange={handleOpenChange}>
@@ -79,16 +89,16 @@ export function GridSlot({
           >
             <div className="flex w-full min-w-0 items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-background text-xs font-black italic">
-                {String(slot.position).padStart(2, "0")}
+                {String(position).padStart(2, "0")}
               </div>
 
               {isEmpty ? (
                 <div className="min-w-0 flex-1">
                   <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                    P{slot.position}
+                    P{position}
                   </div>
                   <div className="mt-1 text-sm font-black uppercase text-muted-foreground">
-                    Selecionar piloto
+                    Selecionar driver
                   </div>
                   <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">
                     Vaga vazia
@@ -98,31 +108,24 @@ export function GridSlot({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                      P{slot.position}
+                      P{position}
                     </span>
-                    <span className="text-lg leading-none">
-                      {flag(driver?.countryCode ?? "")}
-                    </span>
+                    <span className="text-lg leading-none">{flag(driver.countryCode)}</span>
                   </div>
-                  <div className="mt-1 truncate text-sm font-black uppercase">
-                    {driver?.name}
-                  </div>
+                  <div className="mt-1 truncate text-sm font-black uppercase">{driver.name}</div>
                   <div className="mt-1 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    {driver?.teamName}
+                    {driver.teamName}
                   </div>
                 </div>
               )}
 
-              {!isEmpty && driver && (
+              {!isEmpty && (
                 <span className="shrink-0 text-2xl font-black italic text-muted-foreground/40">
                   {driver.number}
                 </span>
               )}
 
-              {!disabled && (
-                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-              )}
-
+              {!disabled && <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />}
             </div>
           </button>
         </DropdownMenuTrigger>
@@ -141,32 +144,32 @@ export function GridSlot({
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 onKeyDown={(event) => event.stopPropagation()}
-                placeholder="Buscar piloto..."
+                placeholder="Buscar driver..."
                 className="h-10 rounded-none border-border bg-background pl-9 text-xs font-bold uppercase placeholder:text-muted-foreground/60"
                 autoFocus
               />
             </div>
           </div>
 
-          {!isEmpty && driver && (
+          {!isEmpty && (
             <>
               <div className="flex items-center gap-3 px-3 py-2.5">
                 <span className="text-lg leading-none">{flag(driver.countryCode)}</span>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-xs font-black uppercase">{driver.name}</div>
                   <div className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    {driver.teamName} · {driver.nationality}
+                    {driver.teamName} · {driver.country}
                   </div>
                 </div>
                 <span className="flex shrink-0 items-center gap-2 text-xs font-black italic text-muted-foreground">
                   {driver.number}
                   <button
                     type="button"
-                    aria-label={`Remover ${driver.name} da posição ${slot.position}`}
+                    aria-label={`Remover ${driver.name} da posição ${position}`}
                     onClick={(event) => {
                       event.preventDefault()
                       event.stopPropagation()
-                      onSelect(slot.position, NULL_DRIVER_ID)
+                      updateDriverAtPosition(index, null)
                     }}
                     className="flex h-6 w-6 items-center justify-center border border-border text-muted-foreground transition-colors hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
                   >
@@ -179,45 +182,45 @@ export function GridSlot({
           )}
 
           <div className="max-h-[216px] overflow-y-auto pr-1">
-            {availableDrivers.length > 0 ? (
-              availableDrivers.map((pilot) => (
-                <DropdownMenuItem
-                  key={pilot.id}
-                  onSelect={() => onSelect(slot.position, pilot.id)}
-                  className={[
-                    "cursor-pointer rounded-none py-3",
-                    selectedDriverIds.has(pilot.id)
-                      ? "bg-muted/70 hover:bg-muted"
-                      : "",
-                  ].join(" ")}
-                >
-                  <div className="flex min-w-0 w-full items-center gap-3">
-                    <span className="text-lg leading-none">{flag(pilot.countryCode)}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <div className="truncate text-xs font-black uppercase">{pilot.name}</div>
-                        {selectedDriverIds.has(pilot.id) && (
-                          <span className="shrink-0 text-[9px] font-black uppercase tracking-wider text-primary">
-                            Trocar
-                          </span>
-                        )}
+            {filteredDrivers.length > 0 ? (
+              filteredDrivers.map((item) => {
+                const isSelected = selectedDriverIds.has(item.id)
+
+                return (
+                  <DropdownMenuItem
+                    key={item.id}
+                    onSelect={() => updateDriverAtPosition(index, item)}
+                    className={[
+                      "cursor-pointer rounded-none py-3",
+                      isSelected ? "bg-muted/70 hover:bg-muted" : "",
+                    ].join(" ")}
+                  >
+                    <div className="flex min-w-0 w-full items-center gap-3">
+                      <span className="text-lg leading-none">{flag(item.countryCode)}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="truncate text-xs font-black uppercase">{item.name}</div>
+                          {isSelected && (
+                            <span className="shrink-0 text-[9px] font-black uppercase tracking-wider text-primary">
+                              Trocar
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          {item.teamName} · {item.country}
+                        </div>
                       </div>
-                      <div className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        {pilot.teamName} · {pilot.nationality}
-                      </div>
+                      <span className="ml-auto flex shrink-0 items-center gap-2 text-right text-xs font-black italic text-muted-foreground">
+                        {item.number}
+                        {isSelected && <ArrowLeftRight className="h-3.5 w-3.5 text-primary" />}
+                      </span>
                     </div>
-                    <span className="ml-auto flex shrink-0 items-center gap-2 text-right text-xs font-black italic text-muted-foreground">
-                      {pilot.number}
-                      {selectedDriverIds.has(pilot.id) && (
-                        <ArrowLeftRight className="h-3.5 w-3.5 text-primary" />
-                      )}
-                    </span>
-                  </div>
-                </DropdownMenuItem>
-              ))
+                  </DropdownMenuItem>
+                )
+              })
             ) : (
               <div className="px-3 py-5 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Nenhum piloto encontrado
+                Nenhum driver encontrado
               </div>
             )}
           </div>

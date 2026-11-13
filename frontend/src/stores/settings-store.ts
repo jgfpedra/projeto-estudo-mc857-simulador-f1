@@ -1,13 +1,8 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
-export type GameSettings = {
-  masterVolume: number
-  sfxVolume: number
-  musicVolume: number
-  resolution: string
-  graphicsQuality: string
-}
+import { DEFAULT_SETTINGS } from "@/data/settings"
+import type { GameSettings } from "@/types/settings"
 
 type SettingsStore = {
   settings: GameSettings
@@ -18,18 +13,10 @@ type SettingsStore = {
   resetSettings: () => void
 }
 
-const defaultSettings: GameSettings = {
-  masterVolume: 80,
-  sfxVolume: 80,
-  musicVolume: 60,
-  resolution: "1920x1080",
-  graphicsQuality: "high",
-}
-
 export const useSettingsStore = create<SettingsStore>()(
   persist(
     (set) => ({
-      settings: defaultSettings,
+      settings: DEFAULT_SETTINGS,
 
       updateSetting: (key, value) =>
         set((state) => ({
@@ -39,13 +26,12 @@ export const useSettingsStore = create<SettingsStore>()(
           },
         })),
 
-      resetSettings: () =>
-        set({
-          settings: defaultSettings,
-        }),
+      resetSettings: () => set({ settings: DEFAULT_SETTINGS }),
     }),
     {
       name: "f1-simulator-settings",
+      // Só as configurações do jogo são persistidas; ações não fazem parte do estado salvo.
+      partialize: (state) => ({ settings: state.settings }),
     },
   ),
 )

@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { CarIdentity } from './motion'
+import type { PitReadout } from '../engine/source'
+import { pitText, tyreText } from '../engine/source'
 
 interface Props {
   cars: CarIdentity[]
@@ -24,6 +26,17 @@ interface Props {
    * untouched.
    */
   lapAt: (carIndex: number, sUnwrapped: number) => number
+  /**
+   * The followed car's running position, where the source has one: the engine
+   * recording, ranked by interpolated `progress_m`. Polled like everything else
+   * here; absent for the synthetic field and the replay.
+   */
+  rankAt?: (carIndex: number) => number
+  /**
+   * The followed car's tyres and pit state, engine recording only. A stop in
+   * the engine is bookkeeping at the lap line, not a place: the line says so.
+   */
+  pitAt?: (carIndex: number) => PitReadout
   /** What is driving the cars, for the one line of prose at the bottom. */
   sourceKind: string
   /** Debug toggle: a stripe on every wheel, so spin can be seen. */
@@ -50,6 +63,8 @@ export function CarPanel({
   lengthM,
   widthM,
   lapAt,
+  rankAt,
+  pitAt,
   sourceKind,
   wheelMarkers,
   onWheelMarkers,
@@ -57,12 +72,23 @@ export function CarPanel({
   const sRef = useRef<HTMLSpanElement>(null)
   const dRef = useRef<HTMLSpanElement>(null)
   const lapRef = useRef<HTMLSpanElement>(null)
+  const posRef = useRef<HTMLSpanElement>(null)
+  const tyreRef = useRef<HTMLDivElement>(null)
+  const pitRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const tick = () => {
       const { s, sUnwrapped, d, speedMps } = readout.current
       if (sRef.current) sRef.current.textContent = `${s.toFixed(1)} m`
       if (dRef.current) dRef.current.textContent = `${d >= 0 ? '+' : ''}${d.toFixed(2)} m`
+      if (posRef.current) posRef.current.textContent = rankAt ? `P${rankAt(selected)} · ` : ''
+      const pit = pitAt?.(selected)
+      if (tyreRef.current) tyreRef.current.textContent = pit ? `tyres ${tyreText(pit)}` : ''
+      if (pitRef.current) {
+        const text = pit ? pitText(pit) : ''
+        pitRef.current.textContent = text
+        pitRef.current.style.display = text ? 'block' : 'none'
+      }
       if (lapRef.current) {
         // Live speed and a real lap count. The old line here estimated a lap time
         // as `lengthM / speedMps`, which assumed a constant speed — true of the
@@ -76,7 +102,7 @@ export function CarPanel({
     tick()
     const id = setInterval(tick, 1000 / READOUT_HZ)
     return () => clearInterval(id)
-  }, [readout, lengthM, selected, lapAt])
+  }, [readout, lengthM, selected, lapAt, rankAt, pitAt])
 
   const car = cars[selected]
 
@@ -130,20 +156,42 @@ export function CarPanel({
       </div>
 
       <div>
+        <span ref={posRef} data-testid="car-position" style={{ color: '#fff' }} />
         s <span ref={sRef} style={{ color: '#fff' }} /> · d{' '}
-        <span ref={dRef} style={{ color: '#ff8a5f' }} />
+        <span ref={dRef} data-testid="car-d" style={{ color: '#ff8a5f' }} />
       </div>
       <div style={{ opacity: 0.6, marginTop: 4 }}>
         <span ref={lapRef} />
       </div>
+      {pitAt && <div ref={tyreRef} data-testid="car-tyre" style={{ marginTop: 4 }} />}
+      {pitAt && (
+        <div
+          ref={pitRef}
+          data-testid="car-pit"
+          style={{
+            display: 'none',
+            marginTop: 4,
+            padding: '2px 6px',
+            background: '#3a2a10',
+            border: '1px solid #ffb020',
+            borderRadius: 3,
+            color: '#ffd27a',
+          }}
+        />
+      )}
       <p style={{ margin: '6px 0 0', opacity: 0.6 }}>
         positive d = right of the direction of travel. Ribbon is {widthM.toFixed(1)} m wide.{' '}
         {sourceKind === 'replay'
           ? 'Real telemetry: d is measured against a centreline that is the median ' +
             'of racing lines, so it stays within a metre and the field runs nearly ' +
             'single file.'
-          : 'Cars hold a fixed d and a fixed speed, so the order changes only ' +
-            'because the speeds differ — there is no overtaking logic.'}
+          : sourceKind === 'engine'
+            ? "Engine race: cars sit at the engine's own position and heading. d is " +
+              "d_m, our refined projection of that position; s and P come from the " +
+              "engine's race progress. A pit stop is done at the lap line in one " +
+              'tick: the car keeps running and the pit time is added to its next lap.'
+            : 'Cars hold a fixed d and a fixed speed, so the order changes only ' +
+              'because the speeds differ — there is no overtaking logic.'}
       </p>
       {/* Debug. The tyres are uniform grey, so without this a wheel spinning
           the wrong way, or not at all, looks exactly like a correct one. Watch

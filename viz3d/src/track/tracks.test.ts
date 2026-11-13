@@ -7,6 +7,8 @@ import { TRACKS } from './registry'
 import type { TrackJson } from './types'
 import { checkVerdict, verifyOrientation } from './verify'
 import expected from './expected-verdicts.json'
+import { parseRecording, trackFromRecording } from '../engine/load'
+import type { Track } from './types'
 
 /**
  * The viewer's own orientation checks, run on every committed track through
@@ -25,12 +27,23 @@ function load(url: string): TrackJson {
   return JSON.parse(readFileSync(path, 'utf8')) as TrackJson
 }
 
+function publicText(url: string): string {
+  return readFileSync(fileURLToPath(new URL(`../../public${url}`, import.meta.url)), 'utf8')
+}
+
+/** A registry entry's track, through the same path the viewer takes for it. */
+function trackFor(entry: (typeof TRACKS)[number]): Track {
+  if (entry.recordingUrl) return trackFromRecording(parseRecording(publicText(entry.recordingUrl)))
+  if (!entry.url) throw new Error(`${entry.id}: neither url nor recordingUrl`)
+  return parseTrack(load(entry.url))
+}
+
 const pinned = expected as unknown as Record<string, { verdicts: Record<string, string> }>
 
 describe('orientation checks on every committed track', () => {
   for (const entry of TRACKS) {
     it(`${entry.id}: verdicts match expected-verdicts.json`, () => {
-      const track = parseTrack(load(entry.url))
+      const track = trackFor(entry)
       const checks = verifyOrientation(track, buildFrame(track))
       for (const c of checks) console.log(`${entry.id}  ${checkVerdict(c)}  [${c.id}] ${c.detail}`)
       const got = Object.fromEntries(checks.map((c) => [c.id, checkVerdict(c)]))

@@ -35,6 +35,24 @@ export function carMatrix(
   return out.compose(pos, quat, ONE)
 }
 
+const Y_AXIS = new Vector3(0, 1, 0)
+
+/**
+ * Placement matrix for a car whose world pose is known directly - the engine
+ * recording's `position_xy` / `heading_deg`, already mapped to Three.js by
+ * `engineSource`. A rotation about +y and a translation, composed with unit
+ * scale, so the determinant is +1 by construction; check J still verifies it
+ * on the matrices actually handed to the GPU.
+ *
+ * Flat: `h` is above y = 0, which is where `trackFromRecording` puts the
+ * engine's centreline. The engine's plan has no elevation either.
+ */
+export function poseMatrix(x: number, z: number, yawRad: number, h: number, out: Matrix4): Matrix4 {
+  pos.set(x, h, z)
+  quat.setFromAxisAngle(Y_AXIS, yawRad)
+  return out.compose(pos, quat, ONE)
+}
+
 /**
  * Placement matrix for one wheel: the car's matrix, then out to the wheel's
  * centre, then a spin about its own axle.

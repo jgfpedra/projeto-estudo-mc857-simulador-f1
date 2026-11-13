@@ -1,0 +1,11 @@
+{
+  "input_sha256": "d950f7a60d47d125d829f5c4bf0302eadd9eb8ef7001cd17e690ba7950f6ac95",
+  "track_sha256": "af3125959ade1f82062d9c9fe0dfa8020d31e431d919408ae4d293f0fac20bf2",
+  "audit_sha256": "e106db7882edb58d603358855e86c5776373e0ddba28f676ee3ee7e6560f1d25",
+  "outputs_sha256": {
+    "3_rejoin_windows.csv": "1df9fdcff1082dffc0e9571b53e6cdc26d7f2daf1af59495e024a032f140e129",
+    "4_hesitations.csv": "0a479deaf34b5ba4bdba92e384d4497c01cdefbac533cf43d28cc83d9ee3c89e",
+    "5_summary.json": "74fccba9e9c5bafed52a9b150877f0598c4fb87da4e5fc31a8cf46cf60c08cf3",
+    "6_veredito.md": "37164fe3220709908e46fe4bc5692f399c00536d3eadd8b65ebeb856b201fddc"
+  }
+}

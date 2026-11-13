@@ -1,0 +1,14 @@
+PROJ-FIX-4 — post-classification validation
+All checks below operate on the frozen v1.2 outputs; no simulation or classifying code was rerun or edited.
+Checks: 112 rows=PASS, 112 unique keys=PASS, GE10 closure=PASS, GE30 closure=PASS, ALO C5=PASS, C5 offtrack anatomy=PASS, C4 diagnostic empty=PASS
+ge10 mapping (abs_projection_error_m >= 10): C1=0 C2=0 C3=46 C5=66; 112 = 0+0+46+66.
+headline cut (abs_projection_error_m >= 30): C1=0 C2=0 C3=45 C5=0; 45 = 0+0+45+0.
+ALO tick_prev=2130 tick=2132: C5.
+C5 offtrack anatomy: offtrack=1 66/66 (1.000000); offtrack=0 0/66 (0.000000).
+C4 invalid-row diagnostic: count=0.
+P95 by class: {"ge10":{"C1":{"count":0,"p95_abs_d_ns_raw":null,"p95_dxy_m":null},"C2":{"count":0,"p95_abs_d_ns_raw":null,"p95_dxy_m":null},"C3":{"count":46,"p95_abs_d_ns_raw":416.25,"p95_dxy_m":1.8704425708164663},"C5":{"count":66,"p95_abs_d_ns_raw":6.75,"p95_dxy_m":3.307436586085905}},"ge30":{"C1":{"count":0,"p95_abs_d_ns_raw":null,"p95_dxy_m":null},"C2":{"count":0,"p95_abs_d_ns_raw":null,"p95_dxy_m":null},"C3":{"count":45,"p95_abs_d_ns_raw":418.59999999999985,"p95_dxy_m":1.8713291979009652},"C5":{"count":0,"p95_abs_d_ns_raw":null,"p95_dxy_m":null}}}
+Output hashes (sha256sum):
+9744db80cb2c55400aac4bc75351af59c89fb7963c0163dbe63b42c5abf5cb05  backend/experiments/proj-fix-1/classificacao_v12/16_classify_v12.log
+750319117b7f2f9c43a92543a8754a36a14021dbfd483c8bc3366f25c6b8c3c5  backend/experiments/proj-fix-1/classificacao_v12/pares_classificados.csv
+1f75e75b50ac9d6a78f96b12f04ca0ac422cbff8ec1546d8cafb7aa791f5008f  backend/experiments/proj-fix-1/classificacao_v12/mapa_nit2_ge10.csv
+9744db80cb2c55400aac4bc75351af59c89fb7963c0163dbe63b42c5abf5cb05  backend/experiments/proj-fix-1/classificacao_v12/resumo_classes.json

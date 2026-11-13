@@ -34,6 +34,22 @@
  *   6. Then moves to each engine track by clicking its link in the viewer's
  *      own track picker, so the selector is exercised rather than bypassed,
  *      and repeats 2-4 with the synthetic field (no replay exists for them).
+ *   7. Phase 3: the `engine` track, built from the committed recording
+ *      fixture's race block, repeats 2-4 under the engine source and the
+ *      synthetic field, then pauses the clock on chosen ticks (one inside
+ *      Sainz's off-track excursion) and requires every car's instance matrix -
+ *      read back from the GPU-bound `InstancedMesh`, not recomputed - to sit at
+ *      the fixture's `position_xy` (three.z = -y) with its nose along
+ *      `heading_deg`, and the car panel to show the recorded position and `d_m`.
+ *      On each of those ticks it then switches to the T-cam and requires the
+ *      live camera at the followed car's instance pose plus the rig's
+ *      car-local offset, looking along the nose.
+ *   8. Phase 3b: `engine_ours`, a 15-lap race on our own Interlagos export,
+ *      trimmed to a window around the first pit stop. Same checks, plus a
+ *      paused tick on the stop itself and one 2 s later, following the car
+ *      that pitted: the car panel must show its tyres (compound, life, stops)
+ *      and the pit line (lap, tyres before / after, pending pit time) exactly
+ *      as the fixture has them, and the timeline must carry the pit marks.
  *
  * Output: `.cache/snapshots/*.png` (gitignored). Exit code 1 on any failure.
  */
@@ -74,8 +90,44 @@ const MODES = [
 const RUNS = [
   { track: 'monza', sources: ['synthetic', 'replay'], wheel: true },
   { track: 'monza_v1', sources: ['synthetic'], wheel: false },
+  { track: 'interlagos', sources: ['synthetic'], wheel: false },
+  { track: 'interlagos_2024', sources: ['synthetic'], wheel: false },
   { track: 'interlagos_v2', sources: ['synthetic'], wheel: false },
+  {
+    track: 'engine',
+    sources: ['engine', 'synthetic'],
+    wheel: false,
+    /**
+     * The fixture the `engine` registry entry loads, read here independently.
+     * Ticks: the first, one mid-window, and one where Sainz is 9.1 m off the
+     * centreline (sim 40.0 s), so the off-track path is on screen. Clock time
+     * is `(tick) * dt`, tick 0 being the first recorded.
+     */
+    engine: { recording: 'engine-interlagos-seed42.jsonl', ticks: [0, 205, 399], pit: false },
+  },
+  {
+    track: 'engine_ours',
+    sources: ['engine', 'synthetic'],
+    wheel: false,
+    /**
+     * Phase 3b. Ticks: the first and the last of the window, plus (`pit`) the
+     * fixture's first pit-stop tick and 20 ticks after it, found in the file.
+     */
+    engine: { recording: 'engine-interlagos2023-seed42-pit.jsonl', ticks: [0, -1], pit: true },
+  },
 ]
+/** Ticks after the stop for the second pit check: still inside the pending window. */
+const PIT_LATER_TICKS = 20
+/** Placement tolerance: the stored `position_xy` is rounded to 1 cm. */
+const ENGINE_POS_TOL_M = 1e-3
+const ENGINE_DIR_TOL = 1e-3
+/**
+ * T-cam against the car it is bolted to: 1 cm. Measured at <= 6.1e-6 m (float32
+ * instance matrices). The progress_m-anchored T-cam it replaced was 2.2 mm,
+ * 7.8 cm and 4.9 cm off at these ticks, and up to 2 degrees off in direction
+ * (docs/phase3-engine-race.md section 5).
+ */
+const ENGINE_TCAM_TOL_M = 0.01
 
 /** The one list of known check failures, shared with src/track/tracks.test.ts. */
 const EXPECTED = JSON.parse(readFileSync(join(ROOT, 'src', 'track', 'expected-verdicts.json'), 'utf8'))
@@ -355,6 +407,222 @@ async function wheelCheck(page) {
 }
 
 // ---------------------------------------------------------------------------
+// engine check
+// ---------------------------------------------------------------------------
+
+function readRecording(name) {
+  const file = join(ROOT, 'public', 'recordings', name)
+  const lines = readFileSync(file, 'utf8').split(/\r?\n/).filter((l) => l.trim())
+  const block = JSON.parse(lines[0])
+  const grid = [...block.drivers].sort((a, b) => a.grid_position - b.grid_position).map((d) => d.driver_id)
+  return { grid, ticks: lines.slice(1).map((l) => JSON.parse(l)) }
+}
+
+/** Every pit stop in the fixture: a tick on which a car's `pit_stops` went up. */
+function pitStops(ticks) {
+  const out = []
+  for (let k = 1; k < ticks.length; k++) {
+    for (const p of ticks[k].positions) {
+      const before = ticks[k - 1].positions.find((q) => q.driver_id === p.driver_id)
+      if (p.pit_stops > before.pit_stops) out.push({ tick: k, driver: p.driver_id, before, after: p })
+    }
+  }
+  return out
+}
+
+/** What `tyreText` / `pitText` (src/engine/source.ts) must print, rebuilt from the file. */
+function expectedPitPanel(pit, now) {
+  const stops = `${now.pit_stops} stop${now.pit_stops === 1 ? '' : 's'}`
+  const tyre = `tyres ${now.tyre_compound} ${now.tyre_life_pct.toFixed(1)}% · ${stops}`
+  const lap = pit.after.lap
+  const line =
+    now.pit_penalty_pending_s > 0
+      ? `PIT end of lap ${lap}: ${pit.before.tyre_compound} (${pit.before.tyre_life_pct.toFixed(1)}% before that lap) → ` +
+        `${pit.after.tyre_compound} ${pit.after.tyre_life_pct.toFixed(1)}%, ` +
+        `+${now.pit_penalty_pending_s.toFixed(1)} s on lap ${lap + 1}'s time (car not stopped)`
+      : ''
+  return { tyre, line }
+}
+
+/** Follow a car by clicking its swatch in the car panel (title starts with its code). */
+async function follow(page, driverId) {
+  await page.locator(`button[title^="${driverId} ·"]`).click()
+  await page.waitForTimeout(100)
+}
+
+/** Every car's body instance matrix, as handed to the GPU. */
+function readBodiesInPage() {
+  const { scene } = window.__viewer.store()
+  let body = null
+  scene.traverse((o) => {
+    if (o.isInstancedMesh && o.instanceColor && !body) body = o
+  })
+  if (!body) return null
+  const m = new body.matrix.constructor()
+  const out = []
+  for (let i = 0; i < body.count; i++) {
+    body.getMatrixAt(i, m)
+    out.push(m.elements.slice())
+  }
+  return out
+}
+
+/**
+ * The live camera against the followed car's body instance matrix, in the page.
+ * Expected: the car's ground point plus `fwdM` along its nose (local -Z,
+ * column 2 negated) and `heightM` up, aimed at `lookaheadM` along the nose at
+ * `targetHeightM`. The matrix carries the ride height in y; the rig measures
+ * heights from the ground, so only x and z are taken from it.
+ */
+function readTcamInPage() {
+  const { camera, scene } = window.__viewer.store()
+  const { fwdM, heightM, lookaheadM, targetHeightM } = window.__viewer.onboard
+  const selected = window.__viewer.readout.carIndex
+  let body = null
+  scene.traverse((o) => {
+    if (o.isInstancedMesh && o.instanceColor && !body) body = o
+  })
+  const m = new body.matrix.constructor()
+  body.getMatrixAt(selected, m)
+  const e = m.elements
+  const fx = -e[8]
+  const fz = -e[10]
+  const fl = Math.hypot(fx, fz)
+  const want = [e[12] + (fwdM * fx) / fl, heightM, e[14] + (fwdM * fz) / fl]
+  const aim = [e[12] + (lookaheadM * fx) / fl, targetHeightM, e[14] + (lookaheadM * fz) / fl]
+  const p = camera.position
+  const wantDir = aim.map((v, i) => v - want[i])
+  const wl = Math.hypot(...wantDir)
+  const d = camera.getWorldDirection(p.clone())
+  return {
+    pos: Math.hypot(p.x - want[0], p.y - want[1], p.z - want[2]),
+    dir: Math.hypot(d.x - wantDir[0] / wl, d.y - wantDir[1] / wl, d.z - wantDir[2] / wl),
+  }
+}
+
+async function engineCheck(page, spec) {
+  console.log(`\n  engine placement against the recording fixture ${spec.recording}`)
+  const { grid, ticks } = readRecording(spec.recording)
+  const plan = spec.ticks.map((k) => ({ k: k < 0 ? ticks.length + k : k, follow: grid[0], pit: null }))
+  await selectSource(page, 'engine')
+  if (spec.pit) {
+    // Read from the file, not hard-coded, so re-trimming the fixture cannot
+    // leave the check pausing on the wrong tick.
+    const stops = pitStops(ticks)
+    const pit = stops[0]
+    if (!pit) {
+      fail(`${spec.recording}: no pit stop in the fixture`)
+    } else {
+      note('INFO', `first pit stop: ${pit.driver} at tick ${pit.tick} (sim ${ticks[pit.tick].sim_ts.toFixed(1)} s)`)
+      plan.splice(
+        1,
+        0,
+        { k: pit.tick, follow: pit.driver, pit },
+        { k: Math.min(pit.tick + PIT_LATER_TICKS, ticks.length - 1), follow: pit.driver, pit },
+      )
+      const marks = await page.locator('[data-testid=timeline-pits] > span').count()
+      if (marks === stops.length) pass(`timeline pit marks: ${marks}, one per stop in the fixture`)
+      else fail(`timeline pit marks: ${marks} on the timeline, ${stops.length} stops in the fixture`)
+    }
+  }
+  await pressKey(page, '1')
+  await page.evaluate(() => {
+    window.__viewer.clock.playing = false
+  })
+  const dt = (ticks.at(-1).sim_ts - ticks[0].sim_ts) / (ticks.length - 1)
+  const tag = spec.recording.replace(/\.jsonl$/, '')
+  for (const { k, follow: who, pit } of plan) {
+    const tick = ticks[k]
+    await follow(page, who)
+    await setTime(page, k * dt)
+    const mats = await page.evaluate(readBodiesInPage)
+    if (!mats || mats.length !== grid.length) {
+      fail(`engine tick ${k}: found ${mats?.length ?? 0} car instances, recording has ${grid.length}`)
+      continue
+    }
+    let worstPos = 0
+    let worstDir = 0
+    let worstWho = ''
+    let off = []
+    for (const p of tick.positions) {
+      const e = mats[grid.indexOf(p.driver_id)]
+      const [x, y] = p.position_xy
+      const pos = Math.hypot(e[12] - x, e[14] + y)
+      const h = (p.heading_deg * Math.PI) / 180
+      // the nose is local -Z: column 2 negated
+      const dir = Math.hypot(-e[8] - Math.cos(h), -e[9], -e[10] + Math.sin(h))
+      if (pos > worstPos) worstWho = p.driver_id
+      worstPos = Math.max(worstPos, pos)
+      worstDir = Math.max(worstDir, dir)
+      if (Math.abs(p.d_m) > 6) off.push(`${p.driver_id} d ${p.d_m.toFixed(2)} m`)
+    }
+    const msg =
+      `tick ${k} (sim ${tick.sim_ts.toFixed(1)} s): ${grid.length} cars, worst position error ` +
+      `${worstPos.toExponential(1)} m (${worstWho}), worst nose-vs-heading ${worstDir.toExponential(1)}` +
+      (off.length ? `; off-track: ${off.join(', ')}` : '')
+    if (worstPos < ENGINE_POS_TOL_M && worstDir < ENGINE_DIR_TOL) pass(`engine placement: ${msg}`)
+    else fail(`engine placement: ${msg}`)
+
+    // The followed car in the panel: position and d_m.
+    const me = tick.positions.find((p) => p.driver_id === who)
+    await page.waitForTimeout(250) // the panel polls at 12 Hz
+    const shown = await page.evaluate(() => {
+      const text = (id) => document.querySelector(`[data-testid=${id}]`)?.textContent ?? ''
+      const pitEl = document.querySelector('[data-testid=car-pit]')
+      return {
+        pos: text('car-position'),
+        d: text('car-d'),
+        tyre: text('car-tyre'),
+        pit: text('car-pit'),
+        pitVisible: !!pitEl && getComputedStyle(pitEl).display !== 'none',
+        lap: text('timeline-lap'),
+      }
+    })
+    const wantPos = `P${me.position} · `
+    const wantD = `${me.d_m >= 0 ? '+' : ''}${me.d_m.toFixed(2)} m`
+    const panelMsg = `${who} at tick ${k}: panel "${shown.pos}" "${shown.d}", recording P${me.position} d ${wantD}`
+    if (shown.pos === wantPos && shown.d === wantD) pass(`engine panel: ${panelMsg}`)
+    else fail(`engine panel: ${panelMsg}`)
+    if (pit) {
+      // The pit state on the paused tick, against the file: tyres, the pit
+      // line (visible), and the timeline's PIT tag.
+      const want = expectedPitPanel(pit, me)
+      const wantTag = me.pit_penalty_pending_s > 0 ? ` · PIT +${me.pit_penalty_pending_s.toFixed(0)} s` : ''
+      const pitMsg =
+        `${who} at tick ${k} (sim ${tick.sim_ts.toFixed(1)} s): tyre "${shown.tyre}", ` +
+        `pit "${shown.pit}"${shown.pitVisible ? '' : ' (hidden)'}, timeline "${shown.lap}"`
+      const ok =
+        want.line !== '' &&
+        shown.tyre === want.tyre &&
+        shown.pit === want.line &&
+        shown.pitVisible &&
+        shown.lap.endsWith(wantTag)
+      if (ok) pass(`engine pit panel: ${pitMsg}`)
+      else fail(`engine pit panel: ${pitMsg}; expected tyre "${want.tyre}", pit "${want.line}", tag "${wantTag}"`)
+    }
+    await page.screenshot({ path: join(OUT, `${tag}-tick-${String(k).padStart(4, '0')}.png`) })
+
+    // The T-cam on the same paused tick: bolted to the followed car's pose as
+    // drawn (its GPU instance matrix), at the rig's offsets in car-local space.
+    await pressKey(page, '3')
+    await waitFrames(page, await frames(page), 3, `engine tick ${k} T-cam`)
+    const cam = await page.evaluate(readTcamInPage)
+    const tcamMsg =
+      `${who} at tick ${k}: camera ${cam.pos.toExponential(1)} m from the car pose + local offset, ` +
+      `view direction off by ${cam.dir.toExponential(1)}`
+    if (cam.pos < ENGINE_TCAM_TOL_M && cam.dir < ENGINE_DIR_TOL) pass(`engine T-cam: ${tcamMsg}`)
+    else fail(`engine T-cam: ${tcamMsg}`)
+    await page.screenshot({ path: join(OUT, `${tag}-tick-${String(k).padStart(4, '0')}-onboard.png`) })
+    await pressKey(page, '1')
+    await waitFrames(page, await frames(page), 2, `engine tick ${k} orbit`)
+  }
+  await follow(page, grid[0])
+  await page.evaluate(() => {
+    window.__viewer.clock.playing = true
+  })
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -454,6 +722,7 @@ async function runTrack(page, run, url, logs) {
   }
 
   if (run.wheel) await wheelCheck(page)
+  if (run.engine) await engineCheck(page, run.engine)
 }
 
 async function main() {
@@ -481,15 +750,24 @@ async function main() {
         await page.goto(`${url}?probe&track=${run.track}`)
       } else {
         // Through the viewer's own picker: the link must keep `probe`.
-        const link = page.locator(`a[href*="track=${run.track}"]`)
-        const href = await link.getAttribute('href').catch(() => null)
+        // Match the `track` parameter exactly: a substring selector would also
+        // hit `interlagos_2024` / `interlagos_v2` when looking for `interlagos`.
+        const params = (h) => new URLSearchParams(h.replace(/^\?/, ''))
+        const hrefs = await page
+          .locator('a[href*="track="]')
+          .evaluateAll((as) => as.map((a) => a.getAttribute('href')))
+        const href = hrefs.find((h) => h && params(h).get('track') === run.track) ?? null
         if (!href) {
           fail(`track picker has no link to ${run.track}`)
           continue
         }
-        if (!new URLSearchParams(href.replace(/^\?/, '')).has('probe'))
+        if (!params(href).has('probe'))
           fail(`track picker link to ${run.track} drops ?probe: ${href}`)
-        await Promise.all([page.waitForURL(`**track=${run.track}**`), link.click()])
+        const link = page.locator(`a[href="${href}"]`)
+        await Promise.all([
+          page.waitForURL((u) => u.searchParams.get('track') === run.track),
+          link.click(),
+        ])
       }
       await runTrack(page, run, url, logs)
     }
