@@ -11,7 +11,7 @@ O eixo do backend `(x, y)` corresponde a `(x, 0, -y)` no Three.js; a direção v
 Na sessão gráfica Linux, execute na raiz do projeto:
 
 ```bash
-scripts/run-live-compare.sh --laps 3 --camera follow
+backend/scripts/visualization/run-live-compare.sh --laps 3 --camera follow
 ```
 
 O script cria uma única corrida, abre a janela do PyBullet e abre no navegador o visualizador conectado à mesma engine. Pressione `Ctrl+C` no terminal para encerrar os processos iniciados pelo script. A visualização no navegador usa um buffer de cerca de 150 ms, de modo que fica um pouco atrás do PyBullet.

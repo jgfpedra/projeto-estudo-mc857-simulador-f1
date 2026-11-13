@@ -2,7 +2,7 @@
 # A mesma engine alimenta a janela PyBullet e o navegador via Redis/WebSocket.
 set -Eeuo pipefail
 
-ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PYTHON_BIN="${F1_PYTHON:-$ROOT_DIR/backend/.venv/bin/python}"
 API_PORT="${F1_API_PORT:-8000}"
 VIZ_PORT="${F1_VIZ_PORT:-5174}"
@@ -17,7 +17,7 @@ REDIS_CONTAINER=
 
 usage() {
   cat <<'HELP'
-Uso: scripts/run-live-compare.sh [--laps N] [--track NOME] [--year ANO] [--camera follow|overview] [--no-browser]
+Uso: backend/scripts/visualization/run-live-compare.sh [--laps N] [--track NOME] [--year ANO] [--camera follow|overview] [--no-browser]
 
 Inicia uma corrida na engine com a janela do PyBullet e abre a mesma corrida
 no visualizador 3D do navegador. Pressione Ctrl+C para encerrar.
