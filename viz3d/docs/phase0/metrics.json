@@ -1,0 +1,1059 @@
+{
+ "monza": {
+  "lengthM": {
+   "ours": 5756.8,
+   "frozen": 5641.9,
+   "published": 5793.0,
+   "diff": -114.9
+  },
+  "overlay": {
+   "ours->frozen": {
+    "n": 6851,
+    "max": 105.47,
+    "p50": 22.44,
+    "p90": 74.98,
+    "maxAtS": 5451.7,
+    "maxNear": "T11 Curva Parabolica (+268 m)"
+   },
+   "frozen->ours": {
+    "n": 5868,
+    "max": 105.47,
+    "p50": 19.53,
+    "p90": 72.98,
+    "maxAtS": 5278.1,
+    "maxNear": "T11 Curva Parabolica (+217 m)"
+   },
+   "hausdorff": 105.47
+  },
+  "startFinish": {
+   "distanceM": 97.5,
+   "aOnB": {
+    "s": -63.7,
+    "d": -73.8
+   },
+   "bOnA": {
+    "s": 73.3,
+    "d": 64.4
+   }
+  },
+  "corners": [
+   {
+    "number": 1,
+    "name": "Variante del Rettifilo (1)",
+    "oursS": 891.4,
+    "frozenS": 822.0,
+    "deltaS": -69.4
+   },
+   {
+    "number": 2,
+    "name": "Variante del Rettifilo (2)",
+    "oursS": 946.7,
+    "frozenS": 876.8,
+    "deltaS": -69.9
+   },
+   {
+    "number": 3,
+    "name": "Curva Grande",
+    "oursS": 1460.4,
+    "frozenS": 1374.2,
+    "deltaS": -86.2
+   },
+   {
+    "number": 4,
+    "name": "Variante della Roggia (1)",
+    "oursS": 2106.7,
+    "frozenS": 2016.0,
+    "deltaS": -90.7
+   },
+   {
+    "number": 5,
+    "name": "Variante della Roggia (2)",
+    "oursS": 2157.9,
+    "frozenS": 2067.9,
+    "deltaS": -90.0
+   },
+   {
+    "number": 6,
+    "name": "Curva di Lesmo 1",
+    "oursS": 2516.9,
+    "frozenS": 2426.1,
+    "deltaS": -90.8
+   },
+   {
+    "number": 7,
+    "name": "Curva di Lesmo 2",
+    "oursS": 2835.5,
+    "frozenS": 2751.9,
+    "deltaS": -83.6
+   },
+   {
+    "number": 8,
+    "name": "Variante Ascari (1)",
+    "oursS": 3904.8,
+    "frozenS": 3821.2,
+    "deltaS": -83.6
+   },
+   {
+    "number": 9,
+    "name": "Variante Ascari (2)",
+    "oursS": 3995.5,
+    "frozenS": 3913.6,
+    "deltaS": -81.9
+   },
+   {
+    "number": 10,
+    "name": "Variante Ascari (3)",
+    "oursS": 4097.0,
+    "frozenS": 4015.3,
+    "deltaS": -81.7
+   },
+   {
+    "number": 11,
+    "name": "Curva Parabolica",
+    "oursS": 5183.5,
+    "frozenS": 5061.3,
+    "deltaS": -122.2
+   }
+  ],
+  "markersAreVertices": {
+   "count": 11,
+   "maxDistanceM": 2.2737367544323206e-13,
+   "waypointIndices": [
+    0,
+    22,
+    153,
+    320,
+    339,
+    436,
+    523,
+    796,
+    823,
+    852,
+    1120
+   ]
+  },
+  "splineFit": [
+   {
+    "alpha": 0.0,
+    "p50": 10.947,
+    "p90": 25.345,
+    "max": 41.911,
+    "lengthM": 5982.9
+   },
+   {
+    "alpha": 0.4,
+    "p50": 2.986,
+    "p90": 7.644,
+    "max": 9.359,
+    "lengthM": 5650.7
+   },
+   {
+    "alpha": 0.5,
+    "p50": 0.198,
+    "p90": 0.703,
+    "max": 2.526,
+    "lengthM": 5645.8
+   },
+   {
+    "alpha": 0.6,
+    "p50": 4.011,
+    "p90": 11.294,
+    "max": 13.205,
+    "lengthM": 5650.3
+   },
+   {
+    "alpha": 1.0,
+    "p50": 30.152,
+    "p90": 113.477,
+    "max": 136.615,
+    "lengthM": 5786.2
+   }
+  ],
+  "reproduction": {
+   "vertices": [
+    1477,
+    1477
+   ],
+   "maxVertexErrorM": 6.821210263296962e-13,
+   "knots": 132
+  },
+  "vertexTurnDeg": {
+   "frozenMaxAbs": 120.4,
+   "frozenAtS": 5061.3,
+   "oursMaxAbs": 15.9
+  },
+  "peaksAtMarkers": {
+   "frozen": [
+    {
+     "corner": 1,
+     "s": 822.0,
+     "ratio": 1.0,
+     "peakOffsetM": 0.0,
+     "kappaPeak": 0.0423
+    },
+    {
+     "corner": 2,
+     "s": 876.8,
+     "ratio": 0.995,
+     "peakOffsetM": -2.7,
+     "kappaPeak": 0.0405
+    },
+    {
+     "corner": 3,
+     "s": 1374.2,
+     "ratio": 1.0,
+     "peakOffsetM": 0.1,
+     "kappaPeak": 0.0383
+    },
+    {
+     "corner": 4,
+     "s": 2016.0,
+     "ratio": 0.901,
+     "peakOffsetM": 39.9,
+     "kappaPeak": 0.0385
+    },
+    {
+     "corner": 5,
+     "s": 2067.9,
+     "ratio": 0.463,
+     "peakOffsetM": -12.0,
+     "kappaPeak": 0.0385
+    },
+    {
+     "corner": 6,
+     "s": 2426.1,
+     "ratio": 1.0,
+     "peakOffsetM": 0.1,
+     "kappaPeak": 0.0425
+    },
+    {
+     "corner": 7,
+     "s": 2751.9,
+     "ratio": 1.0,
+     "peakOffsetM": 0.0,
+     "kappaPeak": 0.0299
+    },
+    {
+     "corner": 8,
+     "s": 3821.2,
+     "ratio": 1.0,
+     "peakOffsetM": 0.3,
+     "kappaPeak": 0.0346
+    },
+    {
+     "corner": 9,
+     "s": 3913.6,
+     "ratio": 0.895,
+     "peakOffsetM": -7.2,
+     "kappaPeak": 0.0216
+    },
+    {
+     "corner": 10,
+     "s": 4015.3,
+     "ratio": 1.0,
+     "peakOffsetM": -0.1,
+     "kappaPeak": 0.0173
+    },
+    {
+     "corner": 11,
+     "s": 5061.3,
+     "ratio": 1.0,
+     "peakOffsetM": -0.0,
+     "kappaPeak": 0.2496
+    }
+   ],
+   "ours": [
+    {
+     "corner": 1,
+     "s": 891.4,
+     "ratio": 0.478,
+     "peakOffsetM": 43.9,
+     "kappaPeak": 0.0518
+    },
+    {
+     "corner": 2,
+     "s": 946.7,
+     "ratio": 0.755,
+     "peakOffsetM": -11.4,
+     "kappaPeak": 0.0518
+    },
+    {
+     "corner": 3,
+     "s": 1460.4,
+     "ratio": 0.866,
+     "peakOffsetM": -30.0,
+     "kappaPeak": 0.0045
+    },
+    {
+     "corner": 4,
+     "s": 2106.7,
+     "ratio": 0.924,
+     "peakOffsetM": 3.9,
+     "kappaPeak": 0.0293
+    },
+    {
+     "corner": 5,
+     "s": 2157.9,
+     "ratio": 0.584,
+     "peakOffsetM": -47.3,
+     "kappaPeak": 0.0293
+    },
+    {
+     "corner": 6,
+     "s": 2516.9,
+     "ratio": 0.947,
+     "peakOffsetM": -6.2,
+     "kappaPeak": 0.0142
+    },
+    {
+     "corner": 7,
+     "s": 2835.5,
+     "ratio": 0.917,
+     "peakOffsetM": -9.7,
+     "kappaPeak": 0.0171
+    },
+    {
+     "corner": 8,
+     "s": 3904.8,
+     "ratio": 0.871,
+     "peakOffsetM": -8.7,
+     "kappaPeak": 0.0177
+    },
+    {
+     "corner": 9,
+     "s": 3995.5,
+     "ratio": 0.66,
+     "peakOffsetM": 20.7,
+     "kappaPeak": 0.0096
+    },
+    {
+     "corner": 10,
+     "s": 4097.0,
+     "ratio": 1.0,
+     "peakOffsetM": -0.8,
+     "kappaPeak": 0.0117
+    },
+    {
+     "corner": 11,
+     "s": 5183.5,
+     "ratio": 0.696,
+     "peakOffsetM": -46.9,
+     "kappaPeak": 0.0143
+    }
+   ]
+  },
+  "straights": [
+   {
+    "oursS": [
+     1711.0,
+     2031.0
+    ],
+    "lengthM": 320.0,
+    "between": "T3 Curva Grande (+250 m) .. T4 Variante della Roggia (1) (-76 m)",
+    "oursChordDevM": 3.55,
+    "frozenChordDevM": 1.95,
+    "oursTotalTurnDeg": 7.0,
+    "frozenTotalTurnDeg": 6.2,
+    "oursMedianKappa": 0.00029,
+    "frozenMedianKappa": 1.54e-08
+   },
+   {
+    "oursS": [
+     2916.0,
+     3181.0
+    ],
+    "lengthM": 265.0,
+    "between": "T7 Curva di Lesmo 2 (+80 m) .. T7 Curva di Lesmo 2 (+345 m)",
+    "oursChordDevM": 1.91,
+    "frozenChordDevM": 7.68,
+    "oursTotalTurnDeg": 6.3,
+    "frozenTotalTurnDeg": 12.3,
+    "oursMedianKappa": 0.000389,
+    "frozenMedianKappa": 1.21e-08
+   },
+   {
+    "oursS": [
+     3271.0,
+     3831.0
+    ],
+    "lengthM": 560.0,
+    "between": "T7 Curva di Lesmo 2 (+435 m) .. T8 Variante Ascari (1) (-74 m)",
+    "oursChordDevM": 1.37,
+    "frozenChordDevM": 7.18,
+    "oursTotalTurnDeg": 5.5,
+    "frozenTotalTurnDeg": 9.5,
+    "oursMedianKappa": 8.56e-05,
+    "frozenMedianKappa": 9.9e-09
+   },
+   {
+    "oursS": [
+     4181.0,
+     4987.0
+    ],
+    "lengthM": 805.0,
+    "between": "T10 Variante Ascari (3) (+84 m) .. T11 Curva Parabolica (-197 m)",
+    "oursChordDevM": 0.65,
+    "frozenChordDevM": 5.01,
+    "oursTotalTurnDeg": 5.3,
+    "frozenTotalTurnDeg": 5.3,
+    "oursMedianKappa": 6.56e-05,
+    "frozenMedianKappa": 1.58e-08
+   },
+   {
+    "oursS": [
+     5497.0,
+     835.0
+    ],
+    "lengthM": 1095.0,
+    "between": "T11 Curva Parabolica (+313 m) .. T1 Variante del Rettifilo (1) (-56 m)",
+    "oursChordDevM": 7.89,
+    "frozenChordDevM": 18.52,
+    "oursTotalTurnDeg": 9.4,
+    "frozenTotalTurnDeg": 9.4,
+    "oursMedianKappa": 7.05e-05,
+    "frozenMedianKappa": 1.57e-08
+   }
+  ],
+  "multiviewerStandIn": {
+   "lap": {
+    "driverNumber": "3",
+    "lapNumber": 2,
+    "lapStartDate": "2021-09-10T12:32:32.752000",
+    "lapStartSessionTime": 1023.005,
+    "lapTime": 85.995,
+    "session": "FP1",
+    "sessionStartTime": 870.359
+   },
+   "points": 752,
+   "vsOurs": {
+    "ours->mv": {
+     "n": 6851,
+     "max": 1.33,
+     "p50": 0.06,
+     "p90": 0.46,
+     "maxAtS": 2461.5,
+     "maxNear": "T6 Curva di Lesmo 1 (-55 m)"
+    },
+    "mv->ours": {
+     "n": 6130,
+     "max": 1.39,
+     "p50": 0.06,
+     "p90": 0.47,
+     "maxAtS": 2481.1,
+     "maxNear": "no corners"
+    },
+    "hausdorff": 1.39
+   },
+   "vsFrozen": {
+    "frozen->mv": {
+     "n": 5868,
+     "max": 105.74,
+     "p50": 19.55,
+     "p90": 73.0,
+     "maxAtS": 5273.1,
+     "maxNear": "T11 Curva Parabolica (+212 m)"
+    },
+    "mv->frozen": {
+     "n": 6130,
+     "max": 105.76,
+     "p50": 21.42,
+     "p90": 74.85,
+     "maxAtS": 5471.4,
+     "maxNear": "no corners"
+    },
+    "hausdorff": 105.76
+   },
+   "lapStartOnOurs": {
+    "s": -15.5,
+    "d": -0.3
+   }
+  }
+ },
+ "interlagos": {
+  "lengthM": {
+   "ours": 4226.1,
+   "ours2024": 4226.5,
+   "frozen": 4160.4,
+   "published": 4309.0,
+   "diff": -65.6,
+   "mvOutline": 4231.5
+  },
+  "overlay": {
+   "ours->frozen": {
+    "n": 4979,
+    "max": 27.5,
+    "p50": 5.14,
+    "p90": 17.2,
+    "maxAtS": 1118.0,
+    "maxNear": "T4 (-284 m)"
+   },
+   "frozen->ours": {
+    "n": 4500,
+    "max": 27.51,
+    "p50": 4.94,
+    "p90": 16.69,
+    "maxAtS": 2253.8,
+    "maxNear": "T4 (-286 m)"
+   },
+   "hausdorff": 27.51
+  },
+  "startFinish": {
+   "distanceM": 640.8,
+   "aOnB": {
+    "s": 1145.4,
+    "d": -7.2
+   },
+   "bOnA": {
+    "s": -1151.0,
+    "d": -10.7
+   }
+  },
+  "corners": [
+   {
+    "number": 1,
+    "name": "T1",
+    "oursS": 365.3,
+    "frozenS": 1505.3,
+    "deltaS": 1140.0
+   },
+   {
+    "number": 2,
+    "name": "T2",
+    "oursS": 463.0,
+    "frozenS": 1603.7,
+    "deltaS": 1140.7
+   },
+   {
+    "number": 3,
+    "name": "T3",
+    "oursS": 648.9,
+    "frozenS": 1785.7,
+    "deltaS": 1136.8
+   },
+   {
+    "number": 4,
+    "name": "T4",
+    "oursS": 1402.4,
+    "frozenS": 2540.2,
+    "deltaS": 1137.8
+   },
+   {
+    "number": 5,
+    "name": "T5",
+    "oursS": 1564.8,
+    "frozenS": 2704.8,
+    "deltaS": 1140.0
+   },
+   {
+    "number": 6,
+    "name": "T6",
+    "oursS": 2003.8,
+    "frozenS": 3141.8,
+    "deltaS": 1138.0
+   },
+   {
+    "number": 7,
+    "name": "T7",
+    "oursS": 2140.9,
+    "frozenS": 3273.9,
+    "deltaS": 1133.0
+   },
+   {
+    "number": 8,
+    "name": "T8",
+    "oursS": 2301.8,
+    "frozenS": 3435.2,
+    "deltaS": 1133.4
+   },
+   {
+    "number": 9,
+    "name": "T9",
+    "oursS": 2427.0,
+    "frozenS": 3553.5,
+    "deltaS": 1126.5
+   },
+   {
+    "number": 10,
+    "name": "T10",
+    "oursS": 2718.4,
+    "frozenS": 3817.8,
+    "deltaS": 1099.4
+   },
+   {
+    "number": 11,
+    "name": "T11",
+    "oursS": 2926.5,
+    "frozenS": 4019.3,
+    "deltaS": 1092.8
+   },
+   {
+    "number": 12,
+    "name": "T12",
+    "oursS": 3217.6,
+    "frozenS": 135.2,
+    "deltaS": 1078.0
+   },
+   {
+    "number": 13,
+    "name": "T13",
+    "oursS": 3328.5,
+    "frozenS": 249.3,
+    "deltaS": 1081.2
+   },
+   {
+    "number": 14,
+    "name": "T14",
+    "oursS": 3586.6,
+    "frozenS": 505.5,
+    "deltaS": 1079.3
+   },
+   {
+    "number": 15,
+    "name": "T15",
+    "oursS": 3986.8,
+    "frozenS": 905.7,
+    "deltaS": 1079.3
+   }
+  ],
+  "markersAreVertices": {
+   "count": 15,
+   "maxDistanceM": 1.1368683772161603e-13,
+   "waypointIndices": [
+    0,
+    32,
+    84,
+    280,
+    328,
+    444,
+    480,
+    527,
+    561,
+    634,
+    690,
+    767,
+    800,
+    870,
+    975
+   ]
+  },
+  "splineFit": [
+   {
+    "alpha": 0.0,
+    "p50": 5.774,
+    "p90": 32.573,
+    "max": 46.553,
+    "lengthM": 4299.3
+   },
+   {
+    "alpha": 0.4,
+    "p50": 1.201,
+    "p90": 7.918,
+    "max": 10.54,
+    "lengthM": 4165.9
+   },
+   {
+    "alpha": 0.5,
+    "p50": 0.153,
+    "p90": 0.455,
+    "max": 1.592,
+    "lengthM": 4163.7
+   },
+   {
+    "alpha": 0.6,
+    "p50": 1.599,
+    "p90": 10.064,
+    "max": 12.945,
+    "lengthM": 4171.5
+   },
+   {
+    "alpha": 1.0,
+    "p50": 7.066,
+    "p90": 67.672,
+    "max": 90.322,
+    "lengthM": 4310.6
+   }
+  ],
+  "reproduction": {
+   "vertices": [
+    1131,
+    1131
+   ],
+   "maxVertexErrorM": 2.2737367544323206e-13,
+   "knots": 180
+  },
+  "vertexTurnDeg": {
+   "frozenMaxAbs": 57.5,
+   "frozenAtS": 3817.8,
+   "oursMaxAbs": 15.2
+  },
+  "peaksAtMarkers": {
+   "frozen": [
+    {
+     "corner": 12,
+     "s": 135.2,
+     "ratio": 1.0,
+     "peakOffsetM": -0.0,
+     "kappaPeak": 0.0552
+    },
+    {
+     "corner": 13,
+     "s": 249.3,
+     "ratio": 1.0,
+     "peakOffsetM": -0.0,
+     "kappaPeak": 0.0099
+    },
+    {
+     "corner": 14,
+     "s": 505.5,
+     "ratio": 1.0,
+     "peakOffsetM": -0.0,
+     "kappaPeak": 0.0175
+    },
+    {
+     "corner": 15,
+     "s": 905.7,
+     "ratio": 0.998,
+     "peakOffsetM": 46.4,
+     "kappaPeak": 0.0078
+    },
+    {
+     "corner": 1,
+     "s": 1505.3,
+     "ratio": 1.0,
+     "peakOffsetM": -0.0,
+     "kappaPeak": 0.0594
+    },
+    {
+     "corner": 2,
+     "s": 1603.7,
+     "ratio": 1.0,
+     "peakOffsetM": -0.0,
+     "kappaPeak": 0.0323
+    },
+    {
+     "corner": 3,
+     "s": 1785.7,
+     "ratio": 1.0,
+     "peakOffsetM": 0.0,
+     "kappaPeak": 0.0379
+    },
+    {
+     "corner": 4,
+     "s": 2540.2,
+     "ratio": 1.0,
+     "peakOffsetM": 0.0,
+     "kappaPeak": 0.0517
+    },
+    {
+     "corner": 5,
+     "s": 2704.8,
+     "ratio": 1.0,
+     "peakOffsetM": -0.0,
+     "kappaPeak": 0.0306
+    },
+    {
+     "corner": 6,
+     "s": 3141.8,
+     "ratio": 0.986,
+     "peakOffsetM": -24.3,
+     "kappaPeak": 0.0314
+    },
+    {
+     "corner": 7,
+     "s": 3273.9,
+     "ratio": 1.0,
+     "peakOffsetM": 0.0,
+     "kappaPeak": 0.0247
+    },
+    {
+     "corner": 8,
+     "s": 3435.2,
+     "ratio": 1.0,
+     "peakOffsetM": -0.0,
+     "kappaPeak": 0.0772
+    },
+    {
+     "corner": 9,
+     "s": 3553.5,
+     "ratio": 1.0,
+     "peakOffsetM": -0.0,
+     "kappaPeak": 0.0869
+    },
+    {
+     "corner": 10,
+     "s": 3817.8,
+     "ratio": 1.0,
+     "peakOffsetM": -0.0,
+     "kappaPeak": 0.149
+    },
+    {
+     "corner": 11,
+     "s": 4019.3,
+     "ratio": 1.0,
+     "peakOffsetM": -0.0,
+     "kappaPeak": 0.0546
+    }
+   ],
+   "ours": [
+    {
+     "corner": 1,
+     "s": 365.3,
+     "ratio": 0.736,
+     "peakOffsetM": -15.1,
+     "kappaPeak": 0.0302
+    },
+    {
+     "corner": 2,
+     "s": 463.0,
+     "ratio": 0.738,
+     "peakOffsetM": -17.8,
+     "kappaPeak": 0.0281
+    },
+    {
+     "corner": 3,
+     "s": 648.9,
+     "ratio": 0.887,
+     "peakOffsetM": -38.7,
+     "kappaPeak": 0.0087
+    },
+    {
+     "corner": 4,
+     "s": 1402.4,
+     "ratio": 0.97,
+     "peakOffsetM": 3.2,
+     "kappaPeak": 0.019
+    },
+    {
+     "corner": 5,
+     "s": 1564.8,
+     "ratio": 0.959,
+     "peakOffsetM": -4.2,
+     "kappaPeak": 0.0099
+    },
+    {
+     "corner": 6,
+     "s": 2003.8,
+     "ratio": 0.752,
+     "peakOffsetM": -13.0,
+     "kappaPeak": 0.0116
+    },
+    {
+     "corner": 7,
+     "s": 2140.9,
+     "ratio": 0.671,
+     "peakOffsetM": -20.1,
+     "kappaPeak": 0.0124
+    },
+    {
+     "corner": 8,
+     "s": 2301.8,
+     "ratio": 0.556,
+     "peakOffsetM": 14.0,
+     "kappaPeak": 0.0432
+    },
+    {
+     "corner": 9,
+     "s": 2427.0,
+     "ratio": 0.946,
+     "peakOffsetM": 18.7,
+     "kappaPeak": 0.03
+    },
+    {
+     "corner": 10,
+     "s": 2718.4,
+     "ratio": 0.952,
+     "peakOffsetM": -2.8,
+     "kappaPeak": 0.0507
+    },
+    {
+     "corner": 11,
+     "s": 2926.5,
+     "ratio": 0.917,
+     "peakOffsetM": 49.1,
+     "kappaPeak": 0.0105
+    },
+    {
+     "corner": 12,
+     "s": 3217.6,
+     "ratio": 0.899,
+     "peakOffsetM": -12.0,
+     "kappaPeak": 0.0251
+    },
+    {
+     "corner": 13,
+     "s": 3328.5,
+     "ratio": 0.719,
+     "peakOffsetM": -12.9,
+     "kappaPeak": 0.0067
+    },
+    {
+     "corner": 14,
+     "s": 3586.6,
+     "ratio": 0.596,
+     "peakOffsetM": -15.8,
+     "kappaPeak": 0.006
+    },
+    {
+     "corner": 15,
+     "s": 3986.8,
+     "ratio": 0.923,
+     "peakOffsetM": -5.8,
+     "kappaPeak": 0.0021
+    }
+   ]
+  },
+  "straights": [
+   {
+    "oursS": [
+     810.0,
+     1306.0
+    ],
+    "lengthM": 495.0,
+    "between": "T3 (+161 m) .. T4 (-97 m)",
+    "oursChordDevM": 2.2,
+    "frozenChordDevM": 18.1,
+    "oursTotalTurnDeg": 4.6,
+    "frozenTotalTurnDeg": 17.2,
+    "oursMedianKappa": 0.000119,
+    "frozenMedianKappa": 1.6e-08
+   },
+   {
+    "oursS": [
+     4066.0,
+     235.0
+    ],
+    "lengthM": 395.0,
+    "between": "T15 (+79 m) .. T1 (-130 m)",
+    "oursChordDevM": 3.93,
+    "frozenChordDevM": 11.56,
+    "oursTotalTurnDeg": 7.6,
+    "frozenTotalTurnDeg": 15.6,
+    "oursMedianKappa": 0.000237,
+    "frozenMedianKappa": 1.37e-08
+   }
+  ],
+  "ours2024": {
+   "vsOurs": {
+    "ours->ours2024": {
+     "n": 4979,
+     "max": 0.51,
+     "p50": 0.04,
+     "p90": 0.16,
+     "maxAtS": 1955.0,
+     "maxNear": "T6 (-49 m)"
+    },
+    "ours2024->ours": {
+     "n": 5066,
+     "max": 0.51,
+     "p50": 0.04,
+     "p90": 0.16,
+     "maxAtS": 1950.7,
+     "maxNear": "T6 (-48 m)"
+    },
+    "hausdorff": 0.51
+   },
+   "vsFrozen": {
+    "ours2024->frozen": {
+     "n": 5066,
+     "max": 27.48,
+     "p50": 5.1,
+     "p90": 16.99,
+     "maxAtS": 1112.9,
+     "maxNear": "T4 (-284 m)"
+    },
+    "frozen->ours2024": {
+     "n": 4500,
+     "max": 27.49,
+     "p50": 4.96,
+     "p90": 16.66,
+     "maxAtS": 2253.8,
+     "maxNear": "T4 (-286 m)"
+    },
+    "hausdorff": 27.49
+   },
+   "startFinishOnOurs": {
+    "s": 5.3,
+    "d": -0.0
+   },
+   "cornerDeltaS": [
+    -5.2,
+    -5.2,
+    -5.1,
+    -5.1,
+    -5.1,
+    -4.9,
+    -4.8,
+    -4.9,
+    -4.9,
+    -4.9,
+    -5.0,
+    -4.9,
+    -4.9,
+    -4.9,
+    -4.8
+   ]
+  },
+  "multiviewerStandIn": {
+   "lap": {
+    "driverNumber": "3",
+    "lapNumber": 2,
+    "lapStartDate": "2021-11-12T15:32:24.562000",
+    "lapStartSessionTime": 1044.553,
+    "lapTime": 76.148,
+    "session": "FP1",
+    "sessionStartTime": 900.396
+   },
+   "points": 283,
+   "medianStepM": 13.9,
+   "maxStepM": 38.6,
+   "openingGapM": 25.5,
+   "datasetYear": 2023,
+   "vsOurs": {
+    "ours->mv": {
+     "n": 4979,
+     "max": 0.86,
+     "p50": 0.07,
+     "p90": 0.26,
+     "maxAtS": 453.5,
+     "maxNear": "T2 (-10 m)"
+    },
+    "mv->ours": {
+     "n": 4373,
+     "max": 0.93,
+     "p50": 0.07,
+     "p90": 0.27,
+     "maxAtS": 434.2,
+     "maxNear": "no corners"
+    },
+    "hausdorff": 0.93
+   },
+   "vsFrozen": {
+    "frozen->mv": {
+     "n": 4500,
+     "max": 27.45,
+     "p50": 4.97,
+     "p90": 16.74,
+     "maxAtS": 2253.8,
+     "maxNear": "T4 (-286 m)"
+    },
+    "mv->frozen": {
+     "n": 4373,
+     "max": 27.45,
+     "p50": 5.15,
+     "p90": 16.9,
+     "maxAtS": 1098.9,
+     "maxNear": "no corners"
+    },
+    "hausdorff": 27.45
+   },
+   "lapStartOnOurs": {
+    "s": 20.6,
+    "d": 0.1
+   },
+   "lapStartOnFrozen": {
+    "s": 1166.0,
+    "d": -7.3
+   }
+  }
+ }
+}
