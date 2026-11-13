@@ -36,10 +36,19 @@ unblocks the current milestone instead.
 
 ## Stack
 
-- **Viewer:** Vite + React + TypeScript + react-three-fiber + drei
+- **Viewer:** Vite 8.2.2 + React 19.3.0 + TypeScript 6.0.3 +
+  react-three-fiber 9.8.2 + drei 10.7.9 + three 0.169.0; vitest 5.1.0,
+  @vitejs/plugin-react 6.1.1, @types/node 24.13.4. React, Vite, plugin-react,
+  TypeScript and their types match `frontend/package-lock.json`, so the 3D can
+  move into the frontend app later. Needs Node `^22.12`, `^24` or `>=26`
+  (vitest 5's engines; Vite 8 alone accepts `^20.19 || >=22.12`).
 - **Data extraction:** Python 3.11+, FastF1, numpy, scipy — offline scripts only
 - Pin versions in `package.json` / `requirements.txt`. Don't upgrade Three.js or
   R3F mid-milestone; the R3F ↔ Three.js version pairing is easy to break.
+- R3F 9 connects pointer events after its children first mount, so a drei
+  `<Html>` mounted at once re-targets a commit later and, under React 19,
+  renders empty. Mount `<Html>` only once `events.connected` is set, as
+  `src/track/OrientationAids.tsx` does.
 
 ## Commands
 
