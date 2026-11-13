@@ -8,9 +8,9 @@ It now lives inside the group repo at `viz3d/` (brought in with
 `package.json`, own `requirements.txt`, no imports from `frontend/` or
 `backend/`, and nothing in it may read files outside `viz3d/` (typecheck, tests,
 snapshot and extraction never do). The exceptions are the backend-integration
-scripts - phase 0b's `verify_export_backend.py` and `smoke_engine_lap.py`, and
-phase 3's `record_race.py` - which import the backend by design and change
-nothing in it. Run every command below from `viz3d/` unless it says otherwise. The goal is unchanged: one circuit — Monza,
+scripts - phase 0b's `verify_export_backend.py` and `smoke_engine_lap.py`,
+phase 3's `record_race.py` and phase 3b's `pit_horizon.py` - which import the
+backend by design and change nothing in it. Run every command below from `viz3d/` unless it says otherwise. The goal is unchanged: one circuit — Monza,
 2024 — rendering in Three.js with cars moving along it.
 
 Design rationale, data pipeline details and the milestone list live in
@@ -79,6 +79,13 @@ python viz3d/scripts/smoke_engine_lap.py                 # backend deps + joblib
 wsl -d Ubuntu-22.04 -- bash /mnt/c/<...>/viz3d/scripts/record_race.sh   # -> .cache/recordings/
 python scripts/check_recording.py .cache/recordings/interlagos_seed42_3laps.jsonl
 python scripts/trim_recording.py .cache/recordings/interlagos_seed42_3laps.jsonl --out public/recordings/engine-interlagos-seed42.jsonl
+
+# Phase 3b: first-pit horizon, the three 15-lap races (a v2 tuned, b v2 untuned,
+# c our export), compare, trim the pit fixture (docs/phase3b-longer-races.md)
+wsl -d Ubuntu-22.04 -- bash /mnt/c/<...>/viz3d/scripts/pit_horizon.sh
+wsl -d Ubuntu-22.04 -- bash /mnt/c/<...>/viz3d/scripts/record_phase3b.sh 15
+python scripts/compare_recordings.py .cache/recordings/*_15laps_*.jsonl   # after check_recording --json on each
+python scripts/trim_recording.py .cache/recordings/interlagos_2023_seed42_15laps_c_ours.jsonl --from-s 1340 --out public/recordings/engine-interlagos2023-seed42-pit.jsonl
 
 # Phase 0: the engine's frozen tracks, vendored read-only in vendor/tracks_frozen/
 # (see PROVENANCE.md there) - docs/phase0-geometry-report.md has the full commands
@@ -151,6 +158,10 @@ in headless Chromium with `?probe` (which mounts `src/probe.tsx`), and:
   GPU instance matrix at the recording's `position_xy` / `heading_deg`, the
   car panel to show its position and `d_m`, and the T-cam at the followed
   car's pose plus its car-local offset;
+- on `?track=engine_ours`, does the same on the pit fixture, plus the stop's
+  tick and 20 ticks later following the car that pitted: the panel's tyre and
+  pit lines and the timeline's PIT tag must equal the fixture, and the timeline
+  must carry one mark per stop;
 - steps the replay at 0.25x beside a front wheel with the debug wheel markers
   on, checks spin against distance travelled, scrubs the timeline backwards and
   requires the marker to return exactly.
@@ -211,6 +222,13 @@ the T-cam check (docs/phase3-engine-race.md section 5). First run needs
   to the pose: the T-cam is bolted to it and the chase anchor sits on the car.
   `MotionState.posed` selects the path (and reaches the rig through
   `FollowState`); every source must write it.
+- **An engine pit stop is bookkeeping, not a place.** It happens inside
+  `_complete_lap` on one tick: tyres swapped (compound from the weather), fuel
+  topped to 70% (often 0 kg), `pit_penalty_pending_s = 22` added to the *next*
+  lap's time, never to `race_progress_m`. Nothing sets `pitting = True` and
+  `Track.pit` is never read, so the car keeps racing on the line. Show it as
+  state (car panel, timeline), never as a pit lane. The tick before a stop has
+  the tyre life *before* that lap's wear.
 - **`run_race_10_cars.py` is not `engine.run()`.** `run()` steps the weather to
   lap 1 first and caps ticks; the 10-car script does neither. The recorder
   reproduces the script's loop, and its realtime can only be turned off there.
@@ -227,12 +245,15 @@ scripts/export_frozen_track.py   # our JSON -> engine frozen format (phase 0b)
 scripts/verify_export_backend.py # exports' sha256 via backend load_track_frozen
 scripts/smoke_engine_lap.py      # one solo lap per export in the real engine
 scripts/record_race.py (+ .sh)   # headless 10-car engine race -> JSONL ticks (WSL)
+scripts/record_phase3b.sh  # the three 15-lap phase 3b recordings, in turn
+scripts/pit_horizon.py (+ .sh)   # first pit lap from the engine's wear/fuel code (WSL)
 scripts/check_recording.py # progress, round trip, overtakes, |d| of a recording
+scripts/compare_recordings.py    # lap times, order, excursions, pits across recordings
 scripts/trim_recording.py  # full recording -> committed <= 1 MB fixture
 scripts/multiviewer.py     # MultiViewer corner markers / lap outline, cached
 scripts/snapshot.mjs       # headless render verification (npm run snapshot)
 public/tracks/*.json       # committed track geometry
-public/recordings/         # trimmed engine recording fixture (?track=engine)
+public/recordings/         # trimmed engine fixtures (?track=engine, ?track=engine_ours)
 vendor/tracks_frozen/      # engine frozen tracks, copied byte-exact from feat/bot-ai
 exports/                   # our Interlagos in the engine's frozen format
 src/track/                 # spline, frame, ribbon, checks, ?track= registry
@@ -243,5 +264,6 @@ src/App.tsx
 docs/3d-design.md          # design rationale and milestones
 docs/phase0-geometry-report.md  # engine frozen tracks vs ours: the evidence
 docs/phase3-engine-race.md # an engine race recorded and played in the 3D
+docs/phase3b-longer-races.md # 15-lap races, pit stops, v2 vs our Interlagos
 ASSETS.md                  # third-party asset licences
 ```

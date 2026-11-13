@@ -1,5 +1,5 @@
 import type { MotionSource, MotionState } from '../cars/motion'
-import type { Recording } from './types'
+import type { PitEvent, Recording } from './types'
 
 /** Same floor, same reason, as `replay/source.ts`: the rig ignores speed <= 0. */
 const MIN_REPORTED_MPS = 1e-3
@@ -68,6 +68,74 @@ export function lapAtTime(rec: Recording, tS: number, car: number): number {
   const { i, f } = tickAt(rec, tS)
   const k = f >= 1 ? i + 1 : i
   return rec.lap[k * rec.cars.length + car]
+}
+
+/** What the panel and the timeline show about a car's pit state at one tick. */
+export interface PitReadout {
+  /** The engine's own `pitting` flag at that tick. */
+  pitting: boolean
+  compound: string
+  tyreLifePct: number
+  /** NaN when the recording has no `fuel_kg`. */
+  fuelKg: number
+  stops: number
+  /** Pit time waiting to be added to the lap now being driven, seconds. */
+  penaltyPendingS: number
+  /**
+   * The stop whose penalty is still pending: from the tick of the stop to the
+   * next lap completion, the window in which this car is "pitting" in any
+   * sense the engine has.
+   */
+  active: PitEvent | null
+}
+
+/**
+ * Pit state of one car at the tick at or before `tS`, like `lapAtTime`.
+ *
+ * The engine never stops a car for a pit (phase 3b doc, section 4): the stop is
+ * done inside the `_complete_lap` call that ends the lap, tyres and fuel change
+ * on that tick, `pitting` is set false, and the pit time is held in
+ * `pit_penalty_pending_s` until the next lap completes, when it is added to that
+ * lap's time. So "pitting" here is that pending window, not a place.
+ */
+export function pitStateAt(rec: Recording, tS: number, car: number): PitReadout {
+  const { i, f } = tickAt(rec, tS)
+  const k = f >= 1 ? i + 1 : i
+  const j = k * rec.cars.length + car
+  const pending = rec.pitPenaltyS[j]
+  let active: PitEvent | null = null
+  for (const e of rec.pitEvents) {
+    if (e.car !== car || e.tick > k) continue
+    if (rec.hasPitFields ? pending > 0 : rec.lap[j] === e.lap) active = e
+  }
+  return {
+    pitting: rec.pitting[j] === 1,
+    compound: rec.compounds[rec.tyreCompound[j]],
+    tyreLifePct: rec.tyreLifePct[j],
+    fuelKg: rec.fuelKg[j],
+    stops: rec.pitStops[j],
+    penaltyPendingS: pending,
+    active,
+  }
+}
+
+/** The panel's tyre line: compound, life, stops. */
+export function tyreText(p: PitReadout): string {
+  const stops = `${p.stops} stop${p.stops === 1 ? '' : 's'}`
+  return `${p.compound} ${p.tyreLifePct.toFixed(1)}% · ${stops}`
+}
+
+/** The panel's pit line, empty when the car has nothing pending. */
+export function pitText(p: PitReadout): string {
+  if (p.active) {
+    const e = p.active
+    return (
+      `PIT end of lap ${e.lap}: ${e.compoundBefore} (${e.lifeBefore.toFixed(1)}% before that lap) → ` +
+      `${e.compoundAfter} ${e.lifeAfter.toFixed(1)}%, +${p.penaltyPendingS.toFixed(1)} s ` +
+      `on lap ${e.lap + 1}'s time (car not stopped)`
+    )
+  }
+  return p.pitting ? 'PITTING (engine flag)' : ''
 }
 
 /**
