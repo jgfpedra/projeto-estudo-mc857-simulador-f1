@@ -122,8 +122,8 @@ export const api = {
     return snapshot
   },
   async getCircuits(): Promise<Circuit[]> {
-    const data = await request<ApiCircuit[]>("/circuits")
-    return data.map(mapCircuit)
+    const data = await request<ApiCircuit[] | { circuits: ApiCircuit[] }>("/circuits")
+    return (Array.isArray(data) ? data : data.circuits).map(mapCircuit)
   },
 
   getSeasons(): Promise<number[]> {
@@ -137,6 +137,9 @@ export const api = {
 
   async startRace(body: ApiRaceRequest): Promise<RaceStartResponse> {
     const data = await request<ApiRaceResponse>("/races", { method: "POST", body })
+    if (typeof data.race_id !== "string" || !data.race_id.trim()) {
+      throw new Error("A API não retornou um identificador válido para a corrida.")
+    }
     return {
       raceId: data.race_id,
       wsPath: data.ws_path,

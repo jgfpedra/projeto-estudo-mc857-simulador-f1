@@ -90,6 +90,10 @@ class SimulationConfig:
     input_fallback: str = "brake"       # "brake" (freia aos poucos) | "neutral" (parado)
     input_stale_after_s: float = 1.0    # input sem atualização há mais de N segundos → fallback
     track_progress_laps: bool = False   # encerra voltas pelo avanço na pista
+    collision_events: bool = False
+    collision_force_threshold_n: float = 1.0
+    collision_penetration_m: float = 0.001
+    collision_release_s: float = 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -460,6 +464,7 @@ class SimulationEngine:
 
         if self.config.track_progress_laps or len(self.drivers) > 1:
             self._update_race_progress(dt)
+        self._detect_collisions()
         self._check_lap_completion()
         self._publish_tick()
 

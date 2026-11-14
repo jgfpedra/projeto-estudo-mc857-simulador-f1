@@ -21,6 +21,7 @@ if _BACKEND_ROOT not in sys.path:
 import redis
 from config import DEFAULT_DRIVERS, DEFAULT_INTERLAGOS_CONFIG
 from engine.physics import CHASSIS_LENGTH_M, CHASSIS_WIDTH_M, CHASSIS_HEIGHT_M
+from domain import TyreCompound, WeatherKind, WeatherModel, WeatherTransitionConfig, BASE_CONDITIONS
 from engine import InMemoryInputSource, Publisher, RuleBasedRaceController, SimulationEngine
 from .providers.race_data import default_provider, driver_record
 from .providers.f1db_layouts import load_layout_catalog, normalize
@@ -191,7 +192,8 @@ class RaceManager:
             self.catalog = None
         self._threads = {}
 
-    def create_race(self, laps, track, year, num_drivers=2, layout_id=None):
+    def create_race(self, laps, track, year, num_drivers=2, layout_id=None, selected_roster=None,
+                    weather=None, weather_change=None, initial_tyre=None):
         if not 1 <= num_drivers <= 24:
             raise ValueError('A quantidade de corredores deve estar entre 1 e 24.')
         self.redis.ping()
@@ -205,11 +207,15 @@ class RaceManager:
         track_obj, roster, sources = self.provider.load(circuit, season)
         if not roster:
             raise ValueError('Fonte não forneceu pilotos')
+        if selected_roster is not None:
+            roster = selected_roster
+            sources['driver_source'] = 'season_selection'
         roster = list(roster[:num_drivers])
         while len(roster) < num_drivers:
             i = len(roster)+1
             roster.append(driver_record(f'P{i:02d}', f'Piloto {i:02d}', None, None, '808080'))
-        drivers = [replace(DEFAULT_DRIVERS[i % len(DEFAULT_DRIVERS)], driver_id=entry['driver_id'], name=entry['name'])
+        drivers = [replace(DEFAULT_DRIVERS[i % len(DEFAULT_DRIVERS)], driver_id=entry['driver_id'], name=entry['name'],
+                           **({'starting_tyre_compound': TyreCompound(initial_tyre.upper())} if initial_tyre else {}))
                    for i, entry in enumerate(roster)]
         race_id = f'race_{uuid.uuid4().hex}'
         gui = os.environ.get('F1_PYBULLET_GUI', '').lower() in ('1','true','yes','on')
@@ -234,8 +240,27 @@ class RaceManager:
                          'waypoints':[[float(x),float(y)] for x,y in track_obj.waypoints]},
                 'drivers':driver_meta}
         publisher = LivePublisher(self.redis, race_id, driver_meta)
-        engine = SimulationEngine(config=config, track=track_obj, drivers=drivers, publisher=publisher,
-                                  input_source=InMemoryInputSource(fallback_race_id=race_id))
+        weather_model = None
+        if weather is not None:
+            weather_map = {'dry': WeatherKind.DRY, 'cloudy': WeatherKind.CLOUDY,
+                           'light_rain': WeatherKind.WET, 'rain': WeatherKind.WET,
+                           'heavy_rain': WeatherKind.WET}
+            initial = BASE_CONDITIONS[weather_map[weather]]
+            if weather in ('light_rain', 'heavy_rain'):
+                initial = replace(initial, rainfall=0.5 if weather == 'light_rain' else 7.0)
+            transition = WeatherTransitionConfig.default(transition_prob_per_lap=0.0)
+            if weather_change:
+                kinds = list(dict.fromkeys(weather_map[x.value if hasattr(x, 'value') else x]
+                                           for x in weather_change['possible']))
+                transition = WeatherTransitionConfig(
+                    transition_matrix={kind: {target: 1.0 / len(kinds) for target in kinds} for kind in WeatherKind},
+                    transition_prob_per_lap=weather_change['probability_per_lap'])
+            weather_model = WeatherModel(initial=initial, config=transition)
+        engine_kwargs = dict(config=config, track=track_obj, drivers=drivers, publisher=publisher,
+                             input_source=InMemoryInputSource(fallback_race_id=race_id))
+        if weather_model is not None:
+            engine_kwargs['weather_model'] = weather_model
+        engine = SimulationEngine(**engine_kwargs)
         publisher.engine = engine
         engine.physics.contact_collector = []
         engine.physics.contact_collector_include_penetration = True
@@ -247,7 +272,7 @@ class RaceManager:
         thread = threading.Thread(target=self._run_engine, args=(engine,publisher), daemon=True)
         self._threads[race_id] = thread
         thread.start()
-        return race_id
+        return race_id, track_obj, config
 
     def _run_engine(self, engine, publisher):
         try:

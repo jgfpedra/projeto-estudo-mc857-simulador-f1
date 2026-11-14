@@ -41,6 +41,7 @@ export type ApiTyre = "soft" | "medium" | "hard" | "intermediate" | "wet"
 
 export type ApiRaceRequest = {
   circuit: { id: string; layout_id?: string }
+  year: number
   laps: number
   grid: string[]
   weather: ApiWeather

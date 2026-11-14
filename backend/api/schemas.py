@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 MAX_GRID = 24  # slots do grid do motor (SimulationConfig.num_slots)
 
@@ -119,26 +119,27 @@ class RaceSetupRequest(BaseModel):
     outros anos ou circuitos seguem ``config.load_track``.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     laps: int = Field(default=10, ge=1, le=200)
     num_drivers: int = Field(default=2, ge=1, le=24)
     track: Optional[str] = None
     layout_id: Optional[str] = None
     year: Optional[int] = None
     season: Optional[int] = None
+    circuit: Optional[CircuitChoice] = None
+    grid: Optional[List[str]] = Field(None, min_length=1, max_length=24)
+    weather: Optional[WeatherName] = None
+    weather_change: Optional[WeatherChange] = None
+    initial_tyre: Optional[TyreName] = None
+    stints: Optional[List[StintIn]] = None
 
 
 class RaceSetupResponse(BaseModel):
-    race_id: str = Field(..., description="Use para abrir o WebSocket.")
-    ws_path: str = Field(..., examples=["/ws/races/race_1a2b3c4d"])
+    race_id: str
     track_name: str
     num_laps: int
-    circuit_id: Optional[str] = None
-    layout_id: Optional[str] = None
-    grid: List[GridEntryOut]
-    initial_weather: InitialWeatherOut
-    initial_tyre: Optional[TyreName] = Field(
-        None, description="Pneu aplicado a todos. null = pneus padrão do grid padrão."
-    )
-    warnings: List[str] = Field(
-        default_factory=list, description="Itens aceitos mas não aplicados (ou aproximados) pelo motor."
-    )
+    ws_path: str
+    grid: List[str] = Field(default_factory=list)
+    initial_weather: str = "dry"
+    warnings: List[str] = Field(default_factory=list)

@@ -147,6 +147,7 @@ export function WeatherTiresSelection() {
   selectedCircuitId && selectedLayout
     ? {
         circuitId: selectedCircuitId,
+        season: Number(season),
         layoutId: selectedLayout.id,
         laps: totalLaps,
         grid: gridDrivers.map((driver) => driver.id),
@@ -170,7 +171,6 @@ export function WeatherTiresSelection() {
     if (!setup || setupError) return
 
     const race = await startRace(setup)
-    // A tela de simulação ainda será ajustada. Ela recebe race_id, ws_path e warnings pelo state.
     if (race) navigate(`/race-simulation/${race.raceId}`, { state: race })
   }
 

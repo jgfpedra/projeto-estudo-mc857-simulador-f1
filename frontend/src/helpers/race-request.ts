@@ -16,6 +16,7 @@ const TYRE: Record<TireCompound, ApiTyre> = {
 /** Estado da tela de clima e pneus, já com o layout resolvido. */
 export type RaceSetup = {
   circuitId: string
+  season: number
   layoutId: string
   laps: number
   grid: string[]
@@ -54,6 +55,7 @@ export function validateRaceSetup(setup: RaceSetup): string | null {
 export function buildRaceRequest(setup: RaceSetup): ApiRaceRequest {
   const request: ApiRaceRequest = {
     circuit: { id: setup.circuitId, layout_id: setup.layoutId },
+    year: setup.season,
     laps: setup.laps,
     grid: setup.grid,
     weather: setup.weather.weather,

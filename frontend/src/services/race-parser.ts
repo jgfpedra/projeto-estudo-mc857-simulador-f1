@@ -55,7 +55,7 @@ function parseCar(raw: unknown): CarFrame | null {
     lap,
     x: xy[0],
     y: xy[1],
-    speedKmh: num(raw.speed_kmh) ?? 0,
+    speedKmh: num(raw.speed_kmh) ?? (num(raw.velocity_mps) ?? 0) * 3.6,
     tyre: str(raw.tyre_compound) ?? "UNKNOWN",
     tyreLifePct: num(raw.tyre_life_pct) ?? null,
     pitting: raw.pitting === true,
