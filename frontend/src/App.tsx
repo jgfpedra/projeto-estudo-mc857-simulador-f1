@@ -27,7 +27,7 @@ export default function App() {
           element={<WeatherTiresSelection />}
         />
 
-        <Route path="/race-simulation" element={<RaceSimulation />} />
+        <Route path="/race-simulation/:raceId" element={<RaceSimulation />} />
 
         <Route
           path="*"

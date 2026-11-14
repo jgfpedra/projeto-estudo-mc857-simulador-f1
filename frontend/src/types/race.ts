@@ -1,58 +1,112 @@
-export type TrackStatus = "green" | "yellow" | "safety_car" | "vsc" | "red_flag"
-export type Tyre = "SOFT" | "MEDIUM" | "HARD" | "INTERMEDIATE" | "WET" | "UNKNOWN"
-
-export type RaceEventType =
-  | "overtake"
-  | "pit_stop"
-  | "safety_car"
-  | "vsc"
-  | "red_flag"
-  | "yellow_flag"
-  | "green_flag"
-  | "finish"
-
-export type DriverInfo = {
-  id: string
-  code: string
-  name: string
-  teamColor: string
-}
-
-/** Estado de um carro em um tick. Coordenadas na unidade da FastF1 (décimos de metro). */
-export type TickCar = {
-  id: string
-  x: number
-  y: number
-  position: number
-  lap: number
-  lapTotal: number
-  speedKmh: number
-  tyre: Tyre
-  inPit: boolean
-  gapToLeaderS: number | null
-}
-
-/** Um instante da corrida. É o objeto que vai pelo websocket no futuro. */
-export type Tick = {
-  t: number
-  trackStatus: TrackStatus
-  cars: TickCar[]
-}
-
-export type RaceEvent = {
-  t: number
-  type: RaceEventType
-  driverIds: string[]
-  lap: number
-  message: string
-}
+/** Modelo de domínio da corrida. Os campos do backend (snake_case) são convertidos em services/race-parser.ts. */
 
 export type Bounds = { minX: number; maxX: number; minY: number; maxY: number }
 
-export type RaceData = {
-  meta: { totalLaps: number; tickHz: number; durationS: number }
-  track: { points: [number, number][]; bounds: Bounds }
-  drivers: DriverInfo[]
-  ticks: Tick[]
-  events: RaceEvent[]
+export type TrackStatus = "GREEN" | "YELLOW" | "SAFETY_CAR" | "VSC" | "RED_FLAG"
+
+export type Tone = "info" | "success" | "warn" | "danger"
+
+export type FeedKind =
+  | "overtake"
+  | "pit_stop"
+  | "tyre_worn"
+  | "weather"
+  | "collision"
+  | "race_control"
+  | "finish"
+
+export type FeedItem = {
+  id: number
+  simTs: number
+  lap: number
+  kind: FeedKind
+  tone: Tone
+  message: string
+  driverIds: string[]
+}
+
+export type ViewMode = "2d" | "3d"
+
+export type RaceDriver = {
+  driverId: string
+  abbreviation: string
+  name: string
+  number: number | null
+  team: string | null
+  /** Pode vir nulo enquanto o backend não envia a cor da temporada. */
+  teamColor: string | null
+  gridPosition: number
+}
+
+export type RaceTrack = {
+  name: string
+  lengthM: number
+  startFinishWaypoint: number
+  /** Metros, mesmo sistema de coordenadas dos carros. */
+  waypoints: [number, number][]
+}
+
+/** GET /races/{race_id}: dados estáticos da corrida. */
+export type RaceInfo = {
+  raceId: string
+  season: number | null
+  circuitId: string
+  layoutId: string | null
+  numLaps: number
+  track: RaceTrack
+  drivers: RaceDriver[]
+}
+
+export type Weather = {
+  kind: string
+  trackTemp: number
+  rainfall: number
+}
+
+export type CarFrame = {
+  driverId: string
+  position: number
+  lap: number
+  x: number
+  y: number
+  speedKmh: number
+  tyre: string
+  tyreLifePct: number | null
+  pitting: boolean
+  gapToLeaderS: number | null
+  lapsBehind: number
+  headingDeg: number | null
+}
+
+export type Frame = {
+  simTs: number
+  lap: number
+  weather: Weather | null
+  cars: CarFrame[]
+}
+
+export type FinalEntry = {
+  position: number
+  driverId: string
+  lapsCompleted: number
+  totalTimeS: number
+  pitStops: number
+}
+
+/** Mensagens do WebSocket já validadas e convertidas. */
+export type LiveMessage =
+  | { kind: "tick"; frame: Frame }
+  | { kind: "race_control"; simTs: number; lap: number; status: TrackStatus; message: string }
+  | { kind: "pit_stop"; simTs: number; lap: number; driverId: string; newCompound: string; pitTimeS: number }
+  | { kind: "tyre_worn"; simTs: number; driverId: string; compound: string; tyreLifePct: number }
+  | { kind: "weather_changed"; simTs: number; lap: number; weather: Weather }
+  | { kind: "collision"; simTs: number; lap: number; driverAId: string; driverBId: string; impactForceN: number }
+  | { kind: "race_end"; simTs: number; classification: FinalEntry[] }
+
+/** GET /races/{race_id}/snapshot. */
+export type RaceSnapshot = {
+  status: "running" | "finished"
+  simTs: number
+  lastFrame: Frame | null
+  classification: FinalEntry[] | null
 }

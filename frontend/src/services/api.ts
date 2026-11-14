@@ -2,6 +2,8 @@ import { env } from "@/config/env"
 import type { ApiCircuit, ApiDriver, ApiLayout, ApiRaceRequest, ApiRaceResponse } from "@/types/api"
 import type { Circuit, CircuitLayout } from "@/types/circuit"
 import type { Driver } from "@/types/driver"
+import { parseRaceInfo, parseSnapshot } from "@/services/race-parser"
+import type { RaceInfo, RaceSnapshot } from "@/types/race"
 
 export type RaceStartResponse = {
   raceId: string
@@ -106,6 +108,19 @@ function mapDriver(d: ApiDriver): Driver {
 }
 
 export const api = {
+  async getRace(raceId: string): Promise<RaceInfo> {
+    const race = parseRaceInfo(await request<unknown>(`/races/${encodeURIComponent(raceId)}`))
+    if (!race) throw new Error("Resposta inválida ao carregar a corrida.")
+    return race
+  },
+
+  async getSnapshot(raceId: string): Promise<RaceSnapshot> {
+    const snapshot = parseSnapshot(
+      await request<unknown>(`/races/${encodeURIComponent(raceId)}/snapshot`),
+    )
+    if (!snapshot) throw new Error("Resposta inválida ao carregar o estado da corrida.")
+    return snapshot
+  },
   async getCircuits(): Promise<Circuit[]> {
     const data = await request<ApiCircuit[]>("/circuits")
     return data.map(mapCircuit)
