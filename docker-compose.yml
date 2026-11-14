@@ -12,9 +12,6 @@ services:
       ollama pull llama3.2 &&
       wait"
 
-  redis:
-    image: redis:7-alpine
-
   backend:
     build: ./backend
     ports:
