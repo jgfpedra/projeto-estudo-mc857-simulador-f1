@@ -19,14 +19,39 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=['*'], a
 @app.post('/races', response_model=RaceSetupResponse)
 def create_race(req: RaceSetupRequest):
     try:
+        if req.year is not None and req.season is not None and req.year != req.season:
+            raise ValueError('year e season devem indicar a mesma temporada')
         race_id, track, config = race_manager.create_race(
-            req.laps, req.track, req.year, num_drivers=req.num_drivers
+            req.laps, req.track, req.season if req.season is not None else req.year,
+            num_drivers=req.num_drivers, layout_id=req.layout_id
         )
     except redis.RedisError as exc:
         raise HTTPException(status_code=503, detail='Redis indisponível') from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return RaceSetupResponse(race_id=race_id, track_name=track.name, num_laps=config.num_laps)
+
+@app.get('/circuits')
+def list_circuits():
+    catalog = race_manager.catalog
+    if catalog is None:
+        raise HTTPException(status_code=503, detail='Catálogo F1DB indisponível')
+    return {'catalog': catalog.provenance, 'circuits': [
+        {'id': c['id'], 'name': c['name'], 'full_name': c['full_name'],
+         'layouts_count': len(c.get('layouts', []))} for c in catalog.circuits]}
+
+
+@app.get('/circuits/{circuit_id}/layouts')
+def circuit_layout_history(circuit_id: str):
+    catalog = race_manager.catalog
+    if catalog is None:
+        raise HTTPException(status_code=503, detail='Catálogo F1DB indisponível')
+    circuit = catalog.find_circuit(circuit_id)
+    if circuit is None:
+        raise HTTPException(status_code=404, detail='Circuito não encontrado no catálogo F1DB')
+    return {'circuit_id': circuit['id'], 'name': circuit['full_name'],
+            'catalog': catalog.provenance, 'layouts': circuit['layouts']}
+
 
 @app.get('/races/{race_id}')
 def get_race(race_id: str):
@@ -37,6 +62,16 @@ def get_race(race_id: str):
     if meta is None:
         raise HTTPException(status_code=404, detail='Corrida não encontrada')
     return meta
+
+@app.get('/races/{race_id}/snapshot')
+def get_race_snapshot(race_id: str):
+    try:
+        snapshot = race_manager.snapshot(race_id)
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail='Redis indisponível') from exc
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail='Corrida não encontrada')
+    return snapshot
 
 @app.websocket('/ws/races/{race_id}')
 async def race_websocket(websocket: WebSocket, race_id: str):
@@ -49,9 +84,18 @@ async def race_websocket(websocket: WebSocket, race_id: str):
         # Inscrever antes de ler o último estado evita perder ticks na conexão.
         await pubsub.subscribe(f'race:{race_id}:events')
         await websocket.accept()
+        start_event = await client.get(f'race:{race_id}:start')
+        start_sent = bool(start_event)
+        if start_event:
+            await websocket.send_text(start_event)
         snapshot = await client.get(f'race:{race_id}:state')
         last_tick = -1.0
         if snapshot:
+            if not start_sent:
+                start_event = await client.get(f'race:{race_id}:start')
+                if start_event:
+                    await websocket.send_text(start_event)
+                    start_sent = True
             payload = json.loads(snapshot)
             last_tick = payload['sim_ts']
             await websocket.send_json(payload)
@@ -66,11 +110,15 @@ async def race_websocket(websocket: WebSocket, race_id: str):
             return
 
         async def forward():
-            nonlocal last_tick
+            nonlocal last_tick, start_sent
             async for message in pubsub.listen():
                 if message['type'] != 'message':
                     continue
                 payload = json.loads(message['data'])
+                if payload.get('type') == 'race_start':
+                    if start_sent:
+                        continue
+                    start_sent = True
                 if payload.get('type') == 'tick':
                     if payload['sim_ts'] <= last_tick:
                         continue

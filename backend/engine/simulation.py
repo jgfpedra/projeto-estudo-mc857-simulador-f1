@@ -162,6 +162,8 @@ class SimulationEngine:
         self._race_segment_starts = np.r_[0.0, np.cumsum(self._race_segment_lengths[:-1])]
         self._race_track_length = float(self._race_segment_lengths.sum())
         self.race_progress_m: Dict[str, float] = {}
+        self.race_s_m: Dict[str, float] = {}
+        self.race_lateral_m: Dict[str, float] = {}
         self._race_last_s: Dict[str, float] = {}
         self.last_tyre_warn_pct: Dict[str, float] = {}
         # FASE 2 (v14 tráfego): drivers que acumulam distância mas NÃO
@@ -473,7 +475,7 @@ class SimulationEngine:
             state.velocity_mps = float(phys["speed_mps"])
             state.heading_rad = float(phys.get("heading_rad", state.heading_rad))
             hint = self.prev_waypoint_idx.get(driver_id, self.track.start_finish_waypoint)
-            _, idx = self.track.distance_to_centerline_near(x, y, hint_idx=hint, window=50)
+            distance, idx = self.track.distance_to_centerline_near(x, y, hint_idx=hint, window=50)
             ax, ay = self.track.waypoints[idx]
             bx, by = self.track.waypoints[(idx + 1) % len(self.track.waypoints)]
             dx, dy = bx - ax, by - ay
@@ -482,6 +484,10 @@ class SimulationEngine:
                 continue
             fraction = max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / (segment_len * segment_len)))
             s = float(self._race_segment_starts[idx] + fraction * segment_len)
+            # Mesma projeção usada para o progresso; lateral positivo à direita.
+            cross = dx * (y - ay) - dy * (x - ax)
+            self.race_s_m[driver_id] = (s - start_s) % length
+            self.race_lateral_m[driver_id] = float(distance if cross <= 0.0 else -distance)
             previous = self._race_last_s.get(driver_id)
             if previous is None:
                 self.race_progress_m[driver_id] = (s - start_s + length * 0.5) % length - length * 0.5

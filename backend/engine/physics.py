@@ -118,6 +118,7 @@ class PyBulletPhysics:
         # zero custo; o runner valida a não-contaminação com a guarda
         # bit-idêntica (re-run s0 == R4).
         self.contact_collector: Optional[list] = None
+        self.contact_collector_include_penetration = False
         self._contact_sub_counter: int = 0
         # Estado de câmera
         self._camera_follow_handle: Optional[PhysicsCarHandle] = None
@@ -1007,13 +1008,14 @@ class PyBulletPhysics:
             if a not in chassis or b not in chassis:
                 continue        # solo/chão: fora do instrumento carro-carro
             f_n = abs(float(c[9]))
-            if f_n <= 0.0:
+            depth = max(0.0, -float(c[8]))
+            if f_n <= 0.0 and not (self.contact_collector_include_penetration and depth >= 0.001):
                 continue
             ha, hb = chassis[a], chassis[b]
             j_n = f_n * self.time_step_s
             pos_a = p.getBasePositionAndOrientation(a, physicsClientId=self._client_id)[0]
             pos_b = p.getBasePositionAndOrientation(b, physicsClientId=self._client_id)[0]
-            self.contact_collector.append({
+            contact = {
                 'sub': self._contact_sub_counter,
                 'drv_a': ha.driver_id, 'drv_b': hb.driver_id,
                 'body_a': int(a), 'body_b': int(b),
@@ -1024,7 +1026,10 @@ class PyBulletPhysics:
                 'dv_b': j_n / max(hb.mass_kg, 1.0),
                 'ax': float(pos_a[0]), 'ay': float(pos_a[1]),
                 'bx': float(pos_b[0]), 'by': float(pos_b[1]),
-            })
+            }
+            if self.contact_collector_include_penetration:
+                contact['penetration_m'] = depth
+            self.contact_collector.append(contact)
         self._contact_sub_counter += 1
 
     # ------------------------------------------------------------------
