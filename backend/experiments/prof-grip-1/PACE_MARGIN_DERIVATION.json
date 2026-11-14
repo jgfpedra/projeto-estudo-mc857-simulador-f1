@@ -1,0 +1,1091 @@
+{
+  "aplicacao_cap": {
+    "c_m": 0.00368421,
+    "janelas_canonicas_m": {
+      "C01": [
+        -32.003,
+        128.013
+      ],
+      "C06": [
+        1888.198,
+        1964.206
+      ],
+      "C07": [
+        2012.211,
+        2092.22
+      ],
+      "C08": [
+        2276.239,
+        2344.246
+      ]
+    },
+    "ordem_congelada": [
+      "v_ctrl = 0,93·v_plan",
+      "v_seed = min(v_ctrl, v_safe)",
+      "v_target_cap = passadas backward/forward sobre v_seed (algoritmo de prof_curva.py)"
+    ]
+  },
+  "conclusao": "PREPARADO PARA CICLO ON",
+  "correcao_metodologica": {
+    "escada_e_constante_de_engenharia": true,
+    "faixa_eta_abaixo_de_055_e_extrapolacao": true,
+    "lat_max_e_censurada": true,
+    "sem_regressao_para_eta": true
+  },
+  "diagnostico_descritivo": {
+    "ajuste_indicativo_c01_limpas": {
+      "a": 6.7091,
+      "b": -1.283349,
+      "n": 6,
+      "r2": null,
+      "rotulo": "diagnóstico indicativo, n pequeno, uma única crônica, sem poder de derivar ou validar η"
+    },
+    "ajuste_nota": "diagnóstico indicativo, n pequeno, uma única crônica, sem poder de derivar ou validar η",
+    "fontes": [
+      "ON_N1",
+      "ON_N2",
+      "ON_N3",
+      "ON_N4"
+    ],
+    "n_passes": 68,
+    "passes": [
+      {
+        "curva": "C01",
+        "desfecho": "LIMPA",
+        "fonte": "ON_N1",
+        "lat_max_m": 5.9066,
+        "razao_inst_apex": 0.6047,
+        "segmento": 2
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 9.0235,
+        "razao_inst_apex": 0.798,
+        "segmento": 2
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 14.1477,
+        "razao_inst_apex": 0.8715,
+        "segmento": 2
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 35.5879,
+        "razao_inst_apex": 0.8696,
+        "segmento": 2
+      },
+      {
+        "curva": "C01",
+        "desfecho": "LIMPA",
+        "fonte": "ON_N1",
+        "lat_max_m": 5.8997,
+        "razao_inst_apex": 0.6319,
+        "segmento": 3
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 8.9148,
+        "razao_inst_apex": 0.8246,
+        "segmento": 3
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 14.5166,
+        "razao_inst_apex": 0.8458,
+        "segmento": 3
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 35.197,
+        "razao_inst_apex": 0.9156,
+        "segmento": 3
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 6.1308,
+        "razao_inst_apex": 0.6248,
+        "segmento": 4
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 9.3997,
+        "razao_inst_apex": 0.8656,
+        "segmento": 4
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 14.6733,
+        "razao_inst_apex": 0.8994,
+        "segmento": 4
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 35.8635,
+        "razao_inst_apex": 0.8877,
+        "segmento": 4
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 6.2391,
+        "razao_inst_apex": 0.6257,
+        "segmento": 5
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 9.5213,
+        "razao_inst_apex": 0.825,
+        "segmento": 5
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 15.5564,
+        "razao_inst_apex": 0.9227,
+        "segmento": 5
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 36.247,
+        "razao_inst_apex": 0.9612,
+        "segmento": 5
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N1",
+        "lat_max_m": 6.3381,
+        "razao_inst_apex": 0.6669,
+        "segmento": 6
+      },
+      {
+        "curva": "C01",
+        "desfecho": "LIMPA",
+        "fonte": "ON_N2",
+        "lat_max_m": 5.855,
+        "razao_inst_apex": 0.6583,
+        "segmento": 2
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 8.9331,
+        "razao_inst_apex": 0.8453,
+        "segmento": 2
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 14.722,
+        "razao_inst_apex": 0.8887,
+        "segmento": 2
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 35.1468,
+        "razao_inst_apex": 0.909,
+        "segmento": 2
+      },
+      {
+        "curva": "C01",
+        "desfecho": "LIMPA",
+        "fonte": "ON_N2",
+        "lat_max_m": 5.8324,
+        "razao_inst_apex": 0.628,
+        "segmento": 3
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 8.8539,
+        "razao_inst_apex": 0.7908,
+        "segmento": 3
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 14.1151,
+        "razao_inst_apex": 0.8916,
+        "segmento": 3
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 35.6904,
+        "razao_inst_apex": 0.9292,
+        "segmento": 3
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 6.0151,
+        "razao_inst_apex": 0.6601,
+        "segmento": 4
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 8.9538,
+        "razao_inst_apex": 0.8393,
+        "segmento": 4
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 15.1122,
+        "razao_inst_apex": 0.9239,
+        "segmento": 4
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 35.9222,
+        "razao_inst_apex": 0.941,
+        "segmento": 4
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 6.0953,
+        "razao_inst_apex": 0.6334,
+        "segmento": 5
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 9.0637,
+        "razao_inst_apex": 0.8556,
+        "segmento": 5
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 15.2984,
+        "razao_inst_apex": 0.9356,
+        "segmento": 5
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 36.3482,
+        "razao_inst_apex": 0.9142,
+        "segmento": 5
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N2",
+        "lat_max_m": 6.27,
+        "razao_inst_apex": 0.6551,
+        "segmento": 6
+      },
+      {
+        "curva": "C01",
+        "desfecho": "LIMPA",
+        "fonte": "ON_N3",
+        "lat_max_m": 5.9586,
+        "razao_inst_apex": 0.6303,
+        "segmento": 2
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 8.707,
+        "razao_inst_apex": 0.8202,
+        "segmento": 2
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 14.1376,
+        "razao_inst_apex": 0.847,
+        "segmento": 2
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 35.2122,
+        "razao_inst_apex": 0.9077,
+        "segmento": 2
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 6.0571,
+        "razao_inst_apex": 0.6312,
+        "segmento": 3
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 9.1973,
+        "razao_inst_apex": 0.8045,
+        "segmento": 3
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 15.1628,
+        "razao_inst_apex": 0.8592,
+        "segmento": 3
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 35.1903,
+        "razao_inst_apex": 0.898,
+        "segmento": 3
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 6.0546,
+        "razao_inst_apex": 0.6331,
+        "segmento": 4
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 9.0064,
+        "razao_inst_apex": 0.85,
+        "segmento": 4
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 15.2255,
+        "razao_inst_apex": 0.7823,
+        "segmento": 4
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 35.8883,
+        "razao_inst_apex": 0.9369,
+        "segmento": 4
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 6.1746,
+        "razao_inst_apex": 0.6632,
+        "segmento": 5
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 9.2086,
+        "razao_inst_apex": 0.8421,
+        "segmento": 5
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 15.4532,
+        "razao_inst_apex": 0.8642,
+        "segmento": 5
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 36.3855,
+        "razao_inst_apex": 0.9663,
+        "segmento": 5
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N3",
+        "lat_max_m": 6.3575,
+        "razao_inst_apex": 0.6715,
+        "segmento": 6
+      },
+      {
+        "curva": "C01",
+        "desfecho": "LIMPA",
+        "fonte": "ON_N4",
+        "lat_max_m": 5.9629,
+        "razao_inst_apex": 0.6178,
+        "segmento": 2
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 8.9021,
+        "razao_inst_apex": 0.8118,
+        "segmento": 2
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 14.472,
+        "razao_inst_apex": 0.7884,
+        "segmento": 2
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 35.9475,
+        "razao_inst_apex": 0.8733,
+        "segmento": 2
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 6.0903,
+        "razao_inst_apex": 0.6378,
+        "segmento": 3
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 9.2919,
+        "razao_inst_apex": 0.8125,
+        "segmento": 3
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 14.4798,
+        "razao_inst_apex": 0.8579,
+        "segmento": 3
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 35.9711,
+        "razao_inst_apex": 0.8814,
+        "segmento": 3
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 6.1726,
+        "razao_inst_apex": 0.6458,
+        "segmento": 4
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 9.4009,
+        "razao_inst_apex": 0.8152,
+        "segmento": 4
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 14.7105,
+        "razao_inst_apex": 0.9098,
+        "segmento": 4
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 35.8068,
+        "razao_inst_apex": 0.9352,
+        "segmento": 4
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 6.2428,
+        "razao_inst_apex": 0.6696,
+        "segmento": 5
+      },
+      {
+        "curva": "C06",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 9.397,
+        "razao_inst_apex": 0.8564,
+        "segmento": 5
+      },
+      {
+        "curva": "C07",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 15.4753,
+        "razao_inst_apex": 0.861,
+        "segmento": 5
+      },
+      {
+        "curva": "C08",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 36.4057,
+        "razao_inst_apex": 0.9662,
+        "segmento": 5
+      },
+      {
+        "curva": "C01",
+        "desfecho": "SAÍDA",
+        "fonte": "ON_N4",
+        "lat_max_m": 6.4174,
+        "razao_inst_apex": 0.6633,
+        "segmento": 6
+      }
+    ],
+    "por_curva": {
+      "C01": {
+        "lat_max_range_m": [
+          5.8324,
+          6.4174
+        ],
+        "n_limpa": 6,
+        "n_passes": 20,
+        "n_saida": 14,
+        "razao_max_geral": 0.6715,
+        "razao_max_limpa": 0.6583
+      },
+      "C06": {
+        "lat_max_range_m": [
+          8.707,
+          9.5213
+        ],
+        "n_limpa": 0,
+        "n_passes": 16,
+        "n_saida": 16,
+        "razao_max_geral": 0.8656,
+        "razao_max_limpa": 0.0
+      },
+      "C07": {
+        "lat_max_range_m": [
+          14.1151,
+          15.5564
+        ],
+        "n_limpa": 0,
+        "n_passes": 16,
+        "n_saida": 16,
+        "razao_max_geral": 0.9356,
+        "razao_max_limpa": 0.0
+      },
+      "C08": {
+        "lat_max_range_m": [
+          35.1468,
+          36.4057
+        ],
+        "n_limpa": 0,
+        "n_passes": 16,
+        "n_saida": 16,
+        "razao_max_geral": 0.9663,
+        "razao_max_limpa": 0.0
+      }
+    }
+  },
+  "escada_eta": {
+    "eta1": 0.48848,
+    "eta1_precisao_completa": "0.48848",
+    "eta2": 0.4,
+    "origem_eta1": "0,8 × 0,6106 (maior razão LIMPA da calibração em amostra)",
+    "regra_execucao": [
+      "iniciar o estágio com η1",
+      "se o estágio falhar nos gates, executar o estágio previamente definido com η2",
+      "não criar novos valores depois de observar os resultados",
+      "não escolher entre η1 e η2 após ver as saídas"
+    ]
+  },
+  "estagios": [
+    {
+      "apex_delta": {
+        "C01": {
+          "delta_apex_kmh": 12.115,
+          "delta_apex_pct": 21.48,
+          "v_capada_apex_kmh": 44.287,
+          "v_historica_apex_kmh": 56.403
+        },
+        "C06": {
+          "delta_apex_kmh": 15.348,
+          "delta_apex_pct": 29.878,
+          "v_capada_apex_kmh": 36.022,
+          "v_historica_apex_kmh": 51.371
+        },
+        "C07": {
+          "delta_apex_kmh": 14.818,
+          "delta_apex_pct": 30.309,
+          "v_capada_apex_kmh": 34.071,
+          "v_historica_apex_kmh": 48.889
+        },
+        "C08": {
+          "delta_apex_kmh": 13.004,
+          "delta_apex_pct": 33.684,
+          "v_capada_apex_kmh": 25.602,
+          "v_historica_apex_kmh": 38.606
+        }
+      },
+      "delta_vs_base_s": 11.12,
+      "distancia_afetada_m": 332.035,
+      "engajamento": {
+        "C01": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta1|grip 0.807",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 132.014,
+          "janela_m": [
+            -32.003,
+            128.013
+          ],
+          "maior_trecho_continuo_m": 132.014,
+          "n_ticks_engajados": 33,
+          "pct_da_janela": 100.0,
+          "v_capada_min_kmh": 38.196,
+          "v_historica_min_kmh": 53.643
+        },
+        "C06": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta1|grip 0.807",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 76.008,
+          "janela_m": [
+            1888.198,
+            1964.206
+          ],
+          "maior_trecho_continuo_m": 52.005,
+          "n_ticks_engajados": 19,
+          "pct_da_janela": 95.0,
+          "v_capada_min_kmh": 36.022,
+          "v_historica_min_kmh": 51.054
+        },
+        "C07": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta1|grip 0.807",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 64.007,
+          "janela_m": [
+            2012.211,
+            2092.22
+          ],
+          "maior_trecho_continuo_m": 64.007,
+          "n_ticks_engajados": 16,
+          "pct_da_janela": 76.19,
+          "v_capada_min_kmh": 30.955,
+          "v_historica_min_kmh": 46.86
+        },
+        "C08": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta1|grip 0.807",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 60.006,
+          "janela_m": [
+            2276.239,
+            2344.246
+          ],
+          "maior_trecho_continuo_m": 32.003,
+          "n_ticks_engajados": 15,
+          "pct_da_janela": 83.33,
+          "v_capada_min_kmh": 25.602,
+          "v_historica_min_kmh": 38.305
+        }
+      },
+      "estagio": "eta1",
+      "eta": 0.48848,
+      "folga_guarda_s": 15.728,
+      "grip": 0.807,
+      "guarda_estoura": false,
+      "piso_otimista_rotulo": "referência inferior (piso otimista — não é estimativa final)",
+      "piso_otimista_s": 105.418,
+      "premissas": "frenagem: círculo de atrito com downforce (a_lat·sf − a_lat_demanda) + drag, piso 0,3 m/s², 4 iterações, fecho circular 200 m; aceleração: a_accel·sf (tração 55% + potência − drag − rolling)",
+      "t_base_v_plan_s": 96.202,
+      "t_lap_v_target_cap_s": 107.322
+    },
+    {
+      "apex_delta": {
+        "C01": {
+          "delta_apex_kmh": 11.109,
+          "delta_apex_pct": 19.696,
+          "v_capada_apex_kmh": 45.293,
+          "v_historica_apex_kmh": 56.403
+        },
+        "C06": {
+          "delta_apex_kmh": 14.546,
+          "delta_apex_pct": 28.315,
+          "v_capada_apex_kmh": 36.825,
+          "v_historica_apex_kmh": 51.371
+        },
+        "C07": {
+          "delta_apex_kmh": 14.061,
+          "delta_apex_pct": 28.762,
+          "v_capada_apex_kmh": 34.828,
+          "v_historica_apex_kmh": 48.889
+        },
+        "C08": {
+          "delta_apex_kmh": 12.444,
+          "delta_apex_pct": 32.233,
+          "v_capada_apex_kmh": 26.162,
+          "v_historica_apex_kmh": 38.606
+        }
+      },
+      "delta_vs_base_s": 10.497,
+      "distancia_afetada_m": 296.031,
+      "engajamento": {
+        "C01": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta1|grip 0.842",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 120.013,
+          "janela_m": [
+            -32.003,
+            128.013
+          ],
+          "maior_trecho_continuo_m": 64.007,
+          "n_ticks_engajados": 30,
+          "pct_da_janela": 90.91,
+          "v_capada_min_kmh": 39.051,
+          "v_historica_min_kmh": 53.643
+        },
+        "C06": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta1|grip 0.842",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 64.007,
+          "janela_m": [
+            1888.198,
+            1964.206
+          ],
+          "maior_trecho_continuo_m": 48.005,
+          "n_ticks_engajados": 16,
+          "pct_da_janela": 80.0,
+          "v_capada_min_kmh": 36.825,
+          "v_historica_min_kmh": 51.054
+        },
+        "C07": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta1|grip 0.842",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 60.006,
+          "janela_m": [
+            2012.211,
+            2092.22
+          ],
+          "maior_trecho_continuo_m": 60.006,
+          "n_ticks_engajados": 15,
+          "pct_da_janela": 71.43,
+          "v_capada_min_kmh": 31.639,
+          "v_historica_min_kmh": 46.86
+        },
+        "C08": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta1|grip 0.842",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 52.005,
+          "janela_m": [
+            2276.239,
+            2344.246
+          ],
+          "maior_trecho_continuo_m": 28.003,
+          "n_ticks_engajados": 13,
+          "pct_da_janela": 72.22,
+          "v_capada_min_kmh": 26.162,
+          "v_historica_min_kmh": 38.305
+        }
+      },
+      "estagio": "eta1",
+      "eta": 0.48848,
+      "folga_guarda_s": 16.352,
+      "grip": 0.842,
+      "guarda_estoura": false,
+      "piso_otimista_rotulo": "referência inferior (piso otimista — não é estimativa final)",
+      "piso_otimista_s": 105.174,
+      "premissas": "frenagem: círculo de atrito com downforce (a_lat·sf − a_lat_demanda) + drag, piso 0,3 m/s², 4 iterações, fecho circular 200 m; aceleração: a_accel·sf (tração 55% + potência − drag − rolling)",
+      "t_base_v_plan_s": 96.202,
+      "t_lap_v_target_cap_s": 106.698
+    },
+    {
+      "apex_delta": {
+        "C01": {
+          "delta_apex_kmh": 16.531,
+          "delta_apex_pct": 29.309,
+          "v_capada_apex_kmh": 39.872,
+          "v_historica_apex_kmh": 56.403
+        },
+        "C06": {
+          "delta_apex_kmh": 18.884,
+          "delta_apex_pct": 36.761,
+          "v_capada_apex_kmh": 32.486,
+          "v_historica_apex_kmh": 51.371
+        },
+        "C07": {
+          "delta_apex_kmh": 18.151,
+          "delta_apex_pct": 37.127,
+          "v_capada_apex_kmh": 30.738,
+          "v_historica_apex_kmh": 48.889
+        },
+        "C08": {
+          "delta_apex_kmh": 15.478,
+          "delta_apex_pct": 40.093,
+          "v_capada_apex_kmh": 23.128,
+          "v_historica_apex_kmh": 38.606
+        }
+      },
+      "delta_vs_base_s": 13.235,
+      "distancia_afetada_m": 360.037,
+      "engajamento": {
+        "C01": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta2|grip 0.807",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 132.014,
+          "janela_m": [
+            -32.003,
+            128.013
+          ],
+          "maior_trecho_continuo_m": 132.014,
+          "n_ticks_engajados": 33,
+          "pct_da_janela": 100.0,
+          "v_capada_min_kmh": 34.433,
+          "v_historica_min_kmh": 53.643
+        },
+        "C06": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta2|grip 0.807",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 80.008,
+          "janela_m": [
+            1888.198,
+            1964.206
+          ],
+          "maior_trecho_continuo_m": 80.008,
+          "n_ticks_engajados": 20,
+          "pct_da_janela": 100.0,
+          "v_capada_min_kmh": 32.486,
+          "v_historica_min_kmh": 51.054
+        },
+        "C07": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta2|grip 0.807",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 80.008,
+          "janela_m": [
+            2012.211,
+            2092.22
+          ],
+          "maior_trecho_continuo_m": 68.007,
+          "n_ticks_engajados": 20,
+          "pct_da_janela": 95.24,
+          "v_capada_min_kmh": 27.942,
+          "v_historica_min_kmh": 46.86
+        },
+        "C08": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta2|grip 0.807",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 68.007,
+          "janela_m": [
+            2276.239,
+            2344.246
+          ],
+          "maior_trecho_continuo_m": 40.004,
+          "n_ticks_engajados": 17,
+          "pct_da_janela": 94.44,
+          "v_capada_min_kmh": 23.128,
+          "v_historica_min_kmh": 38.305
+        }
+      },
+      "estagio": "eta2",
+      "eta": 0.4,
+      "folga_guarda_s": 13.613,
+      "grip": 0.807,
+      "guarda_estoura": false,
+      "piso_otimista_rotulo": "referência inferior (piso otimista — não é estimativa final)",
+      "piso_otimista_s": 106.731,
+      "premissas": "frenagem: círculo de atrito com downforce (a_lat·sf − a_lat_demanda) + drag, piso 0,3 m/s², 4 iterações, fecho circular 200 m; aceleração: a_accel·sf (tração 55% + potência − drag − rolling)",
+      "t_base_v_plan_s": 96.202,
+      "t_lap_v_target_cap_s": 109.437
+    },
+    {
+      "apex_delta": {
+        "C01": {
+          "delta_apex_kmh": 15.635,
+          "delta_apex_pct": 27.72,
+          "v_capada_apex_kmh": 40.768,
+          "v_historica_apex_kmh": 56.403
+        },
+        "C06": {
+          "delta_apex_kmh": 18.165,
+          "delta_apex_pct": 35.361,
+          "v_capada_apex_kmh": 33.205,
+          "v_historica_apex_kmh": 51.371
+        },
+        "C07": {
+          "delta_apex_kmh": 17.473,
+          "delta_apex_pct": 35.74,
+          "v_capada_apex_kmh": 31.416,
+          "v_historica_apex_kmh": 48.889
+        },
+        "C08": {
+          "delta_apex_kmh": 14.974,
+          "delta_apex_pct": 38.787,
+          "v_capada_apex_kmh": 23.632,
+          "v_historica_apex_kmh": 38.606
+        }
+      },
+      "delta_vs_base_s": 12.451,
+      "distancia_afetada_m": 344.036,
+      "engajamento": {
+        "C01": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta2|grip 0.842",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 132.014,
+          "janela_m": [
+            -32.003,
+            128.013
+          ],
+          "maior_trecho_continuo_m": 132.014,
+          "n_ticks_engajados": 33,
+          "pct_da_janela": 100.0,
+          "v_capada_min_kmh": 35.197,
+          "v_historica_min_kmh": 53.643
+        },
+        "C06": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta2|grip 0.842",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 80.008,
+          "janela_m": [
+            1888.198,
+            1964.206
+          ],
+          "maior_trecho_continuo_m": 80.008,
+          "n_ticks_engajados": 20,
+          "pct_da_janela": 100.0,
+          "v_capada_min_kmh": 33.205,
+          "v_historica_min_kmh": 51.054
+        },
+        "C07": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta2|grip 0.842",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 68.007,
+          "janela_m": [
+            2012.211,
+            2092.22
+          ],
+          "maior_trecho_continuo_m": 64.007,
+          "n_ticks_engajados": 17,
+          "pct_da_janela": 80.95,
+          "v_capada_min_kmh": 28.555,
+          "v_historica_min_kmh": 46.86
+        },
+        "C08": {
+          "cap_engajou_algum_ponto": true,
+          "estagio": "eta2|grip 0.842",
+          "exits_com_cap_ativo": 4,
+          "exits_sem_cap_ativo": 0,
+          "extensao_engajada_m": 64.007,
+          "janela_m": [
+            2276.239,
+            2344.246
+          ],
+          "maior_trecho_continuo_m": 36.004,
+          "n_ticks_engajados": 16,
+          "pct_da_janela": 88.89,
+          "v_capada_min_kmh": 23.632,
+          "v_historica_min_kmh": 38.305
+        }
+      },
+      "estagio": "eta2",
+      "eta": 0.4,
+      "folga_guarda_s": 14.397,
+      "grip": 0.842,
+      "guarda_estoura": false,
+      "piso_otimista_rotulo": "referência inferior (piso otimista — não é estimativa final)",
+      "piso_otimista_s": 106.422,
+      "premissas": "frenagem: círculo de atrito com downforce (a_lat·sf − a_lat_demanda) + drag, piso 0,3 m/s², 4 iterações, fecho circular 200 m; aceleração: a_accel·sf (tração 55% + potência − drag − rolling)",
+      "t_base_v_plan_s": 96.202,
+      "t_lap_v_target_cap_s": 108.653
+    }
+  ],
+  "gates_pre_declarados": [
+    "1. C01, C06, C07 e C08: zero saídas no estágio final",
+    "2. C06, C07 e C08: se qualquer uma sair com o cap ativo no estágio final, declarar PARE e rejeitar a hipótese de suficiência do mecanismo",
+    "3. se houver saída com o cap inativo, declarar falha de engajamento/cobertura, não falha física do limiar",
+    "4. a Guarda de Ritmo deve ser avaliada pelo tempo observado no ciclo real, não pelo piso offline",
+    "5. nenhum gate pode ser alterado após observar os resultados",
+    "escalada η1→η2 pré-declarada (não é ajuste pós-fato)"
+  ],
+  "schema_version": "prof-grip-1/pace-margin-derivation-v2.0-horizonte"
+}

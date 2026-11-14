@@ -1,0 +1,4 @@
+selector=run==composite_monaco
+rows=112 ge10=112 ge30=45
+tracks=['monaco']
+g3=PASS

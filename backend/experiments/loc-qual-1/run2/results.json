@@ -1,0 +1,3803 @@
+{
+  "aggregates_by_type": {
+    "alternativo": {
+      "field_report_totals": {
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "interpretation": "descritivo; pilotos alternativos não são pistas independentes",
+      "original_order": {
+        "conflicting_xy_duplicate_groups": 0,
+        "distance_quantiles": {
+          "count": 223527,
+          "quantiles_m": {
+            "P50": 7.443117626371358,
+            "P90": 21.63007165961315,
+            "P95": 25.93838853899756,
+            "P99": 34.10014662725074
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 287,
+              "fraction": 0.0012839612216868656
+            },
+            ">3s": {
+              "count": 2,
+              "fraction": 8.947464959490352e-06
+            }
+          },
+          "denominator": 223527
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 2577,
+              "fraction": 0.011528808600303319
+            },
+            ">60m/s": {
+              "count": 58338,
+              "fraction": 0.2609886054033741
+            },
+            ">90m/s": {
+              "count": 11635,
+              "fraction": 0.052051877401835124
+            }
+          },
+          "denominator": 223527
+        },
+        "inversions": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 20,
+              "fraction": 8.947464959490352e-05
+            },
+            ">10m": {
+              "count": 92838,
+              "fraction": 0.41533237595458267
+            },
+            ">30m": {
+              "count": 5311,
+              "fraction": 0.02375999319992663
+            }
+          },
+          "denominator": 223527
+        },
+        "positive_interval_distribution": {
+          "count": 223527,
+          "maximum_seconds": 3.1,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "precleaned_view": {
+        "cut_interval_duration_seconds": 527.0249999999999,
+        "cut_intervals_primary_rule": 2579,
+        "distance_quantiles": {
+          "count": 223527,
+          "quantiles_m": {
+            "P50": 7.443117626371358,
+            "P90": 21.63007165961315,
+            "P95": 25.93838853899756,
+            "P99": 34.10014662725074
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 287,
+              "fraction": 0.0012839612216868656
+            },
+            ">3s": {
+              "count": 2,
+              "fraction": 8.947464959490352e-06
+            }
+          },
+          "denominator": 223527
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 2577,
+              "fraction": 0.011528808600303319
+            },
+            ">60m/s": {
+              "count": 58338,
+              "fraction": 0.2609886054033741
+            },
+            ">90m/s": {
+              "count": 11635,
+              "fraction": 0.052051877401835124
+            }
+          },
+          "denominator": 223527
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 20,
+              "fraction": 8.947464959490352e-05
+            },
+            ">10m": {
+              "count": 92838,
+              "fraction": 0.41533237595458267
+            },
+            ">30m": {
+              "count": 5311,
+              "fraction": 0.02375999319992663
+            }
+          },
+          "denominator": 223527
+        },
+        "observed_window_seconds": 58188.64700000001,
+        "positive_interval_distribution": {
+          "count": 223527,
+          "maximum_seconds": 3.1,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 220948,
+        "streams_in_observed_window_coverage": 6,
+        "streams_with_precleaned_view": 6,
+        "valid_window_coverage_fraction": 0.9909428208564465
+      },
+      "streams_by_classification": {
+        "FALTA_DADO(repo)": 0,
+        "só geometria": 0,
+        "utilizável com pré-limpeza": 6,
+        "utilizável como está": 0
+      }
+    },
+    "historico": {
+      "field_report_totals": {
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "interpretation": "descritivo; pilotos alternativos não são pistas independentes",
+      "original_order": {
+        "conflicting_xy_duplicate_groups": 0,
+        "distance_quantiles": {
+          "count": 343057,
+          "quantiles_m": {
+            "P50": 8.276472678623424,
+            "P90": 22.47220505424423,
+            "P95": 26.92582403567252,
+            "P99": 35.34586255843815
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 422,
+              "fraction": 0.0012301162780529182
+            },
+            ">3s": {
+              "count": 3,
+              "fraction": 8.744902450613163e-06
+            }
+          },
+          "denominator": 343057
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 5207,
+              "fraction": 0.015178235686780913
+            },
+            ">60m/s": {
+              "count": 96445,
+              "fraction": 0.2811340389497955
+            },
+            ">90m/s": {
+              "count": 21542,
+              "fraction": 0.06279422953036959
+            }
+          },
+          "denominator": 343057
+        },
+        "inversions": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 27,
+              "fraction": 7.870412205551847e-05
+            },
+            ">10m": {
+              "count": 149891,
+              "fraction": 0.43692739107495254
+            },
+            ">30m": {
+              "count": 9952,
+              "fraction": 0.029009756396167402
+            }
+          },
+          "denominator": 343057
+        },
+        "positive_interval_distribution": {
+          "count": 343057,
+          "maximum_seconds": 3.4,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "precleaned_view": {
+        "cut_interval_duration_seconds": 1099.3859999999993,
+        "cut_intervals_primary_rule": 5210,
+        "distance_quantiles": {
+          "count": 343057,
+          "quantiles_m": {
+            "P50": 8.276472678623424,
+            "P90": 22.47220505424423,
+            "P95": 26.92582403567252,
+            "P99": 35.34586255843815
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 422,
+              "fraction": 0.0012301162780529182
+            },
+            ">3s": {
+              "count": 3,
+              "fraction": 8.744902450613163e-06
+            }
+          },
+          "denominator": 343057
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 5207,
+              "fraction": 0.015178235686780913
+            },
+            ">60m/s": {
+              "count": 96445,
+              "fraction": 0.2811340389497955
+            },
+            ">90m/s": {
+              "count": 21542,
+              "fraction": 0.06279422953036959
+            }
+          },
+          "denominator": 343057
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 27,
+              "fraction": 7.870412205551847e-05
+            },
+            ">10m": {
+              "count": 149891,
+              "fraction": 0.43692739107495254
+            },
+            ">30m": {
+              "count": 9952,
+              "fraction": 0.029009756396167402
+            }
+          },
+          "denominator": 343057
+        },
+        "observed_window_seconds": 89139.22099999999,
+        "positive_interval_distribution": {
+          "count": 343057,
+          "maximum_seconds": 3.4,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 337847,
+        "streams_in_observed_window_coverage": 10,
+        "streams_with_precleaned_view": 10,
+        "valid_window_coverage_fraction": 0.9876666411522712
+      },
+      "streams_by_classification": {
+        "FALTA_DADO(repo)": 0,
+        "só geometria": 0,
+        "utilizável com pré-limpeza": 10,
+        "utilizável como está": 0
+      }
+    }
+  },
+  "aggregation_note": "agregados por tipo são descritivos e não tratam pilotos como pistas independentes",
+  "classification_label": "diagnóstico exploratório",
+  "cycle": "LOC-QUAL-1",
+  "frozen_path_writes": 0,
+  "instrument": {
+    "commit_at_measurement": "cc3edbe17a2b20b2918143e9b136284cb766ef83",
+    "path": "backend/scripts/audit_loc_qual_1.py",
+    "sha256": "90e32baa187a23c9d9a3bc0a716bb89331382efba56f13483c07eb110b674eaf"
+  },
+  "network_calls": 0,
+  "nominal_location_cadence": "FALTA_DADO(repo)",
+  "official_session_bounds": "FALTA_DADO(repo)",
+  "prereg": {
+    "commit": "902097e33a34a7d158e33a3222a45e18307221df",
+    "path": "backend/PREREG_LOC_QUAL_1.md",
+    "sha256": "a04cacc452f2231a5f105b10c21bd1086343903ebbb7471ca3d484609de8937e"
+  },
+  "runtime": {
+    "external_dependencies": [],
+    "implementation": "cpython",
+    "python_version": "3.12.12"
+  },
+  "simulations": 0,
+  "streams": [
+    {
+      "actual_bytes": 4338361,
+      "actual_sha256": "19c61905ba527d9114aeb54dc38df33f587c244215898e6af9f87427e090fc45",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 44,
+      "expected_bytes": 4338361,
+      "expected_sha256": "19c61905ba527d9114aeb54dc38df33f587c244215898e6af9f87427e090fc45",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "historico",
+      "observed_window": {
+        "duration_seconds": 7940.582,
+        "end_utc": "2024-09-01T14:20:34.369000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-09-01T12:08:13.787000Z"
+      },
+      "order": 1,
+      "original_order": {
+        "adjacent_file_pairs": 30636,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 30636,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 30636,
+          "quantiles_m": {
+            "P50": 10.012492197250394,
+            "P90": 25.793991548420728,
+            "P95": 30.103986446980738,
+            "P99": 38.76751217192045
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 40,
+              "fraction": 0.0013056534795665231
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 30636
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 934,
+              "fraction": 0.030487008747878314
+            },
+            ">60m/s": {
+              "count": 11407,
+              "fraction": 0.3723397310353832
+            },
+            ">90m/s": {
+              "count": 3297,
+              "fraction": 0.10761848805327066
+            }
+          },
+          "denominator": 30636
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 6,
+              "fraction": 0.00019584802193497845
+            },
+            ">10m": {
+              "count": 15327,
+              "fraction": 0.5002937720329025
+            },
+            ">30m": {
+              "count": 1564,
+              "fraction": 0.05105105105105105
+            }
+          },
+          "denominator": 30636
+        },
+        "pairs_with_usable_dates": 30636,
+        "positive_interval_distribution": {
+          "count": 30636,
+          "maximum_seconds": 1.8,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "path": "backend/experiments/fonte-2/location_9590_d44.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 30637,
+        "cut_interval_duration_seconds": 208.24999999999952,
+        "cut_intervals_primary_rule": 934,
+        "distance_quantiles": {
+          "count": 30636,
+          "quantiles_m": {
+            "P50": 10.012492197250394,
+            "P90": 25.793991548420728,
+            "P95": 30.103986446980738,
+            "P99": 38.76751217192045
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 40,
+              "fraction": 0.0013056534795665231
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 30636
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 934,
+              "fraction": 0.030487008747878314
+            },
+            ">60m/s": {
+              "count": 11407,
+              "fraction": 0.3723397310353832
+            },
+            ">90m/s": {
+              "count": 3297,
+              "fraction": 0.10761848805327066
+            }
+          },
+          "denominator": 30636
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 6,
+              "fraction": 0.00019584802193497845
+            },
+            ">10m": {
+              "count": 15327,
+              "fraction": 0.5002937720329025
+            },
+            ">30m": {
+              "count": 1564,
+              "fraction": 0.05105105105105105
+            }
+          },
+          "denominator": 30636
+        },
+        "observed_window": {
+          "duration_seconds": 7940.582,
+          "end_utc": "2024-09-01T14:20:34.369000Z",
+          "start_utc": "2024-09-01T12:08:13.787000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 30636,
+          "maximum_seconds": 1.8,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 29702,
+        "stable_sorted_points": 30637,
+        "valid_window_coverage_fraction": 0.9737739626641977
+      },
+      "record_count": 30637,
+      "session_key": 9590,
+      "status": "calculado",
+      "track": "Monza"
+    },
+    {
+      "actual_bytes": 5055421,
+      "actual_sha256": "16572644c117cd3085c1fb193de65363daf7446713514d4c82acf860c052cf03",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 81,
+      "expected_bytes": 5055421,
+      "expected_sha256": "16572644c117cd3085c1fb193de65363daf7446713514d4c82acf860c052cf03",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "historico",
+      "observed_window": {
+        "duration_seconds": 9285.537,
+        "end_utc": "2024-07-21T14:43:37.717000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-07-21T12:08:52.180000Z"
+      },
+      "order": 2,
+      "original_order": {
+        "adjacent_file_pairs": 35723,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 35723,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 35723,
+          "quantiles_m": {
+            "P50": 8.614522621712709,
+            "P90": 20.038463014912097,
+            "P95": 23.903347045968268,
+            "P99": 31.190543438677054
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 42,
+              "fraction": 0.0011757131259972566
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 35723
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 226,
+              "fraction": 0.0063264563446519045
+            },
+            ">60m/s": {
+              "count": 8075,
+              "fraction": 0.2260448450578059
+            },
+            ">90m/s": {
+              "count": 1308,
+              "fraction": 0.036615065923914565
+            }
+          },
+          "denominator": 35723
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 3,
+              "fraction": 8.397950899980405e-05
+            },
+            ">10m": {
+              "count": 15480,
+              "fraction": 0.43333426643898887
+            },
+            ">30m": {
+              "count": 473,
+              "fraction": 0.013240769252302439
+            }
+          },
+          "denominator": 35723
+        },
+        "pairs_with_usable_dates": 35723,
+        "positive_interval_distribution": {
+          "count": 35723,
+          "maximum_seconds": 1.421,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9566_81.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 35724,
+        "cut_interval_duration_seconds": 42.076,
+        "cut_intervals_primary_rule": 226,
+        "distance_quantiles": {
+          "count": 35723,
+          "quantiles_m": {
+            "P50": 8.614522621712709,
+            "P90": 20.038463014912097,
+            "P95": 23.903347045968268,
+            "P99": 31.190543438677054
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 42,
+              "fraction": 0.0011757131259972566
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 35723
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 226,
+              "fraction": 0.0063264563446519045
+            },
+            ">60m/s": {
+              "count": 8075,
+              "fraction": 0.2260448450578059
+            },
+            ">90m/s": {
+              "count": 1308,
+              "fraction": 0.036615065923914565
+            }
+          },
+          "denominator": 35723
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 3,
+              "fraction": 8.397950899980405e-05
+            },
+            ">10m": {
+              "count": 15480,
+              "fraction": 0.43333426643898887
+            },
+            ">30m": {
+              "count": 473,
+              "fraction": 0.013240769252302439
+            }
+          },
+          "denominator": 35723
+        },
+        "observed_window": {
+          "duration_seconds": 9285.537,
+          "end_utc": "2024-07-21T14:43:37.717000Z",
+          "start_utc": "2024-07-21T12:08:52.180000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 35723,
+          "maximum_seconds": 1.421,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 35497,
+        "stable_sorted_points": 35724,
+        "valid_window_coverage_fraction": 0.9954686519476472
+      },
+      "record_count": 35724,
+      "session_key": 9566,
+      "status": "calculado",
+      "track": "Hungaroring"
+    },
+    {
+      "actual_bytes": 4793907,
+      "actual_sha256": "3a9ff9f8c5631557937de0dcb87abc19dbbe696c16c3f50fe2d235efcfd0806f",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 44,
+      "expected_bytes": 4793907,
+      "expected_sha256": "3a9ff9f8c5631557937de0dcb87abc19dbbe696c16c3f50fe2d235efcfd0806f",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "historico",
+      "observed_window": {
+        "duration_seconds": 8790.582,
+        "end_utc": "2024-07-07T15:31:29.972000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-07-07T13:04:59.390000Z"
+      },
+      "order": 3,
+      "original_order": {
+        "adjacent_file_pairs": 33898,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 33898,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 33898,
+          "quantiles_m": {
+            "P50": 8.34865258589672,
+            "P90": 23.389313799254563,
+            "P95": 27.920601712713857,
+            "P99": 35.415392133929565
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 43,
+              "fraction": 0.0012685114166027494
+            },
+            ">3s": {
+              "count": 1,
+              "fraction": 2.9500265502389522e-05
+            }
+          },
+          "denominator": 33898
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 584,
+              "fraction": 0.01722815505339548
+            },
+            ">60m/s": {
+              "count": 10919,
+              "fraction": 0.32211339902059116
+            },
+            ">90m/s": {
+              "count": 2228,
+              "fraction": 0.06572659153932385
+            }
+          },
+          "denominator": 33898
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 4,
+              "fraction": 0.00011800106200955809
+            },
+            ">10m": {
+              "count": 15279,
+              "fraction": 0.4507345566110095
+            },
+            ">30m": {
+              "count": 1162,
+              "fraction": 0.03427930851377663
+            }
+          },
+          "denominator": 33898
+        },
+        "pairs_with_usable_dates": 33898,
+        "positive_interval_distribution": {
+          "count": 33898,
+          "maximum_seconds": 3.4,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.241,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.481
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9558_44.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 33899,
+        "cut_interval_duration_seconds": 119.96000000000012,
+        "cut_intervals_primary_rule": 585,
+        "distance_quantiles": {
+          "count": 33898,
+          "quantiles_m": {
+            "P50": 8.34865258589672,
+            "P90": 23.389313799254563,
+            "P95": 27.920601712713857,
+            "P99": 35.415392133929565
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 43,
+              "fraction": 0.0012685114166027494
+            },
+            ">3s": {
+              "count": 1,
+              "fraction": 2.9500265502389522e-05
+            }
+          },
+          "denominator": 33898
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 584,
+              "fraction": 0.01722815505339548
+            },
+            ">60m/s": {
+              "count": 10919,
+              "fraction": 0.32211339902059116
+            },
+            ">90m/s": {
+              "count": 2228,
+              "fraction": 0.06572659153932385
+            }
+          },
+          "denominator": 33898
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 4,
+              "fraction": 0.00011800106200955809
+            },
+            ">10m": {
+              "count": 15279,
+              "fraction": 0.4507345566110095
+            },
+            ">30m": {
+              "count": 1162,
+              "fraction": 0.03427930851377663
+            }
+          },
+          "denominator": 33898
+        },
+        "observed_window": {
+          "duration_seconds": 8790.582,
+          "end_utc": "2024-07-07T15:31:29.972000Z",
+          "start_utc": "2024-07-07T13:04:59.390000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 33898,
+          "maximum_seconds": 3.4,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.241,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.481
+          }
+        },
+        "retained_intervals_primary_rule": 33313,
+        "stable_sorted_points": 33899,
+        "valid_window_coverage_fraction": 0.9863535770441593
+      },
+      "record_count": 33899,
+      "session_key": 9558,
+      "status": "calculado",
+      "track": "Silverstone"
+    },
+    {
+      "actual_bytes": 3644352,
+      "actual_sha256": "12e0ae6a3b36b19da28ab41bca0e6f0462e22b3ddda35f93ab9d8821e3f5bbf4",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 1,
+      "expected_bytes": 3644352,
+      "expected_sha256": "12e0ae6a3b36b19da28ab41bca0e6f0462e22b3ddda35f93ab9d8821e3f5bbf4",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "historico",
+      "observed_window": {
+        "duration_seconds": 6729.901,
+        "end_utc": "2024-06-09T19:51:14.457000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-06-09T17:59:04.556000Z"
+      },
+      "order": 4,
+      "original_order": {
+        "adjacent_file_pairs": 25939,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 25939,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 25939,
+          "quantiles_m": {
+            "P50": 10.404326023342406,
+            "P90": 22.314345161801185,
+            "P95": 26.36854186336438,
+            "P99": 33.96998675301479
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 30,
+              "fraction": 0.0011565596206484445
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 25939
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 291,
+              "fraction": 0.01121862832028991
+            },
+            ">60m/s": {
+              "count": 7783,
+              "fraction": 0.3000501175835614
+            },
+            ">90m/s": {
+              "count": 1365,
+              "fraction": 0.052623462739504225
+            }
+          },
+          "denominator": 25939
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 1,
+              "fraction": 3.855198735494815e-05
+            },
+            ">10m": {
+              "count": 13559,
+              "fraction": 0.5227263965457419
+            },
+            ">30m": {
+              "count": 600,
+              "fraction": 0.02313119241296889
+            }
+          },
+          "denominator": 25939
+        },
+        "pairs_with_usable_dates": 25939,
+        "positive_interval_distribution": {
+          "count": 25939,
+          "maximum_seconds": 1.86,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9531_1.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 25940,
+        "cut_interval_duration_seconds": 55.14099999999993,
+        "cut_intervals_primary_rule": 291,
+        "distance_quantiles": {
+          "count": 25939,
+          "quantiles_m": {
+            "P50": 10.404326023342406,
+            "P90": 22.314345161801185,
+            "P95": 26.36854186336438,
+            "P99": 33.96998675301479
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 30,
+              "fraction": 0.0011565596206484445
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 25939
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 291,
+              "fraction": 0.01121862832028991
+            },
+            ">60m/s": {
+              "count": 7783,
+              "fraction": 0.3000501175835614
+            },
+            ">90m/s": {
+              "count": 1365,
+              "fraction": 0.052623462739504225
+            }
+          },
+          "denominator": 25939
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 1,
+              "fraction": 3.855198735494815e-05
+            },
+            ">10m": {
+              "count": 13559,
+              "fraction": 0.5227263965457419
+            },
+            ">30m": {
+              "count": 600,
+              "fraction": 0.02313119241296889
+            }
+          },
+          "denominator": 25939
+        },
+        "observed_window": {
+          "duration_seconds": 6729.901,
+          "end_utc": "2024-06-09T19:51:14.457000Z",
+          "start_utc": "2024-06-09T17:59:04.556000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 25939,
+          "maximum_seconds": 1.86,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 25648,
+        "stable_sorted_points": 25940,
+        "valid_window_coverage_fraction": 0.9918065659509702
+      },
+      "record_count": 25940,
+      "session_key": 9531,
+      "status": "calculado",
+      "track": "Montreal"
+    },
+    {
+      "actual_bytes": 5063347,
+      "actual_sha256": "03e70429ce0cfa6554388ee4d1acf50ed52e48039f26fbc3ba2657445c220092",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 11,
+      "expected_bytes": 5063347,
+      "expected_sha256": "03e70429ce0cfa6554388ee4d1acf50ed52e48039f26fbc3ba2657445c220092",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "historico",
+      "observed_window": {
+        "duration_seconds": 9332.479,
+        "end_utc": "2024-03-02T16:39:16.378000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-03-02T14:03:43.899000Z"
+      },
+      "order": 5,
+      "original_order": {
+        "adjacent_file_pairs": 35993,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 35993,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 35993,
+          "quantiles_m": {
+            "P50": 8.10987052917616,
+            "P90": 21.57405849625888,
+            "P95": 25.651705596314642,
+            "P99": 33.393711982946726
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 39,
+              "fraction": 0.0010835440224488094
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 35993
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 361,
+              "fraction": 0.010029728002667186
+            },
+            ">60m/s": {
+              "count": 9783,
+              "fraction": 0.27180285055427444
+            },
+            ">90m/s": {
+              "count": 1769,
+              "fraction": 0.04914844553107549
+            }
+          },
+          "denominator": 35993
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 1,
+              "fraction": 2.7783180062789987e-05
+            },
+            ">10m": {
+              "count": 15519,
+              "fraction": 0.43116717139443783
+            },
+            ">30m": {
+              "count": 768,
+              "fraction": 0.02133748228822271
+            }
+          },
+          "denominator": 35993
+        },
+        "pairs_with_usable_dates": 35993,
+        "positive_interval_distribution": {
+          "count": 35993,
+          "maximum_seconds": 1.301,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9472_11.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 35994,
+        "cut_interval_duration_seconds": 71.3159999999999,
+        "cut_intervals_primary_rule": 361,
+        "distance_quantiles": {
+          "count": 35993,
+          "quantiles_m": {
+            "P50": 8.10987052917616,
+            "P90": 21.57405849625888,
+            "P95": 25.651705596314642,
+            "P99": 33.393711982946726
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 39,
+              "fraction": 0.0010835440224488094
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 35993
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 361,
+              "fraction": 0.010029728002667186
+            },
+            ">60m/s": {
+              "count": 9783,
+              "fraction": 0.27180285055427444
+            },
+            ">90m/s": {
+              "count": 1769,
+              "fraction": 0.04914844553107549
+            }
+          },
+          "denominator": 35993
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 1,
+              "fraction": 2.7783180062789987e-05
+            },
+            ">10m": {
+              "count": 15519,
+              "fraction": 0.43116717139443783
+            },
+            ">30m": {
+              "count": 768,
+              "fraction": 0.02133748228822271
+            }
+          },
+          "denominator": 35993
+        },
+        "observed_window": {
+          "duration_seconds": 9332.479,
+          "end_utc": "2024-03-02T16:39:16.378000Z",
+          "start_utc": "2024-03-02T14:03:43.899000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 35993,
+          "maximum_seconds": 1.301,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 35632,
+        "stable_sorted_points": 35994,
+        "valid_window_coverage_fraction": 0.992358300511579
+      },
+      "record_count": 35994,
+      "session_key": 9472,
+      "status": "calculado",
+      "track": "Bahrain"
+    },
+    {
+      "actual_bytes": 5225558,
+      "actual_sha256": "a139c6f272b41510115479ec3a7055c593a1018e9a396b287afb9bbc86c01af4",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 55,
+      "expected_bytes": 5225558,
+      "expected_sha256": "a139c6f272b41510115479ec3a7055c593a1018e9a396b287afb9bbc86c01af4",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "historico",
+      "observed_window": {
+        "duration_seconds": 9551.788,
+        "end_utc": "2024-10-27T21:46:47.141000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-10-27T19:07:35.353000Z"
+      },
+      "order": 6,
+      "original_order": {
+        "adjacent_file_pairs": 36740,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 36740,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 36740,
+          "quantiles_m": {
+            "P50": 6.9641941385920605,
+            "P90": 20.938003725283842,
+            "P95": 25.950915205441213,
+            "P99": 35.22782990761707
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 43,
+              "fraction": 0.0011703864997278171
+            },
+            ">3s": {
+              "count": 1,
+              "fraction": 2.7218290691344584e-05
+            }
+          },
+          "denominator": 36740
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 473,
+              "fraction": 0.012874251497005988
+            },
+            ">60m/s": {
+              "count": 8129,
+              "fraction": 0.2212574850299401
+            },
+            ">90m/s": {
+              "count": 2184,
+              "fraction": 0.05944474686989657
+            }
+          },
+          "denominator": 36740
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 2,
+              "fraction": 5.443658138268917e-05
+            },
+            ">10m": {
+              "count": 13644,
+              "fraction": 0.3713663581927055
+            },
+            ">30m": {
+              "count": 988,
+              "fraction": 0.02689167120304845
+            }
+          },
+          "denominator": 36740
+        },
+        "pairs_with_usable_dates": 36740,
+        "positive_interval_distribution": {
+          "count": 36740,
+          "maximum_seconds": 3.38,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.481
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9625_55.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 36741,
+        "cut_interval_duration_seconds": 106.72599999999991,
+        "cut_intervals_primary_rule": 474,
+        "distance_quantiles": {
+          "count": 36740,
+          "quantiles_m": {
+            "P50": 6.9641941385920605,
+            "P90": 20.938003725283842,
+            "P95": 25.950915205441213,
+            "P99": 35.22782990761707
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 43,
+              "fraction": 0.0011703864997278171
+            },
+            ">3s": {
+              "count": 1,
+              "fraction": 2.7218290691344584e-05
+            }
+          },
+          "denominator": 36740
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 473,
+              "fraction": 0.012874251497005988
+            },
+            ">60m/s": {
+              "count": 8129,
+              "fraction": 0.2212574850299401
+            },
+            ">90m/s": {
+              "count": 2184,
+              "fraction": 0.05944474686989657
+            }
+          },
+          "denominator": 36740
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 2,
+              "fraction": 5.443658138268917e-05
+            },
+            ">10m": {
+              "count": 13644,
+              "fraction": 0.3713663581927055
+            },
+            ">30m": {
+              "count": 988,
+              "fraction": 0.02689167120304845
+            }
+          },
+          "denominator": 36740
+        },
+        "observed_window": {
+          "duration_seconds": 9551.788,
+          "end_utc": "2024-10-27T21:46:47.141000Z",
+          "start_utc": "2024-10-27T19:07:35.353000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 36740,
+          "maximum_seconds": 3.38,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.481
+          }
+        },
+        "retained_intervals_primary_rule": 36266,
+        "stable_sorted_points": 36741,
+        "valid_window_coverage_fraction": 0.988826594560097
+      },
+      "record_count": 36741,
+      "session_key": 9625,
+      "status": "calculado",
+      "track": "Mexico"
+    },
+    {
+      "actual_bytes": 4832394,
+      "actual_sha256": "d5a88777e21924c68254a00c952511826a91a2394ef1b3bfdc2fd79c99c77332",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 4,
+      "expected_bytes": 4832394,
+      "expected_sha256": "d5a88777e21924c68254a00c952511826a91a2394ef1b3bfdc2fd79c99c77332",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "historico",
+      "observed_window": {
+        "duration_seconds": 9058.842,
+        "end_utc": "2024-08-25T14:38:22.496000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-08-25T12:07:23.654000Z"
+      },
+      "order": 7,
+      "original_order": {
+        "adjacent_file_pairs": 34780,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 34780,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 34780,
+          "quantiles_m": {
+            "P50": 8.489994110716449,
+            "P90": 21.50581316760657,
+            "P95": 25.51568145278507,
+            "P99": 33.38038346094904
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 47,
+              "fraction": 0.0013513513513513514
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 34780
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 355,
+              "fraction": 0.010207015526164463
+            },
+            ">60m/s": {
+              "count": 9245,
+              "fraction": 0.265813686026452
+            },
+            ">90m/s": {
+              "count": 1720,
+              "fraction": 0.04945370902817711
+            }
+          },
+          "denominator": 34780
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 2,
+              "fraction": 5.750431282346176e-05
+            },
+            ">10m": {
+              "count": 15390,
+              "fraction": 0.44249568717653825
+            },
+            ">30m": {
+              "count": 705,
+              "fraction": 0.02027027027027027
+            }
+          },
+          "denominator": 34780
+        },
+        "pairs_with_usable_dates": 34780,
+        "positive_interval_distribution": {
+          "count": 34780,
+          "maximum_seconds": 1.36,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9582_4.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 34781,
+        "cut_interval_duration_seconds": 71.23900000000002,
+        "cut_intervals_primary_rule": 355,
+        "distance_quantiles": {
+          "count": 34780,
+          "quantiles_m": {
+            "P50": 8.489994110716449,
+            "P90": 21.50581316760657,
+            "P95": 25.51568145278507,
+            "P99": 33.38038346094904
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 47,
+              "fraction": 0.0013513513513513514
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 34780
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 355,
+              "fraction": 0.010207015526164463
+            },
+            ">60m/s": {
+              "count": 9245,
+              "fraction": 0.265813686026452
+            },
+            ">90m/s": {
+              "count": 1720,
+              "fraction": 0.04945370902817711
+            }
+          },
+          "denominator": 34780
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 2,
+              "fraction": 5.750431282346176e-05
+            },
+            ">10m": {
+              "count": 15390,
+              "fraction": 0.44249568717653825
+            },
+            ">30m": {
+              "count": 705,
+              "fraction": 0.02027027027027027
+            }
+          },
+          "denominator": 34780
+        },
+        "observed_window": {
+          "duration_seconds": 9058.842,
+          "end_utc": "2024-08-25T14:38:22.496000Z",
+          "start_utc": "2024-08-25T12:07:23.654000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 34780,
+          "maximum_seconds": 1.36,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 34425,
+        "stable_sorted_points": 34781,
+        "valid_window_coverage_fraction": 0.9921359705799041
+      },
+      "record_count": 34781,
+      "session_key": 9582,
+      "status": "calculado",
+      "track": "Zandvoort"
+    },
+    {
+      "actual_bytes": 5853936,
+      "actual_sha256": "7b3f00ecbbd7c54c44831b4e7699bb9b61b08fcba42fb2384bbd6a7c0280cb10",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 1,
+      "expected_bytes": 5853936,
+      "expected_sha256": "7b3f00ecbbd7c54c44831b4e7699bb9b61b08fcba42fb2384bbd6a7c0280cb10",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "historico",
+      "observed_window": {
+        "duration_seconds": 10880.128,
+        "end_utc": "2024-04-07T07:02:23.056000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-04-07T04:01:02.928000Z"
+      },
+      "order": 8,
+      "original_order": {
+        "adjacent_file_pairs": 41800,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 41800,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 41800,
+          "quantiles_m": {
+            "P50": 4.973932046178355,
+            "P90": 21.242645786248,
+            "P95": 25.503137061938087,
+            "P99": 33.31741286474687
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 57,
+              "fraction": 0.0013636363636363637
+            },
+            ">3s": {
+              "count": 1,
+              "fraction": 2.3923444976076556e-05
+            }
+          },
+          "denominator": 41800
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 453,
+              "fraction": 0.01083732057416268
+            },
+            ">60m/s": {
+              "count": 10131,
+              "fraction": 0.24236842105263157
+            },
+            ">90m/s": {
+              "count": 1940,
+              "fraction": 0.046411483253588515
+            }
+          },
+          "denominator": 41800
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 3,
+              "fraction": 7.177033492822967e-05
+            },
+            ">10m": {
+              "count": 15908,
+              "fraction": 0.38057416267942584
+            },
+            ">30m": {
+              "count": 872,
+              "fraction": 0.020861244019138758
+            }
+          },
+          "denominator": 41800
+        },
+        "pairs_with_usable_dates": 41800,
+        "positive_interval_distribution": {
+          "count": 41800,
+          "maximum_seconds": 3.1,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.381,
+            "P95": 0.42,
+            "P99": 0.481
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9496_1.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 41801,
+        "cut_interval_duration_seconds": 92.44799999999992,
+        "cut_intervals_primary_rule": 454,
+        "distance_quantiles": {
+          "count": 41800,
+          "quantiles_m": {
+            "P50": 4.973932046178355,
+            "P90": 21.242645786248,
+            "P95": 25.503137061938087,
+            "P99": 33.31741286474687
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 57,
+              "fraction": 0.0013636363636363637
+            },
+            ">3s": {
+              "count": 1,
+              "fraction": 2.3923444976076556e-05
+            }
+          },
+          "denominator": 41800
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 453,
+              "fraction": 0.01083732057416268
+            },
+            ">60m/s": {
+              "count": 10131,
+              "fraction": 0.24236842105263157
+            },
+            ">90m/s": {
+              "count": 1940,
+              "fraction": 0.046411483253588515
+            }
+          },
+          "denominator": 41800
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 3,
+              "fraction": 7.177033492822967e-05
+            },
+            ">10m": {
+              "count": 15908,
+              "fraction": 0.38057416267942584
+            },
+            ">30m": {
+              "count": 872,
+              "fraction": 0.020861244019138758
+            }
+          },
+          "denominator": 41800
+        },
+        "observed_window": {
+          "duration_seconds": 10880.128,
+          "end_utc": "2024-04-07T07:02:23.056000Z",
+          "start_utc": "2024-04-07T04:01:02.928000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 41800,
+          "maximum_seconds": 3.1,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.381,
+            "P95": 0.42,
+            "P99": 0.481
+          }
+        },
+        "retained_intervals_primary_rule": 41346,
+        "stable_sorted_points": 41801,
+        "valid_window_coverage_fraction": 0.9915030411406924
+      },
+      "record_count": 41801,
+      "session_key": 9496,
+      "status": "calculado",
+      "track": "Suzuka"
+    },
+    {
+      "actual_bytes": 4702363,
+      "actual_sha256": "782bd62606a964c33c4896ac34e70f95e01bf8263429acacf2bfa40fce120b48",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 63,
+      "expected_bytes": 4702363,
+      "expected_sha256": "782bd62606a964c33c4896ac34e70f95e01bf8263429acacf2bfa40fce120b48",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "historico",
+      "observed_window": {
+        "duration_seconds": 8591.154,
+        "end_utc": "2024-11-24T07:30:25.121000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-11-24T05:07:13.967000Z"
+      },
+      "order": 9,
+      "original_order": {
+        "adjacent_file_pairs": 33174,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 33174,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 33174,
+          "quantiles_m": {
+            "P50": 8.5,
+            "P90": 24.751767613647313,
+            "P95": 29.70151511286924,
+            "P99": 38.65139066062177
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 41,
+              "fraction": 0.0012359076385120879
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 33174
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 902,
+              "fraction": 0.027189968047265933
+            },
+            ">60m/s": {
+              "count": 10948,
+              "fraction": 0.33001748357147165
+            },
+            ">90m/s": {
+              "count": 3481,
+              "fraction": 0.10493157291855067
+            }
+          },
+          "denominator": 33174
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 3,
+              "fraction": 9.043226623259179e-05
+            },
+            ">10m": {
+              "count": 14980,
+              "fraction": 0.451558449388075
+            },
+            ">30m": {
+              "count": 1593,
+              "fraction": 0.04801953336950624
+            }
+          },
+          "denominator": 33174
+        },
+        "pairs_with_usable_dates": 33174,
+        "positive_interval_distribution": {
+          "count": 33174,
+          "maximum_seconds": 1.599,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9644_63.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 33175,
+        "cut_interval_duration_seconds": 199.86899999999994,
+        "cut_intervals_primary_rule": 902,
+        "distance_quantiles": {
+          "count": 33174,
+          "quantiles_m": {
+            "P50": 8.5,
+            "P90": 24.751767613647313,
+            "P95": 29.70151511286924,
+            "P99": 38.65139066062177
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 41,
+              "fraction": 0.0012359076385120879
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 33174
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 902,
+              "fraction": 0.027189968047265933
+            },
+            ">60m/s": {
+              "count": 10948,
+              "fraction": 0.33001748357147165
+            },
+            ">90m/s": {
+              "count": 3481,
+              "fraction": 0.10493157291855067
+            }
+          },
+          "denominator": 33174
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 3,
+              "fraction": 9.043226623259179e-05
+            },
+            ">10m": {
+              "count": 14980,
+              "fraction": 0.451558449388075
+            },
+            ">30m": {
+              "count": 1593,
+              "fraction": 0.04801953336950624
+            }
+          },
+          "denominator": 33174
+        },
+        "observed_window": {
+          "duration_seconds": 8591.154,
+          "end_utc": "2024-11-24T07:30:25.121000Z",
+          "start_utc": "2024-11-24T05:07:13.967000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 33174,
+          "maximum_seconds": 1.599,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 32272,
+        "stable_sorted_points": 33175,
+        "valid_window_coverage_fraction": 0.9767354886200387
+      },
+      "record_count": 33175,
+      "session_key": 9644,
+      "status": "calculado",
+      "track": "LasVegas"
+    },
+    {
+      "actual_bytes": 4795031,
+      "actual_sha256": "fcb7235f8154b544b727f12038922a42e75296d89f092026bceb265d3399bd89",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 1,
+      "expected_bytes": 4795031,
+      "expected_sha256": "fcb7235f8154b544b727f12038922a42e75296d89f092026bceb265d3399bd89",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "historico",
+      "observed_window": {
+        "duration_seconds": 8978.228,
+        "end_utc": "2024-05-05T21:37:22.172000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-05-05T19:07:43.944000Z"
+      },
+      "order": 10,
+      "original_order": {
+        "adjacent_file_pairs": 34374,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 34374,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 34374,
+          "quantiles_m": {
+            "P50": 8.026207074328447,
+            "P90": 23.363432966925046,
+            "P95": 28.01446055165082,
+            "P99": 36.16102874642811
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 40,
+              "fraction": 0.001163670215860825
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 34374
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 628,
+              "fraction": 0.01826962238901495
+            },
+            ">60m/s": {
+              "count": 10025,
+              "fraction": 0.2916448478501193
+            },
+            ">90m/s": {
+              "count": 2250,
+              "fraction": 0.06545644964217141
+            }
+          },
+          "denominator": 34374
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 2,
+              "fraction": 5.8183510793041255e-05
+            },
+            ">10m": {
+              "count": 14805,
+              "fraction": 0.4307034386454879
+            },
+            ">30m": {
+              "count": 1227,
+              "fraction": 0.03569558387153081
+            }
+          },
+          "denominator": 34374
+        },
+        "pairs_with_usable_dates": 34374,
+        "positive_interval_distribution": {
+          "count": 34374,
+          "maximum_seconds": 1.999,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.241,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9507_1.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 34375,
+        "cut_interval_duration_seconds": 132.3610000000001,
+        "cut_intervals_primary_rule": 628,
+        "distance_quantiles": {
+          "count": 34374,
+          "quantiles_m": {
+            "P50": 8.026207074328447,
+            "P90": 23.363432966925046,
+            "P95": 28.01446055165082,
+            "P99": 36.16102874642811
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 40,
+              "fraction": 0.001163670215860825
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 34374
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 628,
+              "fraction": 0.01826962238901495
+            },
+            ">60m/s": {
+              "count": 10025,
+              "fraction": 0.2916448478501193
+            },
+            ">90m/s": {
+              "count": 2250,
+              "fraction": 0.06545644964217141
+            }
+          },
+          "denominator": 34374
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 2,
+              "fraction": 5.8183510793041255e-05
+            },
+            ">10m": {
+              "count": 14805,
+              "fraction": 0.4307034386454879
+            },
+            ">30m": {
+              "count": 1227,
+              "fraction": 0.03569558387153081
+            }
+          },
+          "denominator": 34374
+        },
+        "observed_window": {
+          "duration_seconds": 8978.228,
+          "end_utc": "2024-05-05T21:37:22.172000Z",
+          "start_utc": "2024-05-05T19:07:43.944000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 34374,
+          "maximum_seconds": 1.999,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.241,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 33746,
+        "stable_sorted_points": 34375,
+        "valid_window_coverage_fraction": 0.9852575586184712
+      },
+      "record_count": 34375,
+      "session_key": 9507,
+      "status": "calculado",
+      "track": "Miami"
+    },
+    {
+      "actual_bytes": 5028285,
+      "actual_sha256": "0acc7c3776dbffdc8636cca2b12c65467dcde7614f67df274287ac63261711c4",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 1,
+      "expected_bytes": 5028285,
+      "expected_sha256": "0acc7c3776dbffdc8636cca2b12c65467dcde7614f67df274287ac63261711c4",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "alternativo",
+      "observed_window": {
+        "duration_seconds": 9332.479,
+        "end_utc": "2024-03-02T16:39:16.378000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-03-02T14:03:43.899000Z"
+      },
+      "order": 11,
+      "original_order": {
+        "adjacent_file_pairs": 35993,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 35993,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 35993,
+          "quantiles_m": {
+            "P50": 8.100617260431454,
+            "P90": 21.5188289644209,
+            "P95": 25.564428411368795,
+            "P99": 33.41496670655232
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 39,
+              "fraction": 0.0010835440224488094
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 35993
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 349,
+              "fraction": 0.009696329841913705
+            },
+            ">60m/s": {
+              "count": 9891,
+              "fraction": 0.2748034340010558
+            },
+            ">90m/s": {
+              "count": 1773,
+              "fraction": 0.049259578251326645
+            }
+          },
+          "denominator": 35993
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 6,
+              "fraction": 0.00016669908037673993
+            },
+            ">10m": {
+              "count": 15645,
+              "fraction": 0.43466785208234937
+            },
+            ">30m": {
+              "count": 755,
+              "fraction": 0.02097630094740644
+            }
+          },
+          "denominator": 35993
+        },
+        "pairs_with_usable_dates": 35993,
+        "positive_interval_distribution": {
+          "count": 35993,
+          "maximum_seconds": 1.301,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9472_1.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 35994,
+        "cut_interval_duration_seconds": 67.92899999999992,
+        "cut_intervals_primary_rule": 349,
+        "distance_quantiles": {
+          "count": 35993,
+          "quantiles_m": {
+            "P50": 8.100617260431454,
+            "P90": 21.5188289644209,
+            "P95": 25.564428411368795,
+            "P99": 33.41496670655232
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 39,
+              "fraction": 0.0010835440224488094
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 35993
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 349,
+              "fraction": 0.009696329841913705
+            },
+            ">60m/s": {
+              "count": 9891,
+              "fraction": 0.2748034340010558
+            },
+            ">90m/s": {
+              "count": 1773,
+              "fraction": 0.049259578251326645
+            }
+          },
+          "denominator": 35993
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 6,
+              "fraction": 0.00016669908037673993
+            },
+            ">10m": {
+              "count": 15645,
+              "fraction": 0.43466785208234937
+            },
+            ">30m": {
+              "count": 755,
+              "fraction": 0.02097630094740644
+            }
+          },
+          "denominator": 35993
+        },
+        "observed_window": {
+          "duration_seconds": 9332.479,
+          "end_utc": "2024-03-02T16:39:16.378000Z",
+          "start_utc": "2024-03-02T14:03:43.899000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 35993,
+          "maximum_seconds": 1.301,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 35644,
+        "stable_sorted_points": 35994,
+        "valid_window_coverage_fraction": 0.9927212265894196
+      },
+      "record_count": 35994,
+      "session_key": 9472,
+      "status": "calculado",
+      "track": "Bahrain"
+    },
+    {
+      "actual_bytes": 4794049,
+      "actual_sha256": "b230968a62fefb5bcc7158d3b3d908cebebfabe74989676226076e97cafdf57d",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 4,
+      "expected_bytes": 4794049,
+      "expected_sha256": "b230968a62fefb5bcc7158d3b3d908cebebfabe74989676226076e97cafdf57d",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "alternativo",
+      "observed_window": {
+        "duration_seconds": 8978.228,
+        "end_utc": "2024-05-05T21:37:22.172000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-05-05T19:07:43.944000Z"
+      },
+      "order": 12,
+      "original_order": {
+        "adjacent_file_pairs": 34374,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 34374,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 34374,
+          "quantiles_m": {
+            "P50": 7.657675887630659,
+            "P90": 23.213789005675054,
+            "P95": 27.917915394957408,
+            "P99": 36.20842443410096
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 40,
+              "fraction": 0.001163670215860825
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 34374
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 591,
+              "fraction": 0.01719322743934369
+            },
+            ">60m/s": {
+              "count": 9850,
+              "fraction": 0.28655379065572817
+            },
+            ">90m/s": {
+              "count": 2394,
+              "fraction": 0.06964566241927038
+            }
+          },
+          "denominator": 34374
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 5,
+              "fraction": 0.00014545877698260312
+            },
+            ">10m": {
+              "count": 14426,
+              "fraction": 0.41967766335020656
+            },
+            ">30m": {
+              "count": 1224,
+              "fraction": 0.03560830860534125
+            }
+          },
+          "denominator": 34374
+        },
+        "pairs_with_usable_dates": 34374,
+        "positive_interval_distribution": {
+          "count": 34374,
+          "maximum_seconds": 1.999,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.241,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9507_4.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 34375,
+        "cut_interval_duration_seconds": 125.40100000000007,
+        "cut_intervals_primary_rule": 591,
+        "distance_quantiles": {
+          "count": 34374,
+          "quantiles_m": {
+            "P50": 7.657675887630659,
+            "P90": 23.213789005675054,
+            "P95": 27.917915394957408,
+            "P99": 36.20842443410096
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 40,
+              "fraction": 0.001163670215860825
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 34374
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 591,
+              "fraction": 0.01719322743934369
+            },
+            ">60m/s": {
+              "count": 9850,
+              "fraction": 0.28655379065572817
+            },
+            ">90m/s": {
+              "count": 2394,
+              "fraction": 0.06964566241927038
+            }
+          },
+          "denominator": 34374
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 5,
+              "fraction": 0.00014545877698260312
+            },
+            ">10m": {
+              "count": 14426,
+              "fraction": 0.41967766335020656
+            },
+            ">30m": {
+              "count": 1224,
+              "fraction": 0.03560830860534125
+            }
+          },
+          "denominator": 34374
+        },
+        "observed_window": {
+          "duration_seconds": 8978.228,
+          "end_utc": "2024-05-05T21:37:22.172000Z",
+          "start_utc": "2024-05-05T19:07:43.944000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 34374,
+          "maximum_seconds": 1.999,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.241,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 33783,
+        "stable_sorted_points": 34375,
+        "valid_window_coverage_fraction": 0.9860327672676613
+      },
+      "record_count": 34375,
+      "session_key": 9507,
+      "status": "calculado",
+      "track": "Miami"
+    },
+    {
+      "actual_bytes": 5893840,
+      "actual_sha256": "bf58f1a3b450c7bec4d994396096be62ee2c33a2a3a1b945c329f6a3280d2ff7",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 11,
+      "expected_bytes": 5893840,
+      "expected_sha256": "bf58f1a3b450c7bec4d994396096be62ee2c33a2a3a1b945c329f6a3280d2ff7",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "alternativo",
+      "observed_window": {
+        "duration_seconds": 10880.128,
+        "end_utc": "2024-04-07T07:02:23.056000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-04-07T04:01:02.928000Z"
+      },
+      "order": 13,
+      "original_order": {
+        "adjacent_file_pairs": 41800,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 41800,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 41800,
+          "quantiles_m": {
+            "P50": 4.879549159502341,
+            "P90": 21.246176126540984,
+            "P95": 25.73033229478391,
+            "P99": 33.74566638844164
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 57,
+              "fraction": 0.0013636363636363637
+            },
+            ">3s": {
+              "count": 1,
+              "fraction": 2.3923444976076556e-05
+            }
+          },
+          "denominator": 41800
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 487,
+              "fraction": 0.011650717703349283
+            },
+            ">60m/s": {
+              "count": 9880,
+              "fraction": 0.23636363636363636
+            },
+            ">90m/s": {
+              "count": 2034,
+              "fraction": 0.048660287081339716
+            }
+          },
+          "denominator": 41800
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 2,
+              "fraction": 4.784688995215311e-05
+            },
+            ">10m": {
+              "count": 15782,
+              "fraction": 0.3775598086124402
+            },
+            ">30m": {
+              "count": 953,
+              "fraction": 0.022799043062200958
+            }
+          },
+          "denominator": 41800
+        },
+        "pairs_with_usable_dates": 41800,
+        "positive_interval_distribution": {
+          "count": 41800,
+          "maximum_seconds": 3.1,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.381,
+            "P95": 0.42,
+            "P99": 0.481
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9496_11.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 41801,
+        "cut_interval_duration_seconds": 101.47099999999998,
+        "cut_intervals_primary_rule": 488,
+        "distance_quantiles": {
+          "count": 41800,
+          "quantiles_m": {
+            "P50": 4.879549159502341,
+            "P90": 21.246176126540984,
+            "P95": 25.73033229478391,
+            "P99": 33.74566638844164
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 57,
+              "fraction": 0.0013636363636363637
+            },
+            ">3s": {
+              "count": 1,
+              "fraction": 2.3923444976076556e-05
+            }
+          },
+          "denominator": 41800
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 487,
+              "fraction": 0.011650717703349283
+            },
+            ">60m/s": {
+              "count": 9880,
+              "fraction": 0.23636363636363636
+            },
+            ">90m/s": {
+              "count": 2034,
+              "fraction": 0.048660287081339716
+            }
+          },
+          "denominator": 41800
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 2,
+              "fraction": 4.784688995215311e-05
+            },
+            ">10m": {
+              "count": 15782,
+              "fraction": 0.3775598086124402
+            },
+            ">30m": {
+              "count": 953,
+              "fraction": 0.022799043062200958
+            }
+          },
+          "denominator": 41800
+        },
+        "observed_window": {
+          "duration_seconds": 10880.128,
+          "end_utc": "2024-04-07T07:02:23.056000Z",
+          "start_utc": "2024-04-07T04:01:02.928000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 41800,
+          "maximum_seconds": 3.1,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.381,
+            "P95": 0.42,
+            "P99": 0.481
+          }
+        },
+        "retained_intervals_primary_rule": 41312,
+        "stable_sorted_points": 41801,
+        "valid_window_coverage_fraction": 0.9906737310443406
+      },
+      "record_count": 41801,
+      "session_key": 9496,
+      "status": "calculado",
+      "track": "Suzuka"
+    },
+    {
+      "actual_bytes": 5890089,
+      "actual_sha256": "bb9947035b223763901839d723a67bbb87030687254b4c5eaea47465d7b5f7fc",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 55,
+      "expected_bytes": 5890089,
+      "expected_sha256": "bb9947035b223763901839d723a67bbb87030687254b4c5eaea47465d7b5f7fc",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "alternativo",
+      "observed_window": {
+        "duration_seconds": 10880.128,
+        "end_utc": "2024-04-07T07:02:23.056000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-04-07T04:01:02.928000Z"
+      },
+      "order": 14,
+      "original_order": {
+        "adjacent_file_pairs": 41800,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 41800,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 41800,
+          "quantiles_m": {
+            "P50": 4.879549159502341,
+            "P90": 21.292721761202817,
+            "P95": 25.66807355451515,
+            "P99": 33.700593466584536
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 57,
+              "fraction": 0.0013636363636363637
+            },
+            ">3s": {
+              "count": 1,
+              "fraction": 2.3923444976076556e-05
+            }
+          },
+          "denominator": 41800
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 452,
+              "fraction": 0.010813397129186603
+            },
+            ">60m/s": {
+              "count": 10126,
+              "fraction": 0.24224880382775119
+            },
+            ">90m/s": {
+              "count": 1951,
+              "fraction": 0.04667464114832536
+            }
+          },
+          "denominator": 41800
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 3,
+              "fraction": 7.177033492822967e-05
+            },
+            ">10m": {
+              "count": 15801,
+              "fraction": 0.37801435406698564
+            },
+            ">30m": {
+              "count": 917,
+              "fraction": 0.0219377990430622
+            }
+          },
+          "denominator": 41800
+        },
+        "pairs_with_usable_dates": 41800,
+        "positive_interval_distribution": {
+          "count": 41800,
+          "maximum_seconds": 3.1,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.381,
+            "P95": 0.42,
+            "P99": 0.481
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9496_55.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 41801,
+        "cut_interval_duration_seconds": 94.17299999999987,
+        "cut_intervals_primary_rule": 453,
+        "distance_quantiles": {
+          "count": 41800,
+          "quantiles_m": {
+            "P50": 4.879549159502341,
+            "P90": 21.292721761202817,
+            "P95": 25.66807355451515,
+            "P99": 33.700593466584536
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 57,
+              "fraction": 0.0013636363636363637
+            },
+            ">3s": {
+              "count": 1,
+              "fraction": 2.3923444976076556e-05
+            }
+          },
+          "denominator": 41800
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 452,
+              "fraction": 0.010813397129186603
+            },
+            ">60m/s": {
+              "count": 10126,
+              "fraction": 0.24224880382775119
+            },
+            ">90m/s": {
+              "count": 1951,
+              "fraction": 0.04667464114832536
+            }
+          },
+          "denominator": 41800
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 3,
+              "fraction": 7.177033492822967e-05
+            },
+            ">10m": {
+              "count": 15801,
+              "fraction": 0.37801435406698564
+            },
+            ">30m": {
+              "count": 917,
+              "fraction": 0.0219377990430622
+            }
+          },
+          "denominator": 41800
+        },
+        "observed_window": {
+          "duration_seconds": 10880.128,
+          "end_utc": "2024-04-07T07:02:23.056000Z",
+          "start_utc": "2024-04-07T04:01:02.928000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 41800,
+          "maximum_seconds": 3.1,
+          "minimum_seconds": 0.019,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.381,
+            "P95": 0.42,
+            "P99": 0.481
+          }
+        },
+        "retained_intervals_primary_rule": 41347,
+        "stable_sorted_points": 41801,
+        "valid_window_coverage_fraction": 0.991344495211821
+      },
+      "record_count": 41801,
+      "session_key": 9496,
+      "status": "calculado",
+      "track": "Suzuka"
+    },
+    {
+      "actual_bytes": 4834156,
+      "actual_sha256": "4b9798cf288e688f72987fffba6f64be108489c22c98a5a8d3e5b68545ad5721",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 1,
+      "expected_bytes": 4834156,
+      "expected_sha256": "4b9798cf288e688f72987fffba6f64be108489c22c98a5a8d3e5b68545ad5721",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "alternativo",
+      "observed_window": {
+        "duration_seconds": 9058.842,
+        "end_utc": "2024-08-25T14:38:22.496000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-08-25T12:07:23.654000Z"
+      },
+      "order": 15,
+      "original_order": {
+        "adjacent_file_pairs": 34780,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 34780,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 34780,
+          "quantiles_m": {
+            "P50": 8.782368700982667,
+            "P90": 21.232522224172993,
+            "P95": 25.293675098727746,
+            "P99": 33.09289954053588
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 47,
+              "fraction": 0.0013513513513513514
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 34780
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 302,
+              "fraction": 0.008683151236342725
+            },
+            ">60m/s": {
+              "count": 9373,
+              "fraction": 0.26949396204715353
+            },
+            ">90m/s": {
+              "count": 1673,
+              "fraction": 0.04810235767682576
+            }
+          },
+          "denominator": 34780
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 2,
+              "fraction": 5.750431282346176e-05
+            },
+            ">10m": {
+              "count": 15718,
+              "fraction": 0.451926394479586
+            },
+            ">30m": {
+              "count": 680,
+              "fraction": 0.019551466359977
+            }
+          },
+          "denominator": 34780
+        },
+        "pairs_with_usable_dates": 34780,
+        "positive_interval_distribution": {
+          "count": 34780,
+          "maximum_seconds": 1.36,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9582_1.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 34781,
+        "cut_interval_duration_seconds": 57.72199999999997,
+        "cut_intervals_primary_rule": 302,
+        "distance_quantiles": {
+          "count": 34780,
+          "quantiles_m": {
+            "P50": 8.782368700982667,
+            "P90": 21.232522224172993,
+            "P95": 25.293675098727746,
+            "P99": 33.09289954053588
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 47,
+              "fraction": 0.0013513513513513514
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 34780
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 302,
+              "fraction": 0.008683151236342725
+            },
+            ">60m/s": {
+              "count": 9373,
+              "fraction": 0.26949396204715353
+            },
+            ">90m/s": {
+              "count": 1673,
+              "fraction": 0.04810235767682576
+            }
+          },
+          "denominator": 34780
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 2,
+              "fraction": 5.750431282346176e-05
+            },
+            ">10m": {
+              "count": 15718,
+              "fraction": 0.451926394479586
+            },
+            ">30m": {
+              "count": 680,
+              "fraction": 0.019551466359977
+            }
+          },
+          "denominator": 34780
+        },
+        "observed_window": {
+          "duration_seconds": 9058.842,
+          "end_utc": "2024-08-25T14:38:22.496000Z",
+          "start_utc": "2024-08-25T12:07:23.654000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 34780,
+          "maximum_seconds": 1.36,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 34478,
+        "stable_sorted_points": 34781,
+        "valid_window_coverage_fraction": 0.9936281039011388
+      },
+      "record_count": 34781,
+      "session_key": 9582,
+      "status": "calculado",
+      "track": "Zandvoort"
+    },
+    {
+      "actual_bytes": 4868284,
+      "actual_sha256": "9829fc170b9012339b3a9fed6c15002432908b299a1dafcb88d4b2e1b827e50a",
+      "classification": "utilizável com pré-limpeza",
+      "classification_reasons": [
+        "primary_rule_cuts_intervals"
+      ],
+      "driver_number": 16,
+      "expected_bytes": 4868284,
+      "expected_sha256": "9829fc170b9012339b3a9fed6c15002432908b299a1dafcb88d4b2e1b827e50a",
+      "field_report": {
+        "identity_mismatch_values": 0,
+        "missing_required_keys": {
+          "date": 0,
+          "driver_number": 0,
+          "meeting_key": 0,
+          "session_key": 0,
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "records_with_irrecoverable_fields": 0,
+        "unusable_values": {
+          "date": 0,
+          "x": 0,
+          "y": 0
+        }
+      },
+      "kind": "alternativo",
+      "observed_window": {
+        "duration_seconds": 9058.842,
+        "end_utc": "2024-08-25T14:38:22.496000Z",
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "start_utc": "2024-08-25T12:07:23.654000Z"
+      },
+      "order": 16,
+      "original_order": {
+        "adjacent_file_pairs": 34780,
+        "conflicting_xy_duplicate_groups": 0,
+        "delta_t_sign_counts": {
+          "negative_inversions": 0,
+          "positive_intervals": 34780,
+          "zero_duplicate_adjacencies": 0
+        },
+        "distance_quantiles": {
+          "count": 34780,
+          "quantiles_m": {
+            "P50": 8.631338250816034,
+            "P90": 21.51278689523977,
+            "P95": 25.608201811138553,
+            "P99": 33.60952246016001
+          }
+        },
+        "duplicate_timestamp_groups": 0,
+        "excess_rows_in_duplicate_groups": 0,
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 47,
+              "fraction": 0.0013513513513513514
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 34780
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 396,
+              "fraction": 0.011385853939045428
+            },
+            ">60m/s": {
+              "count": 9218,
+              "fraction": 0.26503737780333525
+            },
+            ">90m/s": {
+              "count": 1810,
+              "fraction": 0.05204140310523289
+            }
+          },
+          "denominator": 34780
+        },
+        "inversions_in_original_order": 0,
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 2,
+              "fraction": 5.750431282346176e-05
+            },
+            ">10m": {
+              "count": 15466,
+              "fraction": 0.44468085106382976
+            },
+            ">30m": {
+              "count": 782,
+              "fraction": 0.02248418631397355
+            }
+          },
+          "denominator": 34780
+        },
+        "pairs_with_usable_dates": 34780,
+        "positive_interval_distribution": {
+          "count": 34780,
+          "maximum_seconds": 1.36,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        }
+      },
+      "path": "backend/cache/openf1_pistas_expand_1/location_9582_16.json",
+      "precleaned_view": {
+        "coalesced_duplicate_groups": 0,
+        "coalesced_excess_rows": 0,
+        "coalesced_points": 34781,
+        "cut_interval_duration_seconds": 80.32900000000001,
+        "cut_intervals_primary_rule": 396,
+        "distance_quantiles": {
+          "count": 34780,
+          "quantiles_m": {
+            "P50": 8.631338250816034,
+            "P90": 21.51278689523977,
+            "P95": 25.608201811138553,
+            "P99": 33.60952246016001
+          }
+        },
+        "gap_bands": {
+          "bands": {
+            ">10s": {
+              "count": 0,
+              "fraction": 0.0
+            },
+            ">1s": {
+              "count": 47,
+              "fraction": 0.0013513513513513514
+            },
+            ">3s": {
+              "count": 0,
+              "fraction": 0.0
+            }
+          },
+          "denominator": 34780
+        },
+        "implicit_speed_bands": {
+          "bands": {
+            ">120m/s": {
+              "count": 396,
+              "fraction": 0.011385853939045428
+            },
+            ">60m/s": {
+              "count": 9218,
+              "fraction": 0.26503737780333525
+            },
+            ">90m/s": {
+              "count": 1810,
+              "fraction": 0.05204140310523289
+            }
+          },
+          "denominator": 34780
+        },
+        "jump_bands": {
+          "bands": {
+            ">100m": {
+              "count": 2,
+              "fraction": 5.750431282346176e-05
+            },
+            ">10m": {
+              "count": 15466,
+              "fraction": 0.44468085106382976
+            },
+            ">30m": {
+              "count": 782,
+              "fraction": 0.02248418631397355
+            }
+          },
+          "denominator": 34780
+        },
+        "observed_window": {
+          "duration_seconds": 9058.842,
+          "end_utc": "2024-08-25T14:38:22.496000Z",
+          "start_utc": "2024-08-25T12:07:23.654000Z"
+        },
+        "official_session_coverage": "FALTA_DADO(repo)",
+        "positive_interval_distribution": {
+          "count": 34780,
+          "maximum_seconds": 1.36,
+          "minimum_seconds": 0.02,
+          "quantiles_seconds": {
+            "P50": 0.24,
+            "P90": 0.38,
+            "P95": 0.42,
+            "P99": 0.48
+          }
+        },
+        "retained_intervals_primary_rule": 34384,
+        "stable_sorted_points": 34781,
+        "valid_window_coverage_fraction": 0.9911325310674367
+      },
+      "record_count": 34781,
+      "session_key": 9582,
+      "status": "calculado",
+      "track": "Zandvoort"
+    }
+  ]
+}

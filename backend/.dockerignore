@@ -1,0 +1,9 @@
+.venv
+__pycache__
+.pytest_cache
+experiments
+archive
+*.csv
+*.npz
+*.log
+model_train/cache_fastf1

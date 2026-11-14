@@ -113,54 +113,18 @@ class StintIn(BaseModel):
 
 
 class RaceSetupRequest(BaseModel):
-    """Configuração enviada pelo front. Todos os campos são opcionais."""
+    """Payload enviado pelo front para configurar/criar uma corrida.
 
-    circuit: Optional[CircuitChoice] = Field(None, description="Omitido = Interlagos (pista local).")
-    laps: int = Field(10, ge=1, le=200, description="Número de voltas.")
-    grid: Optional[List[str]] = Field(
-        None, min_length=1, max_length=MAX_GRID,
-        description="ids dos pilotos em ordem de largada (1º = pole). Omitido = 2 pilotos padrão.",
-        examples=[["max-verstappen", "lando-norris", "charles-leclerc"]],
-    )
-    weather: WeatherName = Field(WeatherName.dry, description="Clima inicial.")
-    weather_change: Optional[WeatherChange] = Field(
-        None, description="Omitido = o clima não muda durante a corrida."
-    )
-    initial_tyre: Optional[TyreName] = Field(
-        None, description="Pneu inicial de todos. Omitido = 1º stint de `stints`, ou medium."
-    )
-    stints: Optional[List[StintIn]] = Field(
-        None, min_length=1,
-        description="Estratégia de stints (composto + voltas). A soma das voltas deve ser igual a `laps`. "
-        "ATENÇÃO: é validada e aceita, mas o motor ainda NÃO aplica (veja `warnings` na resposta).",
-    )
+    Interlagos 2023 e Monza 2024 usam traçados locais derivados de telemetria;
+    outros anos ou circuitos seguem ``config.load_track``.
+    """
 
-    @model_validator(mode="after")
-    def _consistency(self) -> "RaceSetupRequest":
-        if self.grid is not None and len(set(self.grid)) != len(self.grid):
-            raise ValueError("grid não pode ter pilotos repetidos")
-        if self.stints is not None:
-            total = sum(s.laps for s in self.stints)
-            if total != self.laps:
-                raise ValueError(f"a soma das voltas dos stints ({total}) deve ser igual a laps ({self.laps})")
-            if self.initial_tyre is not None and self.stints[0].compound != self.initial_tyre:
-                raise ValueError(
-                    "initial_tyre deve ser igual ao composto do 1º stint "
-                    f"({self.stints[0].compound.value}); envie só um dos dois ou deixe-os consistentes"
-                )
-        return self
-
-
-class GridEntryOut(BaseModel):
-    position: int = Field(..., description="Posição de largada (1 = pole).")
-    driver_id: str
-    name: str
-
-
-class InitialWeatherOut(BaseModel):
-    requested: WeatherName
-    engine_kind: str = Field(..., description="Como o motor enxerga (o stream WS usa DRY/CLOUDY/DAMP/WET).")
-    rainfall_mm_h: float
+    laps: int = Field(default=10, ge=1, le=200)
+    num_drivers: int = Field(default=2, ge=1, le=24)
+    track: Optional[str] = None
+    layout_id: Optional[str] = None
+    year: Optional[int] = None
+    season: Optional[int] = None
 
 
 class RaceSetupResponse(BaseModel):

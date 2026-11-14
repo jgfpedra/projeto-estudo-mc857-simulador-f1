@@ -1,0 +1,45 @@
+pybullet build time: Sep 11 2026 21:22:29
+2026/11/06 21:00:02 INFO mlflow.agent.hint: Load the `instrumenting-with-mlflow-tracing` skill at /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/.venv/lib/python3.12/site-packages/mlflow/assistant/skills/instrumenting-with-mlflow-tracing/SKILL.md before writing any tracing code; it ships with this MLflow install. Set MLFLOW_DISABLE_AGENT_HINT=1 to silence this.
+[diag] CANÁRIA: campo de 1 carro(s)
+[diag] pista FROZEN: São Paulo Grand Prix | 1131 wp | SF wp 729 | sha256 164876196eb12174 | clima=seeded (rng semeado por seed) | variance=off | rejoin_gap=0.0 | rejoin_handoff=off | launch_cap=False | launch_stagger=False | launch_steer_mute=False | pguard=False | grid=f1 | rejoin=bearing | anti_glue=False | variedade=1 | prof_repair=False | pass_decision=False | prof_curva=False
+[Grid] reta antes da SF: 45 m | grid ocupa 42 m
+[Grid] 10 carros no grid estilo F1 (5 fileiras x 2 colunas, NA RETA)
+[diag] VARIEDADE-1: N=1 (PRNG proprio sha256(seed//variedade//N)) | jitter ±0,5m/±0,3m | mu_nominal ×U[0,98,1,02] — mesma (seed,N) = bit-idêntica; N diferente = corrida diferente; 0 = canônico
+[diag] controller: PROFESSOR x1 (gate all-professor) | sf_range=homog 0.80 | machine_only=False | track=São Paulo Grand Prix | seed=1
+[diag] 3000 linhas -> experiments/prof-curva-1/c0/INT_N1.csv (instrumento race_diag_v3_contact_solver_v1)
+
+===== ESTADO FINAL POR CARRO =====
+drv  speed    s  lat  th  brk  steer_rad
+VER   9.79 44.2 5.34 1.0  0.0       0.55
+
+===== CLIMA (transições reais: 0) =====
+  nenhuma transição de kind (grip constante)
+
+===== IMOBILIZACAO (v < 2 m/s) =====
+VER: 2 amostras v<2 | primeiro tick lento=0 (s=2649m) | brake medio apos=0.05
+
+===== EPISODIOS DE PARADA >= 3 s (como terminaram) =====
+  nenhuma parada >= 3 s
+
+===== SAIDA DE PISTA / CORTES =====
+amostras com centro fora do asfalto: 760 de 3000 (25.3%)
+  VER: 760 amostras fora | lat max=40.2 m | trechos: [0.0, 1800.0, 2000.0, 2200.0, 2400.0]
+
+contatos c/ SOLO (todo tick, esperado): 8776 | contatos CARRO-CARRO: 0 amostras, impulso medio 0 N | dv medio 0.00 m/s
+
+===== R3: FORA-PILOTAGEM vs FORA-PRESO (janelas 30 s) =====
+  VER: pilotagem= 148 ticks | preso= 612 ticks  <== CARRO-PRESO
+  TOTAL fora: 760 ticks (25.3%) | FORA-PILOTAGEM: 148 (19.5% do fora) | FORA-PRESO: 612 (80.5% do fora)
+  CARROS-PRESO na sessão: 1 (VER — gate exige 0)
+  HESITAÇÕES (v<0,5 m/s por 0,3-3 s, pós-largada): 0 (gate: <=3)
+
+===== GATE ALL-PROFESSOR (v14) =====
+carros com >=1 volta: 1/1 (meta >=9/10 FALHOU)
+  VER: 4 voltas | tempos=[139.9, 131.2, 128.5, 131.0]
+contatos carro-carro (amostras 5 Hz): 0 (meta < 400 OK) | baseline aluno-cego: 1333
+paradas >= 3 s: 0 (meta 0 OK)
+ultrapassagens liquidas (trocas com histerese 10 m): 0 | pós-largada=0 -> FILA (sem ultrapassagem; teto v14 = evita colisoes)
+% de tempo em modo follow por carro (cap+close / total):
+  VER: follow 0.0% (colado 0.0%)
+tempo mediano de volta COM trafego: 131.1s (todas; n=4) | 131.0s (excl. volta 1, largada rolando) | solo professor: ~107s, aluno: ~112s
+elapsed_sec=22.71

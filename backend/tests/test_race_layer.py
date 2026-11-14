@@ -208,7 +208,7 @@ def test_headless_stall_recovery_physical():
     os comandos do anti-stall — velocidade e progresso voltam a crescer
     (critério: não basta o comando; o carro tem que andar de verdade)."""
     from backend.model_train.f1_env import F1MultiContextEnv
-    from backend.scripts.run_race_10_cars import NeuralRaceController as N
+    from backend.scripts.simulation.run_race_10_cars import NeuralRaceController as N
     env = F1MultiContextEnv(track='interlagos', allow_respawn=False)
     env.reset()
     h = env.engine.handles[env.driver_id]
@@ -245,14 +245,22 @@ def test_headless_stall_recovery_physical():
 def test_rejoin_gains_authority_off_track():
     """A camada de rejoin reage no LIMITE do asfalto (1× meia-largura), não a 2×.
     Verifica as constantes e o mapeamento steer/velocidade-alvo."""
-    from backend.scripts.run_race_10_cars import NeuralRaceController as N
+    from backend.scripts.simulation.run_race_10_cars import NeuralRaceController as N
     assert N.OFFTRACK_FACTOR == 1.0, "rejoin deve agir na borda do asfalto (era 2.0)"
     assert N.REJOIN_TARGET_MPS <= 10.0, "rejoin deve ser lento"
     assert N.REJOIN_THROTTLE <= 0.5, "rejoin não deve arremeter pela grama"
-    # steering para a linha central: carro à esquerda (lat>0) -> esterço à direita
-    # (espelha a fórmula do bloco rejoin)
-    half = 6.0
-    signed_lat = +3.0
-    lat_dist = abs(signed_lat)
-    correction = -float(np.sign(signed_lat)) * min(N.STEER_MAX_RAD, 0.3 + lat_dist / 40.0)
-    assert correction < 0, "carro à esquerda da linha deve esterçar à direita"
+    # v15 FASE R3: esterço por BEARING ao ponto de re-entrada (a lei antiga
+    # de VALOR FIXO saturado produzia órbitas na grama — absorvedor).
+    # Alvo à esquerda do heading => berr>0 => steer>0 (física: steer+ = esquerda)
+    berr = math.pi / 4
+    steer = float(np.clip(N.REJOIN_BEARING_GAIN * berr,
+                          -N.STEER_MAX_RAD, N.STEER_MAX_RAD))
+    assert steer > 0, "alvo à esquerda deve esterçar à esquerda"
+    # alvo à direita => steer negativo
+    steer_r = float(np.clip(N.REJOIN_BEARING_GAIN * (-math.pi / 2 + 0.1),
+                            -N.STEER_MAX_RAD, N.STEER_MAX_RAD))
+    assert steer_r < 0, "alvo à direita deve esterçar à direita"
+    # rumo travado no alvo (berr~0) => esterço ~0 — SEM órbitas de valor fixo
+    assert abs(N.REJOIN_BEARING_GAIN * 0.01) < 0.05, "no alvo, esterço neutro"
+    # o ponto de re-entrada existe como constante instrumentada
+    assert 0 < N.REJOIN_AHEAD_M <= 30.0, "re-entrada: projeção + à frente moderado"

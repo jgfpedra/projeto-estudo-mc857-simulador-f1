@@ -1,0 +1,70 @@
+{
+  "version": "yield-1c-offline-audit-1",
+  "freeze_commit": "b9f9061e74e0c98c5186b2d7960c841848665d48",
+  "code_freeze": "d4b4eb067f3205d6a9e33062a461a1380bd50495",
+  "inputs": {
+    "r1_csv": {
+      "path": "experiments/pass-1/1_R1_OFF.csv",
+      "sha256": "5cb49097fea9bb066e9bef5ae62f4ee7c6f9ceb70485448792d33b533ce5cdaa",
+      "data_rows": 30000
+    },
+    "r2_y2_csv": {
+      "path": "experiments/yield-1/2_R2_Y2.csv",
+      "sha256": "5cb49097fea9bb066e9bef5ae62f4ee7c6f9ceb70485448792d33b533ce5cdaa",
+      "data_rows": 30000
+    },
+    "r2_y2_log": {
+      "path": "experiments/yield-1/2_R2_Y2.log",
+      "sha256": "9190c14ffeb7e75e1bfaec96903490995e8a96a238da5e3d66da0400bfa8c916"
+    },
+    "r2_y2_events": {
+      "path": "experiments/yield-1/2_R2_Y2_events.csv",
+      "sha256": "af8d8428d1380f2a80e309ba3a5653df1b93a528d8ff22dbe74ac1f6328171f1"
+    }
+  },
+  "schema": {
+    "header_byte_identical": true,
+    "r1_columns": 54,
+    "r2_columns": 54
+  },
+  "parity": {
+    "csv_byte_identical": true,
+    "t_star_s": null,
+    "g5": "PASS — no trigger occurred; CSV identical through the full run"
+  },
+  "yield_by_driver": {
+    "lines": [
+      "[leader-yield] VER: {'engaged': 0, 'consumed': 0, 'aborted': 0, 'attempts': [], 'active': None}",
+      "[leader-yield] NOR: {'engaged': 0, 'consumed': 0, 'aborted': 0, 'attempts': [], 'active': None}",
+      "[leader-yield] LEC: {'engaged': 0, 'consumed': 0, 'aborted': 0, 'attempts': [], 'active': None}",
+      "[leader-yield] HAM: {'engaged': 0, 'consumed': 0, 'aborted': 0, 'attempts': [], 'active': None}",
+      "[leader-yield] PIA: {'engaged': 0, 'consumed': 0, 'aborted': 0, 'attempts': [], 'active': None}",
+      "[leader-yield] RUS: {'engaged': 0, 'consumed': 0, 'aborted': 0, 'attempts': [], 'active': None}",
+      "[leader-yield] SAI: {'engaged': 0, 'consumed': 0, 'aborted': 0, 'attempts': [], 'active': None}",
+      "[leader-yield] PER: {'engaged': 0, 'consumed': 0, 'aborted': 0, 'attempts': [], 'active': None}",
+      "[leader-yield] ALO: {'engaged': 0, 'consumed': 0, 'aborted': 0, 'attempts': [], 'active': None}",
+      "[leader-yield] GAS: {'engaged': 0, 'consumed': 0, 'aborted': 0, 'attempts': [], 'active': None}"
+    ],
+    "engaged_total": 0,
+    "consumed_total": 0,
+    "aborted_total": 0
+  },
+  "gates": {
+    "g2_consumption": "FAIL — zero yield engagements and zero consumed yields; no target pair completed a passage",
+    "g3_non_worsening": "PASS relative to R1 for the compared CSV; byte-identical trajectory",
+    "g4_transfer_and_carveouts": "PASS — no yield active, so no carve-out engagement; trajectory identical to R1",
+    "g5_pre_trigger_parity": "PASS — no t*; exact R1 equality for the complete 6000-tick output"
+  },
+  "race_observations": {
+    "exit_code": 0,
+    "data_rows_required": 30000,
+    "data_rows_observed": 30000,
+    "contacts_5hz": 4156,
+    "completed_laps": 32,
+    "median_lap_s": 134.0,
+    "offtrack_samples": 12143,
+    "all_professor_cars_with_lap": "8/10",
+    "car_car_solver_events": 291997
+  },
+  "verdict": "PARE/SUNSET — standalone execution completed, but g2 consumption is zero; archive yield line and pivot to Etapa 4."
+}

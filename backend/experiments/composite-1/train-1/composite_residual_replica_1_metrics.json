@@ -1,0 +1,47 @@
+{
+  "best_epoch": 41,
+  "best_val_loss": 0.20699821412563324,
+  "corpus_audits": {
+    "case_A_audit_file_sha256": "3631168758e5531b194352ff94004a9f90d8d6423fa7ace9a95a27d6d7586cf3",
+    "case_A_dataset_sha256": "5d29d1808695528c7a8bfc8e03cb335d95d5fab35ef16076b708dd3fca6b215b",
+    "case_B_audit_file_sha256": "e9066ab8bba40858c50b702b14135a9b277d990415fedf93a73c4136cc43c9e5",
+    "case_B_dataset_sha256": "2089d289c0f3b2adc01b0431c6af7bedb1a5522362101d4e9a39ab3ab3a593bc"
+  },
+  "counts": {
+    "train": {
+      "case_A": 24000,
+      "case_B": 24000,
+      "total": 48000
+    },
+    "validation": {
+      "case_A": 3000,
+      "case_B": 3000,
+      "total": 6000
+    }
+  },
+  "hparams": {
+    "batch_size": 256,
+    "epochs": 50,
+    "loss": "Huber(delta=1.0)",
+    "lr": 0.001,
+    "optimizer": "Adam"
+  },
+  "huber_cand": 0.20699818432331085,
+  "huber_null": 0.5864295363426208,
+  "is_replica": true,
+  "mae_r1": 0.4703496992588043,
+  "mae_zeros": 0.8873178958892822,
+  "mean_norm_r": 1.4221404790878296,
+  "nan_inf_count": 0,
+  "run": "Run 2 (replica)",
+  "seeds": {
+    "numpy": 42,
+    "python": 42,
+    "tensorflow": 42
+  },
+  "sha256_git_head": "b7096dbe39c2385dbf41b88e2cddf2fc6a402098",
+  "sha256_keras": "e9e633a32aebecfee67188a439fe50d065d71c2e6ecebb918f868c57164b766e",
+  "sha256_npz": "6210fff65b19ad0e51c561e332ae30fe875b5a390c389520d6e2f23cefd17c60",
+  "sha256_script": "2f084e0e4ee832debc88fce7e733753f6e65e00336b41fb2b62d30ecb3ed06bf",
+  "val_loss_improvement_ratio": 0.352980488694847
+}

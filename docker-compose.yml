@@ -14,10 +14,14 @@ services:
 
   backend:
     build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      REDIS_URL: redis://redis:6379/0
     volumes:
       - ./data:/app/data:ro
     depends_on:
-      - llama
+      - redis
 
   ai:
     build: ./ai
@@ -29,9 +33,21 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "3000:3000"
+      - "3000:80"
     depends_on:
       - backend
+
+  viz3d:
+    build: ./viz3d
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
 
 volumes:
   ollama_data:

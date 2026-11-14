@@ -1,0 +1,13 @@
+{
+  "delta_val_loss": 0.0,
+  "diffs_by_layer": {
+    "res_d1_0": 0.0,
+    "res_d1_1": 0.0,
+    "res_d2_0": 0.0,
+    "res_d2_1": 0.0,
+    "res_out_0": 0.0,
+    "res_out_1": 0.0
+  },
+  "max_diff_w": 0.0,
+  "passes_gate": true
+}

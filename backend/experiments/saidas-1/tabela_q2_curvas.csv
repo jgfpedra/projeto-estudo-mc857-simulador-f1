@@ -1,0 +1,18 @@
+perfil,curva_id,curva_nome,eventos,taxa_100v,pct_do_perfil,eventos_solo,pct_solo_na_curva,rank
+A (v10-cego),C01,Descida do Lago (T4/T5),48,48,26.7,25,52.1,1
+A (v10-cego),C06,Bico de Pato (T10),40,40,22.2,22,55.0,2
+A (v10-cego),C08,Junção (T12),40,40,22.2,21,52.5,3
+A (v10-cego),C07,Mergulho (T11),37,37,20.6,16,43.2,4
+A (v10-cego),C09,Subida dos Boxes (T13/T14),7,7,3.9,0,0.0,5
+A (v10-cego),C10,Senna S (T1/T2),4,4,2.2,0,0.0,6
+A (v10-cego),Reta,Reta / Outro,4,4,2.2,0,0.0,7
+B (composite),C01,Descida do Lago (T4/T5),50,50,22.8,42,84.0,1
+B (composite),C07,Mergulho (T11),42,42,19.2,40,95.2,2
+B (composite),C08,Junção (T12),41,41,18.7,37,90.2,3
+B (composite),C06,Bico de Pato (T10),38,38,17.4,38,100.0,4
+B (composite),Reta,Reta / Outro,20,20,9.1,11,55.0,5
+B (composite),C10,Senna S (T1/T2),10,10,4.6,2,20.0,6
+B (composite),C11,Curva do Sol (T3),6,6,2.7,4,66.7,7
+B (composite),C09,Subida dos Boxes (T13/T14),5,5,2.3,2,40.0,8
+B (composite),C02,Ferradura (T6/T7),4,4,1.8,4,100.0,9
+B (composite),C05,Pinheirinho (T9),3,3,1.4,3,100.0,10

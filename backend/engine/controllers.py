@@ -11,13 +11,13 @@ Implementações incluídas:
 - :class:`InputSourceController` — consome input de uma :class:`InputSource`
   (ex.: Redis, InMemoryInputSource). A engine se inscreve na fonte e o
   controller apenas repassa o último input publicado.
+- ``RuleBasedRaceController`` — controller autônomo baseado em regras,
+  disponível em ``engine.rule_based_race_controller``.
 
-**Importante**: NÃO há mais controller que faz o carro "andar sozinho"
-(waypoint follower foi removido). O motor espera inputs externos.
-
-A ideia é que o :class:`~racing_sim.engine.simulation.SimulationEngine`
-mantenha um registry ``driver_id -> controller`` e, a cada tick, chame
-``compute_input`` para obter o :class:`CarInput` que será aplicado na física.
+O :class:`~racing_sim.engine.simulation.SimulationEngine` mantém um registry
+``driver_id -> controller`` e, a cada tick, chama ``compute_input`` para obter
+o :class:`CarInput` que será aplicado na física. Por padrão usa inputs
+externos; a simulação visual de dez carros pode instalar o controller autônomo.
 """
 
 from __future__ import annotations
@@ -80,6 +80,7 @@ class EnvironmentState:
     weather: Any  # WeatherState
     track: Any    # Track
     all_driver_states: Dict[str, Any]  # driver_id -> DriverState
+    aero_drag_multipliers: Dict[str, float] = field(default_factory=dict)
 
 
 class CarController:

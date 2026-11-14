@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from fastapi import HTTPException
 
-from scripts.fetch_track_layouts import (
+from scripts.tracks.fetch_track_layouts import (
     format_year_ranges,
     extract_layout_number,
     find_database_path,

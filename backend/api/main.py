@@ -1,173 +1,153 @@
-"""Entry point da api web do simulador.
-
-Rodar localmente (de dentro da pasta backend/):
-
-    uvicorn api.main:app --reload --port 8000
-
-Documentação interativa (contrato para o front): http://localhost:8000/docs
-
-Catálogo (precisa de ``data/catalog.json`` — ``python scripts/build_catalog.py``):
-- GET /circuits                  -> circuitos, países, SVG e variações de traçado
-- GET /seasons                   -> temporadas disponíveis
-- GET /seasons/{year}/drivers    -> pilotos de uma temporada
-
-Corrida:
-- POST /races                    -> cria e inicia uma corrida, devolve {race_id, ws_path, ...}
-- WS   /ws/races/{race_id}       -> transmite os eventos em tempo real (fecha no race_end)
-"""
-
+"""API HTTP e ponte Redis -> WebSocket para a visualização da corrida."""
 from __future__ import annotations
 
 import asyncio
+import json
 import os
-from typing import Callable, List, Optional
-
-from fastapi import Depends, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+import anyio
+import redis
+import redis.asyncio as aioredis
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from .race_manager import REDIS_URL, race_manager
+from .schemas import RaceSetupRequest, RaceSetupResponse
 
-from config import CircuitLoadError, load_track
+app = FastAPI(title='F1 Simulator API')
+origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174,http://localhost:3000,http://localhost:3001,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:3000,http://127.0.0.1:3001').split(',')
+app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=['*'], allow_headers=['*'])
 
-from .catalog import Catalog, CatalogUnavailable, get_catalog
-from .race_manager import race_manager
-from .race_setup import CatalogRequired, SetupError, build_race_setup
-from .schemas import (
-    CircuitOut,
-    RaceSetupRequest,
-    RaceSetupResponse,
-    SeasonDriverOut,
-)
-
-app = FastAPI(title="F1 Simulator API")
-
-# Origens do front em dev (Vite) e do front "buildado" no docker-compose.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:3000",
-    ],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.on_event("startup")
-async def on_startup() -> None:
-    # Guarda o event loop principal para o RaceManager poder repassar eventos
-    # vindos da thread da engine de volta para as conexões websocket.
-    race_manager.bind_loop(asyncio.get_running_loop())
-
-
-# ---------------------------------------------------------------------------
-# Dependências (sobrescritas nos testes)
-# ---------------------------------------------------------------------------
-
-def required_catalog() -> Catalog:
+@app.post('/races', response_model=RaceSetupResponse)
+def create_race(req: RaceSetupRequest):
     try:
-        return get_catalog()
-    except CatalogUnavailable as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-
-def optional_catalog() -> Optional[Catalog]:
-    """Para o POST /races, que funciona sem catálogo quando não usa circuito/grid."""
-    try:
-        return get_catalog()
-    except CatalogUnavailable:
-        return None
-
-
-def get_track_loader() -> Callable:
-    return load_track
-
-
-# ---------------------------------------------------------------------------
-# Catálogo
-# ---------------------------------------------------------------------------
-
-@app.get("/circuits", response_model=List[CircuitOut], tags=["catálogo"])
-def list_circuits(catalog: Catalog = Depends(required_catalog)):
-    """Todos os circuitos, com país, cidade, SVG e variações de traçado."""
-    return catalog.circuits
-
-
-@app.get("/seasons", response_model=List[int], tags=["catálogo"])
-def list_seasons(catalog: Catalog = Depends(required_catalog)):
-    """Temporadas com pilotos cadastrados (mais recente primeiro)."""
-    return catalog.season_years()
-
-
-@app.get("/seasons/{year}/drivers", response_model=List[SeasonDriverOut], tags=["catálogo"])
-def list_season_drivers(year: int, catalog: Catalog = Depends(required_catalog)):
-    """Pilotos titulares de uma temporada (sem pilotos de teste)."""
-    drivers = catalog.season_drivers(year)
-    if drivers is None:
-        raise HTTPException(status_code=404, detail=f"temporada {year} não encontrada")
-    return drivers
-
-
-# ---------------------------------------------------------------------------
-# Corrida
-# ---------------------------------------------------------------------------
-
-@app.post("/races", response_model=RaceSetupResponse, tags=["corrida"])
-def create_race(
-    req: RaceSetupRequest,
-    catalog: Optional[Catalog] = Depends(optional_catalog),
-    track_loader: Callable = Depends(get_track_loader),
-) -> RaceSetupResponse:
-    """Configura e inicia uma nova corrida.
-
-    Guarde o ``race_id`` e abra o WebSocket em ``ws_path``. Carregar um circuito
-    real pode demorar (o FastF1 baixa os dados na 1ª vez): mostre um loading.
-    """
-    try:
-        setup = build_race_setup(
-            req,
-            catalog,
-            track_loader=track_loader,
-            cache_dir=os.environ.get("FASTF1_CACHE_DIR"),
+        if req.year is not None and req.season is not None and req.year != req.season:
+            raise ValueError('year e season devem indicar a mesma temporada')
+        race_id, track, config = race_manager.create_race(
+            req.laps, req.track, req.season if req.season is not None else req.year,
+            num_drivers=req.num_drivers, layout_id=req.layout_id
         )
-    except SetupError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    except CatalogRequired as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except CircuitLoadError as exc:
-        raise HTTPException(status_code=502, detail=f"falha ao carregar o circuito no FastF1: {exc}") from exc
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail='Redis indisponível') from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return RaceSetupResponse(race_id=race_id, track_name=track.name, num_laps=config.num_laps)
 
-    race_id = race_manager.create_race(setup)
-
-    return RaceSetupResponse(
-        race_id=race_id,
-        ws_path=f"/ws/races/{race_id}",
-        track_name=setup.track.name,
-        num_laps=setup.num_laps,
-        circuit_id=setup.circuit_id,
-        layout_id=setup.layout_id,
-        grid=setup.grid,
-        initial_weather=setup.initial_weather,
-        initial_tyre=setup.initial_tyre,
-        warnings=setup.warnings,
-    )
+@app.get('/circuits')
+def list_circuits():
+    catalog = race_manager.catalog
+    if catalog is None:
+        raise HTTPException(status_code=503, detail='Catálogo F1DB indisponível')
+    return {'catalog': catalog.provenance, 'circuits': [
+        {'id': c['id'], 'name': c['name'], 'full_name': c['full_name'],
+         'layouts_count': len(c.get('layouts', []))} for c in catalog.circuits]}
 
 
-@app.websocket("/ws/races/{race_id}")
-async def race_websocket(websocket: WebSocket, race_id: str) -> None:
-    if not race_manager.exists(race_id):
-        # 4404: código de fechamento customizado (faixa 4000-4999 é livre).
-        await websocket.close(code=4404)
-        return
+@app.get('/circuits/{circuit_id}/layouts')
+def circuit_layout_history(circuit_id: str):
+    catalog = race_manager.catalog
+    if catalog is None:
+        raise HTTPException(status_code=503, detail='Catálogo F1DB indisponível')
+    circuit = catalog.find_circuit(circuit_id)
+    if circuit is None:
+        raise HTTPException(status_code=404, detail='Circuito não encontrado no catálogo F1DB')
+    return {'circuit_id': circuit['id'], 'name': circuit['full_name'],
+            'catalog': catalog.provenance, 'layouts': circuit['layouts']}
 
-    await websocket.accept()
-    queue = race_manager.subscribe(race_id)
+
+@app.get('/races/{race_id}')
+def get_race(race_id: str):
     try:
-        while True:
-            payload = await queue.get()
+        meta = race_manager.metadata(race_id)
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail='Redis indisponível') from exc
+    if meta is None:
+        raise HTTPException(status_code=404, detail='Corrida não encontrada')
+    return meta
+
+@app.get('/races/{race_id}/snapshot')
+def get_race_snapshot(race_id: str):
+    try:
+        snapshot = race_manager.snapshot(race_id)
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail='Redis indisponível') from exc
+    if snapshot is None:
+        raise HTTPException(status_code=404, detail='Corrida não encontrada')
+    return snapshot
+
+@app.websocket('/ws/races/{race_id}')
+async def race_websocket(websocket: WebSocket, race_id: str):
+    client = aioredis.from_url(REDIS_URL, decode_responses=True, socket_connect_timeout=2)
+    pubsub = client.pubsub()
+    try:
+        if not await client.exists(f'race:{race_id}:meta'):
+            await websocket.close(code=4404)
+            return
+        # Inscrever antes de ler o último estado evita perder ticks na conexão.
+        await pubsub.subscribe(f'race:{race_id}:events')
+        await websocket.accept()
+        start_event = await client.get(f'race:{race_id}:start')
+        start_sent = bool(start_event)
+        if start_event:
+            await websocket.send_text(start_event)
+        snapshot = await client.get(f'race:{race_id}:state')
+        last_tick = -1.0
+        if snapshot:
+            if not start_sent:
+                start_event = await client.get(f'race:{race_id}:start')
+                if start_event:
+                    await websocket.send_text(start_event)
+                    start_sent = True
+            payload = json.loads(snapshot)
+            last_tick = payload['sim_ts']
             await websocket.send_json(payload)
-            if payload.get("type") == "race_end":
-                await websocket.close(code=1000)  # corrida acabou: encerra o stream
-                break
+        result = await client.get(f'race:{race_id}:result')
+        if result:
+            final_snapshot = await client.get(f'race:{race_id}:state')
+            if final_snapshot:
+                final_tick = json.loads(final_snapshot)
+                if final_tick['sim_ts'] > last_tick:
+                    await websocket.send_json(final_tick)
+            await websocket.send_text(result)
+            return
+
+        async def forward():
+            nonlocal last_tick, start_sent
+            async for message in pubsub.listen():
+                if message['type'] != 'message':
+                    continue
+                payload = json.loads(message['data'])
+                if payload.get('type') == 'race_start':
+                    if start_sent:
+                        continue
+                    start_sent = True
+                if payload.get('type') == 'tick':
+                    if payload['sim_ts'] <= last_tick:
+                        continue
+                    last_tick = payload['sim_ts']
+                await websocket.send_json(payload)
+                if payload.get('type') in ('race_end', 'race_error'):
+                    return
+
+        async def wait_for_disconnect():
+            while True:
+                if (await websocket.receive())['type'] == 'websocket.disconnect':
+                    return
+
+        tasks = [asyncio.create_task(forward()), asyncio.create_task(wait_for_disconnect())]
+        try:
+            done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                task.result()
+        finally:
+            # Desconexões podem cancelar o escopo ASGI durante a limpeza.
+            with anyio.CancelScope(shield=True):
+                for task in tasks:
+                    task.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
     except WebSocketDisconnect:
         pass
+    except redis.RedisError:
+        await websocket.close(code=1011)
     finally:
-        race_manager.unsubscribe(race_id, queue)
+        with anyio.CancelScope(shield=True):
+            await pubsub.aclose()
+            await client.aclose()

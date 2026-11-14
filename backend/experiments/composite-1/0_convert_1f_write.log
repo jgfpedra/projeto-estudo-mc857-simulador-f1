@@ -1,0 +1,2 @@
+pybullet build time: Sep 11 2026 21:22:29
+{"A": {"episode_count": 10, "families": {"hesitations_post_reentry_le_10s": 42, "launch_t_lt_60s": 3000, "monaco_rejoin": 16088, "nose_to_tail_gt_60s": 178}, "record_count": 30000, "split_counts": {"test": 3000, "train": 24000, "validation": 3000}, "written": true}, "B": {"episode_count": 10, "families": {"hesitations_post_reentry_le_10s": 44, "launch_t_lt_60s": 3000, "monaco_rejoin": 23946, "nose_to_tail_gt_60s": 273}, "record_count": 30000, "split_counts": {"test": 3000, "train": 24000, "validation": 3000}, "written": true}}

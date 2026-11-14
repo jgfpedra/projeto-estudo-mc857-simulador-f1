@@ -1,0 +1,276 @@
+.......................................................................s [ 15%]
+s........................................FF............................. [ 31%]
+......................F...........................FFFFFFFF.FFFFF........ [ 47%]
+....................F......F...............s............................ [ 63%]
+.............FF......................................................... [ 79%]
+........................................................................ [ 95%]
+.....................                                                    [100%]
+=================================== FAILURES ===================================
+_______________ TestKappaSignProcedural.test_local_sign_correct ________________
+tests/test_kappa_sign.py:54: in test_local_sign_correct
+    t = generate_track(seed=seed, n_hairpins=2, n_esses=0)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+________________ TestKappaSignProcedural.test_no_spurious_flip _________________
+tests/test_kappa_sign.py:81: in test_no_spurious_flip
+    t = generate_track(seed=101, n_hairpins=2, n_esses=0)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+_____________________ TestHoldAt.test_hold_car_stays_at_s ______________________
+tests/test_mixed_race.py:100: in test_hold_car_stays_at_s
+    held = df[df.drv == 'GAS'].sort_values('tick')   # último do grid
+              ^^^^^^
+.venv/lib/python3.12/site-packages/pandas/core/generic.py:6321: in __getattr__
+    return object.__getattribute__(self, name)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'DataFrame' object has no attribute 'drv'. Did you mean: 'div'?
+__________________ TestDeterminism.test_same_seed_same_track ___________________
+tests/test_procedural_track.py:32: in test_same_seed_same_track
+    t1 = _gen(seed=42, n_hairpins=2, n_esses=1)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+_____________ TestDeterminism.test_different_seed_different_track ______________
+tests/test_procedural_track.py:41: in test_different_seed_different_track
+    t1 = _gen(seed=1, n_hairpins=1, n_esses=0)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+__________________________ TestGeometry.test_closure ___________________________
+tests/test_procedural_track.py:54: in test_closure
+    t = _gen(seed=7, n_hairpins=1, n_esses=1)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+_______________________ TestGeometry.test_spacing_le_4m ________________________
+tests/test_procedural_track.py:66: in test_spacing_le_4m
+    t = _gen(seed=3, n_hairpins=2, n_esses=1)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+________________________ TestGeometry.test_length_range ________________________
+tests/test_procedural_track.py:76: in test_length_range
+    t = _gen(seed=5, n_hairpins=1, n_esses=1, target_length_m=4000)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+_______________________ TestGeometry.test_kappa_in_range _______________________
+tests/test_procedural_track.py:85: in test_kappa_in_range
+    t = _gen(seed=11, n_hairpins=2, n_esses=0)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+_________________________ TestWidth.test_custom_width __________________________
+tests/test_procedural_track.py:95: in test_custom_width
+    t = _gen(seed=13, width_m=14.0)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+__________________________ TestWidth.test_width_range __________________________
+tests/test_procedural_track.py:101: in test_width_range
+    t = _gen(seed=17, width_m=w)
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+_________________ TestEnvIntegration.test_env_with_procedural __________________
+tests/test_procedural_track.py:118: in test_env_with_procedural
+    t = _gen(seed=21, n_hairpins=1, n_esses=1)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+___________________ TestEnvIntegration.test_start_zones_auto ___________________
+tests/test_procedural_track.py:134: in test_start_zones_auto
+    t = _gen(seed=23, n_hairpins=2, n_esses=0)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+________________ TestEnvIntegration.test_race_layer_compatible _________________
+tests/test_procedural_track.py:143: in test_race_layer_compatible
+    t = _gen(seed=25, n_hairpins=1, n_esses=1)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+_______________ TestFeatures.test_hairpin_produces_tight_corner ________________
+tests/test_procedural_track.py:155: in test_hairpin_produces_tight_corner
+    t = _gen(seed=31, n_hairpins=2, n_esses=0)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+_____________________ TestFeatures.test_esse_track_variety _____________________
+tests/test_procedural_track.py:163: in test_esse_track_variety
+    t = _gen(seed=33, n_hairpins=0, n_esses=3)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+model_train/procedural_track.py:84: in generate_track
+    from backend.domain.track import (Track, _catmull_rom_spline,
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+_________ TestSplineGeometry.test_subdivision_preserves_length_exactly _________
+tests/test_race_layer.py:175: in test_subdivision_preserves_length_exactly
+    from backend.domain.track import _resample_closed_polyline, _compute_segment_length
+E   ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+_______ TestDeployProfiles.test_profiles_exist_default_race_obs_correct ________
+tests/test_race_neural_60d.py:84: in test_profiles_exist_default_race_obs_correct
+    assert set(R.PROFILES) == {'race', 'quali', 'traffic', 'composite'}
+E   AssertionError: assert {'composite',...d', 'traffic'} == {'composite',...e', 'traffic'}
+E     
+E     Extra items in the left set:
+E     'race-blind'
+E     Use -v to get more diff
+___________________ test_reference_controller_completes_lap ____________________
+tests/test_rl_v2.py:180: in test_reference_controller_completes_lap
+    assert info["completed_lap"], f"baseline não completou a volta: prog={info['progress_m']:.0f}m"
+E   AssertionError: baseline não completou a volta: prog=2837m
+E   assert False
+---------------------------- Captured stdout setup -----------------------------
+[track_resolution] MIRROR canônico: 'interlagos' -> São Paulo Grand Prix (1131 wp, sha 164876196eb12174), ZERO rede
+[F1MultiContextEnv][IDENTIDADE] solicitada=interlagos | efetiva=São Paulo Grand Prix (ver self.track_identity p/ hash/fonte/wp/L)
+[F1MultiContextEnv] Start/finish ajustado do wp 729 -> 929 (melhor reta)
+_____________________ test_skidpad_radius_close_to_bicycle _____________________
+tests/test_rl_v2.py:206: in test_skidpad_radius_close_to_bicycle
+    assert radius < 2.0 * bike, f"subesterço regressou: raio={radius:.1f} m vs bicicleta {bike:.1f} m"
+E   AssertionError: subesterço regressou: raio=33.0 m vs bicicleta 12.7 m
+E   assert 32.95224462124835 < (2.0 * 12.688972745734183)
+=============================== warnings summary ===============================
+tests/test_composite_parity.py:54
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_composite_parity.py:54: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_deep_rejoin.py:47
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_deep_rejoin.py:47: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_mixed_race.py:87
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_mixed_race.py:87: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_prof_monaco_instrument.py:34
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_prof_monaco_instrument.py:34: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_race_layer.py:205
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_race_layer.py:205: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_residual_gated.py:48
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_residual_gated.py:48: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_residual_gated.py:155
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_residual_gated.py:155: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_rl_v2.py:173
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_rl_v2.py:173: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_rl_v2.py:185
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_rl_v2.py:185: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_rl_v3.py:116
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_rl_v3.py:116: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_rl_v3.py:117
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_rl_v3.py:117: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_sanidade_mec.py:97
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_sanidade_mec.py:97: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_sanidade_mec.py:158
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_sanidade_mec.py:158: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_velocity_profile.py:126
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_velocity_profile.py:126: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_race_neural_60d.py::TestRegistryResolution::test_resolve_deploy_aliases_exist_and_match_profiles
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/.venv/lib/python3.12/site-packages/mlflow/store/tracking/sqlalchemy_store.py:327: SADeprecationWarning: The ``noload`` loader strategy is deprecated and will be removed in a future release.  This option produces incorrect results by returning ``None`` for related items. (deprecated since: 2.1)
+    sqlalchemy.orm.configure_mappers()
+
+tests/test_regression_v2v4.py: 48 warnings
+tests/test_rl_v2.py: 24 warnings
+tests/test_rl_v3.py: 12 warnings
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/.venv/lib/python3.12/site-packages/keras/src/backend/tensorflow/core.py:172: DeprecationWarning: __array__ implementation doesn't accept a copy keyword, so passing copy=False failed. __array__ must implement 'dtype' and 'copy' keyword arguments. To learn more, see the migration guide https://numpy.org/devdocs/numpy_2_0_migration_guide.html#adapting-to-changes-in-the-copy-keyword
+    return np.array(x)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_kappa_sign.py::TestKappaSignProcedural::test_local_sign_correct
+FAILED tests/test_kappa_sign.py::TestKappaSignProcedural::test_no_spurious_flip
+FAILED tests/test_mixed_race.py::TestHoldAt::test_hold_car_stays_at_s - Attri...
+FAILED tests/test_procedural_track.py::TestDeterminism::test_same_seed_same_track
+FAILED tests/test_procedural_track.py::TestDeterminism::test_different_seed_different_track
+FAILED tests/test_procedural_track.py::TestGeometry::test_closure - ImportErr...
+FAILED tests/test_procedural_track.py::TestGeometry::test_spacing_le_4m - Imp...
+FAILED tests/test_procedural_track.py::TestGeometry::test_length_range - Impo...
+FAILED tests/test_procedural_track.py::TestGeometry::test_kappa_in_range - Im...
+FAILED tests/test_procedural_track.py::TestWidth::test_custom_width - ImportE...
+FAILED tests/test_procedural_track.py::TestWidth::test_width_range - ImportEr...
+FAILED tests/test_procedural_track.py::TestEnvIntegration::test_env_with_procedural
+FAILED tests/test_procedural_track.py::TestEnvIntegration::test_start_zones_auto
+FAILED tests/test_procedural_track.py::TestEnvIntegration::test_race_layer_compatible
+FAILED tests/test_procedural_track.py::TestFeatures::test_hairpin_produces_tight_corner
+FAILED tests/test_procedural_track.py::TestFeatures::test_esse_track_variety
+FAILED tests/test_race_layer.py::TestSplineGeometry::test_subdivision_preserves_length_exactly
+FAILED tests/test_race_neural_60d.py::TestDeployProfiles::test_profiles_exist_default_race_obs_correct
+FAILED tests/test_rl_v2.py::test_reference_controller_completes_lap - Asserti...
+FAILED tests/test_rl_v2.py::test_skidpad_radius_close_to_bicycle - AssertionE...
+20 failed, 430 passed, 3 skipped, 99 warnings in 196.60s (0:03:16)

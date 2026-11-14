@@ -1,0 +1,3 @@
+
+# FASE 4 v15: events de fixtures de teste (regeneráveis; só o CSV principal é âncora)
+tests/fixtures/*_events.csv

@@ -1,0 +1,12 @@
+pybullet build time: Sep 11 2026 21:22:29
+Traceback (most recent call last):
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/model_train/race_diagnostic.py", line 1256, in <module>
+    main()
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/model_train/race_diagnostic.py", line 587, in main
+    track = load_track_frozen(args.track, strict=True)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track_resolution.py", line 219, in load_track_frozen
+    raise FileNotFoundError(
+FileNotFoundError: PISTA FROZEN AUSENTE: /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/model_train/tracks_frozen/Monaco_v2_v1.json. O runner REJEITA corridas em pistas não congeladas (incidente 9099235: fallback silencioso para preset procedural produziu carros burros). Congele a pista primeiro ou use --track com uma frozen existente.
+ATTEMPT_STATUS=INVALID_TRACK_NAME
+The process stopped in load_track_frozen before simulator setup: --track Monaco_v2 resolved to missing Monaco_v2_v1.json. No output CSV exists and no simulation occurred.

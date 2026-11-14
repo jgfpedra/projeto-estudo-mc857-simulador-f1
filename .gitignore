@@ -8,23 +8,16 @@ __pycache__/
 mlflow.db
 mlruns/
 
-# Caches e artefatos grandes
-cache/
+# Caches, logs e artefatos regeneráveis
+cache*/
 model_train/cache_fastf1/
 *.log
-
-# Experimentos (CSVs grandes — regeneráveis)
 experiments/
 repo_manifest.csv
+f1db.db
+download/
 
-# Arquivos de estado de ferramentas
-.kilo/
-.claude/
-.agents/
-skills-lock.json
-teste.py
-
-# Checkpoints ML (binários grandes — usar model_train/tracks_frozen para dados)
+# Checkpoints e artefatos de treino grandes
 archive/checkpoints/**/*.keras
 archive/checkpoints/**/*.npz
 archive/checkpoints_root/*.keras
@@ -35,11 +28,30 @@ model_train/*.keras
 model_train/*.npz
 model_train/*.npy
 model_train/*.pkl
-# Cache FastF1 e banco
-model_train/cache_fastf1/
-f1db.db
-download/
-data/
-# Scalers/mappings (artefatos de treino)
 model_train/scaler_*.pkl
 model_train/mappings.pkl
+
+# Arquivos locais de ferramentas e IDE
+.kilo/
+.claude/
+.agents/
+.cursor/mcp.json
+.kiro/settings/mcp.json
+skills-lock.json
+teste.py
+
+# viz3d (3D visualisation spike, see viz3d/CLAUDE.md)
+viz3d/node_modules/
+viz3d/dist/
+viz3d/.cache/
+# Python virtualenvs anywhere in the tree
+.venv/
+venv/
+# FastF1 HTTP/session cache and any backup copy of it - never commit
+.fastf1-cache/
+.fastf1-cache*/
+fastf1-cache-backup*/
+# Playwright output
+test-results/
+playwright-report/
+playwright/.cache/

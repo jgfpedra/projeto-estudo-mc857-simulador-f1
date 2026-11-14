@@ -1,0 +1,435 @@
+{
+  "arm": "composite",
+  "canonical": {
+    "contacts_5hz_t_le_60s": 178,
+    "contacts_5hz_total": 488,
+    "driver_count": 10,
+    "hesitations": 6,
+    "laps_by_driver": {
+      "ALO": 3,
+      "GAS": 3,
+      "HAM": 3,
+      "LEC": 3,
+      "NOR": 3,
+      "PER": 3,
+      "PIA": 3,
+      "RUS": 3,
+      "SAI": 3,
+      "VER": 3
+    },
+    "laps_total": 30,
+    "metrics_sha256": "1b16e914cd09a66da3d02c8636d80fe1f7d047a9a54f276fa6f98d6663ad9157",
+    "offtrack_pct": 47.5,
+    "run_id": "6_ON_MONACO_N1",
+    "runner_summary": {
+      "driver_count": 10,
+      "hesitations": 6,
+      "offtrack_pct": 47.5,
+      "offtrack_ticks": 14259,
+      "stuck_car_count": 10
+    },
+    "sample_rows": 30000,
+    "schema_version": "base-metrics-v1.0",
+    "solver_event_contacts_by_pair": {
+      "ALO-GAS": 1597,
+      "ALO-HAM": 2947,
+      "ALO-PIA": 18,
+      "GAS-HAM": 3163,
+      "GAS-PER": 397,
+      "GAS-PIA": 38,
+      "HAM-RUS": 77,
+      "LEC-RUS": 258,
+      "LEC-SAI": 406,
+      "LEC-VER": 2389,
+      "NOR-PER": 4074,
+      "NOR-PIA": 6,
+      "NOR-RUS": 358,
+      "NOR-SAI": 260,
+      "PER-PIA": 1208,
+      "PER-SAI": 2276,
+      "PIA-RUS": 260,
+      "PIA-SAI": 103,
+      "PIA-VER": 3029,
+      "RUS-SAI": 1460
+    },
+    "solver_event_rows": 24324,
+    "source_sha256": {
+      "events": "59448f4fcf266ed01c656f86f5498a7204006fb5e7bb4e64fd1cfd556549794f",
+      "log": "0963bd5eba20970e699b878630c336190f48329d37a47f10a0c388cb60cba8cf",
+      "main": "7ac280d08d523befdaa1cc60e19c0b20cd3b26040e8ad3eb32ce44dc8ead230b"
+    },
+    "stuck_car_count": 10,
+    "stuck_driver_ids": [
+      "ALO",
+      "GAS",
+      "HAM",
+      "LEC",
+      "NOR",
+      "PER",
+      "PIA",
+      "RUS",
+      "SAI",
+      "VER"
+    ]
+  },
+  "cross_checks": {
+    "fora_preso_vs_log": {
+      "computed": 10354,
+      "log": 10354,
+      "match": true
+    },
+    "offtrack_vs_log": {
+      "computed": 14259,
+      "log": 14259,
+      "match": true
+    },
+    "sample_rows_vs_canonical": {
+      "canonical": 30000,
+      "computed": 30000,
+      "match": true
+    }
+  },
+  "events": {
+    "junction": null,
+    "z_reta": [
+      {
+        "corner_id": "Reta",
+        "drv": "HAM",
+        "rows": 9,
+        "s": 3330.695,
+        "t_s": 2.2,
+        "tick": 22
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "RUS",
+        "rows": 17,
+        "s": 3321.139,
+        "t_s": 2.2,
+        "tick": 22
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "GAS",
+        "rows": 26,
+        "s": 3304.343,
+        "t_s": 2.4,
+        "tick": 24
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "PER",
+        "rows": 17,
+        "s": 3316.566,
+        "t_s": 2.6,
+        "tick": 26
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "ALO",
+        "rows": 21,
+        "s": 3308.567,
+        "t_s": 3.0,
+        "tick": 30
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "PIA",
+        "rows": 11,
+        "s": 3327.789,
+        "t_s": 3.0,
+        "tick": 30
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "SAI",
+        "rows": 11,
+        "s": 3323.183,
+        "t_s": 3.2,
+        "tick": 32
+      }
+    ],
+    "z_t1_t_le_60s": [
+      {
+        "corner_id": "C01",
+        "drv": "NOR",
+        "rows": 16,
+        "s": 27.852,
+        "t_s": 3.8,
+        "tick": 38
+      },
+      {
+        "corner_id": "C01",
+        "drv": "PIA",
+        "rows": 1,
+        "s": 43.84,
+        "t_s": 8.0,
+        "tick": 80
+      },
+      {
+        "corner_id": "C01",
+        "drv": "SAI",
+        "rows": 6,
+        "s": 37.209,
+        "t_s": 8.2,
+        "tick": 82
+      },
+      {
+        "corner_id": "C01",
+        "drv": "ALO",
+        "rows": 41,
+        "s": 24.053,
+        "t_s": 9.2,
+        "tick": 92
+      },
+      {
+        "corner_id": "C01",
+        "drv": "GAS",
+        "rows": 37,
+        "s": 27.326,
+        "t_s": 9.4,
+        "tick": 94
+      }
+    ]
+  },
+  "instrument": {
+    "base_metrics_sha256": "9107c2d0f6bb3b1c7b317020b09b90a7c615390cdfb4e565acb29c27c362d728",
+    "realismo_metrics_sha256": "e5a7ecb42fd9bfd3297935d974a53174b51eb822a877b33e4ed4a208a590ac7b",
+    "saidas_verdict_sha256": "e1ac9f699e6d1339e67b7d53683f6becd5e3041da52102516cc4529c21496d6c",
+    "sanidade1b_verdict_sha256": "c23f3c6692dfdb5add216e5d021cf1db6ba49b4113f1052d2aef2b54a74d8b16",
+    "track_file_sha256": "af3125959ade1f82062d9c9fe0dfa8020d31e431d919408ae4d293f0fac20bf2",
+    "track_sha16": "67ca11dc211c8c78"
+  },
+  "integrity": {
+    "arm": "composite",
+    "checks": {
+      "csv_track_sha": {
+        "detail": {
+          "expected": "67ca11dc211c8c78",
+          "found": [
+            "67ca11dc211c8c78"
+          ]
+        },
+        "pass": true
+      },
+      "events_present": {
+        "detail": "6_ON_MONACO_N1_events.csv",
+        "pass": true
+      },
+      "expected_variedade": {
+        "detail": {
+          "expected": 1,
+          "found": 1
+        },
+        "pass": true
+      },
+      "log_track_sha": {
+        "detail": {
+          "expected": "67ca11dc211c8c78",
+          "frozen_lines": 1
+        },
+        "pass": true
+      },
+      "main_physical_lines": {
+        "detail": {
+          "expected": 30002,
+          "found": 30002
+        },
+        "pass": true
+      },
+      "no_residual_override": {
+        "detail": {
+          "override_lines": 0
+        },
+        "pass": true
+      },
+      "residual_baseline": {
+        "detail": {
+          "expected": [
+            "6210fff65b19ad0e"
+          ],
+          "found": [
+            "6210fff65b19ad0e"
+          ]
+        },
+        "pass": true
+      },
+      "variedade_frozen": {
+        "detail": {
+          "found": [
+            "1"
+          ]
+        },
+        "pass": true
+      },
+      "variedade_line": {
+        "detail": {
+          "expected": [
+            1
+          ],
+          "found": [
+            1
+          ]
+        },
+        "pass": true
+      }
+    },
+    "ok": true,
+    "variedade": 1
+  },
+  "metrics": {
+    "cascade_event_frac": 0.6914600550964187,
+    "cascade_events": 251,
+    "cascade_events_int": 251,
+    "cascade_offtime_frac": 0.7307665334174908,
+    "cascade_offtime_rows": 10420,
+    "censored_excursions": 7,
+    "contacts_5hz_t_le_60s": 178,
+    "contacts_5hz_total": 488,
+    "corner_exits": {
+      "C01": 24,
+      "C02": 10,
+      "C03": 54,
+      "C04": 42,
+      "C05": 46,
+      "C06": 22,
+      "C07": 23,
+      "C10": 27,
+      "C11": 42,
+      "C12": 40,
+      "Reta": 33
+    },
+    "deadlocks": 5,
+    "excursions_t_le_60s": 56,
+    "excursions_total": 363,
+    "fora_pilotagem_rows": 3905,
+    "fora_preso_rows": 10354,
+    "glued_rows": 940,
+    "glued_s": 188.0,
+    "hesitations": 6,
+    "junction_exits": null,
+    "laps_total": 30,
+    "new_exit_le_5s": 126,
+    "new_exit_le_5s_per_excursion": 0.34710743801652894,
+    "new_exit_le_5s_per_reentry": 0.3539325842696629,
+    "offtrack_pct": 47.5,
+    "offtrack_rows": 14259,
+    "reentries": 356,
+    "sample_rows": 30000,
+    "wanderer_events": 0,
+    "z_reta_exits": 7,
+    "z_t1_exits_t_le_60s": 5
+  },
+  "metrics_sha256": "21c36010cdc9de7d7323fe10aaea58004b519009dab76147a26c171ec78a92b5",
+  "run_id": "6_ON_MONACO_N1",
+  "schema_version": "realismo-metrics-v1.0",
+  "source_sha256": {
+    "events": "59448f4fcf266ed01c656f86f5498a7204006fb5e7bb4e64fd1cfd556549794f",
+    "log": "0963bd5eba20970e699b878630c336190f48329d37a47f10a0c388cb60cba8cf",
+    "main": "7ac280d08d523befdaa1cc60e19c0b20cd3b26040e8ad3eb32ce44dc8ead230b"
+  },
+  "track": "monaco",
+  "zones": {
+    "corners": [
+      {
+        "id": "C01",
+        "kmax": 0.038176,
+        "name": "Complexo de curva 01",
+        "s0": -4.0039,
+        "s1": 36.0349
+      },
+      {
+        "id": "C02",
+        "kmax": 0.006659,
+        "name": "Complexo de curva 02",
+        "s0": 76.0738,
+        "s1": 100.0971
+      },
+      {
+        "id": "C03",
+        "kmax": 0.071178,
+        "name": "Complexo de curva 03",
+        "s0": 164.1592,
+        "s1": 240.233
+      },
+      {
+        "id": "C04",
+        "kmax": 0.099869,
+        "name": "Complexo de curva 04",
+        "s0": 320.3106,
+        "s1": 388.3767
+      },
+      {
+        "id": "C05",
+        "kmax": 0.088838,
+        "name": "Complexo de curva 05",
+        "s0": 428.4155,
+        "s1": 596.5786
+      },
+      {
+        "id": "C06",
+        "kmax": 0.160247,
+        "name": "Complexo de curva 06",
+        "s0": 648.6291,
+        "s1": 728.7067
+      },
+      {
+        "id": "C07",
+        "kmax": 0.083167,
+        "name": "Complexo de curva 07",
+        "s0": 1105.0717,
+        "s1": 1221.1843
+      },
+      {
+        "id": "C08",
+        "kmax": 0.006615,
+        "name": "Complexo de curva 08",
+        "s0": 1477.4328,
+        "s1": 1493.4484
+      },
+      {
+        "id": "C09",
+        "kmax": 0.006096,
+        "name": "Complexo de curva 09",
+        "s0": 1561.5144,
+        "s1": 1565.5183
+      },
+      {
+        "id": "C10",
+        "kmax": 0.029746,
+        "name": "Complexo de curva 10",
+        "s0": 1665.6153,
+        "s1": 1917.86
+      },
+      {
+        "id": "C11",
+        "kmax": 0.086495,
+        "name": "Complexo de curva 11",
+        "s0": 2090.027,
+        "s1": 2442.3687
+      },
+      {
+        "id": "C12",
+        "kmax": 0.125731,
+        "name": "Complexo de curva 12",
+        "s0": 3038.9472,
+        "s1": 3139.0443
+      }
+    ],
+    "grid_back": 3293.2346,
+    "grid_front": 3329.2346,
+    "junction_corner_id": null,
+    "junction_zone": null,
+    "length_m": 3335.2346,
+    "sf_s": 0.0,
+    "t1_corner_id": "C01",
+    "z_reta": [
+      3288.2346,
+      3331.2307
+    ],
+    "z_t1": [
+      3331.2307,
+      66.0349
+    ]
+  }
+}

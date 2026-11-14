@@ -38,84 +38,19 @@ from backend.domain.track_loader import FastF1TrackLoader
 
 DEFAULT_REFERENCE_CSV = MODEL_DIR / 'reference_path.csv'
 
-# --- Pistas reais via FastF1 (sem waypoints hardcoded) ---------------------
-# Padrão: GP de São Paulo (Interlagos) baixado do FastF1, cacheado em disco.
-# Se o evento pedido não existir, cai para o GP de São Paulo; se ainda assim
-# falhar (ex.: sem internet e sem cache), último recurso é o preset local.
-FASTF1_DEFAULT_YEAR = 2024
-FASTF1_DEFAULT_EVENT = "São Paulo"
-FASTF1_CACHE_DIR = MODEL_DIR / "cache_fastf1"
-
-# aliases amigáveis -> nome do evento no FastF1
-_FASTF1_EVENT_ALIASES = {
-    "interlagos": FASTF1_DEFAULT_EVENT,
-    "sao paulo": FASTF1_DEFAULT_EVENT,
-    "são paulo": FASTF1_DEFAULT_EVENT,
-    "sao-paulo": FASTF1_DEFAULT_EVENT,
-    "são-paulo": FASTF1_DEFAULT_EVENT,
-    "brazil": FASTF1_DEFAULT_EVENT,
-    "default": FASTF1_DEFAULT_EVENT,
-    "none": FASTF1_DEFAULT_EVENT,
-}
-
-
-def _fastf1_event_name(track_str):
-    if track_str is None or not str(track_str).strip():
-        return FASTF1_DEFAULT_EVENT
-    s = str(track_str).strip()
-    return _FASTF1_EVENT_ALIASES.get(s.lower(), s)
-
-
-def resolve_track(track=None, reference_csv=None, year=FASTF1_DEFAULT_YEAR,
-                  session="R", cache_dir=None, width_m=12.0):
-    """Resolve a pista de treino com esta ordem de prioridade:
-
-    1. ``track`` já sendo um objeto :class:`Track` -> usa direto;
-    2. CSV de referência (``reference_csv`` ou caminho .csv) -> pista do arquivo;
-    3. FastF1 com o evento pedido (dados reais);
-    4. Fallback: FastF1 GP de São Paulo (Interlagos);
-    5. Último recurso (offline/sem cache): preset local de Interlagos.
-    """
-    if isinstance(track, Track):
-        return track
-
-    csv_path = None
-    if reference_csv is not None:
-        csv_path = Path(reference_csv)
-    elif track is not None:
-        candidate = Path(str(track))
-        if str(track).lower().endswith(".csv") or candidate.exists():
-            csv_path = candidate
-    if csv_path is not None:
-        if not csv_path.is_absolute() and not csv_path.exists():
-            if (MODEL_DIR / csv_path).exists():
-                csv_path = MODEL_DIR / csv_path
-            elif (PROJECT_ROOT / csv_path).exists():
-                csv_path = PROJECT_ROOT / csv_path
-        ref = pd.read_csv(str(csv_path))
-        return Track.from_waypoints(
-            name=csv_path.stem,
-            waypoints=ref[['X', 'Y']].values.astype(float),
-            width_m=width_m,
-        )
-
-    cache = Path(cache_dir) if cache_dir is not None else FASTF1_CACHE_DIR
-    loader = FastF1TrackLoader(cache_dir=cache)
-    event = _fastf1_event_name(track)
-    attempts = [event] + ([] if event == FASTF1_DEFAULT_EVENT else [FASTF1_DEFAULT_EVENT])
-    for ev in attempts:
-        try:
-            t = loader.load(year=year, event=ev, session=session,
-                            load_session=True,       # circuit_info exige voltas carregadas
-                            grid_from_telemetry=False)  # sem telemetria: só o desenho da pista
-            print(f"[F1MultiContextEnv] Pista carregada do FastF1: {t.name} "
-                  f"({year}, {ev}), {len(t.waypoints)} waypoints")
-            return t
-        except Exception as e:
-            print(f"[F1MultiContextEnv] FastF1 falhou p/ '{ev}' ({year}): {e}")
-
-    print("[F1MultiContextEnv] Sem FastF1; usando preset local de Interlagos (último recurso).")
-    return build_interlagos_track()
+# PISTA-IDENT-1 G1 (prereg 3758661 §2): a RESOLUÇÃO DE DADOS de pista
+# mudou para backend/domain/track_resolution.py — f1_env re-exporta
+# para manter TODOS os imports existentes (scripts de investigação,
+# evals, track_geometry_free) funcionando sem mudança.
+from backend.domain.track_resolution import (  # noqa: F401
+    FASTF1_DEFAULT_YEAR,
+    FASTF1_DEFAULT_EVENT,
+    FASTF1_CACHE_DIR,
+    resolve_track,
+    load_track_frozen,
+    track_identity,
+    TrackResolutionError,
+)
 
 # ----------------------------------------------------------------------------
 # Constantes do ambiente (todas ajustáveis)
@@ -309,6 +244,7 @@ class F1MultiContextEnv(gym.Env):
         f1_year=FASTF1_DEFAULT_YEAR,
         f1_session="R",
         fastf1_cache_dir=None,
+        allow_track_fallback=False,  # PISTA-IDENT-1 G2: fallback legado opt-in
         obs_mode='legacy',    # 'legacy'=23 dims | 'edge'=23+11 raios LiDAR (v8)
         sf_reward=SF_REWARD_DEFAULT,  # fator de segurança do v_allow da recompensa
         allow_respawn=True,   # treino: respawn no último gate; avaliação: False
@@ -389,13 +325,28 @@ class F1MultiContextEnv(gym.Env):
 
         # Resolução da pista: dados REAIS via FastF1 (padrão: GP de São Paulo),
         # com fallback para Interlagos e, sem internet/cache, o preset local.
+        # PISTA-IDENT-1 G3 (prereg 3758661 §4): fallback silencioso MORTO no
+        # default — pista pedida não carregou = TrackResolutionError com a
+        # lista de opções (o comportamento antigo atrás de allow_fallback
+        # True / --allow-track-fallback com WARNING LOUD no resolvedor).
+        from backend.domain.track_resolution import track_identity
         self.track = resolve_track(
             track=track,
             reference_csv=reference_csv,
             year=f1_year,
             session=f1_session,
             cache_dir=fastf1_cache_dir,
+            allow_fallback=bool(allow_track_fallback),
         )
+        self.track_identity = track_identity(self.track, requested=track)
+        # divergência solicitada×efetiva (G3): warning LOUD (com fallback
+        # o resolvedor JÁ gritou; aqui é o registro de identidade)
+        if (self.track_identity["requested"] not in (None, "")
+                and self.track_identity["efetiva"] != self.track_identity["requested"]):
+            print(f"[F1MultiContextEnv][IDENTIDADE] solicitada="
+                  f"{self.track_identity['requested']} | efetiva="
+                  f"{self.track_identity['efetiva']} (ver "
+                  f"self.track_identity p/ hash/fonte/wp/L)")
 
         car_specs = CarSpecs(name="F1 Car", power_kw=735.0, mass_kg=798.0, fuel_capacity_kg=110.0)
         self.driver = Driver(driver_id=driver_id, name=driver_id, car_specs=car_specs, starting_tyre_compound=TyreCompound.MEDIUM)
@@ -467,7 +418,8 @@ class F1MultiContextEnv(gym.Env):
         # Interlagos cai na Descida do Lago). Detectamos a maior reta (menor
         # curvatura à frente) e colocamos a largada no meio dela, garantindo
         # bastante espaço antes da próxima curva.
-        best_start = self._find_best_start_waypoint()
+        # v15 R2 S4: usa a função PURA (fonte única com o runner)
+        best_start = find_best_start_waypoint(self.track.waypoints)
         if best_start is not None and best_start != self.track.start_finish_waypoint:
             print(f"[F1MultiContextEnv] Start/finish ajustado do wp "
                   f"{self.track.start_finish_waypoint} -> {best_start} (melhor reta)")
@@ -1278,3 +1230,100 @@ class F1MultiContextEnv(gym.Env):
     def close(self):
         if hasattr(self, 'engine') and self.engine is not None and hasattr(self.engine, 'physics'):
             self.engine.physics.close()
+
+# --- v15 FASE R: fonte de pista FROZEN (fail-fast, sem fallback) -----------
+# Regra do incidente 9099235: FastF1 é OPCIONAL (só nomes/cores); a geometria
+# vem SEMPRE da pista congelada quando disponível. Fallback silencioso para
+# preset procedural ("último recurso") é PROIBIDO no runner — pista errada
+# = carros burros + largada em cima da curva. Se a frozen não existe ou o
+# hash diverge: ERRO DURO + aborto.
+
+FROZEN_TRACKS_DIR = MODEL_DIR / 'tracks_frozen'
+
+
+
+# ============================================================================
+# v15 FASE R2 S1: função PURA de ajuste de SF (fonte única para env+runner)
+# ============================================================================
+
+def find_best_start_waypoint(waypoints, min_straight_m=150.0):
+    """Acha o waypoint no MEIO da melhor reta para a largada/chegada.
+
+    EXTRAÇÃO DO ENV (FASE R2 S1): o mesmo algoritmo de
+    F1MultiContextEnv._find_best_start_waypoint, mas como FUNÇÃO PURA que
+    recebe apenas os waypoints — sem estado de env, sem tabelas internas.
+    É a FONTE ÚNICA: o env chama esta função no construtor, e o
+    load_track_frozen também chama (nunca mais divergem).
+
+    Estratégia: encontra todas as retas (zonas de baixa curvatura à frente
+    no horizonte KAPPA_AHEAD_M=150) e, entre as 3 mais longas, escolhe a
+    cuja próxima curva é menos fechada.
+
+    Args:
+      waypoints: lista [(x, y)] ou array (N, 2) — polilinha FECHADA.
+      min_straight_m: comprimento mínimo da reta candidata (150 m).
+
+    Returns:
+      int: índice do waypoint no MEIO da melhor reta.
+    """
+    import math as _math
+    wps = np.asarray(waypoints, dtype=np.float64)
+    n = len(wps)
+    if n < 3:
+        return 0
+
+    d = np.roll(wps, -1, axis=0) - wps
+    seg = np.hypot(d[:, 0], d[:, 1])
+    cum = np.concatenate([[0.0], np.cumsum(seg)])[:-1]
+    total = float(seg.sum())
+    heading = np.arctan2(d[:, 1], d[:, 0])
+
+    KAPPA_AHEAD_M = 150.0
+
+    def _heading_at(s_val):
+        s_val = s_val % total
+        j = int(np.searchsorted(cum, s_val, side='right') - 1)
+        return float(heading[min(max(j, 0), n - 1)])
+
+    def _kappa_ahead(s_val, horizon_m):
+        ns = max(2, int(horizon_m // 10.0) + 1)
+        ds = horizon_m / (ns - 1)
+        prev_h = _heading_at(s_val)
+        k = 0.0
+        for kk in range(1, ns):
+            h = _heading_at(s_val + kk * ds)
+            k = max(k, abs((h - prev_h + _math.pi) % (2 * _math.pi) - _math.pi) / ds)
+            prev_h = h
+        return k
+
+    kappas = np.array([_kappa_ahead(float(cum[i]), KAPPA_AHEAD_M)
+                       for i in range(n)], dtype=np.float64)
+    kmax = float(kappas.max())
+    if kmax <= 0.0:
+        return 0
+    is_straight = kappas < 0.30 * kmax
+
+    segments = []
+    i = 0
+    while i < n:
+        if not is_straight[i]:
+            i += 1
+            continue
+        j = i
+        while j < n and is_straight[j]:
+            j += 1
+        length = float(cum[min(j, n - 1)] - cum[i])
+        mid = (i + j - 1) // 2
+        s_end = float(cum[min(j, n - 1)])
+        k_next = _kappa_ahead(s_end + 50.0, 250.0)
+        segments.append((length, mid, k_next))
+        i = j
+
+    if not segments:
+        return 0
+    segments.sort(key=lambda t: -t[0])
+    candidates = [s for s in segments if s[0] >= min_straight_m][:3]
+    if not candidates:
+        return 0
+    best = min(candidates, key=lambda t: t[2])
+    return int(best[1])

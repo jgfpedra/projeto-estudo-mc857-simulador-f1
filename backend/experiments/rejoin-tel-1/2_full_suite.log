@@ -1,0 +1,953 @@
+.....................ss........................................FF....... [ 18%]
+............................................F..........FFFFFFFF.FFFFF... [ 37%]
+.........................F......F...............s....................... [ 55%]
+..................FF.................................................... [ 74%]
+........................................................................ [ 93%]
+..........................                                               [100%]
+=================================== FAILURES ===================================
+_______________ TestKappaSignProcedural.test_local_sign_correct ________________
+
+self = <test_kappa_sign.TestKappaSignProcedural object at 0x7fca5df8b5c0>
+
+    def test_local_sign_correct(self):
+        """O sinal do kappa da obs deve concordar com o kappa LOCAL
+        (medido com janela pequena de 2m) onde a curvatura é significativa."""
+        from backend.model_train.procedural_track import generate_track
+        from backend.model_train.f1_env import F1MultiContextEnv
+    
+        for seed in (101, 103, 301):
+>           t = generate_track(seed=seed, n_hairpins=2, n_esses=0)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_kappa_sign.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 101, width_m = 12.0, target_length_m = 4000.0, n_hairpins = 2
+n_esses = 0, n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+________________ TestKappaSignProcedural.test_no_spurious_flip _________________
+
+self = <test_kappa_sign.TestKappaSignProcedural object at 0x7fca5df8b890>
+
+    def test_no_spurious_flip(self):
+        """O sinal do kappa não pode SALTAR de +max para −max sem cruzar 0
+        (o bug do wrap de ±180° fazia exatamente isso)."""
+        from backend.model_train.procedural_track import generate_track
+        from backend.model_train.f1_env import F1MultiContextEnv
+>       t = generate_track(seed=101, n_hairpins=2, n_esses=0)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_kappa_sign.py:81: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 101, width_m = 12.0, target_length_m = 4000.0, n_hairpins = 2
+n_esses = 0, n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+_____________________ TestHoldAt.test_hold_car_stays_at_s ______________________
+
+self = <test_mixed_race.TestHoldAt object at 0x7fca2cff0740>
+
+    @pytest.mark.slow
+    def test_hold_car_stays_at_s(self):
+        """Smoke físico: corrida de 30 ticks com --hold-at — o carro held tem
+        s ~constante no CSV (variação < 2 m)."""
+        import subprocess, sys
+        cmd = [sys.executable, 'model_train/race_diagnostic.py',
+               '--actor', 'model_train/v10_dagger/dagger_actor_best.keras',
+               '--obs-mode', 'edge', '--ticks', '30', '--laps', '99',
+               '--track', 'interlagos', '--hold-at', '1200',
+               '--out', '/tmp/hold_smoke.csv', '--seed', '0']
+        subprocess.run(cmd, cwd=str(PROJECT_ROOT / 'backend'), check=True,
+                      capture_output=True, timeout=600)
+        df = pd.read_csv('/tmp/hold_smoke.csv')
+>       held = df[df.drv == 'GAS'].sort_values('tick')   # último do grid
+                  ^^^^^^
+
+tests/test_mixed_race.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self =                                                                                                                       ...                                                                                               
+
+[151 rows x 1 columns]
+name = 'drv'
+
+    @final
+    def __getattr__(self, name: str):
+        """
+        After regular attribute access, try looking up the name
+        This allows simpler access to columns for interactive use.
+        """
+        # Note: obj.x will always call obj.__getattribute__('x') prior to
+        # calling obj.__getattr__('x').
+        if (
+            name not in self._internal_names_set
+            and name not in self._metadata
+            and name not in self._accessors
+            and self._info_axis._can_hold_identifiers_and_holds_name(name)
+        ):
+            return self[name]
+>       return object.__getattribute__(self, name)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'DataFrame' object has no attribute 'drv'. Did you mean: 'div'?
+
+.venv/lib/python3.12/site-packages/pandas/core/generic.py:6321: AttributeError
+__________________ TestDeterminism.test_same_seed_same_track ___________________
+
+self = <test_procedural_track.TestDeterminism object at 0x7fca2cff28d0>
+
+    def test_same_seed_same_track(self):
+>       t1 = _gen(seed=42, n_hairpins=2, n_esses=1)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:32: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 42, width_m = 12.0, target_length_m = 4000.0, n_hairpins = 2, n_esses = 1
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+_____________ TestDeterminism.test_different_seed_different_track ______________
+
+self = <test_procedural_track.TestDeterminism object at 0x7fca2cff2ba0>
+
+    def test_different_seed_different_track(self):
+>       t1 = _gen(seed=1, n_hairpins=1, n_esses=0)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:41: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 1, width_m = 12.0, target_length_m = 4000.0, n_hairpins = 1, n_esses = 0
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+__________________________ TestGeometry.test_closure ___________________________
+
+self = <test_procedural_track.TestGeometry object at 0x7fca2cfcc6b0>
+
+    def test_closure(self):
+        """O último waypoint deve conectar de volta ao primeiro."""
+>       t = _gen(seed=7, n_hairpins=1, n_esses=1)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 7, width_m = 12.0, target_length_m = 4000.0, n_hairpins = 1, n_esses = 1
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+_______________________ TestGeometry.test_spacing_le_4m ________________________
+
+self = <test_procedural_track.TestGeometry object at 0x7fca2cfcfc20>
+
+    def test_spacing_le_4m(self):
+        """Todos os segmentos devem ter ≤4m (subdivisão)."""
+>       t = _gen(seed=3, n_hairpins=2, n_esses=1)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:66: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 3, width_m = 12.0, target_length_m = 4000.0, n_hairpins = 2, n_esses = 1
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+________________________ TestGeometry.test_length_range ________________________
+
+self = <test_procedural_track.TestGeometry object at 0x7fca2cff2ae0>
+
+    def test_length_range(self):
+        """Comprimento deve estar em 3-7km."""
+>       t = _gen(seed=5, n_hairpins=1, n_esses=1, target_length_m=4000)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:76: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 5, width_m = 12.0, target_length_m = 4000, n_hairpins = 1, n_esses = 1
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+_______________________ TestGeometry.test_kappa_in_range _______________________
+
+self = <test_procedural_track.TestGeometry object at 0x7fca2cff2690>
+
+    def test_kappa_in_range(self):
+        """kappa máx deve ser ≤ fronteira (com folga do gate)."""
+>       t = _gen(seed=11, n_hairpins=2, n_esses=0)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:85: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 11, width_m = 12.0, target_length_m = 4000.0, n_hairpins = 2, n_esses = 0
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+_________________________ TestWidth.test_custom_width __________________________
+
+self = <test_procedural_track.TestWidth object at 0x7fca2cff14c0>
+
+    def test_custom_width(self):
+>       t = _gen(seed=13, width_m=14.0)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:95: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 13, width_m = 14.0, target_length_m = 4000.0, n_hairpins = 1, n_esses = 1
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+__________________________ TestWidth.test_width_range __________________________
+
+self = <test_procedural_track.TestWidth object at 0x7fca2cff1280>
+
+    def test_width_range(self):
+        for w in (10.0, 12.0, 15.0):
+>           t = _gen(seed=17, width_m=w)
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:101: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 17, width_m = 10.0, target_length_m = 4000.0, n_hairpins = 1, n_esses = 1
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+_________________ TestEnvIntegration.test_env_with_procedural __________________
+
+self = <test_procedural_track.TestEnvIntegration object at 0x7fca2cff3110>
+
+    def test_env_with_procedural(self):
+        """F1MultiContextEnv deve aceitar um Track procedural."""
+        from backend.model_train.f1_env import F1MultiContextEnv
+>       t = _gen(seed=21, n_hairpins=1, n_esses=1)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:118: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 21, width_m = 12.0, target_length_m = 4000.0, n_hairpins = 1, n_esses = 1
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+___________________ TestEnvIntegration.test_start_zones_auto ___________________
+
+self = <test_procedural_track.TestEnvIntegration object at 0x7fca2cff33e0>
+
+    def test_start_zones_auto(self):
+        """start_zones='auto' deve detectar curvas por geometria."""
+        from backend.model_train.f1_env import F1MultiContextEnv
+>       t = _gen(seed=23, n_hairpins=2, n_esses=0)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:134: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 23, width_m = 12.0, target_length_m = 4000.0, n_hairpins = 2, n_esses = 0
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+________________ TestEnvIntegration.test_race_layer_compatible _________________
+
+self = <test_procedural_track.TestEnvIntegration object at 0x7fca2cff36b0>
+
+    def test_race_layer_compatible(self):
+        """Track procedural deve ter waypoints e nome (interface Track)."""
+>       t = _gen(seed=25, n_hairpins=1, n_esses=1)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:143: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 25, width_m = 12.0, target_length_m = 4000.0, n_hairpins = 1, n_esses = 1
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+_______________ TestFeatures.test_hairpin_produces_tight_corner ________________
+
+self = <test_procedural_track.TestFeatures object at 0x7fca2cff38c0>
+
+    def test_hairpin_produces_tight_corner(self):
+        """Pistas com hairpin devem ter kappa > 0.04 (R < 25m)."""
+>       t = _gen(seed=31, n_hairpins=2, n_esses=0)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:155: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 31, width_m = 12.0, target_length_m = 4000.0, n_hairpins = 2, n_esses = 0
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+_____________________ TestFeatures.test_esse_track_variety _____________________
+
+self = <test_procedural_track.TestFeatures object at 0x7fca2cff3b90>
+
+    def test_esse_track_variety(self):
+        """Pistas com esses devem ter mudanças de direção."""
+>       t = _gen(seed=33, n_hairpins=0, n_esses=3)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_procedural_track.py:163: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_procedural_track.py:14: in _gen
+    return generate_track(seed=seed, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed = 33, width_m = 12.0, target_length_m = 4000.0, n_hairpins = 0, n_esses = 3
+n_base_points = 12, hairpin_margin_m = 2.0, rng_jitter = 0.15
+
+    def generate_track(
+        seed: int,
+        width_m: float = 12.0,
+        target_length_m: float = 4000.0,
+        n_hairpins: int = 1,
+        n_esses: int = 1,
+        n_base_points: int = 12,
+        hairpin_margin_m: float = 2.0,
+        rng_jitter: float = 0.15,
+    ) -> Optional["object"]:
+        """Gera uma pista procedural fechada.
+    
+        Args:
+            seed: reprodutibilidade total (mesmo seed → mesma pista).
+            width_m: largura do asfalto (10-15m).
+            target_length_m: comprimento aproximado (3-7 km).
+            n_hairpins: número de hairpins (dentes profundos no polígono).
+            n_esses: número de sequências de esses (3 vértices alternados).
+            n_base_points: vértices do polígono base (10-16).
+            hairpin_margin_m: margem sobre R_min da fronteira física.
+            rng_jitter: desordem aleatória dos vértices (0=regular, 0.3=caótico).
+    
+        Returns:
+            Track object ou None se o gate de kappa rejeitar.
+        """
+>       from backend.domain.track import (Track, _catmull_rom_spline,
+                                           _resample_closed_polyline)
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+model_train/procedural_track.py:84: ImportError
+_________ TestSplineGeometry.test_subdivision_preserves_length_exactly _________
+
+self = <test_race_layer.TestSplineGeometry object at 0x7fca2d017c80>
+
+    def test_subdivision_preserves_length_exactly(self):
+>       from backend.domain.track import _resample_closed_polyline, _compute_segment_length
+E       ImportError: cannot import name '_resample_closed_polyline' from 'backend.domain.track' (/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/domain/track.py)
+
+tests/test_race_layer.py:175: ImportError
+_______ TestDeployProfiles.test_profiles_exist_default_race_obs_correct ________
+
+self = <test_race_neural_60d.TestDeployProfiles object at 0x7fca2d0415e0>
+
+    def test_profiles_exist_default_race_obs_correct(self):
+        import run_race_10_cars as R
+        assert R.DEFAULT_PROFILE == 'race'
+>       assert set(R.PROFILES) == {'race', 'quali', 'traffic', 'composite'}
+E       AssertionError: assert {'composite',...d', 'traffic'} == {'composite',...e', 'traffic'}
+E         
+E         Extra items in the left set:
+E         'race-blind'
+E         Use -v to get more diff
+
+tests/test_race_neural_60d.py:84: AssertionError
+___________________ test_reference_controller_completes_lap ____________________
+
+env_eval = <backend.model_train.f1_env.F1MultiContextEnv object at 0x7fc918597830>
+
+    @pytest.mark.slow
+    def test_reference_controller_completes_lap(env_eval):
+        """Prova separável: se o baseline clássico não completa a volta, o problema
+        é da física/pista — não do RL. Lento (~1-2 min de sim)."""
+        from backend.model_train.reference_controller import (
+            ReferenceController, run_reference_episode)
+        info = run_reference_episode(env_eval, ReferenceController(env_eval, a_lat_max=10.0))
+>       assert info["completed_lap"], f"baseline não completou a volta: prog={info['progress_m']:.0f}m"
+E       AssertionError: baseline não completou a volta: prog=2837m
+E       assert False
+
+tests/test_rl_v2.py:180: AssertionError
+---------------------------- Captured stdout setup -----------------------------
+[track_resolution] MIRROR canônico: 'interlagos' -> São Paulo Grand Prix (1131 wp, sha 164876196eb12174), ZERO rede
+[F1MultiContextEnv][IDENTIDADE] solicitada=interlagos | efetiva=São Paulo Grand Prix (ver self.track_identity p/ hash/fonte/wp/L)
+[F1MultiContextEnv] Start/finish ajustado do wp 729 -> 929 (melhor reta)
+_____________________ test_skidpad_radius_close_to_bicycle _____________________
+
+env_eval = <backend.model_train.f1_env.F1MultiContextEnv object at 0x7fc918597830>
+
+    @pytest.mark.slow
+    def test_skidpad_radius_close_to_bicycle(env_eval):
+        """Regressão do subesterço: 15° a ~20 m/s deve dar raio < 2x o bicicleta."""
+        handle = env_eval.engine.handles[env_eval.driver_id]
+        env_eval.reset()
+        env_eval.engine.set_driver_input(env_eval.driver_id, throttle=0, brake=0,
+                                         steering_yaw_rad=math.radians(15), grip_override=1.0)
+        speeds, yaws = [], []
+        for t in range(150):
+            phys = env_eval.engine.physics.get_state(handle)
+            v = phys["speed_mps"]
+            env_eval.engine.set_driver_input(
+                env_eval.driver_id, target_speed_mps=20.0,
+                throttle=1.0 if v < 20 else 0.0, brake=0.5 if v > 22 else 0.0,
+                steering_yaw_rad=math.radians(15), grip_override=1.0)
+            env_eval.engine._step_tick(env_eval.logic_dt, env_eval.sub_steps)
+            if t >= 90:
+                speeds.append(v); yaws.append(abs(phys["yaw_rate"]))
+        v_m, w_m = float(np.mean(speeds[-20:])), float(np.mean(yaws[-20:]))
+        radius = v_m / max(w_m, 1e-6)
+        bike = 3.4 / math.tan(math.radians(15))
+>       assert radius < 2.0 * bike, f"subesterço regressou: raio={radius:.1f} m vs bicicleta {bike:.1f} m"
+E       AssertionError: subesterço regressou: raio=33.0 m vs bicicleta 12.7 m
+E       assert 32.95224462124835 < (2.0 * 12.688972745734183)
+
+tests/test_rl_v2.py:206: AssertionError
+=============================== warnings summary ===============================
+tests/test_composite_parity.py:54
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_composite_parity.py:54: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_deep_rejoin.py:47
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_deep_rejoin.py:47: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_mixed_race.py:87
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_mixed_race.py:87: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_prof_monaco_instrument.py:34
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_prof_monaco_instrument.py:34: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_race_layer.py:205
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_race_layer.py:205: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_residual_gated.py:48
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_residual_gated.py:48: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_residual_gated.py:155
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_residual_gated.py:155: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_rl_v2.py:173
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_rl_v2.py:173: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_rl_v2.py:185
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_rl_v2.py:185: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_rl_v3.py:116
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_rl_v3.py:116: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_rl_v3.py:117
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_rl_v3.py:117: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_sanidade_mec.py:97
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_sanidade_mec.py:97: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_sanidade_mec.py:158
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_sanidade_mec.py:158: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_velocity_profile.py:126
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/tests/test_velocity_profile.py:126: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+tests/test_race_neural_60d.py::TestRegistryResolution::test_resolve_deploy_aliases_exist_and_match_profiles
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/.venv/lib/python3.12/site-packages/mlflow/store/tracking/sqlalchemy_store.py:327: SADeprecationWarning: The ``noload`` loader strategy is deprecated and will be removed in a future release.  This option produces incorrect results by returning ``None`` for related items. (deprecated since: 2.1)
+    sqlalchemy.orm.configure_mappers()
+
+tests/test_regression_v2v4.py: 48 warnings
+tests/test_rl_v2.py: 24 warnings
+tests/test_rl_v3.py: 12 warnings
+  /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/.venv/lib/python3.12/site-packages/keras/src/backend/tensorflow/core.py:172: DeprecationWarning: __array__ implementation doesn't accept a copy keyword, so passing copy=False failed. __array__ must implement 'dtype' and 'copy' keyword arguments. To learn more, see the migration guide https://numpy.org/devdocs/numpy_2_0_migration_guide.html#adapting-to-changes-in-the-copy-keyword
+    return np.array(x)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_kappa_sign.py::TestKappaSignProcedural::test_local_sign_correct
+FAILED tests/test_kappa_sign.py::TestKappaSignProcedural::test_no_spurious_flip
+FAILED tests/test_mixed_race.py::TestHoldAt::test_hold_car_stays_at_s - Attri...
+FAILED tests/test_procedural_track.py::TestDeterminism::test_same_seed_same_track
+FAILED tests/test_procedural_track.py::TestDeterminism::test_different_seed_different_track
+FAILED tests/test_procedural_track.py::TestGeometry::test_closure - ImportErr...
+FAILED tests/test_procedural_track.py::TestGeometry::test_spacing_le_4m - Imp...
+FAILED tests/test_procedural_track.py::TestGeometry::test_length_range - Impo...
+FAILED tests/test_procedural_track.py::TestGeometry::test_kappa_in_range - Im...
+FAILED tests/test_procedural_track.py::TestWidth::test_custom_width - ImportE...
+FAILED tests/test_procedural_track.py::TestWidth::test_width_range - ImportEr...
+FAILED tests/test_procedural_track.py::TestEnvIntegration::test_env_with_procedural
+FAILED tests/test_procedural_track.py::TestEnvIntegration::test_start_zones_auto
+FAILED tests/test_procedural_track.py::TestEnvIntegration::test_race_layer_compatible
+FAILED tests/test_procedural_track.py::TestFeatures::test_hairpin_produces_tight_corner
+FAILED tests/test_procedural_track.py::TestFeatures::test_esse_track_variety
+FAILED tests/test_race_layer.py::TestSplineGeometry::test_subdivision_preserves_length_exactly
+FAILED tests/test_race_neural_60d.py::TestDeployProfiles::test_profiles_exist_default_race_obs_correct
+FAILED tests/test_rl_v2.py::test_reference_controller_completes_lap - Asserti...
+FAILED tests/test_rl_v2.py::test_skidpad_radius_close_to_bicycle - AssertionE...
+20 failed, 363 passed, 3 skipped, 99 warnings in 195.96s (0:03:15)

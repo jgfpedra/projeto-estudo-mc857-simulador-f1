@@ -153,7 +153,7 @@ class NumpyCompositeActor:
         for p_str in (str(scripts),):
             if p_str not in sys.path:
                 sys.path.insert(0, p_str)
-        import run_race_10_cars as R
+        from scripts.simulation import run_race_10_cars as R
         self.solo = R.NumpyNeuralActor(Path(solo_npz_path))
         self.res_w = None
         if residual_weights_path:
