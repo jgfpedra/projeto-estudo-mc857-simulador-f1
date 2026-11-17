@@ -13,15 +13,14 @@ import {
 } from "@/components/ui/select"
 import { RaceLapsField } from "@/components/race-laps-field"
 
-import { CURRENT_LAYOUT_ID } from "@/types/circuit"
+import { layoutLabel, resolveLayout } from "@/helpers/circuit-layout"
 import { useCircuitStore } from "@/stores/circuit-store"
 
-function getFlagEmoji(countryCode: string) {
+function getFlagEmoji(countryCode: string | null) {
+  if (!countryCode) return ""
   return countryCode
     .toUpperCase()
-    .replace(/./g, (char) =>
-      String.fromCodePoint(127397 + char.charCodeAt(0)),
-    )
+    .replace(/./g, (char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
 }
 
 export function CircuitSelection() {
@@ -47,19 +46,16 @@ export function CircuitSelection() {
 
     return circuits.filter((circuit) =>
       circuit.name.toLocaleLowerCase().includes(normalizedSearch) ||
-      circuit.country.toLocaleLowerCase().includes(normalizedSearch) ||
-      circuit.city.toLocaleLowerCase().includes(normalizedSearch),
+      circuit.fullName.toLocaleLowerCase().includes(normalizedSearch) ||
+      (circuit.country ?? "").toLocaleLowerCase().includes(normalizedSearch) ||
+      (circuit.city ?? "").toLocaleLowerCase().includes(normalizedSearch),
     )
   }, [circuits, search])
 
   const selectedCircuit =
     circuits.find((circuit) => circuit.id === selectedCircuitId) ?? circuits[0]
 
-  const selectedLayout = selectedCircuit?.layouts.find(
-    (layout) => layout.id === selectedLayoutId,
-  ) ?? selectedCircuit?.layouts.find(
-    (layout) => layout.id === CURRENT_LAYOUT_ID,
-  ) ?? selectedCircuit?.layouts[0]
+  const selectedLayout = resolveLayout(selectedCircuit, selectedLayoutId)
 
   function handleConfirm() {
     if (!selectedCircuit || !selectedLayout) return
@@ -216,7 +212,7 @@ export function CircuitSelection() {
 
               {/* Circuit preview */}
               <section className="flex min-h-0 flex-col border border-border bg-card/40">
-                {selectedCircuit && selectedLayout ? (
+                {selectedCircuit ? (
                   <>
                     {/* Circuit information */}
                     <div className="border-b border-border p-6 lg:p-8">
@@ -232,7 +228,7 @@ export function CircuitSelection() {
                           </div>
 
                           <h2 className="text-3xl font-black uppercase italic tracking-tight lg:text-4xl">
-                            {selectedCircuit.name}
+                            {selectedCircuit.fullName}
                           </h2>
 
                           <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
@@ -253,11 +249,17 @@ export function CircuitSelection() {
                       </div>
 
                       <div className="relative z-10 flex h-full w-full items-center justify-center p-8">
-                        <img
-                          className="h-full max-h-[360px] max-w-[720px]"
-                          src={selectedLayout.svg}
-                          alt={`Traçado ${selectedLayout.name} — ${selectedCircuit.name}`}
-                        />
+                        <div className="relative z-10 flex h-full w-full items-center justify-center p-8">
+                          {selectedLayout?.svgUrl ? (
+                            <img
+                              className="h-full max-h-[360px] max-w-[720px]"
+                              src={selectedLayout.svgUrl}
+                              alt={`Traçado ${layoutLabel(selectedLayout)} — ${selectedCircuit.fullName}`}
+                            />
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Traçado indisponível</span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -270,22 +272,24 @@ export function CircuitSelection() {
                             Variação do circuito
                           </label>
 
-                          <Select value={selectedLayout.id} onValueChange={selectLayout}>
+                          <Select
+                            value={selectedLayout?.id ?? ""}
+                            onValueChange={selectLayout}
+                            disabled={!selectedLayout}
+                          >
                             <SelectTrigger className="h-12 w-full rounded-none border-border bg-background uppercase">
-                              <SelectValue placeholder="Selecione o layout" />
+                              <SelectValue placeholder="Nenhum traçado simulável" />
                             </SelectTrigger>
                             <SelectContent>
-                              {selectedCircuit.layouts.map((layout) => {
-                                const label = layout.id === CURRENT_LAYOUT_ID
-                                  ? `Atual — ${layout.name}`
-                                  : `${layout.yearFrom ?? "Histórico"}${layout.yearTo ? `–${layout.yearTo}` : ""} — ${layout.name}`
-
-                                return (
-                                  <SelectItem key={layout.id} value={layout.id}>
-                                    {label}
-                                  </SelectItem>
-                                )
-                              })}
+                              {selectedCircuit.layouts.map((layout) => (
+                                <SelectItem
+                                  key={layout.id}
+                                  value={layout.id}
+                                  disabled={!layout.simulable}
+                                >
+                                  {layoutLabel(layout)}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
 

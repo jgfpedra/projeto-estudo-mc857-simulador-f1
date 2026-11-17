@@ -242,3 +242,68 @@ def test_f1db_refresh_detects_layout_changes_and_ignores_metadata():
         {'circuit_id':'interlagos','layout_id':'interlagos-2','change':'alterado'},
         {'circuit_id':'interlagos','layout_id':'interlagos-3','change':'adicionado'}]
     assert find_changes(old,dict(old, generated_at='other')) == []
+
+
+def test_race_creation_rejects_unknown_setup_fields():
+    from api.main import app
+    with TestClient(app) as client:
+        response = client.post('/races', json={'laps': 1, 'unsupported_option': True})
+    assert response.status_code == 422
+    assert any(item['type'] == 'extra_forbidden' for item in response.json()['detail'])
+
+
+def test_2d_setup_passes_selected_grid_and_options(monkeypatch):
+    from api import main
+    from api.schemas import RaceSetupRequest
+    selected = [
+        {'id': 'driver-b', 'name': 'Driver B', 'abbreviation': 'DRB', 'permanent_number': 7,
+         'team_name': 'B', 'team_color': '#123456'},
+        {'id': 'driver-a', 'name': 'Driver A', 'abbreviation': 'DRA', 'permanent_number': 8,
+         'team_name': 'A', 'team_color': '#654321'},
+    ]
+    monkeypatch.setattr(main.driver_service, 'list_drivers', lambda **_: selected)
+    calls = []
+    def create(*args, **kwargs):
+        calls.append((args, kwargs))
+        return 'race-2d', SimpleNamespace(name='Interlagos'), SimpleNamespace(num_laps=args[0])
+    monkeypatch.setattr(main.race_manager, 'create_race', create)
+    req = RaceSetupRequest.model_validate({'laps': 4, 'circuit': {'id': 'interlagos', 'layout_id': 'interlagos-2'},
+        'year': 2023, 'grid': ['driver-a', 'driver-b'], 'weather': 'rain', 'initial_tyre': 'wet',
+        'stints': [{'compound': 'wet', 'laps': 4}]})
+    result = main.create_race(req)
+    assert calls[0][0] == (4, 'interlagos', 2023)
+    assert [d['driver_id'] for d in calls[0][1]['selected_roster']] == ['driver-a', 'driver-b']
+    assert calls[0][1]['weather'] == 'rain' and calls[0][1]['initial_tyre'] == 'wet'
+    assert result.ws_path == '/ws/races/race-2d' and result.warnings
+
+
+def test_2d_options_reach_engine_and_metadata(monkeypatch):
+    import api.race_manager as module
+    from api.providers.race_data import FallbackProvider, driver_record
+    from domain import TyreCompound, WeatherKind
+    class Store:
+        def __init__(self): self.values = {}
+        def ping(self): return True
+        def set(self, key, value, ex=None): self.values[key] = value
+    engines = []
+    class Engine:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            self.physics = SimpleNamespace(contact_collector=None)
+            engines.append(self)
+        def set_controller(self, *_): pass
+    class Thread:
+        def __init__(self, **kwargs): pass
+        def start(self): pass
+    monkeypatch.setattr(module, 'SimulationEngine', Engine)
+    monkeypatch.setattr(module, 'RuleBasedRaceController', lambda *a, **k: object())
+    monkeypatch.setattr(module.threading, 'Thread', Thread)
+    roster = [driver_record('TST', 'Test Driver', 77, 'Team', '123456')]
+    store = Store()
+    race_id, _, _ = module.RaceManager(store, provider=FallbackProvider()).create_race(
+        1, 'interlagos', 2023, num_drivers=1, selected_roster=roster,
+        weather='rain', initial_tyre='wet')
+    assert engines[0].kwargs['drivers'][0].starting_tyre_compound == TyreCompound.WET
+    assert engines[0].kwargs['weather_model'].current.kind == WeatherKind.WET
+    import json
+    assert json.loads(store.values[f'race:{race_id}:meta'])['drivers'][0]['driver_id'] == 'test-driver'
