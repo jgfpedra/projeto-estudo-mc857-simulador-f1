@@ -44,7 +44,9 @@ export function Track2D({ race }: { race: RaceInfo }) {
     const svg = d3.select(svgEl)
     const world = svg.select<SVGGElement>("g.world")
     const layer = world.select<SVGGElement>("g.cars")
-    const proj = createTrackProjection(boundsOf(race.track.waypoints), VIEW_W, VIEW_H)
+    const pitLane = race.track.pitLane
+    const points = [...race.track.waypoints, ...(pitLane?.waypoints ?? [])]
+    const proj = createTrackProjection(boundsOf(points), VIEW_W, VIEW_H)
     const drivers = new Map(race.drivers.map((d, i) => [d.driverId, { d, i }]))
 
     const line = d3
@@ -55,7 +57,17 @@ export function Track2D({ race }: { race: RaceInfo }) {
     world
       .select<SVGPathElement>("path.track")
       .attr("d", `${line(race.track.waypoints) ?? ""}Z`)
-      .attr("stroke-width", TRACK_WIDTH_M * proj.scale)
+      .attr("stroke-width", (race.track.widthM ?? TRACK_WIDTH_M) * proj.scale)
+
+    // A via dos boxes é uma linha aberta na mesma projeção e escala da pista.
+    world
+      .select<SVGPathElement>("path.pit-lane-border")
+      .attr("d", pitLane ? line(pitLane.waypoints) : null)
+      .attr("stroke-width", pitLane ? (pitLane.widthM + 1.5) * proj.scale : 0)
+    world
+      .select<SVGPathElement>("path.pit-lane")
+      .attr("d", pitLane ? line(pitLane.waypoints) : null)
+      .attr("stroke-width", pitLane ? pitLane.widthM * proj.scale : 0)
 
     const toView = (p: Point) => ({ x: proj.x(p.x), y: proj.y(p.y) })
 
@@ -63,6 +75,14 @@ export function Track2D({ race }: { race: RaceInfo }) {
       const v = toView(p)
       return d3.zoomIdentity.translate(VIEW_W / 2 - k * v.x, VIEW_H / 2 - k * v.y).scale(k)
     }
+
+    const pitMarker = world.select<SVGGElement>("g.pit-marker")
+    const pitMidpoint = pitLane?.waypoints[Math.floor(pitLane.waypoints.length / 2)]
+    const positionPitMarker = (k: number) => {
+      if (!pitMidpoint) return
+      pitMarker.attr("transform", `translate(${proj.x(pitMidpoint[0])},${proj.y(pitMidpoint[1])}) scale(${1 / k})`)
+    }
+    positionPitMarker(1)
 
     let zoomK = 1
     /** Piloto que a câmera acompanha depois que a transição de foco termina. */
@@ -76,6 +96,7 @@ export function Track2D({ race }: { race: RaceInfo }) {
       .on("zoom", (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
         world.attr("transform", event.transform.toString())
         zoomK = event.transform.k
+        positionPitMarker(zoomK)
         // Arrastar ou rolar pelo usuário solta o seguimento do carro.
         if (event.sourceEvent) following = null
       })
@@ -211,8 +232,27 @@ export function Track2D({ race }: { race: RaceInfo }) {
           strokeLinecap="round"
           strokeLinejoin="round"
         />
+        {race.track.pitLane && (
+          <>
+            <path className="pit-lane-border" fill="none" stroke="#18181b" strokeLinecap="round" strokeLinejoin="round" />
+            <path className="pit-lane" fill="none" stroke="#facc15" strokeLinecap="round" strokeLinejoin="round">
+              <title>{race.track.pitLane.source === "estimated" ? "Via dos boxes (estimada)" : "Via dos boxes"}</title>
+            </path>
+            <g className="pit-marker" pointerEvents="none" aria-hidden="true">
+              <circle r="4" fill="#facc15" stroke="#18181b" strokeWidth="1.5" />
+              <path d="M 4 -4 L 13 -15" fill="none" stroke="#facc15" strokeWidth="1.5" />
+              <rect x="13" y="-29" width="57" height="20" rx="3" fill="#18181b" stroke="#facc15" />
+              <text x="41.5" y="-15" textAnchor="middle" fontSize="11" fontWeight="700" fill="#facc15">BOXES</text>
+            </g>
+          </>
+        )}
         <g className="cars" />
       </g>
+      {!race.track.pitLane && (
+        <text x="20" y={VIEW_H - 20} fontSize="13" fill="#a1a1aa">
+          Boxes indisponíveis para esta corrida
+        </text>
+      )}
     </svg>
   )
 }

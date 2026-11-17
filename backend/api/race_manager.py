@@ -26,6 +26,7 @@ from domain import TyreCompound, WeatherKind, WeatherModel, WeatherTransitionCon
 from engine import InMemoryInputSource, Publisher, RuleBasedRaceController, SimulationEngine
 from .providers.race_data import default_provider, driver_record
 from .providers.f1db_layouts import load_layout_catalog, normalize
+from .providers.track_reference import candidate_reference_years
 
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 RACE_TTL = 24 * 60 * 60
@@ -192,6 +193,8 @@ class RaceManager:
             logger.warning('Catálogo F1DB indisponível: %s', exc)
             self.catalog = None
         self._threads = {}
+        self._engines = {}
+        self._engines_lock = threading.RLock()
 
     def create_race(self, laps, track, year, num_drivers=2, layout_id=None, selected_roster=None,
                     weather=None, weather_change=None, initial_tyre=None):
@@ -202,10 +205,54 @@ class RaceManager:
         catalog_circuit = self.catalog.find_circuit(circuit) if self.catalog else None
         circuit_id = catalog_circuit['id'] if catalog_circuit else normalize(circuit).replace(' ', '-')
         season = year or (2024 if circuit_id == 'monza' else 2023)
-        layout = self.catalog.find_layout(catalog_circuit, season) if catalog_circuit else None
-        if layout_id is not None and (layout is None or layout['id'] != layout_id):
-            raise ValueError(f"O layout '{layout_id}' não é confirmado para '{circuit_id}' em {season} pelo catálogo F1DB; confira a temporada e o catálogo.")
-        track_obj, roster, sources = self.provider.load(circuit, season)
+        season_layout = self.catalog.find_layout(catalog_circuit, season) if catalog_circuit else None
+        layout = season_layout
+        if layout_id is not None:
+            layout = next((item for item in (catalog_circuit or {}).get('layouts', [])
+                           if item['id'] == layout_id), None)
+            if layout is None:
+                raise ValueError(f"O layout '{layout_id}' não pertence ao circuito '{circuit_id}'.")
+        same_season_layout = layout is None or (season_layout is not None and layout['id'] == season_layout['id'])
+        if layout_id is not None and not same_season_layout and selected_roster is None:
+            raise ValueError(f"O layout '{layout_id}' não é confirmado para '{circuit_id}' em {season} pelo catálogo F1DB; informe o grid para usar pilotos de outra temporada.")
+
+        # Com grid explícito a temporada identifica os pilotos, e o layout
+        # selecionado identifica a pista. A referência nunca troca de layout.
+        track_year = season
+        track_obj = roster = sources = None
+        original_error = None
+        if same_season_layout:
+            try:
+                track_obj, roster, sources = self.provider.load(circuit, season)
+            except ValueError as exc:
+                if layout_id is None or selected_roster is None:
+                    raise
+                original_error = exc
+        if track_obj is None:
+            candidates = candidate_reference_years(self.catalog, catalog_circuit, layout, excluded=(season,))
+            errors = []
+            for reference_year in candidates:
+                try:
+                    track_obj, roster, sources = self.provider.load(circuit, reference_year)
+                except ValueError as exc:
+                    # O snapshot identifica um GP específico mesmo quando há
+                    # múltiplas sessões no mesmo circuito e ano.
+                    try:
+                        from .providers.historical_f1results import HistoricalResultsProvider
+                        track_obj, roster, sources = HistoricalResultsProvider().load(circuit, reference_year)
+                    except ValueError as fallback_exc:
+                        errors.append(f'{reference_year}: {exc}; {fallback_exc}')
+                        continue
+                track_year = reference_year
+                break
+            if track_obj is None:
+                detail = '; '.join(errors) or str(original_error or 'nenhum ano de referência disponível')
+                raise ValueError(f"Geometria indisponível para o layout '{layout_id}' em qualquer referência conhecida: {detail}")
+        reference = {'driver_season': season, 'track_year': track_year,
+                     'basis': 'season' if track_year == season else 'selected_layout_reference'}
+        if track_year != season:
+            sources['track_reference'] = reference
+            track_obj.metadata = {**track_obj.metadata, 'track_reference': reference}
         safe_grid = track_obj.metadata.get('max_safe_grid_cars')
         if safe_grid is not None and num_drivers > safe_grid:
             raise ValueError(f'A geometria histórica aproximada comporta apenas {safe_grid} carros no grid; solicite menos carros.')
@@ -238,7 +285,8 @@ class RaceManager:
         driver_meta = [{**d, 'grid_position': i+1} for i,d in enumerate(roster)]
         meta = {'race_id':race_id, 'schema_version':SCHEMA_VERSION, 'season':season,
                 'circuit_id':circuit_id, 'layout_id':layout['id'] if layout else None,
-                'layout_reference':{'source':'F1DB','basis':'season', 'years':layout['years'],
+                'layout_reference':{'source':'F1DB','basis':reference['basis'], 'years':layout['years'],
+                                    'track_year':track_year,
                                     'catalog_generated_at':self.catalog.data.get('generated_at')} if layout else None,
                 'num_laps':laps, 'num_drivers':num_drivers, 'sources':sources,
                 'car_geometry':{'length_m':CHASSIS_LENGTH_M,'width_m':CHASSIS_WIDTH_M,'height_m':CHASSIS_HEIGHT_M},
@@ -281,7 +329,9 @@ class RaceManager:
         self.redis.set(f'race:{race_id}:meta', json.dumps(meta, ensure_ascii=False), ex=RACE_TTL)
         self.redis.set(f'race:{race_id}:snapshot', json.dumps(publisher.snapshot), ex=RACE_TTL)
         thread = threading.Thread(target=self._run_engine, args=(engine,publisher), daemon=True)
-        self._threads[race_id] = thread
+        with self._engines_lock:
+            self._threads[race_id] = thread
+            self._engines[race_id] = engine
         thread.start()
         return race_id, track_obj, config
 
@@ -301,8 +351,36 @@ class RaceManager:
             except redis.RedisError:
                 pass
         finally:
+            engine.close_pit_requests()
             engine.teardown()
-            self._threads.pop(engine.config.race_id, None)
+            with self._engines_lock:
+                self._threads.pop(engine.config.race_id, None)
+                self._engines.pop(engine.config.race_id, None)
+
+    def request_pit_stop(self, race_id, driver_id, compound):
+        """Valida a corrida e encaminha o comando à thread proprietária da engine."""
+        meta = self.metadata(race_id)
+        if meta is None:
+            raise LookupError('Corrida não encontrada')
+        if driver_id not in {driver['driver_id'] for driver in meta.get('drivers', [])}:
+            raise LookupError('Piloto não encontrado nessa corrida')
+        with self._engines_lock:
+            engine = self._engines.get(race_id)
+            if engine is None:
+                raise RuntimeError('Corrida não está ativa neste processo')
+            engine.request_pit_stop(driver_id, compound)
+
+    def cancel_pit_stop(self, race_id, driver_id):
+        meta = self.metadata(race_id)
+        if meta is None:
+            raise LookupError('Corrida não encontrada')
+        if driver_id not in {driver['driver_id'] for driver in meta.get('drivers', [])}:
+            raise LookupError('Piloto não encontrado nessa corrida')
+        with self._engines_lock:
+            engine = self._engines.get(race_id)
+            if engine is None:
+                raise RuntimeError('Corrida não está ativa neste processo')
+            engine.cancel_pit_stop(driver_id)
 
     def metadata(self, race_id):
         value = self.redis.get(f'race:{race_id}:meta')

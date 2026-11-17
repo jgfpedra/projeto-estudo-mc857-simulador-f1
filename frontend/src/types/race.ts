@@ -38,10 +38,19 @@ export type RaceDriver = {
   gridPosition: number
 }
 
+export type RacePitLane = {
+  /** Via aberta, em metros no mesmo sistema de coordenadas da pista. */
+  waypoints: [number, number][]
+  widthM: number
+  source: string | null
+}
+
 export type RaceTrack = {
   name: string
   lengthM: number
   startFinishWaypoint: number
+  widthM: number | null
+  pitLane: RacePitLane | null
   /** Metros, mesmo sistema de coordenadas dos carros. */
   waypoints: [number, number][]
 }

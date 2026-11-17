@@ -33,7 +33,6 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-import numpy as np
 import pybullet as p
 import pybullet_data
 
@@ -409,14 +408,12 @@ class PyBulletPhysics:
         """
         pos, orn     = p.getBasePositionAndOrientation(car_id, physicsClientId=cid)
         lin_vel, ang_vel = p.getBaseVelocity(car_id, physicsClientId=cid)
-        v_world = np.array([lin_vel[0], lin_vel[1], lin_vel[2]], dtype=float)
+        rot = p.getMatrixFromQuaternion(orn)
+        forward = (rot[0], rot[3], rot[6])  # coluna X da matriz 3x3
+        left = (rot[1], rot[4], rot[7])     # coluna Y da matriz 3x3
 
-        rot     = np.array(p.getMatrixFromQuaternion(orn)).reshape(3, 3)
-        forward = rot @ np.array([1.0, 0.0, 0.0])  # eixo longitudinal (X local)
-        left    = rot @ np.array([0.0, 1.0, 0.0])  # eixo lateral    (Y local)
-
-        v_forward = float(v_world @ forward)
-        v_lateral = float(v_world @ left)
+        v_forward = lin_vel[0] * forward[0] + lin_vel[1] * forward[1] + lin_vel[2] * forward[2]
+        v_lateral = lin_vel[0] * left[0] + lin_vel[1] * left[1] + lin_vel[2] * left[2]
         v_speed   = math.sqrt(lin_vel[0] ** 2 + lin_vel[1] ** 2)
         yaw_rate  = float(ang_vel[2])
 
@@ -460,12 +457,11 @@ class PyBulletPhysics:
 
         # Drag: oposto à direção de movimento no plano XY
         if v_speed > 0.01:
-            v_world_xy = np.array([lin_vel[0], lin_vel[1]], dtype=float)
-            drag_dir   = -v_world_xy / v_speed
-            drag_vec   = drag_magnitude * np.array([drag_dir[0], drag_dir[1], 0.0])
+            drag_x = drag_magnitude * (-lin_vel[0] / v_speed)
+            drag_y = drag_magnitude * (-lin_vel[1] / v_speed)
             p.applyExternalForce(
                 car_id, -1,
-                forceObj=[float(drag_vec[0]), float(drag_vec[1]), 0.0],
+                forceObj=[drag_x, drag_y, 0.0],
                 posObj=pos, flags=p.WORLD_FRAME, physicsClientId=cid,
             )
         else:
@@ -580,11 +576,10 @@ class PyBulletPhysics:
 
         dir_forward    = 1.0 if v_forward >= 0 else -1.0
         long_resist    = (actual_brake + f_rolling + f_engine_drag) * dir_forward
-        long_force_vec = (drive_force - long_resist) * forward
-
+        force = drive_force - long_resist
         p.applyExternalForce(
             car_id, -1,
-            forceObj=[float(long_force_vec[0]), float(long_force_vec[1]), float(long_force_vec[2])],
+            forceObj=[force * forward[0], force * forward[1], force * forward[2]],
             posObj=pos, flags=p.WORLD_FRAME, physicsClientId=cid,
         )
 
@@ -658,11 +653,9 @@ class PyBulletPhysics:
         max_lat_force   = mu_effective * f_z_total
         total_lat_force = max(-max_lat_force, min(max_lat_force,
                               (f_yf * math.cos(steer_angle)) + f_yr))
-        lat_force_vec   = total_lat_force * left
-
         p.applyExternalForce(
             car_id, -1,
-            forceObj=[float(lat_force_vec[0]), float(lat_force_vec[1]), float(lat_force_vec[2])],
+            forceObj=[total_lat_force * left[0], total_lat_force * left[1], total_lat_force * left[2]],
             posObj=pos, flags=p.WORLD_FRAME, physicsClientId=cid,
         )
 
@@ -671,10 +664,10 @@ class PyBulletPhysics:
         f_scrub_slip  = 0.35 * (abs(f_yf * math.sin(slip_f)) + abs(f_yr * math.sin(slip_r)))
         if abs(v_forward) > 0.05:
             f_cornering_drag = min(f_scrub_steer + f_scrub_slip, mass * abs(v_forward) / dt_sub)
-            drag_vec = -(f_cornering_drag * dir_forward) * forward
+            drag = -(f_cornering_drag * dir_forward)
             p.applyExternalForce(
                 car_id, -1,
-                forceObj=[float(drag_vec[0]), float(drag_vec[1]), float(drag_vec[2])],
+                forceObj=[drag * forward[0], drag * forward[1], drag * forward[2]],
                 posObj=pos, flags=p.WORLD_FRAME, physicsClientId=cid,
             )
         else:
@@ -685,10 +678,9 @@ class PyBulletPhysics:
             -min(max_lat_force, mass * abs(v_lateral) * 20.0)
             * math.copysign(1.0, v_lateral)
         )
-        lat_damp_vec = lat_damp_force * left
         p.applyExternalForce(
             car_id, -1,
-            forceObj=[float(lat_damp_vec[0]), float(lat_damp_vec[1]), 0.0],
+            forceObj=[lat_damp_force * left[0], lat_damp_force * left[1], 0.0],
             posObj=pos, flags=p.WORLD_FRAME, physicsClientId=cid,
         )
 

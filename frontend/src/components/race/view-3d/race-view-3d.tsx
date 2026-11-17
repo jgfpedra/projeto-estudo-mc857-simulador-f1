@@ -1,3 +1,4 @@
+import { currentLap } from "@/helpers/race-live"
 import type { Frame, RaceInfo } from "@/types/race"
 
 /**
@@ -21,7 +22,7 @@ export function RaceView3D({ race, frame, selectedDriverId }: RaceView3DProps) {
     <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
       <span className="font-black uppercase tracking-wider">Visualização 3D em integração</span>
       <span className="text-xs">
-        {race.track.name} · volta {frame?.lap ?? 0}/{race.numLaps}
+        {race.track.name} · volta {currentLap(frame?.lap ?? 0, race.numLaps)}/{race.numLaps}
         {selectedDriverId ? ` · câmera em ${selectedDriverId}` : ""}
       </span>
     </div>

@@ -28,6 +28,34 @@ def ensure_pit_lane(track):
     # espaço para o carro mudar de faixa sem saltar de posição.
     before = min(500.0, total * .18)
     after = min(140.0, total * .06)
+
+    # A entrada deve começar depois da última curva fechada anterior à linha.
+    # Deslocar a via para o lado de dentro de um hairpin cria um atalho sobre
+    # o asfalto e coloca o carro dos boxes no caminho de quem segue em corrida.
+    def point_at(relative_s):
+        s = (sf_s + relative_s) % total
+        idx = min(bisect_right(starts, s) - 1, len(points) - 1)
+        a, b = points[idx], points[(idx + 1) % len(points)]
+        segment = lengths[idx]
+        if segment < 1e-9:
+            raise ValueError('Segmento degenerado ao gerar boxes')
+        t = (s - starts[idx]) / segment
+        return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+
+    last_sharp = None
+    relative_s = -before
+    while relative_s <= -40.0:
+        a, b, c = point_at(relative_s - 10.0), point_at(relative_s), point_at(relative_s + 10.0)
+        ux, uy = b[0] - a[0], b[1] - a[1]
+        vx, vy = c[0] - b[0], c[1] - b[1]
+        turn = abs(math.atan2(ux * vy - uy * vx, ux * vx + uy * vy))
+        if turn / 10.0 > .02:
+            last_sharp = relative_s
+        relative_s += 5.0
+    if last_sharp is not None:
+        # Deixe margem para terminar a curva antes de mudar de faixa.
+        before = min(before, max(40.0, -last_sharp - 25.0))
+
     span = before + after
     count = max(20, math.ceil(span / 5.0))
     lane = []

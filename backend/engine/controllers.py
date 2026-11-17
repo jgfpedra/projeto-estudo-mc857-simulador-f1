@@ -96,6 +96,10 @@ class CarController:
     ) -> CarInput:
         raise NotImplementedError
 
+    def on_pit_exit(self, driver_id: str) -> None:
+        """Notifica que o controle do piloto volta após a passagem pelos boxes."""
+        return None
+
     def reset(self) -> None:
         """Chamado quando a simulação reinicia. Override opcional."""
         pass

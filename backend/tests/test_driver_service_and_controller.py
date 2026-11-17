@@ -11,7 +11,7 @@ from database.driver_db import (
 )
 from dto.driver_dto import DriverDTO
 from service.driver_service import DriverService
-from controller.driver_controller import (
+from backend.controller.driver_controller import (
     get_driver_service,
     list_drivers,
     get_driver,
@@ -163,8 +163,8 @@ def test_driver_openapi_schema_contains_team_and_country():
 
 
 def test_seasons_service_and_endpoints():
-    from controller.season_controller import list_seasons, get_seasons_info
-    from controller.driver_controller import list_driver_seasons
+    from backend.controller.season_controller import list_seasons, get_seasons_info
+    from backend.controller.driver_controller import list_driver_seasons
 
     service = DriverService(db=InMemoryDriverDatabase([]))
 

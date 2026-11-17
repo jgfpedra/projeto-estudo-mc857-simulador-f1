@@ -5,6 +5,7 @@ import type {
   LiveMessage,
   RaceDriver,
   RaceInfo,
+  RacePitLane,
   RaceSnapshot,
   RaceTrack,
   TrackStatus,
@@ -69,7 +70,8 @@ function parseCar(raw: unknown): CarFrame | null {
 export function parseFrame(raw: unknown): Frame | null {
   if (!isObj(raw)) return null
   const simTs = num(raw.sim_ts)
-  const lap = num(raw.lap)
+  // Snapshots antigos podem ter lap do último colocado; leader_lap é explícito.
+  const lap = num(raw.leader_lap) ?? num(raw.lap)
   if (simTs === undefined || lap === undefined || !Array.isArray(raw.positions)) return null
 
   return {
@@ -96,12 +98,23 @@ function parseDriver(raw: unknown): RaceDriver | null {
   }
 }
 
+function parsePitLane(raw: unknown): RacePitLane | null {
+  if (!isObj(raw) || !Array.isArray(raw.waypoints)) return null
+  const points = raw.waypoints.map(parsePoint)
+  const widthM = num(raw.width_m)
+  if (points.length < 2 || !points.every(isPoint) || widthM === undefined || widthM <= 0) return null
+  return { waypoints: points, widthM, source: str(raw.source) ?? null }
+}
+
 function parseTrack(raw: unknown): RaceTrack | null {
   if (!isObj(raw)) return null
+  const widthM = num(raw.width_m)
   return {
     name: str(raw.name) ?? "Circuito",
     lengthM: num(raw.length_m) ?? 0,
     startFinishWaypoint: num(raw.start_finish_waypoint) ?? 0,
+    widthM: widthM !== undefined && widthM > 0 ? widthM : null,
+    pitLane: parsePitLane(raw.pit_lane),
     waypoints: Array.isArray(raw.waypoints) ? raw.waypoints.map(parsePoint).filter(isPoint) : [],
   }
 }

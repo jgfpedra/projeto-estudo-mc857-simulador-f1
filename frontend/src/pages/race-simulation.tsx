@@ -10,7 +10,7 @@ import { RaceView3D } from "@/components/race/view-3d/race-view-3d"
 import { ViewToggle } from "@/components/race/view-toggle"
 import { TimingPanel } from "@/components/race/timing-panel"
 import { Track2D } from "@/components/race/track-2d"
-import { TRACK_STATUS_LABEL, formatClock, weatherLabel } from "@/helpers/race-live"
+import { TRACK_STATUS_LABEL, currentLap, formatClock, weatherLabel } from "@/helpers/race-live"
 import type { RaceStartResponse } from "@/services/api"
 import { useLiveRaceStore, type LiveStatus } from "@/stores/live-race-store"
 
@@ -128,7 +128,7 @@ export function RaceSimulation() {
                 Volta
               </div>
               <div className="text-4xl font-black italic tabular-nums">
-                {frame?.lap ?? 0}
+                {currentLap(frame?.lap ?? 0, race.numLaps)}
                 <span className="text-xl text-muted-foreground">/{race.numLaps}</span>
               </div>
             </div>

@@ -8,6 +8,11 @@ import type {
   TrackStatus,
 } from "@/types/race"
 
+/** A engine envia voltas concluídas; a tela apresenta a volta em andamento. */
+export function currentLap(completedLaps: number, totalLaps: number): number {
+  return Math.min(totalLaps, Math.max(1, completedLaps + 1))
+}
+
 /** Largura da pista em metros. */
 export const TRACK_WIDTH_M = 12
 

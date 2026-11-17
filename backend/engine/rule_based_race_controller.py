@@ -63,6 +63,10 @@ class RuleBasedRaceController(CarController):
     HAIRPIN_STEER_LIMIT_FACTOR = 1.40
     INTERLAGOS_LINE_FRACTION = 0.5
     INTERLAGOS_GEOMETRY_SHA256 = "24461ba0b6c38983bf589ba0daefab78498d977a014845979324979f7e8223d6"
+    MONZA_2024_GEOMETRY_SHA256 = frozenset({
+        "9dedaebcdfdbb765ceb1251ea6b0a04830393596dac8d907842a16025d07432a",  # pista congelada
+        "83ae49ca43aaf8917733d01f9bd6300a9b2349665f749362c633dc76c4ca7ed3",  # OpenF1, sessão 9590
+    })
     REJOIN_SURFACE_GRIP_FLOOR = 0.50
     REJOIN_MAX_STEER_RAD = 0.45
     REJOIN_DEEP_GRASS_MARGIN_M = 4.0
@@ -119,9 +123,12 @@ class RuleBasedRaceController(CarController):
         self._lateral_grip_factor = self.LATERAL_GRIP_FACTOR
         self._max_target_accel_mps2 = self.MAX_TARGET_ACCEL_MPS2
         self._interlagos_line_applied = False
+        self._monza_calibrated = False
         self._apply_local_racing_line()
 
         self._hints: Dict[str, int] = {}
+        self._projection_env = None
+        self._projection_cache: Dict[str, Tuple[float, float, Tuple[float, float]]] = {}
         self._styles: Dict[str, _DriverStyle] = {}
         self.last_authority: Dict[str, str] = {}
         self.REJOIN_RAMP_ENABLED = False
@@ -152,6 +159,18 @@ class RuleBasedRaceController(CarController):
     def _apply_local_racing_line(self) -> None:
         """Usa a linha calibrada somente na geometria e largura verificadas."""
         geometry_hash = hashlib.sha256(self._points.tobytes()).hexdigest()
+        if geometry_hash in self.MONZA_2024_GEOMETRY_SHA256 and abs(float(self.track.width_m) - 12.0) <= 1e-6:
+            # A amostragem esparsa da OpenF1 exige margem maior nas curvas.
+            if geometry_hash == "83ae49ca43aaf8917733d01f9bd6300a9b2349665f749362c633dc76c4ca7ed3":
+                self._lateral_grip_factor = 0.75
+                self._max_target_accel_mps2 = 8.0
+                self._hairpin_speed_cap_mps = 12.0
+            else:
+                self._lateral_grip_factor = 1.15
+                self._max_target_accel_mps2 = 14.0
+                self._hairpin_speed_cap_mps = 22.0
+            self._monza_calibrated = True
+            return
         if (geometry_hash != self.INTERLAGOS_GEOMETRY_SHA256
                 or abs(float(self.track.width_m) - 12.0) > 1e-6):
             return
@@ -211,8 +230,20 @@ class RuleBasedRaceController(CarController):
 
     def reset(self) -> None:
         self._hints.clear()
+        self._projection_env = None
+        self._projection_cache.clear()
         self._styles.clear()
         self.last_authority.clear()
+
+    def on_pit_exit(self, driver_id: str) -> None:
+        # O carro percorreu centenas de metros enquanto este controller estava
+        # suspenso. A janela local antiga não serve para projetar sua posição.
+        self._hints.pop(driver_id, None)
+        self._projection_cache.pop(driver_id, None)
+        style = self._styles.get(driver_id)
+        if style is not None:
+            style.avoid_target_id = None
+            style.avoid_offset_m = 0.0
 
     def _project(self, driver_id: str, x: float, y: float) -> Tuple[float, float]:
         n = len(self._a)
@@ -245,6 +276,15 @@ class RuleBasedRaceController(CarController):
         s = float((self._seg_s[idx] + segment_t * self._seg_len[idx]) % self._track_len)
         self._hints[driver_id] = idx
         return s, signed_lat
+
+    def _project_in_frame(self, driver_id: str, x: float, y: float) -> Tuple[float, float]:
+        """Compartilha projeções do mesmo snapshot entre todos os pilotos."""
+        cached = self._projection_cache.get(driver_id)
+        if cached is not None and cached[0] == x and cached[1] == y:
+            return cached[2]
+        result = self._project(driver_id, x, y)
+        self._projection_cache[driver_id] = (x, y, result)
+        return result
 
     def _segment_at(self, s: float) -> int:
         return int(np.searchsorted(self._seg_s, s % self._track_len, side="right") - 1) % len(self._a)
@@ -328,55 +368,35 @@ class RuleBasedRaceController(CarController):
     def _planned_speed(self, s: float, top_speed: float,
                        effective_mu: float, downforce_per_speed_sq: float,
                        braking_accel: float, current_speed: float) -> float:
-        target = top_speed
-        distance = 0.0
         horizon = max(
             self.MIN_SPEED_PLAN_HORIZON_M,
             current_speed * current_speed / (2.0 * 18.0) + 50.0,
         )
         horizon = min(self.MAX_SPEED_PLAN_HORIZON_M, horizon)
-        while distance <= horizon:
-            idx = self._segment_at(s + distance)
-            curvature = self._planning_curvature_at(idx) * 1.08
-            denominator = (
-                curvature
-                - self._lateral_grip_factor * effective_mu * downforce_per_speed_sq
-            )
-            if denominator <= 1e-5:
-                corner_speed = top_speed
-            else:
-                corner_speed = min(
-                    top_speed,
-                    math.sqrt(self._lateral_grip_factor * effective_mu * self.G
-                              / denominator),
-                )
-
-            # Teto calibrado no hairpin mais fechado: acima dele, a linha sai
-            # do corredor antes que o chassi consiga acompanhar a curva.
-            if curvature > 0.09:
-                corner_speed = min(corner_speed, self._hairpin_speed_cap_mps)
-
-            # Desaceleração efetiva média entre velocidade atual e velocidade de curva.
-            # O downforce cai com v² durante a frenagem, portanto usar o freio avaliado
-            # na velocidade de reta superestima a capacidade de frenagem em ~2x.
-            v_mid = 0.5 * (current_speed + corner_speed)
-            downforce_mid = downforce_per_speed_sq * v_mid * v_mid
-            safe_brake = max(
-                8.0,
-                min(
-                    self.MAX_PLAN_BRAKING_MPS2,
-                    effective_mu * (self.G + downforce_mid) * self.BRAKING_GRIP_FACTOR,
-                ),
-            )
-
-            # Zona de aproximação em curvas fechadas: atinge a velocidade alvo antes do ápice
-            eff_dist = max(0.0, distance - 14.0) if curvature > 0.065 else distance
-            allowed_now = math.sqrt(
-                corner_speed * corner_speed + 2.0 * safe_brake * eff_dist
-            )
-            target = min(target, allowed_now)
-            distance += self.SPEED_PLAN_STEP_M
-        return target
+        distances = np.arange(int(horizon / self.SPEED_PLAN_STEP_M) + 1, dtype=np.float64) * self.SPEED_PLAN_STEP_M
+        indices = np.searchsorted(self._seg_s, (s + distances) % self._track_len, side="right") - 1
+        indices %= len(self._a)
+        curvature = np.minimum(
+            self.CURVATURE_PEAK_LIMIT,
+            np.maximum(self._planning_curvature[indices], self._planning_raw_curvature[indices]),
+        ) * 1.08
+        denominator = curvature - self._lateral_grip_factor * effective_mu * downforce_per_speed_sq
+        corner_speed = np.full_like(curvature, top_speed)
+        valid = denominator > 1e-5
+        corner_speed[valid] = np.minimum(
+            top_speed,
+            np.sqrt(self._lateral_grip_factor * effective_mu * self.G / denominator[valid]),
+        )
+        tight = curvature > 0.09
+        corner_speed[tight] = np.minimum(corner_speed[tight], self._hairpin_speed_cap_mps)
+        v_mid = 0.5 * (current_speed + corner_speed)
+        safe_brake = np.clip(
+            effective_mu * (self.G + downforce_per_speed_sq * v_mid * v_mid) * self.BRAKING_GRIP_FACTOR,
+            8.0, self.MAX_PLAN_BRAKING_MPS2,
+        )
+        eff_dist = np.where(curvature > 0.065, np.maximum(0.0, distances - 14.0), distances)
+        allowed = np.sqrt(corner_speed * corner_speed + 2.0 * safe_brake * eff_dist)
+        return min(top_speed, float(np.min(allowed)))
 
     def _longitudinal_commands(
         self,
@@ -433,6 +453,9 @@ class RuleBasedRaceController(CarController):
 
     def compute_input(self, env: EnvironmentState, driver_state: Any) -> CarInput:
         driver_id = driver_state.driver_id
+        if self._projection_env is not env:
+            self._projection_env = env
+            self._projection_cache.clear()
         style = self._style_for(driver_id)
         dt = (0.1 if style.last_sim_ts is None else
               max(0.01, min(0.25, float(env.sim_ts) - style.last_sim_ts)))
@@ -453,7 +476,7 @@ class RuleBasedRaceController(CarController):
             -form_step, min(form_step, style.form_target - style.form_factor),
         )
 
-        s, signed_lat = self._project(
+        s, signed_lat = self._project_in_frame(
             driver_id, float(driver_state.position_x), float(driver_state.position_y),
         )
         speed = max(0.0, float(driver_state.velocity_mps))
@@ -487,24 +510,33 @@ class RuleBasedRaceController(CarController):
         attack_target = None
         attack_gap = float("inf")
         nearby_cars = []
-        straight_ahead = speed > 25.0 and max(
+        passing_allowed = max(
             self._planning_curvature_at(self._segment_at(s + distance))
-            for distance in (0.0, 15.0, 30.0, 45.0)
+            for distance in (0.0, 15.0, 30.0, 45.0, 60.0)
         ) < 0.015
+        straight_ahead = speed > 25.0 and passing_allowed
+        # Em curvas, dois carros inicialmente lado a lado podem convergir
+        # para a mesma trajetória: antecipe a frenagem em uma faixa maior.
+        follow_clearance = self.FOLLOW_LATERAL_CLEARANCE_M if passing_allowed else 5.0
         for other_id, other in env.all_driver_states.items():
-            if other_id == driver_id or getattr(other, "pitting", False):
+            if other_id == driver_id:
                 continue
-            other_s, other_lat = self._project(
+            other_s, other_lat = self._project_in_frame(
                 other_id, float(other.position_x), float(other.position_y),
             )
+            # Um carro que entra ou sai dos boxes ainda pode ocupar a pista.
+            # Só o ignoramos quando já está efetivamente fora do corredor.
+            if getattr(other, "pitting", False) and abs(other_lat) > self._half_width + 1.0:
+                continue
             gap = self._forward_gap(s, other_s, self._track_len)
             lat_gap = abs(other_lat - signed_lat)
             nearby_cars.append((other_id, gap, other_lat))
-            if (straight_ahead and 0.35 < gap < 65.0 and lat_gap < 3.6
+            if (straight_ahead and not getattr(other, "pitting", False)
+                    and 0.35 < gap < 65.0 and lat_gap < 3.6
                     and abs(other_lat) <= self._half_width + 1.0
                     and speed > float(other.velocity_mps) + 1.0 and gap < attack_gap):
                 attack_target, attack_gap = other, gap
-            if (0.35 < gap < 38.0 and lat_gap < 3.6
+            if (0.35 < gap < 38.0 and lat_gap < follow_clearance
                     and float(other.velocity_mps) < speed + 4.0 and gap < blocker_gap):
                 blocker = other
                 blocker_gap, blocker_lat = gap, other_lat
@@ -521,7 +553,7 @@ class RuleBasedRaceController(CarController):
         desired_offset = 0.0
         passing_target = env.all_driver_states.get(style.avoid_target_id)
         if passing_target is not None and not getattr(passing_target, "pitting", False):
-            target_s, target_lat = self._project(
+            target_s, target_lat = self._project_in_frame(
                 passing_target.driver_id,
                 float(passing_target.position_x), float(passing_target.position_y),
             )
@@ -538,8 +570,9 @@ class RuleBasedRaceController(CarController):
             # Remain alongside until the opponent is safely behind. Otherwise
             # leaving their slipstream cancels the move before a pass occurs.
             desired_offset = style.avoid_side * min(self.OVERTAKE_OFFSET_M, room)
-        elif room > 0.6 and (attack_target is not None
-                             or (blocker is not None and blocker_gap < 12.0)):
+        elif room > 0.6 and passing_allowed and (attack_target is not None
+                             or (blocker is not None and not getattr(blocker, "pitting", False)
+                                 and blocker_gap < 12.0)):
             target = attack_target if attack_target is not None else blocker
             target_offset = min(self.OVERTAKE_OFFSET_M, room)
             free_sides = [
@@ -676,6 +709,10 @@ class RuleBasedRaceController(CarController):
             s, top_speed, effective_mu, downforce_per_speed_sq,
             braking_accel, speed,
         )
+        if (self._monza_calibrated and not passing_allowed
+                and any(-12.0 < gap < 35.0 for _, gap, _ in nearby_cars)):
+            # A margem em tráfego reduz choques sem limitar uma volta livre.
+            target_speed *= 0.85
 
         chasing = blocker is not None and blocker_gap < 140.0
         if chasing and blocker_gap / max(speed, 28.0) < 1.0:
@@ -684,9 +721,12 @@ class RuleBasedRaceController(CarController):
 
         follow_brake = 0.0
         if (blocker is not None
-                and abs(blocker_lat - signed_lat) < self.FOLLOW_LATERAL_CLEARANCE_M):
+                and abs(blocker_lat - signed_lat) < follow_clearance):
             closing = max(0.0, speed - float(blocker.velocity_mps))
-            safe_gap = 5.2 + min(3.0, speed * 0.04) + min(6.0, closing * 0.4)
+            if passing_allowed:
+                safe_gap = 5.2 + min(3.0, speed * 0.04) + min(6.0, closing * 0.4)
+            else:
+                safe_gap = 8.0 + min(5.0, speed * 0.12) + min(8.0, closing * 0.6)
             gap_error = safe_gap - blocker_gap
             if gap_error > 0.0:
                 target_speed = min(

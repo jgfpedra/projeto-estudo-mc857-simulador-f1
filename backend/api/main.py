@@ -10,7 +10,9 @@ import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from .race_manager import REDIS_URL, race_manager
-from .schemas import RaceSetupRequest, RaceSetupResponse
+from .schemas import (PitStopCancelResponse, PitStopRequest, PitStopResponse,
+                      RaceSetupRequest, RaceSetupResponse)
+from domain import TyreCompound
 from database.f1results_database import AmbiguousHistoricalEvent, F1ResultsDriverDatabase
 from service.driver_service import DriverService
 from .providers.historical_f1results import load_historical_snapshot
@@ -51,7 +53,8 @@ def create_race(req: RaceSetupRequest):
             'selected_roster': selected_roster,
             'weather': req.weather.value if req.weather else None,
             'weather_change': req.weather_change.model_dump() if req.weather_change else None,
-            'initial_tyre': req.initial_tyre.value if req.initial_tyre else None,
+            'initial_tyre': (req.initial_tyre or (req.stints[0].compound if req.stints else None)).value
+                            if req.initial_tyre or req.stints else None,
         }
         race_id, track, config = race_manager.create_race(
             req.laps, selected_track, season,
@@ -62,10 +65,13 @@ def create_race(req: RaceSetupRequest):
         raise HTTPException(status_code=503, detail='Redis indisponível') from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    warnings = ['Estratégia de stints ainda não é aplicada pela engine.'] if req.stints else []
+    reference = getattr(track, 'metadata', {}).get('track_reference')
+    if reference and reference['track_year'] != reference['driver_season']:
+        warnings.append(f"Pilotos da temporada {reference['driver_season']}; a geometria do layout selecionado usa a referência de {reference['track_year']}.")
     return RaceSetupResponse(race_id=race_id, track_name=track.name, num_laps=config.num_laps,
                              ws_path=f"/ws/races/{race_id}", grid=req.grid or [],
-                             initial_weather=req.weather.value if req.weather else 'dry',
-                             warnings=['Estratégia de stints ainda não é aplicada pela engine.'] if req.stints else [])
+                             initial_weather=req.weather.value if req.weather else 'dry', warnings=warnings)
 
 @app.get('/seasons')
 def list_seasons():
@@ -132,7 +138,9 @@ def list_circuits(season: int | None = None):
         latest = max((item.get('last_year') or 0 for item in layouts), default=0)
         historical_layouts = {layout['id'] for year in historical_years.get(circuit['id'], [])
                               if (layout := catalog.find_layout(circuit, year)) is not None}
-        detailed = [{**item, 'is_current': (item.get('last_year') or 0) == latest,
+        current_id = circuit.get('current_layout_id')
+        detailed = [{**item, 'is_current': item['id'] == current_id if current_id else
+                                         (item.get('last_year') or 0) == latest,
                      'simulable': (item.get('last_year') or 0) >= 2018
                                   or item['id'] in historical_layouts} for item in layouts]
         circuits.append({**circuit, 'layouts_count': len(layouts), 'layouts': detailed,
@@ -161,6 +169,33 @@ def circuit_layout_history(circuit_id: str):
         raise HTTPException(status_code=404, detail='Circuito não encontrado no catálogo F1DB')
     return {'circuit_id': circuit['id'], 'name': circuit['full_name'],
             'catalog': catalog.provenance, 'layouts': circuit['layouts']}
+
+
+@app.post('/races/{race_id}/drivers/{driver_id}/pit-stop', status_code=202, response_model=PitStopResponse)
+def request_pit_stop(race_id: str, driver_id: str, req: PitStopRequest):
+    try:
+        race_manager.request_pit_stop(race_id, driver_id, TyreCompound(req.tyre_compound.value.upper()))
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail='Redis indisponível') from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return PitStopResponse(race_id=race_id, driver_id=driver_id, tyre_compound=req.tyre_compound)
+
+
+@app.delete('/races/{race_id}/drivers/{driver_id}/pit-stop', status_code=202,
+            response_model=PitStopCancelResponse)
+def cancel_pit_stop(race_id: str, driver_id: str):
+    try:
+        race_manager.cancel_pit_stop(race_id, driver_id)
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail='Redis indisponível') from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return PitStopCancelResponse(race_id=race_id, driver_id=driver_id)
 
 
 @app.get('/races/{race_id}')

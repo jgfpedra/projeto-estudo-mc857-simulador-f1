@@ -39,3 +39,29 @@ Quando o desgaste ou o combustível exige uma parada, o carro segue a via fisica
 
 
 A configuração 2D também pode enviar `circuit: {id, layout_id}`, `year`, `grid` (IDs de pilotos em ordem), `weather`, `initial_tyre` e `weather_change`. `GET /seasons` e `GET /seasons/{year}/drivers` fornecem os pilotos usados nessa seleção; `GET /circuits` inclui os layouts no campo `circuits` preservando os metadados do catálogo. Os valores `light_rain`, `rain` e `heavy_rain` usam o estado molhado da engine, com intensidades iniciais diferentes. Quando `weather_change` não é enviado, o clima inicial permanece constante nessa configuração. As alterações de clima escolhidas são aproximadas pelos estados suportados pela engine. Estratégias de `stints` ainda não são aplicadas: a resposta de criação inclui um aviso para o frontend.
+
+### Solicitar boxes durante uma corrida
+
+`POST /races/{race_id}/drivers/{driver_id}/pit-stop` com `{"tyre_compound":"medium"}` solicita a troca para `soft`, `medium`, `hard`, `intermediate` ou `wet` (maiúsculas também são aceitas). Resposta `202` indica que o pedido foi enfileirado para a thread da corrida, não que a troca já aconteceu. `404` indica corrida ou piloto inexistente; `409` indica corrida inativa, solicitação manual já pendente ou carro já entrando/nos boxes; `422` indica composto inválido. Uma solicitação manual substitui o composto de uma parada automática que ainda não começou. Se a corrida acabar antes de o pedido ser processado, a parada não acontece.
+
+Ao processar o pedido, a engine publica `pit_requested` pelo mesmo WebSocket, com `race_id`, `driver_id`, `tyre_compound` em maiúsculas e `source: user`. O tick e o snapshot incluem `pit_request` por piloto com composto, origem e situação (`scheduled`, `approaching` ou `in_pit_lane`), ou `null` sem pedido; a entrada também é observada com `pitting: true`. A troca efetiva continua sendo informada pelo evento `pit_stop`. A via e a decisão de executar a troca continuam sob controle da engine. Na configuração atual de um único processo Uvicorn, o gerenciador mantém as engines ativas em memória; com múltiplos workers, seria necessário rotear o comando para o processo dono da corrida ou usar uma fila compartilhada.
+
+
+`DELETE /races/{race_id}/drivers/{driver_id}/pit-stop` solicita o cancelamento sem corpo. A resposta `202` confirma que o comando foi enfileirado; o evento `pit_cancelled` confirma que a engine realmente o cancelou. Se a confirmação não for possível porque o carro cruzou a entrada entre o HTTP e o próximo tick, o evento é `pit_cancel_rejected` com `reason: already_in_pit_lane`, e a parada continua. `409` também é retornado quando já se sabe que o carro entrou, não há pedido pendente, a corrida está inativa ou o cancelamento já foi solicitado; `404` indica corrida ou piloto inexistente.
+
+O cancelamento vale também para uma parada automática agendada. Depois de confirmado, a primeira avaliação automática de pit seguinte é ignorada para evitar reagendamento imediato; as avaliações posteriores voltam a funcionar normalmente. O carro pode estar em `approaching` com `pitting: true` e ainda pode cancelar: a entrada só é considerada cruzada quando o centro do carro passa o primeiro waypoint da via. O mesmo vale para uma via estimada; seu ponto de entrada também é aproximado.
+
+
+### Temporada dos pilotos e variação da pista
+
+A tela pode escolher um layout antes de escolher a temporada dos pilotos. Quando o pedido contém `grid` e `circuit.layout_id`, a API aceita uma temporada de pilotos diferente dos anos de uso daquele layout. Ela escolhe um ano de referência confirmado pelo F1DB para o **mesmo layout**, priorizando traçados locais congelados e anos com snapshot histórico; se necessário, tenta as fontes configuradas. Não mistura pilotos do ano de referência com o grid enviado. Por exemplo, um grid de 1968 pode correr no `austin-1` com geometria de referência de 2025.
+
+A resposta de criação traz um aviso em `warnings`; `GET /races/{id}` mantém `season` como a temporada dos pilotos e informa `layout_reference.track_year`, `layout_reference.basis` e `sources.track_reference` quando a referência for diferente. A referência não declara que o GP existiu naquele ano dos pilotos. Sem grid explícito, a API continua exigindo que o layout corresponda à temporada, evitando inventar um grid histórico. Se nenhuma geometria do layout escolhido puder ser obtida, a criação é recusada com erro; outro layout não é substituído automaticamente.
+
+Os anos em `layouts[].years` indicam os períodos com GPs registrados no catálogo, não uma variação por período contínuo. A ausência de um GP em 2020, por exemplo, pode dividir a lista de anos de um mesmo layout. As variações sem geometria disponível permanecem sinalizadas com `simulable: false`.
+
+### Ritmo da simulação e calibração de Monza
+
+A simulação ao vivo mantém passos físicos de 1/240 s e usa prazos baseados em relógio monotônico para compensar atrasos pontuais sem pular passos. Se o processamento permanecer mais lento que o tempo real, a corrida também ficará mais lenta; reduzir a quantidade de carros diminui a carga.
+
+O controlador possui ajustes de ritmo para as duas geometrias de Monza 2024 testadas: a pista congelada e o snapshot OpenF1 da sessão 9590, piloto 1, volta 43. O ajuste exige hash e largura correspondentes; outras amostras OpenF1, variantes e geometrias continuam com os parâmetros gerais. A calibração é uma aproximação do simulador e não garante os tempos de pilotos reais. A geometria OpenF1 usada no teste offline está em `tests/fixtures/monza_openf1_2024.json`.

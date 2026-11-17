@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 MAX_GRID = 24  # slots do grid do motor (SimulationConfig.num_slots)
 
@@ -125,14 +125,38 @@ class RaceSetupRequest(BaseModel):
     num_drivers: int = Field(default=2, ge=1, le=24)
     track: Optional[str] = None
     layout_id: Optional[str] = None
-    year: Optional[int] = None
-    season: Optional[int] = None
+    year: Optional[int] = Field(None, description="Temporada dos pilotos; com grid e layout explícitos, a pista pode usar outro ano de referência do mesmo layout.")
+    season: Optional[int] = Field(None, description="Alias de year para a temporada dos pilotos.")
     circuit: Optional[CircuitChoice] = None
     grid: Optional[List[str]] = Field(None, min_length=1, max_length=24)
     weather: Optional[WeatherName] = None
     weather_change: Optional[WeatherChange] = None
     initial_tyre: Optional[TyreName] = None
-    stints: Optional[List[StintIn]] = None
+    stints: Optional[List[StintIn]] = Field(None, min_length=1)
+
+    @model_validator(mode="after")
+    def validate_race_setup(self):
+        if self.grid is not None and len(set(self.grid)) != len(self.grid):
+            raise ValueError("grid não pode ter pilotos repetidos")
+        if self.stints is not None:
+            total = sum(stint.laps for stint in self.stints)
+            if total != self.laps:
+                raise ValueError(f"a soma das voltas dos stints ({total}) deve ser igual a laps ({self.laps})")
+            if self.initial_tyre is not None and self.initial_tyre != self.stints[0].compound:
+                raise ValueError("initial_tyre deve ser igual ao composto do primeiro stint")
+        return self
+
+
+class GridEntryOut(BaseModel):
+    position: int
+    driver_id: str
+    name: str
+
+
+class InitialWeatherOut(BaseModel):
+    requested: WeatherName
+    engine_kind: str
+    rainfall_mm_h: float
 
 
 class RaceSetupResponse(BaseModel):
@@ -143,3 +167,27 @@ class RaceSetupResponse(BaseModel):
     grid: List[str] = Field(default_factory=list)
     initial_weather: str = "dry"
     warnings: List[str] = Field(default_factory=list)
+
+
+class PitStopRequest(BaseModel):
+    """Pedido de troca na próxima entrada dos boxes."""
+    model_config = ConfigDict(extra="forbid")
+    tyre_compound: TyreName
+
+    @field_validator('tyre_compound', mode='before')
+    @classmethod
+    def normalize_compound(cls, value):
+        return value.lower() if isinstance(value, str) else value
+
+
+class PitStopResponse(BaseModel):
+    race_id: str
+    driver_id: str
+    tyre_compound: TyreName
+    status: str = 'queued'
+
+
+class PitStopCancelResponse(BaseModel):
+    race_id: str
+    driver_id: str
+    status: str = 'cancellation_queued'

@@ -29,8 +29,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 # Reaproveita o extrator de circuitos/layouts/SVG já existente.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fetch_track_layouts import (  # noqa: E402
+backend_root = str(Path(__file__).resolve().parent.parent)
+if backend_root not in sys.path:
+    sys.path.insert(0, backend_root)
+from scripts.tracks.fetch_track_layouts import (  # noqa: E402
     TrackLayoutExtractor,
     extract_layout_number,
     find_database_path,

@@ -14,7 +14,7 @@ from scripts.tracks.fetch_track_layouts import (
     TrackLayoutExtractor,
 )
 from service.circuit_evolution import CircuitEvolutionService
-from controller.circuit_controller import (
+from backend.controller.circuit_controller import (
     get_circuit_service,
     list_circuits,
     get_circuit,

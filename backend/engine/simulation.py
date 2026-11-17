@@ -15,6 +15,7 @@ O motor consome módulos puros do domínio (car, tyre, weather, track, driver).
 from __future__ import annotations
 
 import math
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Set, Tuple
@@ -43,6 +44,9 @@ from .events import (
     Event,
     LapCompletedEvent,
     PitStopEvent,
+    PitRequestedEvent,
+    PitCancelledEvent,
+    PitCancelRejectedEvent,
     PositionUpdateEvent,
     RaceEndEvent,
     RaceStartEvent,
@@ -136,6 +140,13 @@ class SimulationEngine:
         ensure_pit_lane(track)
         self.pit_controller = PitController(track)
         self._pit_requests = {}
+        # Comandos HTTP são enfileirados; só a thread da engine altera o estado do pit.
+        self._pit_command_lock = threading.RLock()
+        self._pit_commands = {}
+        self._pit_cancel_commands = set()
+        self._pit_skip_auto_once = set()
+        self._manual_pit_active = set()
+        self._accepting_pit_commands = True
         self.drivers = drivers
         self.publisher = publisher or NullPublisher()
         self.weather_model = weather_model or WeatherModel(
@@ -173,6 +184,8 @@ class SimulationEngine:
         self._race_segment_starts = np.r_[0.0, np.cumsum(self._race_segment_lengths[:-1])]
         self._race_track_length = float(self._race_segment_lengths.sum())
         self.race_progress_m: Dict[str, float] = {}
+        # Progresso em que cada jogo novo foi instalado, até fechar a volta.
+        self._tyre_fit_progress_m: Dict[str, float] = {}
         self.race_s_m: Dict[str, float] = {}
         self.race_lateral_m: Dict[str, float] = {}
         self._race_last_s: Dict[str, float] = {}
@@ -242,6 +255,75 @@ class SimulationEngine:
     # ------------------------------------------------------------------
     # API de input externo
     # ------------------------------------------------------------------
+
+    def request_pit_stop(self, driver_id: str, compound: TyreCompound) -> None:
+        """Enfileira uma solicitação para ser aplicada no próximo tick da engine.
+
+        Uma solicitação manual substitui a estratégia automática já agendada,
+        desde que o carro ainda não tenha começado a entrar nos boxes.
+        """
+        if driver_id not in {driver.driver_id for driver in self.drivers}:
+            raise KeyError(driver_id)
+        if not isinstance(compound, TyreCompound):
+            raise ValueError('Composto inválido')
+        with self._pit_command_lock:
+            if not self._accepting_pit_commands or self.race_finished:
+                raise RuntimeError('Corrida não está ativa')
+            state = self.states.get(driver_id)
+            if (driver_id in self._manual_pit_active or driver_id in self._pit_cancel_commands
+                    or (state is not None and state.pitting)):
+                raise RuntimeError('Piloto já possui solicitação manual ou está nos boxes')
+            self._pit_commands[driver_id] = compound
+            self._manual_pit_active.add(driver_id)
+
+    def cancel_pit_stop(self, driver_id: str) -> None:
+        """Enfileira cancelamento; a engine verifica a entrada no próximo tick."""
+        if driver_id not in {driver.driver_id for driver in self.drivers}:
+            raise KeyError(driver_id)
+        with self._pit_command_lock:
+            if not self._accepting_pit_commands or self.race_finished:
+                raise RuntimeError('Corrida não está ativa')
+            if driver_id in self._pit_cancel_commands:
+                raise RuntimeError('Cancelamento já solicitado')
+            state = self.states.get(driver_id)
+            if state is not None and self.pit_controller.has_entered(state):
+                raise RuntimeError('O carro já entrou na via dos boxes')
+            if driver_id not in self._pit_commands and driver_id not in self._pit_requests:
+                raise RuntimeError('Piloto não possui pit stop pendente')
+            self._pit_cancel_commands.add(driver_id)
+
+    def close_pit_requests(self) -> None:
+        with self._pit_command_lock:
+            self._accepting_pit_commands = False
+
+    def _apply_pit_command(self, driver, state) -> None:
+        """Chamado apenas pela thread da corrida, com o lock dos comandos."""
+        driver_id = driver.driver_id
+        if driver_id in self._pit_cancel_commands:
+            self._pit_cancel_commands.remove(driver_id)
+            # O carro pode cruzar a entrada entre o HTTP e o próximo tick.
+            if self.pit_controller.has_entered(state):
+                self.publisher.publish(PitCancelRejectedEvent(
+                    sim_ts=self.sim_ts, driver_id=driver_id, driver_name=driver.name, lap=state.lap))
+                return
+            self._pit_commands.pop(driver_id, None)
+            self._pit_requests.pop(driver_id, None)
+            self._manual_pit_active.discard(driver_id)
+            self._pit_skip_auto_once.add(driver_id)
+            state.pitting = False
+            self.pit_controller.reset(driver_id)
+            self.publisher.publish(PitCancelledEvent(
+                sim_ts=self.sim_ts, driver_id=driver_id, driver_name=driver.name, lap=state.lap))
+            return
+        compound = self._pit_commands.pop(driver_id, None)
+        if compound is None:
+            return
+        self._pit_skip_auto_once.discard(driver_id)
+        fuel = max(0.0, state.car.specs.fuel_capacity_kg * 0.7 - state.car.fuel_kg)
+        self._pit_requests[driver.driver_id] = {'compound': compound, 'fuel': fuel, 'serviced': False, 'source': 'user'}
+        self.publisher.publish(PitRequestedEvent(sim_ts=self.sim_ts, driver_id=driver.driver_id,
+                               driver_name=driver.name, lap=state.lap,
+                               tyre_compound=compound.value))
 
     def set_input_source(self, source: InputSource) -> None:
         """Troca a fonte de inputs. Recria controllers para todos os drivers."""
@@ -385,7 +467,7 @@ class SimulationEngine:
         # (~75s/volta * num_laps * 3 = generoso; evita corrida infinita)
         max_ticks = int(self.config.num_laps * 200 * 3 / logic_dt)
         tick = 0
-        last_real_time = time.time()
+        next_tick_deadline = time.monotonic()
 
         while not self.race_finished and tick < max_ticks:
             self._step_tick(logic_dt, physics_sub_steps)
@@ -394,10 +476,13 @@ class SimulationEngine:
                 self.physics.update_camera()
             # Sincroniza com tempo real (modo realtime)
             if self.config.realtime:
-                elapsed_real = time.time() - last_real_time
-                if elapsed_real < logic_dt:
-                    time.sleep(logic_dt - elapsed_real)
-                last_real_time = time.time()
+                # Usa um relógio monotônico e prazos acumulados: um tick
+                # demorado pode ser recuperado por ticks seguintes rápidos,
+                # sem saltar física nem acumular o atraso de cada sleep.
+                next_tick_deadline += logic_dt
+                remaining = next_tick_deadline - time.monotonic()
+                if remaining > 0.0:
+                    time.sleep(remaining)
             tick += 1
 
         self.race_finished = True
@@ -447,23 +532,31 @@ class SimulationEngine:
             state  = self.states[drv.driver_id]
             handle = self.handles[drv.driver_id]
 
-            # Uma solicitação de pit é atendida na próxima entrada dos boxes.
-            pit = self._pit_requests.get(drv.driver_id)
-            if pit and (state.pitting or self.pit_controller.should_enter(
-                    self.race_s_m.get(drv.driver_id), state.velocity_mps)):
-                state.pitting = True
-                car_input, phase = self.pit_controller.compute_input(state)
-                self.last_inputs[drv.driver_id] = car_input
-                if phase >= .55 and not pit['serviced']:
-                    self._perform_pit(drv, pit['compound'], pit['fuel'])
+            # A confirmação e o estado de entrada são protegidos contra comandos
+            # simultâneos da API. A física continua exclusivamente na thread da corrida.
+            with self._pit_command_lock:
+                self._apply_pit_command(drv, state)
+                pit = self._pit_requests.get(drv.driver_id)
+                if pit and (state.pitting or self.pit_controller.should_enter(
+                        self.race_s_m.get(drv.driver_id), state.velocity_mps)):
                     state.pitting = True
-                    pit['serviced'] = True
-                if phase >= .99 and pit['serviced']:
-                    state.pitting = False
-                    del self._pit_requests[drv.driver_id]
-                    self.pit_controller.reset(drv.driver_id)
-            else:
-                car_input = self._resolve_car_input(drv.driver_id, env, state)
+                    car_input, phase = self.pit_controller.compute_input(state, env.all_driver_states.values())
+                    self.last_inputs[drv.driver_id] = car_input
+                    if phase >= .55 and not pit['serviced']:
+                        self._perform_pit(drv, pit['compound'], pit['fuel'])
+                        state.pitting = True
+                        pit['serviced'] = True
+                    if phase >= .99 and pit['serviced']:
+                        state.pitting = False
+                        del self._pit_requests[drv.driver_id]
+                        self._manual_pit_active.discard(drv.driver_id)
+                        self.pit_controller.reset(drv.driver_id)
+                        controller = self._get_controller(drv.driver_id)
+                        on_pit_exit = getattr(controller, "on_pit_exit", None)
+                        if callable(on_pit_exit):
+                            on_pit_exit(drv.driver_id)
+                else:
+                    car_input = self._resolve_car_input(drv.driver_id, env, state)
 
             # 3 — calcula grip efectivo (pneu + clima + superfície)
             grip = self._compute_grip(drv.driver_id, car_input, state, weather_kind, track_temp)
@@ -828,9 +921,14 @@ class SimulationEngine:
         # Combustível (car.apply_lap devolve penalidade de pace por peso)
         car_pace_penalty = state.car.apply_lap(self.track.length_km, driver.aggressive)
 
-        # Pneu: aplica degradação e recebe penalidade de tempo por desgaste
+        # Pneus trocados durante a volta só desgastam a distância desde a troca.
+        fit_progress = self._tyre_fit_progress_m.pop(driver.driver_id, None)
+        lap_length = self._race_track_length if self.config.track_progress_laps else self.track.length_m
+        lap_fraction = 1.0 if fit_progress is None else max(
+            0.0, min(1.0, (state.lap * lap_length - fit_progress) / lap_length)
+        )
         tyre_pace_penalty = state.tyre.apply_lap(
-            self.track.length_km, weather_grip, driver.aggressive
+            self.track.length_km, weather_grip, driver.aggressive, lap_fraction=lap_fraction
         )
 
         # Ajuste de pace (não usamos diretamente aqui porque a física já
@@ -867,17 +965,17 @@ class SimulationEngine:
             self._publish_weather_changed(prev_kind=prev_kind, new_kind=new_weather.kind, new_lap=state.lap + 1)
             self.last_weather_kind = new_weather.kind
 
-        # Decisão de pit stop
-        if (driver.driver_id not in self._pit_requests
-                and state.needs_pit(self.config.fuel_threshold_kg, self.config.tyre_life_threshold)):
-            # Escolhe pneu com base no clima atual
-            new_compound = self._pick_compound_for_weather(new_weather.kind)
-            # Reabastece até 70% do tanque
-            fuel_to_add = state.car.specs.fuel_capacity_kg * 0.7 - state.car.fuel_kg
-            fuel_to_add = max(0.0, fuel_to_add)
-            # A troca será feita ao percorrer os boxes na próxima volta.
-            self._pit_requests[driver.driver_id] = {
-                'compound': new_compound, 'fuel': fuel_to_add, 'serviced': False}
+        # Não reagendar automaticamente na primeira avaliação após cancelamento.
+        with self._pit_command_lock:
+            if driver.driver_id in self._pit_skip_auto_once:
+                self._pit_skip_auto_once.remove(driver.driver_id)
+            elif (driver.driver_id not in self._pit_requests
+                    and driver.driver_id not in self._pit_commands
+                    and state.needs_pit(self.config.fuel_threshold_kg, self.config.tyre_life_threshold)):
+                new_compound = self._pick_compound_for_weather(new_weather.kind)
+                fuel_to_add = max(0.0, state.car.specs.fuel_capacity_kg * 0.7 - state.car.fuel_kg)
+                self._pit_requests[driver.driver_id] = {
+                    'compound': new_compound, 'fuel': fuel_to_add, 'serviced': False}
 
         # Snapshot de posições a cada volta
         if state.lap % self.config.position_update_every_lap == 0:
@@ -912,6 +1010,8 @@ class SimulationEngine:
             fuel_to_add_kg=fuel_to_add_kg,
             pit_time_s=0.0,
         )
+        progress = self.race_progress_m if self.config.track_progress_laps else self.cum_dist_m
+        self._tyre_fit_progress_m[driver.driver_id] = progress.get(driver.driver_id, 0.0)
         added = state.car.fuel_kg - old_fuel
         self.publisher.publish(PitStopEvent(
             sim_ts=self.sim_ts,
@@ -1019,7 +1119,9 @@ class SimulationEngine:
         positions = [self._snapshot_position(d) for d in self.ranked_drivers()]
         self.publisher.publish(TickEvent(
             sim_ts=self.sim_ts,
-            lap=max(0, min(s.lap for s in self.states.values())) if self.states else 0,
+            # A volta geral acompanha o líder, não o último carro. Cada
+            # posição continua informando a volta individual do piloto.
+            lap=max(0, positions[0]["lap"]) if positions else 0,
             tick_in_lap=int(self.sim_ts * self.config.logic_step_hz),
             positions=positions,
             weather=self.weather_model.current.to_dict(),
@@ -1035,9 +1137,15 @@ class SimulationEngine:
             (time.time() - last_ts) > self.config.input_stale_after_s
             if last_ts > 0 else True
         )
+        pit_request = self._pit_requests.get(driver.driver_id)
         return {
             "driver_id": driver.driver_id,
             "driver_name": driver.name,
+            "pit_request": ({"tyre_compound": pit_request["compound"].value,
+                             "source": pit_request.get("source", "automatic"),
+                             "status": ("in_pit_lane" if self.pit_controller.has_entered(s)
+                                        else "approaching" if s.pitting else "scheduled")}
+                            if pit_request else None),
             "lap": s.lap,
             "position_xy": [round(s.position_x, 2), round(s.position_y, 2)],
             "velocity_mps": round(s.velocity_mps, 2),

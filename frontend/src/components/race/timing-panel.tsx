@@ -1,4 +1,4 @@
-import { COMPOUND_BADGE, driverColor, formatClock, gapLabel } from "@/helpers/race-live"
+import { COMPOUND_BADGE, currentLap, driverColor, formatClock, gapLabel } from "@/helpers/race-live"
 import type { FinalEntry, Frame, RaceInfo } from "@/types/race"
 
 type Props = {
@@ -119,7 +119,7 @@ export function TimingPanel({
                   )}
                 </div>
                 <div className="truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  V{car.lap} · {Math.round(car.speedKmh)} km/h
+                  V{currentLap(car.lap, race.numLaps)} · {Math.round(car.speedKmh)} km/h
                 </div>
               </div>
               <span className="flex items-center justify-end gap-1 text-right text-xs font-bold tabular-nums">

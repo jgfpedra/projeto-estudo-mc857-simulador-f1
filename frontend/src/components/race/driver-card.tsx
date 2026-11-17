@@ -1,6 +1,6 @@
 import { X } from "lucide-react"
 
-import { COMPOUND_BADGE, driverColor, gapLabel } from "@/helpers/race-live"
+import { COMPOUND_BADGE, currentLap, driverColor, gapLabel } from "@/helpers/race-live"
 import type { CarFrame, FeedItem, FinalEntry, Frame, RaceInfo } from "@/types/race"
 
 type Props = {
@@ -86,7 +86,7 @@ export function DriverCard({
               label="Posição"
               value={`P${car.position}${delta > 0 ? ` ▲${delta}` : delta < 0 ? ` ▼${-delta}` : ""}`}
             />
-            <Item label="Volta" value={`${car.lap}/${race.numLaps}`} />
+            <Item label="Volta" value={`${currentLap(car.lap, race.numLaps)}/${race.numLaps}`} />
             <Item label="Diferença" value={gapLabel(car)} />
             <Item label="Velocidade" value={`${Math.round(car.speedKmh)} km/h`} />
             <Item label="Paradas" value={String(pitStops)} />
