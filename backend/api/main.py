@@ -14,10 +14,11 @@ from .schemas import RaceSetupRequest, RaceSetupResponse
 from database.f1results_database import AmbiguousHistoricalEvent, F1ResultsDriverDatabase
 from service.driver_service import DriverService
 from .providers.historical_f1results import load_historical_snapshot
+from .providers.race_data import driver_record
 
 
-driver_service = DriverService()
 app = FastAPI(title='F1 Simulator API')
+driver_service = DriverService()
 origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174,http://localhost:3000,http://localhost:3001,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:3000,http://127.0.0.1:3001').split(',')
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=['*'], allow_headers=['*'])
 
@@ -26,15 +27,45 @@ def create_race(req: RaceSetupRequest):
     try:
         if req.year is not None and req.season is not None and req.year != req.season:
             raise ValueError('year e season devem indicar a mesma temporada')
+        season = req.season if req.season is not None else req.year
+        if req.circuit and req.track and req.circuit.id != req.track:
+            raise ValueError('Informe um único circuito.')
+        selected_track = req.circuit.id if req.circuit else req.track
+        selected_layout = req.circuit.layout_id if req.circuit else req.layout_id
+        selected_roster = None
+        if req.grid is not None:
+            if season is None or len(set(req.grid)) != len(req.grid):
+                raise ValueError('Informe a temporada e pilotos diferentes para o grid.')
+            available = {d['id']: d for d in driver_service.list_drivers(year=season, limit=None)}
+            missing = [driver for driver in req.grid if driver not in available]
+            if missing:
+                raise ValueError('Pilotos indisponíveis nesta temporada: ' + ', '.join(missing))
+            selected_roster = []
+            for driver_id in req.grid:
+                d = available[driver_id]
+                record = driver_record(d.get('abbreviation') or '', d.get('name') or driver_id,
+                                       d.get('number', d.get('permanent_number')), d.get('team_name'), d.get('team_color'))
+                record['driver_id'] = driver_id
+                selected_roster.append(record)
+        options = {
+            'selected_roster': selected_roster,
+            'weather': req.weather.value if req.weather else None,
+            'weather_change': req.weather_change.model_dump() if req.weather_change else None,
+            'initial_tyre': req.initial_tyre.value if req.initial_tyre else None,
+        }
         race_id, track, config = race_manager.create_race(
-            req.laps, req.track, req.season if req.season is not None else req.year,
-            num_drivers=req.num_drivers, layout_id=req.layout_id
+            req.laps, selected_track, season,
+            num_drivers=len(req.grid) if req.grid is not None else req.num_drivers,
+            layout_id=selected_layout, **{k: v for k, v in options.items() if v is not None},
         )
     except redis.RedisError as exc:
         raise HTTPException(status_code=503, detail='Redis indisponível') from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return RaceSetupResponse(race_id=race_id, track_name=track.name, num_laps=config.num_laps)
+    return RaceSetupResponse(race_id=race_id, track_name=track.name, num_laps=config.num_laps,
+                             ws_path=f"/ws/races/{race_id}", grid=req.grid or [],
+                             initial_weather=req.weather.value if req.weather else 'dry',
+                             warnings=['Estratégia de stints ainda não é aplicada pela engine.'] if req.stints else [])
 
 @app.get('/seasons')
 def list_seasons():
@@ -44,7 +75,9 @@ def list_seasons():
 @app.get('/seasons/{season}/drivers')
 def list_season_drivers(season: int):
     drivers = driver_service.list_drivers(year=season, limit=None)
-    return [{**driver, 'number': driver.get('number', driver.get('permanent_number'))}
+    return [{**driver, 'number': driver.get('number', driver.get('permanent_number')),
+             'team': driver.get('team_name'), 'team_id': (driver.get('team') or {}).get('id'),
+             'country': {'name': driver.get('country_name'), 'code': driver.get('country_code')}}
             for driver in drivers]
 
 
@@ -88,12 +121,25 @@ def list_circuits(season: int | None = None):
     catalog = race_manager.catalog
     if catalog is None:
         raise HTTPException(status_code=503, detail='Catálogo F1DB indisponível')
-    circuits = [{'id': c['id'], 'name': c['name'], 'full_name': c['full_name'],
-                 'layouts_count': len(c.get('layouts', []))} for c in catalog.circuits]
+    snapshot = load_historical_snapshot()
+    historical_years = {}
+    for key in snapshot['races']:
+        circuit_id, year = key.rsplit(':', 1)
+        historical_years.setdefault(circuit_id, []).append(int(year))
+    circuits = []
+    for circuit in catalog.circuits:
+        layouts = circuit.get('layouts', [])
+        latest = max((item.get('last_year') or 0 for item in layouts), default=0)
+        historical_layouts = {layout['id'] for year in historical_years.get(circuit['id'], [])
+                              if (layout := catalog.find_layout(circuit, year)) is not None}
+        detailed = [{**item, 'is_current': (item.get('last_year') or 0) == latest,
+                     'simulable': (item.get('last_year') or 0) >= 2018
+                                  or item['id'] in historical_layouts} for item in layouts]
+        circuits.append({**circuit, 'layouts_count': len(layouts), 'layouts': detailed,
+                         'simulable': any(item['simulable'] for item in detailed)})
     if season is None:
         return {'catalog': catalog.provenance, 'circuits': circuits}
     database = F1ResultsDriverDatabase()
-    snapshot = load_historical_snapshot()
     events = [event_summary(e, snapshot) for e in database.events(season)]
     by_id = {c['id']: c for c in circuits}
     for event in events:

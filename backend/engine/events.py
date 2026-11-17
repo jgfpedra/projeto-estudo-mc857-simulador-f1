@@ -100,3 +100,32 @@ class TickEvent(Event):
     tick_in_lap: int = 0
     positions: List[Dict[str, Any]] = field(default_factory=list)
     weather: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class CollisionEvent(Event):
+    """Emitido UMA vez quando dois carros entram em contato físico.
+
+    Só avisa: a física do choque já é resolvida pelo PyBullet e nenhuma
+    consequência (penalidade, dano, safety car) é aplicada por este evento.
+
+    ``driver_a_id`` / ``driver_b_id`` vêm em ordem alfabética de ``driver_id``
+    (par não-ordenado: o evento não diz quem "bateu em quem").
+    ``lap`` é a maior volta entre os dois pilotos. ``impact_force_n`` é a soma
+    das forças normais dos pontos de contato no passo em que o contato começou
+    e ``penetration_m`` é a maior penetração entre os dois chassis nesse passo.
+
+    Atenção: a força é lida no último sub-passo de física do tick, então numa
+    batida moderada ela pode vir 0,0 mesmo com o choque tendo acontecido (o
+    impulso foi aplicado num sub-passo anterior). Para "quão forte foi" prefira
+    ``penetration_m`` junto com ``impact_force_n``, não só a força.
+    """
+    type: str = "collision"
+    lap: int = 0
+    driver_a_id: str = ""
+    driver_a_name: str = ""
+    driver_b_id: str = ""
+    driver_b_name: str = ""
+    position_xy: List[float] = field(default_factory=list)
+    impact_force_n: float = 0.0
+    penetration_m: float = 0.0
