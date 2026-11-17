@@ -16,4 +16,23 @@ Contatos crus do solver são agregados por par e por episódio, com os limiares 
 python backend/scripts/tracks/refresh_f1db_layouts.py --db-path caminho/para/f1db.db --f1db-release vVERSAO
 ```
 
-Para conferir mudanças sem sobrescrever o snapshot, acrescente `--check`: o comando lista layouts adicionados, removidos ou com anos/extensão/curvas alterados e retorna código 1 quando encontra diferenças. O hash SHA-256 do SQLite e a release informada ficam no catálogo gerado. Reinicie a API para carregar o novo snapshot. O F1DB fornece metadados e imagens de layouts, não waypoints validados para a simulação. A OpenF1 histórica começa em 2023; para 2018–2022 tenta-se FastF1, que pode não ter uma geometria utilizável para toda sessão. Antes de 2018, a criação informa explicitamente que não há geometria histórica verificada, embora seja possível consultar os layouts no F1DB. Não há substituição silenciosa por um traçado moderno.
+Para conferir mudanças sem sobrescrever o snapshot, acrescente `--check`: o comando lista layouts adicionados, removidos ou com anos/extensão/curvas alterados e retorna código 1 quando encontra diferenças. O hash SHA-256 do SQLite e a release informada ficam no catálogo gerado. Reinicie a API para carregar o novo snapshot. O F1DB fornece metadados e imagens de layouts, não waypoints validados para a simulação. A OpenF1 histórica começa em 2023; para 2018–2022 tenta-se FastF1, que pode não ter uma geometria utilizável para toda sessão. Se não houver telemetria ou pista congelada, o provedor F1 Results Database tenta uma geometria aproximada extraída de SVG histórico para o circuito e ano. O catálogo cobre apenas mapas cuja conversão, largada e sentido passaram nas verificações automáticas; demais solicitações continuam indisponíveis.
+
+
+## Pistas históricas aproximadas
+
+A fonte `f1results_svg` funciona offline e é consultada após OpenF1, FastF1 e pistas locais. `sources.track_provenance` informa ano, GP, layout da fonte, comprimento, largura assumida, método de largada, sentido, licença e hash da base. O GET da corrida contém os mesmos waypoints usados pela engine. O grid segue a tangente do traçado e cada carro recebe sua orientação inicial. O limite `max_safe_grid_cars` evita posicionar carros fora da pista. Os mapas e suas limitações, atribuições, licenças e instruções de atualização estão em [`config/historical_tracks/README.md`](../config/historical_tracks/README.md).
+
+
+### Consultas históricas de temporadas e pilotos
+
+`GET /seasons` lista os anos do catálogo local. `GET /seasons/1973/drivers` lista os inscritos da temporada, incluindo a origem do último GP em que cada um aparece. Para circuitos e eventos de um ano, use `GET /circuits?season=1973` ou `GET /seasons/1973/events`; eventos sem associação segura com o F1DB são indicados separadamente. `geometry_available` indica disponibilidade de geometria SVG aproximada para aquele GP, não de telemetria.
+
+`GET /seasons/1973/circuits/interlagos/drivers` retorna o grid real desse GP. Caso haja mais de um GP no mesmo circuito e ano, a consulta retorna 409; é possível informar `grand_prix` como parâmetro para selecionar o evento. Atualmente, a criação de corrida não oferece essa seleção e rejeita o caso ambíguo. A API usa OpenF1 primeiro quando disponível; no histórico usa o grid do F1 Results Database e geometria de outra fonte quando necessário. Solicitar mais carros que os registrados no grid histórico é um erro. Cores de equipe não disponíveis são cinza e siglas geradas são identificadas na resposta. Detalhes, cobertura e licenças: [`config/historical_tracks/README.md`](../config/historical_tracks/README.md).
+
+
+### Via de boxes simplificada
+
+`GET /races/{race_id}` inclui `track.pit_lane` com `waypoints` abertos no mesmo referencial da pista, `width_m`, `speed_limit_kmh` e `source`. Quando a fonte não fornece pontos válidos, o backend constrói uma via estimada junto à linha de chegada e informa `source: estimated`; ela não representa necessariamente a posição real dos boxes. A GUI PyBullet desenha essa via. Os clientes visuais precisam desenhá-la a partir do payload.
+
+Quando o desgaste ou o combustível exige uma parada, o carro segue a via fisicamente, respeita o limite simplificado e troca os pneus instantaneamente durante a passagem. O tick informa `pitting`, e o evento `pit_stop` ocorre na troca. A perda de tempo e posições resulta do percurso e da velocidade reduzida; não se soma a penalidade contábil antiga.

@@ -39,7 +39,11 @@ class PitLane:
     entry_waypoint: int  # índice do waypoint de entrada
     exit_waypoint: int  # índice do waypoint de saída
     speed_limit_kmh: float = 80.0
-    time_penalty_s: float = 22.0
+    time_penalty_s: float = 22.0  # legado; não é somado durante a passagem física
+    waypoints: List[Point2D] = field(default_factory=list)
+    width_m: float = 6.0
+    source: str = "unknown"
+    entry_s_m: Optional[float] = None
 
 
 @dataclass

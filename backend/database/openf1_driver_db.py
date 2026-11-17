@@ -5,6 +5,7 @@ import logging
 import re
 from typing import Optional
 from database.driver_db import DriverDatabase, FastF1DriverDatabase
+from database.f1results_database import F1ResultsDriverDatabase
 from integrations.openf1 import OpenF1Client
 
 logger = logging.getLogger(__name__)
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 class OpenF1DriverDatabase(DriverDatabase):
     def __init__(self, client=None, fallback=None, default_year=2024):
         self.client = client or OpenF1Client()
+        self.historical = F1ResultsDriverDatabase(default_year=default_year) if fallback is None else None
         self.fallback = fallback or FastF1DriverDatabase(default_year=default_year)
         self.default_year = default_year
         self._cache = {}
@@ -20,6 +22,10 @@ class OpenF1DriverDatabase(DriverDatabase):
     def load_season_drivers(self, year):
         if year in self._cache:
             return self._cache[year]
+        if year < 2023 and self.historical:
+            records = self.historical.load_season_drivers(year)
+            self._cache[year] = records
+            return records
         try:
             if year < 2023:
                 raise ValueError('OpenF1 fornece dados históricos a partir de 2023')
@@ -39,7 +45,7 @@ class OpenF1DriverDatabase(DriverDatabase):
                 color = str(row.get('team_colour') or '').lstrip('#')
                 color = '#'+color.upper() if re.fullmatch('[0-9A-Fa-f]{6}', color) else None
                 result.append({'id': re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-'),
-                    'name': name, 'full_name': name, 'first_name': row.get('first_name'),
+                    'name': name, 'full_name': name, 'source': 'openf1', 'first_name': row.get('first_name'),
                     'last_name': row.get('last_name'), 'abbreviation':code,
                     'permanent_number':row.get('driver_number'), 'team_name':team,
                     'team_color':color, 'country_code':country, 'nationality_country_id':country,
@@ -49,6 +55,11 @@ class OpenF1DriverDatabase(DriverDatabase):
             self._cache[year] = sorted(result, key=lambda d:(d['team_name'], d['name']))
         except Exception as exc:
             logger.warning('OpenF1 indisponível para pilotos de %s: %s', year, exc)
+            if self.historical:
+                records = self.historical.load_season_drivers(year)
+                if records:
+                    self._cache[year] = records
+                    return records
             return self.fallback.load_season_drivers(year)
         return self._cache[year]
 
@@ -59,7 +70,7 @@ class OpenF1DriverDatabase(DriverDatabase):
             drivers = [d for d in drivers if any(term in str(d.get(k) or '').lower()
                        for k in ('id','name','first_name','last_name','full_name','abbreviation','team_name'))]
         if nationality:
-            drivers = [d for d in drivers if str(d.get('country_code') or '').lower() == nationality.strip().lower()]
+            drivers = [d for d in drivers if nationality.strip().lower() in (str(d.get('country_code') or '').lower(), str(d.get('country_name') or '').lower())]
         start = offset if isinstance(offset,int) and offset > 0 else 0
         return drivers[start:start+limit] if isinstance(limit,int) else drivers[start:]
 
@@ -69,5 +80,6 @@ class OpenF1DriverDatabase(DriverDatabase):
                      if d['id'] == key or d['abbreviation'].lower() == key), None)
 
     def get_available_seasons(self, all_historical=False):
-        # Preserva as temporadas anteriores a 2023 suportadas pelo adaptador legado.
+        if self.historical:
+            return self.historical.get_available_seasons(all_historical=all_historical)
         return self.fallback.get_available_seasons(all_historical=all_historical)

@@ -11,7 +11,12 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from .race_manager import REDIS_URL, race_manager
 from .schemas import RaceSetupRequest, RaceSetupResponse
+from database.f1results_database import AmbiguousHistoricalEvent, F1ResultsDriverDatabase
+from service.driver_service import DriverService
+from .providers.historical_f1results import load_historical_snapshot
 
+
+driver_service = DriverService()
 app = FastAPI(title='F1 Simulator API')
 origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174,http://localhost:3000,http://localhost:3001,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:3000,http://127.0.0.1:3001').split(',')
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=['*'], allow_headers=['*'])
@@ -31,14 +36,73 @@ def create_race(req: RaceSetupRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return RaceSetupResponse(race_id=race_id, track_name=track.name, num_laps=config.num_laps)
 
+@app.get('/seasons')
+def list_seasons():
+    return driver_service.get_available_seasons()
+
+
+@app.get('/seasons/{season}/drivers')
+def list_season_drivers(season: int):
+    drivers = driver_service.list_drivers(year=season, limit=None)
+    return [{**driver, 'number': driver.get('number', driver.get('permanent_number'))}
+            for driver in drivers]
+
+
+def event_summary(event, snapshot):
+    circuit_id = event.get('circuit_id')
+    race = snapshot['races'].get(f"{circuit_id}:{event['season']}") if circuit_id else None
+    return {key: event.get(key) for key in ('id', 'season', 'round', 'grand_prix', 'circuit_id',
+            'source_circuit_name', 'source_layout_id', 'circuit_length')} | {
+        'geometry_available': bool(race and race['grand_prix'] == event['grand_prix'])}
+
+
+@app.get('/seasons/{season}/events')
+def list_season_events(season: int):
+    database = F1ResultsDriverDatabase()
+    snapshot = load_historical_snapshot()
+    return {'season': season, 'source': database.provenance,
+            'events': [event_summary(e, snapshot) for e in database.events(season)]}
+
+
+@app.get('/seasons/{season}/circuits/{circuit_id}/drivers')
+def list_historical_grid(season: int, circuit_id: str, grand_prix: str | None = None):
+    from database.f1results_database import race_driver_record, roster_provenance
+    catalog = race_manager.catalog
+    circuit = catalog.find_circuit(circuit_id) if catalog else None
+    if circuit is None:
+        raise HTTPException(status_code=404, detail='Circuito não encontrado no catálogo F1DB')
+    database = F1ResultsDriverDatabase()
+    try:
+        event, roster = database.race_roster(circuit['id'], season, grand_prix=grand_prix)
+    except AmbiguousHistoricalEvent as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if not roster:
+        raise HTTPException(status_code=404, detail='Grid histórico indisponível')
+    return {'season': season, 'circuit_id': circuit['id'], 'grand_prix': event['grand_prix'],
+            'source': roster_provenance(database, event),
+            'drivers': [race_driver_record(d) for d in roster]}
+
+
 @app.get('/circuits')
-def list_circuits():
+def list_circuits(season: int | None = None):
     catalog = race_manager.catalog
     if catalog is None:
         raise HTTPException(status_code=503, detail='Catálogo F1DB indisponível')
-    return {'catalog': catalog.provenance, 'circuits': [
-        {'id': c['id'], 'name': c['name'], 'full_name': c['full_name'],
-         'layouts_count': len(c.get('layouts', []))} for c in catalog.circuits]}
+    circuits = [{'id': c['id'], 'name': c['name'], 'full_name': c['full_name'],
+                 'layouts_count': len(c.get('layouts', []))} for c in catalog.circuits]
+    if season is None:
+        return {'catalog': catalog.provenance, 'circuits': circuits}
+    database = F1ResultsDriverDatabase()
+    snapshot = load_historical_snapshot()
+    events = [event_summary(e, snapshot) for e in database.events(season)]
+    by_id = {c['id']: c for c in circuits}
+    for event in events:
+        item = by_id.get(event['circuit_id'])
+        if item is not None:
+            item.setdefault('events', []).append(event)
+    return {'catalog': catalog.provenance, 'season': season, 'source': database.provenance,
+            'circuits': [c for c in circuits if c.get('events')],
+            'unmapped_events': [e for e in events if e['circuit_id'] not in by_id]}
 
 
 @app.get('/circuits/{circuit_id}/layouts')

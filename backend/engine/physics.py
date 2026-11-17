@@ -1113,6 +1113,7 @@ class PyBulletPhysics:
         track_width_m: float = 12.0,
         asphalt_color: Tuple[float, float, float, float] = (0.12, 0.12, 0.13, 1.0),
         z: float = 0.05,
+        closed: bool = True,
     ) -> None:
         """Desenha a pista como uma faixa de asfalto sólida (mesh), não uma linha.
 
@@ -1131,8 +1132,8 @@ class PyBulletPhysics:
         indices: List[int] = []
 
         for i in range(n):
-            prev_x, prev_y = waypoints[(i - 1) % n]
-            next_x, next_y = waypoints[(i + 1) % n]
+            prev_x, prev_y = waypoints[(i - 1) % n if closed else max(0, i - 1)]
+            next_x, next_y = waypoints[(i + 1) % n if closed else min(n - 1, i + 1)]
             tx, ty = next_x - prev_x, next_y - prev_y
             tangent_len = math.hypot(tx, ty) or 1.0
             nx, ny = -ty / tangent_len, tx / tangent_len
@@ -1140,7 +1141,7 @@ class PyBulletPhysics:
             vertices.append([x + nx * half_width, y + ny * half_width, z])  # borda esquerda
             vertices.append([x - nx * half_width, y - ny * half_width, z])  # borda direita
 
-        for i in range(n):
+        for i in range(n if closed else n - 1):
             l0, r0 = 2 * i, 2 * i + 1
             l1, r1 = 2 * ((i + 1) % n), 2 * ((i + 1) % n) + 1
             indices.extend([l0, r0, r1])

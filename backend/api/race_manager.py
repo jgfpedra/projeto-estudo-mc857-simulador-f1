@@ -21,6 +21,7 @@ if _BACKEND_ROOT not in sys.path:
 import redis
 from config import DEFAULT_DRIVERS, DEFAULT_INTERLAGOS_CONFIG
 from engine.physics import CHASSIS_LENGTH_M, CHASSIS_WIDTH_M, CHASSIS_HEIGHT_M
+from domain.pit_lane import ensure_pit_lane
 from engine import InMemoryInputSource, Publisher, RuleBasedRaceController, SimulationEngine
 from .providers.race_data import default_provider, driver_record
 from .providers.f1db_layouts import load_layout_catalog, normalize
@@ -203,8 +204,13 @@ class RaceManager:
         if layout_id is not None and (layout is None or layout['id'] != layout_id):
             raise ValueError(f"O layout '{layout_id}' não é confirmado para '{circuit_id}' em {season} pelo catálogo F1DB; confira a temporada e o catálogo.")
         track_obj, roster, sources = self.provider.load(circuit, season)
+        safe_grid = track_obj.metadata.get('max_safe_grid_cars')
+        if safe_grid is not None and num_drivers > safe_grid:
+            raise ValueError(f'A geometria histórica aproximada comporta apenas {safe_grid} carros no grid; solicite menos carros.')
         if not roster:
             raise ValueError('Fonte não forneceu pilotos')
+        if sources.get('driver_source') == 'f1results_database' and num_drivers > len(roster):
+            raise ValueError(f'O GP histórico possui apenas {len(roster)} carros no grid; solicite menos carros.')
         roster = list(roster[:num_drivers])
         while len(roster) < num_drivers:
             i = len(roster)+1
@@ -219,6 +225,7 @@ class RaceManager:
         config = replace(DEFAULT_INTERLAGOS_CONFIG, race_id=race_id, num_laps=laps, gui=gui,
                          camera_mode=camera, draw_track=gui, draw_track_details=False,
                          realtime=True, track_progress_laps=True)
+        pit = ensure_pit_lane(track_obj)
         geometry = b''.join(struct.pack('<dd', float(x), float(y)) for x,y in track_obj.waypoints)
         digest = hashlib.sha256(geometry).hexdigest()[:16]
         driver_meta = [{**d, 'grid_position': i+1} for i,d in enumerate(roster)]
@@ -231,7 +238,10 @@ class RaceManager:
                 'track':{'name':track_obj.name, 'source':track_obj.source, 'geometry_sha256':digest,
                          'length_m':track_obj.length_m, 'width_m':track_obj.width_m,
                          'start_finish_waypoint':track_obj.start_finish_waypoint,
-                         'waypoints':[[float(x),float(y)] for x,y in track_obj.waypoints]},
+                         'waypoints':[[float(x),float(y)] for x,y in track_obj.waypoints],
+                         'pit_lane': {'waypoints': [[float(x), float(y)] for x, y in pit.waypoints],
+                                      'width_m': pit.width_m, 'speed_limit_kmh': pit.speed_limit_kmh,
+                                      'source': pit.source}},
                 'drivers':driver_meta}
         publisher = LivePublisher(self.redis, race_id, driver_meta)
         engine = SimulationEngine(config=config, track=track_obj, drivers=drivers, publisher=publisher,

@@ -8,6 +8,7 @@ Catmull-Rom para formar uma linha fechada usada pela engine e pelo PyBullet.
 from __future__ import annotations
 
 from pathlib import Path
+import math
 from typing import Any, Mapping, Optional, Sequence
 
 from .track import (
@@ -141,12 +142,16 @@ def _default_pit_lane(waypoint_count: int) -> PitLane:
     )
 
 
-def _pit_lane_from_info(info: Any, waypoints: Sequence[Point2D]) -> PitLane:
-    points = _extract_named_points(info, ("PitLane", "pit_lane", "PitLanePoints"))
-    if len(points) >= 2 and waypoints:
+def _pit_lane_from_info(info: Any, waypoints: Sequence[Point2D], scale: float = 1.0) -> PitLane:
+    raw = _extract_named_points(info, ("PitLane", "pit_lane", "PitLanePoints"))
+    points = [(x * scale, y * scale) for x, y in raw]
+    if (len(points) >= 3 and waypoints and all(math.isfinite(x) and math.isfinite(y) for x, y in points)
+            and min(math.dist(points[0], p) for p in waypoints) < 20
+            and min(math.dist(points[-1], p) for p in waypoints) < 20):
         return PitLane(
             entry_waypoint=_nearest_waypoint(points[0], waypoints),
             exit_waypoint=_nearest_waypoint(points[-1], waypoints),
+            waypoints=list(points), source="track_data",
         )
     return _default_pit_lane(len(waypoints))
 
@@ -410,7 +415,7 @@ class FastF1TrackLoader:
             waypoints=waypoints,
             length_m=length_m,
             sectors=_even_sectors(len(waypoints)),
-            pit=_pit_lane_from_info(raw_info, waypoints),
+            pit=_pit_lane_from_info(raw_info, waypoints, scale=scale),
             start_finish_waypoint=sf_idx,
             source="fastf1",
             metadata=metadata,

@@ -2,7 +2,7 @@
 
 OpenF1 é consultada primeiro. A geometria é aceita somente a partir de uma
 volta cronometrada completa; quando não há dados válidos usamos o traçado
-congelado local, com a proveniência divulgada na resposta.
+congelado local e, por fim, mapas históricos aproximados, com proveniência na resposta.
 """
 from __future__ import annotations
 
@@ -150,12 +150,32 @@ class OpenF1Provider:
 
 
 
+class HistoricalRosterProvider:
+    """Grid efetivo de um GP; pode ser combinado com outra fonte de geometria."""
+    def load(self, circuit: str, season: int):
+        from database.f1results_database import (AmbiguousHistoricalEvent, F1ResultsDriverDatabase,
+                                                 race_driver_record, roster_provenance)
+        from .f1db_layouts import load_layout_catalog
+        entry = load_layout_catalog().find_circuit(circuit)
+        if entry is None:
+            raise ValueError('Circuito não identificado no catálogo F1DB')
+        database = F1ResultsDriverDatabase()
+        try:
+            event, roster = database.race_roster(entry['id'], season)
+        except AmbiguousHistoricalEvent as exc:
+            raise AmbiguousCircuitError(str(exc)) from exc
+        if not roster:
+            raise ValueError('Grid histórico indisponível para este circuito e temporada')
+        return None, [race_driver_record(d) for d in roster], {
+            'driver_source': 'f1results_database', 'driver_provenance': roster_provenance(database, event)}
+
+
 class FallbackProvider:
     def load(self, circuit: str, season: int):
         if season < 2018:
             raise ValueError('Sem geometria histórica verificada para esta pista e temporada: OpenF1 cobre 2023+ e FastF1 geralmente 2018+; F1DB informa layouts, não waypoints de simulação.')
         track = load_live_track(track_name=circuit, year=season)
-        drivers = [driver_record(*item) for item in FALLBACK]
+        drivers = [driver_record(*item) for item in FALLBACK] if season >= 2023 else []
         return track, drivers, {'track_source':track.source, 'driver_source':'local_2023'}
 
 
@@ -172,12 +192,20 @@ class ProviderChain:
                 if track is None and candidate_track is not None:
                     track = candidate_track
                     sources['track_source'] = candidate_sources.get('track_source')
+                    if 'track_provenance' in candidate_sources:
+                        sources['track_provenance'] = candidate_sources['track_provenance']
                 if drivers is None and candidate_drivers:
                     drivers = candidate_drivers
                     sources['driver_source'] = candidate_sources.get('driver_source')
+                    if 'driver_provenance' in candidate_sources:
+                        sources['driver_provenance'] = candidate_sources['driver_provenance']
                     if 'session_key' in candidate_sources:
                         sources['session_key'] = candidate_sources['session_key']
                 if track is not None and drivers:
+                    track_gp = sources.get('track_provenance', {}).get('grand_prix')
+                    driver_gp = sources.get('driver_provenance', {}).get('grand_prix')
+                    if track_gp and driver_gp and track_gp != driver_gp:
+                        raise AmbiguousCircuitError('O grid e a geometria pertencem a GPs diferentes')
                     return track, drivers, sources
             except AmbiguousCircuitError:
                 raise
@@ -189,4 +217,5 @@ class ProviderChain:
 
 
 def default_provider():
-    return ProviderChain([OpenF1Provider(), FallbackProvider()])
+    from .historical_f1results import HistoricalResultsProvider
+    return ProviderChain([OpenF1Provider(), HistoricalRosterProvider(), FallbackProvider(), HistoricalResultsProvider()])

@@ -58,6 +58,8 @@ from .controllers import (
     InputSourceController,
     ManualController,
 )
+from domain.pit_lane import ensure_pit_lane
+from .pit_controller import PitController
 from .input_source import InputEntry, InputSource, InMemoryInputSource
 from .keyboard_pilot import KeyboardPilot
 
@@ -73,7 +75,7 @@ class SimulationConfig:
     physics_sub_steps: int = 8        # sub-passos PyBullet por step de lógica
     logic_step_hz: float = 10.0        # frequência do loop de lógica (Hz)
     position_update_every_lap: int = 1 # snapshot por volta
-    pit_time_s: float = 22.0          # tempo médio de pit (reabastecimento + troca)
+    pit_time_s: float = 22.0          # legado; a passagem física não soma penalidade
     fuel_threshold_kg: float = 6.0
     tyre_life_threshold: float = 18.0
     gui: bool = True
@@ -125,6 +127,9 @@ class SimulationEngine:
     ) -> None:
         self.config = config
         self.track = track
+        ensure_pit_lane(track)
+        self.pit_controller = PitController(track)
+        self._pit_requests = {}
         self.drivers = drivers
         self.publisher = publisher or NullPublisher()
         self.weather_model = weather_model or WeatherModel(
@@ -196,18 +201,20 @@ class SimulationEngine:
             self.states[drv.driver_id] = state
             px, py = self.track.initial_position(i)
             color = getattr(drv, "color_rgba", self._color_for_index(i))
+            grid_yaws = self.track.metadata.get('grid_yaws_rad', ())
+            yaw = grid_yaws[i] if i < len(grid_yaws) else initial_yaw
             handle = self.physics.spawn_car(
                 driver_id=drv.driver_id,
                 mass_kg=state.car.total_mass,
                 start_pos=(px, py, 0.5),
-                start_yaw_rad=initial_yaw,
+                start_yaw_rad=yaw,
                 color_rgb=color,
                 specs=state.car.specs,
             )
             self.handles[drv.driver_id] = handle
             state.position_x = px
             state.position_y = py
-            state.heading_rad = initial_yaw
+            state.heading_rad = yaw
             self.prev_waypoint_idx[drv.driver_id] = self.track.start_finish_waypoint
             self.max_wp_visited[drv.driver_id] = self.track.start_finish_waypoint
             self.lap_start_ts[drv.driver_id] = 0.0
@@ -307,6 +314,10 @@ class SimulationEngine:
             self.physics.draw_track_surface(
                 self.track.waypoints,
                 track_width_m=self.track.width_m,
+            )
+            self.physics.draw_track_surface(
+                self.track.pit.waypoints, track_width_m=self.track.pit.width_m,
+                asphalt_color=(0.20, 0.20, 0.22, 1.0), z=0.051, closed=False,
             )
             self.physics.draw_track_lines(
                 self.track.waypoints,
@@ -429,14 +440,23 @@ class SimulationEngine:
             state  = self.states[drv.driver_id]
             handle = self.handles[drv.driver_id]
 
-            # Pit lane: carro parado independente do controller
-            if state.pitting:
-                controls.append((handle, 0.0, 0.0, 0.0, 1.0, 0.0))
-                self.last_inputs[drv.driver_id] = CarInput.neutral()
-                continue
-
-            # 2 — pede input ao controller e trata ausência de input
-            car_input = self._resolve_car_input(drv.driver_id, env, state)
+            # Uma solicitação de pit é atendida na próxima entrada dos boxes.
+            pit = self._pit_requests.get(drv.driver_id)
+            if pit and (state.pitting or self.pit_controller.should_enter(
+                    self.race_s_m.get(drv.driver_id), state.velocity_mps)):
+                state.pitting = True
+                car_input, phase = self.pit_controller.compute_input(state)
+                self.last_inputs[drv.driver_id] = car_input
+                if phase >= .55 and not pit['serviced']:
+                    self._perform_pit(drv, pit['compound'], pit['fuel'])
+                    state.pitting = True
+                    pit['serviced'] = True
+                if phase >= .99 and pit['serviced']:
+                    state.pitting = False
+                    del self._pit_requests[drv.driver_id]
+                    self.pit_controller.reset(drv.driver_id)
+            else:
+                car_input = self._resolve_car_input(drv.driver_id, env, state)
 
             # 3 — calcula grip efectivo (pneu + clima + superfície)
             grip = self._compute_grip(drv.driver_id, car_input, state, weather_kind, track_temp)
@@ -455,7 +475,7 @@ class SimulationEngine:
         self.physics.step_with_control(controls, sub_steps)
         self.sim_ts += dt
 
-        if self.config.track_progress_laps or len(self.drivers) > 1:
+        if self.config.track_progress_laps or len(self.drivers) > 1 or self._pit_requests:
             self._update_race_progress(dt)
         self._check_lap_completion()
         self._publish_tick()
@@ -651,6 +671,9 @@ class SimulationEngine:
         )
         self.prev_waypoint_idx[driver_id] = new_idx
         surface_factor = self.track.surface_grip_factor_from_distance(dist_to_cl)
+        if (state.pitting and self.pit_controller.distance_to_lane(state.position_x, state.position_y)
+                <= self.track.pit.width_m / 2):
+            surface_factor = 1.0
 
         return max(0.3, min(1.2, grip)) * surface_factor
 
@@ -752,12 +775,6 @@ class SimulationEngine:
         """
         for drv in self.drivers:
             state = self.states[drv.driver_id]
-            if state.pitting:
-                # Mesmo parado, atualiza a última posição para evitar salto
-                handle = self.handles[drv.driver_id]
-                phys = self.physics.get_state(handle)
-                self.last_pos[drv.driver_id] = (phys["x"], phys["y"])
-                continue
             handle = self.handles[drv.driver_id]
             phys = self.physics.get_state(handle)
             curr_x, curr_y = phys["x"], phys["y"]
@@ -786,10 +803,8 @@ class SimulationEngine:
     def _complete_lap(self, driver: Driver) -> None:
         state = self.states[driver.driver_id]
         lap_time = self.sim_ts - self.lap_start_ts.get(driver.driver_id, 0.0)
-        # Subtrai penalidade de pit pendente (aplicada no tempo)
-        if state.pit_penalty_pending_s > 0:
-            lap_time += state.pit_penalty_pending_s  # soma porque o carro ficou parado
-            state.pit_penalty_pending_s = 0.0
+        # O tempo perdido é consequência da passagem física, sem penalidade extra.
+        state.pit_penalty_pending_s = 0.0
 
         state.lap += 1
         state.last_lap_time_s = lap_time
@@ -845,14 +860,16 @@ class SimulationEngine:
             self.last_weather_kind = new_weather.kind
 
         # Decisão de pit stop
-        if state.needs_pit(self.config.fuel_threshold_kg, self.config.tyre_life_threshold):
+        if (driver.driver_id not in self._pit_requests
+                and state.needs_pit(self.config.fuel_threshold_kg, self.config.tyre_life_threshold)):
             # Escolhe pneu com base no clima atual
             new_compound = self._pick_compound_for_weather(new_weather.kind)
             # Reabastece até 70% do tanque
             fuel_to_add = state.car.specs.fuel_capacity_kg * 0.7 - state.car.fuel_kg
             fuel_to_add = max(0.0, fuel_to_add)
-            # Aplica pit stop: tempo de pit
-            self._perform_pit(driver, new_compound, fuel_to_add)
+            # A troca será feita ao percorrer os boxes na próxima volta.
+            self._pit_requests[driver.driver_id] = {
+                'compound': new_compound, 'fuel': fuel_to_add, 'serviced': False}
 
         # Snapshot de posições a cada volta
         if state.lap % self.config.position_update_every_lap == 0:
@@ -885,7 +902,7 @@ class SimulationEngine:
         state.perform_pit_stop(
             new_compound=new_compound,
             fuel_to_add_kg=fuel_to_add_kg,
-            pit_time_s=self.config.pit_time_s,
+            pit_time_s=0.0,
         )
         added = state.car.fuel_kg - old_fuel
         self.publisher.publish(PitStopEvent(
@@ -895,7 +912,7 @@ class SimulationEngine:
             lap=state.lap,
             new_compound=new_compound.value,
             fuel_added_kg=added,
-            pit_time_s=self.config.pit_time_s,
+            pit_time_s=0.0,
         ))
 
     # ------------------------------------------------------------------

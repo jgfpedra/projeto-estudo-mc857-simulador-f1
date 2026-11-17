@@ -44,7 +44,7 @@ class DriverState:
     # Estado de pit
     pitting: bool = False
     pit_stop_done: int = 0
-    pit_penalty_pending_s: float = 0.0  # tempo perdido no pit (a ser descontado do pace)
+    pit_penalty_pending_s: float = 0.0  # campo legado; o pit físico não soma penalidade
 
     # Telemetria de pneu usada para decisão de pit
     def needs_pit(self, fuel_threshold_kg: float = 5.0, tyre_life_threshold: float = 15.0) -> bool:
