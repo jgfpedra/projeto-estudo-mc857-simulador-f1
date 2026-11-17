@@ -12,7 +12,8 @@ import type { LiveTick } from './buffer'
 import { newClock } from '../replay/clock'
 import { buildFrame } from '../track/frame'
 import { TrackRibbon } from '../track/TrackRibbon'
-import { trackFromLive } from './track'
+import { pitLaneFromLive, trackFromLive } from './track'
+import { PitLaneRibbon } from './PitLaneRibbon'
 import type { LiveTrack } from './track'
 import { StartFinishLine } from './StartFinishLine'
 
@@ -92,7 +93,8 @@ export function LiveRace() {
     if (!meta) return null
     const track = trackFromLive(meta.track)
     const frame = buildFrame(track)
-    const sphere = new Sphere().setFromPoints(track.points)
+    const pitLane = pitLaneFromLive(meta.track.pit_lane)
+    const sphere = new Sphere().setFromPoints([...track.points, ...(pitLane?.points ?? [])])
     const distance = sphere.radius / Math.sin(Math.PI / 8) * 1.3
     const cars: CarIdentity[] = [...meta.drivers].sort((a, b) => a.grid_position - b.grid_position).map((driver, index) => ({
       index, label: driver.driver_id, name: driver.name, colourName: PALETTE[index % PALETTE.length].name, hex: PALETTE[index % PALETTE.length].hex,
@@ -107,7 +109,7 @@ export function LiveRace() {
     }
     const geometry = meta.car_geometry
     const modelSpec = geometry ? { ...RACE_CAR_RED, dimensions: { lengthM: geometry.length_m, widthM: geometry.width_m, heightM: geometry.height_m } } : RACE_CAR_RED
-    return { track, frame, cars, source, modelSpec, center: sphere.center, distance, fitted: { target: sphere.center, position: sphere.center.clone().add(new Vector3(0, distance, distance * 0.3)), far: distance * 8 } }
+    return { track, frame, pitLane, cars, source, modelSpec, center: sphere.center, distance, fitted: { target: sphere.center, position: sphere.center.clone().add(new Vector3(0, distance, distance * 0.3)), far: distance * 8 } }
   }, [meta])
 
   async function start() {
@@ -131,6 +133,7 @@ export function LiveRace() {
     <Canvas camera={{ position: [scene.center.x, scene.distance, scene.center.z + scene.distance * 0.3], fov: 45, near: 1, far: scene.distance * 8 }}>
       <hemisphereLight args={['#ffffff', '#30303c', 1.1]} /><directionalLight position={[600, 1200, 400]} intensity={1.2} />
       <TrackRibbon frame={scene.frame} widthM={scene.track.widthM} />
+      {scene.pitLane && <PitLaneRibbon lane={scene.pitLane} />}
       <StartFinishLine track={scene.track} />
       <Suspense fallback={null}>
         <Grid frame={scene.frame} cars={scene.cars} source={scene.source} modelSpec={scene.modelSpec} clock={clock} selected={selected} readout={readout} wheelMarkers={wheelMarkers} />
@@ -138,7 +141,9 @@ export function LiveRace() {
       </Suspense>
     </Canvas>
     <div style={{ position: 'absolute', top: 12, left: 12, color: 'white', background: '#15151ee8', padding: 12, font: '14px sans-serif' }}>
-      <strong>{scene.track.name} · {status}</strong><div>
+      <strong>{scene.track.name} · {status}</strong>
+      {scene.pitLane && <div style={{ color: '#c4c4cd' }}>Via dos boxes{scene.pitLane.source === 'estimated' ? ' (estimada)' : ''}</div>}
+      <div>
         <button onClick={() => setCameraMode('chase')}>Seguir</button>{' '}
         <button onClick={() => setCameraMode('onboard')}>A bordo</button>{' '}
         <button onClick={() => setCameraMode('orbit')}>Pista</button>{' '}
