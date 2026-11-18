@@ -51,6 +51,7 @@ def create_race(req: RaceSetupRequest):
                 selected_roster.append(record)
         options = {
             'selected_roster': selected_roster,
+            'user_driver_id': req.user_driver_id,
             'weather': req.weather.value if req.weather else None,
             'weather_change': req.weather_change.model_dump() if req.weather_change else None,
             'initial_tyre': (req.initial_tyre or (req.stints[0].compound if req.stints else None)).value

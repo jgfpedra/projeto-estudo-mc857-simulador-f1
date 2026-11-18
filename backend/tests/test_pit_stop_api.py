@@ -67,6 +67,7 @@ def test_http_rejects_invalid_or_unavailable_requests(context):
 def test_manual_request_overrides_automatic_and_drives_to_pit(context):
     engine, driver, events = context.engine, context.driver, context.events
     driver_id = driver.driver_id
+    engine.user_driver_id = driver_id
     track, state = engine.track, engine.states[driver_id]
     a, b = track.pit.waypoints[:2]
     heading = math.atan2(b[1]-a[1], b[0]-a[0])
@@ -334,3 +335,21 @@ def test_cancel_errors(context):
     assert c.delete('/races/race_test/drivers/missing/pit-stop').status_code == 404
     assert c.delete(f'/races/race_finished/drivers/{driver_id}/pit-stop').status_code == 409
     assert c.delete(f'/races/race_test/drivers/{driver_id}/pit-stop').status_code == 409
+
+
+def test_user_pit_is_manual_and_cancellation_does_not_reschedule(context):
+    engine, driver = context.engine, context.driver
+    driver_id = driver.driver_id
+    engine.user_driver_id = driver_id
+    engine.states[driver_id].tyre.tyre_life = 1.0
+    engine._complete_lap(driver)
+    assert driver_id not in engine._pit_requests
+    endpoint = f'/races/race_test/drivers/{driver_id}/pit-stop'
+    assert context.http.post(endpoint, json={'tyre_compound': 'hard'}).status_code == 202
+    engine._step_tick(.1, 24)
+    assert engine._pit_requests[driver_id]['compound'] == TyreCompound.HARD
+    assert context.http.delete(endpoint).status_code == 202
+    engine._step_tick(.1, 24)
+    engine._complete_lap(driver)
+    engine._complete_lap(driver)
+    assert driver_id not in engine._pit_requests

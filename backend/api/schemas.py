@@ -129,6 +129,7 @@ class RaceSetupRequest(BaseModel):
     season: Optional[int] = Field(None, description="Alias de year para a temporada dos pilotos.")
     circuit: Optional[CircuitChoice] = None
     grid: Optional[List[str]] = Field(None, min_length=1, max_length=24)
+    user_driver_id: Optional[str] = Field(None, description="Piloto cujo pit stop é solicitado manualmente.")
     weather: Optional[WeatherName] = None
     weather_change: Optional[WeatherChange] = None
     initial_tyre: Optional[TyreName] = None
@@ -138,6 +139,8 @@ class RaceSetupRequest(BaseModel):
     def validate_race_setup(self):
         if self.grid is not None and len(set(self.grid)) != len(self.grid):
             raise ValueError("grid não pode ter pilotos repetidos")
+        if self.user_driver_id is not None and self.grid is not None and self.user_driver_id not in self.grid:
+            raise ValueError("user_driver_id deve pertencer ao grid")
         if self.stints is not None:
             total = sum(stint.laps for stint in self.stints)
             if total != self.laps:

@@ -268,11 +268,12 @@ def test_2d_setup_passes_selected_grid_and_options(monkeypatch):
         return 'race-2d', SimpleNamespace(name='Interlagos'), SimpleNamespace(num_laps=args[0])
     monkeypatch.setattr(main.race_manager, 'create_race', create)
     req = RaceSetupRequest.model_validate({'laps': 4, 'circuit': {'id': 'interlagos', 'layout_id': 'interlagos-2'},
-        'year': 2023, 'grid': ['driver-a', 'driver-b'], 'weather': 'rain', 'initial_tyre': 'wet',
+        'year': 2023, 'grid': ['driver-a', 'driver-b'], 'user_driver_id': 'driver-b', 'weather': 'rain', 'initial_tyre': 'wet',
         'stints': [{'compound': 'wet', 'laps': 4}]})
     result = main.create_race(req)
     assert calls[0][0] == (4, 'interlagos', 2023)
     assert [d['driver_id'] for d in calls[0][1]['selected_roster']] == ['driver-a', 'driver-b']
+    assert calls[0][1]['user_driver_id'] == 'driver-b'
     assert calls[0][1]['weather'] == 'rain' and calls[0][1]['initial_tyre'] == 'wet'
     assert result.ws_path == '/ws/races/race-2d' and result.warnings
 
@@ -302,8 +303,11 @@ def test_2d_options_reach_engine_and_metadata(monkeypatch):
     store = Store()
     race_id, _, _ = module.RaceManager(store, provider=FallbackProvider()).create_race(
         1, 'interlagos', 2023, num_drivers=1, selected_roster=roster,
-        weather='rain', initial_tyre='wet')
+        weather='rain', initial_tyre='wet', user_driver_id='test-driver')
+    assert engines[0].user_driver_id == 'test-driver'
     assert engines[0].kwargs['drivers'][0].starting_tyre_compound == TyreCompound.WET
     assert engines[0].kwargs['weather_model'].current.kind == WeatherKind.WET
     import json
-    assert json.loads(store.values[f'race:{race_id}:meta'])['drivers'][0]['driver_id'] == 'test-driver'
+    meta = json.loads(store.values[f'race:{race_id}:meta'])
+    assert meta['drivers'][0]['driver_id'] == 'test-driver'
+    assert meta['user_driver_id'] == 'test-driver'

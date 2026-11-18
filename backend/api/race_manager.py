@@ -197,7 +197,7 @@ class RaceManager:
         self._engines_lock = threading.RLock()
 
     def create_race(self, laps, track, year, num_drivers=2, layout_id=None, selected_roster=None,
-                    weather=None, weather_change=None, initial_tyre=None):
+                    weather=None, weather_change=None, initial_tyre=None, user_driver_id=None):
         if not 1 <= num_drivers <= 24:
             raise ValueError('A quantidade de corredores deve estar entre 1 e 24.')
         self.redis.ping()
@@ -268,6 +268,8 @@ class RaceManager:
         while len(roster) < num_drivers:
             i = len(roster)+1
             roster.append(driver_record(f'P{i:02d}', f'Piloto {i:02d}', None, None, '808080'))
+        if user_driver_id is not None and user_driver_id not in {entry['driver_id'] for entry in roster}:
+            raise ValueError('O piloto do usuário deve pertencer ao grid da corrida.')
         drivers = [replace(DEFAULT_DRIVERS[i % len(DEFAULT_DRIVERS)], driver_id=entry['driver_id'], name=entry['name'],
                            **({'starting_tyre_compound': TyreCompound(initial_tyre.upper())} if initial_tyre else {}))
                    for i, entry in enumerate(roster)]
@@ -288,7 +290,7 @@ class RaceManager:
                 'layout_reference':{'source':'F1DB','basis':reference['basis'], 'years':layout['years'],
                                     'track_year':track_year,
                                     'catalog_generated_at':self.catalog.data.get('generated_at')} if layout else None,
-                'num_laps':laps, 'num_drivers':num_drivers, 'sources':sources,
+                'num_laps':laps, 'num_drivers':num_drivers, 'user_driver_id':user_driver_id, 'sources':sources,
                 'car_geometry':{'length_m':CHASSIS_LENGTH_M,'width_m':CHASSIS_WIDTH_M,'height_m':CHASSIS_HEIGHT_M},
                 'track':{'name':track_obj.name, 'source':track_obj.source, 'geometry_sha256':digest,
                          'length_m':track_obj.length_m, 'width_m':track_obj.width_m,
@@ -320,6 +322,7 @@ class RaceManager:
         if weather_model is not None:
             engine_kwargs['weather_model'] = weather_model
         engine = SimulationEngine(**engine_kwargs)
+        engine.user_driver_id = user_driver_id
         publisher.engine = engine
         engine.physics.contact_collector = []
         engine.physics.contact_collector_include_penetration = True

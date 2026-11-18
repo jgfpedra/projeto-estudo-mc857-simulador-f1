@@ -163,3 +163,9 @@ def test_circuito_e_grid_exigem_catalogo():
         build_race_setup(req(circuit={"id": "interlagos"}), None)
     with pytest.raises(CatalogRequired):
         build_race_setup(req(grid=["max-verstappen"]), None)
+
+
+def test_piloto_usuario_deve_pertencer_ao_grid():
+    assert req(grid=['a', 'b'], user_driver_id='b').user_driver_id == 'b'
+    with pytest.raises(ValidationError, match='user_driver_id'):
+        req(grid=['a', 'b'], user_driver_id='c')

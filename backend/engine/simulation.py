@@ -140,6 +140,7 @@ class SimulationEngine:
         ensure_pit_lane(track)
         self.pit_controller = PitController(track)
         self._pit_requests = {}
+        self.user_driver_id: Optional[str] = None
         # Comandos HTTP são enfileirados; só a thread da engine altera o estado do pit.
         self._pit_command_lock = threading.RLock()
         self._pit_commands = {}
@@ -969,7 +970,8 @@ class SimulationEngine:
         with self._pit_command_lock:
             if driver.driver_id in self._pit_skip_auto_once:
                 self._pit_skip_auto_once.remove(driver.driver_id)
-            elif (driver.driver_id not in self._pit_requests
+            elif (driver.driver_id != self.user_driver_id
+                    and driver.driver_id not in self._pit_requests
                     and driver.driver_id not in self._pit_commands
                     and state.needs_pit(self.config.fuel_threshold_kg, self.config.tyre_life_threshold)):
                 new_compound = self._pick_compound_for_weather(new_weather.kind)
