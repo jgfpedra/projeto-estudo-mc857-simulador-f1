@@ -96,7 +96,8 @@ class TestHoldAt:
                '--out', '/tmp/hold_smoke.csv', '--seed', '0']
         subprocess.run(cmd, cwd=str(PROJECT_ROOT / 'backend'), check=True,
                       capture_output=True, timeout=600)
-        df = pd.read_csv('/tmp/hold_smoke.csv')
+        # race_diagnostic prefixa o CSV com uma linha de metadados comentada.
+        df = pd.read_csv('/tmp/hold_smoke.csv', comment='#')
         held = df[df.drv == 'GAS'].sort_values('tick')   # último do grid
         assert held.s.max() - held.s.min() < 2.0, \
             f"carro held andou: [{held.s.min():.1f}, {held.s.max():.1f}]"

@@ -1,0 +1,63 @@
+{
+  "candidate": {
+    "path": "experiments/composite-1/train-1/composite_residual_candidato_1_weights.npz",
+    "sha256": "6210fff65b19ad0e51c561e332ae30fe875b5a390c389520d6e2f23cefd17c60",
+    "weights_etalon_sha256": "6210fff65b19ad0e51c561e332ae30fe875b5a390c389520d6e2f23cefd17c60",
+    "weights_sha_matches_etalon": true
+  },
+  "counts": {
+    "case_A_test": 3000,
+    "case_B_test": 3000,
+    "total_test": 6000
+  },
+  "gates": {
+    "all_gates_pass": true,
+    "gate_1_huber": {
+      "description": "Huber(cand) <= 0.80 * Huber(null r=0)",
+      "passed": true,
+      "ratio": 0.40772136895482786,
+      "threshold": 0.5661264419555664,
+      "value": 0.28852730989456177
+    },
+    "gate_2_mae": {
+      "description": "MAE(r_cand, r_target) < MAE(0, r_target)",
+      "passed": true,
+      "value_cand": 0.5856491327285767,
+      "value_null": 1.0440247058868408
+    },
+    "gate_3_norm": {
+      "description": "mean ||r_cand||_2 <= 2.0",
+      "passed": true,
+      "threshold": 2.0,
+      "value": 1.5984541177749634
+    },
+    "gate_4_nan_inf": {
+      "description": "nan_inf_count == 0",
+      "passed": true,
+      "value": 0
+    },
+    "gate_5_determinism": {
+      "description": "Instrument determinism in 2 reads (JSON bytes identical)",
+      "passed": true
+    },
+    "verdict": "SANCIONADO"
+  },
+  "metrics": {
+    "huber_cand": 0.28852730989456177,
+    "huber_null": 0.707658052444458,
+    "huber_ratio": 0.40772136895482786,
+    "mae_cand": 0.5856491327285767,
+    "mae_null": 1.0440247058868408,
+    "mean_norm_r": 1.5984541177749634,
+    "nan_inf_count": 0
+  },
+  "provenance": {
+    "git_head_sha": "20c6969aec0506adc5e6c8e75c92567d9c791518",
+    "script_sha256": "7dc77bc28461b1f8cb73ff69d3f0e3524febf0da49daa408688f1db468870222",
+    "shard_A_test_file": "A_A_ON_dump.jsonl_VER.json",
+    "shard_A_test_sha256": "5ff4a203792eb4f47d94c403c83cb1a6fc94a6e0440b1ebff1b636a0915111c8",
+    "shard_B_test_file": "B_B_ON_dump.jsonl_SAI.json",
+    "shard_B_test_sha256": "4db7f236c8bc40d75dd479bb496b92bb0278c2b88ce8b6a89cd260462a4bef74"
+  },
+  "run": "STAGE 5 RELEASE EVALUATION"
+}

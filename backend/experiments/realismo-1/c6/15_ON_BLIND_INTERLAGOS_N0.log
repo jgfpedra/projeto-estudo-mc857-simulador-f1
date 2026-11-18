@@ -1,0 +1,70 @@
+pybullet build time: Sep 11 2026 21:22:29
+2026/11/04 15:19:09 INFO mlflow.agent.hint: Load the `instrumenting-with-mlflow-tracing` skill at /home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/.venv/lib/python3.12/site-packages/mlflow/assistant/skills/instrumenting-with-mlflow-tracing/SKILL.md before writing any tracing code; it ships with this MLflow install. Set MLFLOW_DISABLE_AGENT_HINT=1 to silence this.
+[diag] pista FROZEN: São Paulo Grand Prix | 1131 wp | SF wp 729 | sha256 164876196eb12174 | clima=seeded (rng semeado por seed) | variance=off | rejoin_gap=0.0 | rejoin_handoff=off | launch_cap=False | launch_stagger=False | launch_steer_mute=False | pguard=False | grid=f1 | rejoin=bearing | anti_glue=False | variedade=0 | prof_repair=False | pass_decision=False
+[Grid] reta antes da SF: 45 m | grid ocupa 42 m
+[Grid] 10 carros no grid estilo F1 (5 fileiras x 2 colunas, NA RETA)
+[Model] Carregando pesos neurais (NumPy Engine) de: dagger_actor_best_weights.npz
+[diag] ator: dagger_actor_best.keras | input_dim=48 | gov=vplan | profile=manual
+[diag] 32652 eventos de contato do solver -> experiments/realismo-1/c6/15_ON_BLIND_INTERLAGOS_N0_events.csv
+[diag] 30000 linhas -> experiments/realismo-1/c6/15_ON_BLIND_INTERLAGOS_N0.csv (instrumento race_diag_v3_contact_solver_v1)
+
+===== ESTADO FINAL POR CARRO =====
+drv  speed       s  lat   th  brk  steer_rad
+VER   2.03 2054.48 9.44 0.35 0.00       0.79
+NOR  20.66   74.27 0.98 0.21 0.00      -0.12
+LEC  17.15    3.54 0.01 0.00 0.08       0.22
+HAM  27.87 2839.05 0.89 0.32 0.00       0.01
+PIA  43.00 2620.20 0.28 0.58 0.00       0.01
+RUS  25.55  315.70 0.19 0.21 0.00       0.03
+SAI   4.10 2056.18 5.51 0.00 0.08       0.75
+PER  25.53   97.02 0.53 0.21 0.00      -0.07
+ALO  27.44 1013.52 0.32 0.00 0.08       0.06
+GAS  69.06  678.21 0.31 0.79 0.00       0.00
+
+===== CLIMA (transições reais: 0) =====
+  nenhuma transição de kind (grip constante)
+
+===== IMOBILIZACAO (v < 2 m/s) =====
+ALO: 2 amostras v<2 | primeiro tick lento=0 (s=2613m) | brake medio apos=0.05
+GAS: 5 amostras v<2 | primeiro tick lento=0 (s=2613m) | brake medio apos=0.05
+HAM: 32 amostras v<2 | primeiro tick lento=0 (s=2640m) | brake medio apos=0.05
+LEC: 7 amostras v<2 | primeiro tick lento=0 (s=2640m) | brake medio apos=0.05
+NOR: 4 amostras v<2 | primeiro tick lento=0 (s=2649m) | brake medio apos=0.05
+PER: 8 amostras v<2 | primeiro tick lento=0 (s=2622m) | brake medio apos=0.05
+PIA: 5 amostras v<2 | primeiro tick lento=0 (s=2631m) | brake medio apos=0.05
+RUS: 5 amostras v<2 | primeiro tick lento=0 (s=2631m) | brake medio apos=0.05
+SAI: 316 amostras v<2 | primeiro tick lento=0 (s=2622m) | brake medio apos=0.04
+VER: 37 amostras v<2 | primeiro tick lento=0 (s=2649m) | brake medio apos=0.04
+
+===== EPISODIOS DE PARADA >= 3 s (como terminaram) =====
+  nenhuma parada >= 3 s
+
+===== SAIDA DE PISTA / CORTES =====
+amostras com centro fora do asfalto: 7693 de 30000 (25.6%)
+  ALO: 622 amostras fora | lat max=42.5 m | trechos: [0.0, 1800.0, 2000.0, 2200.0, 2400.0]
+  GAS: 624 amostras fora | lat max=41.8 m | trechos: [0.0, 1200.0, 1800.0, 2000.0, 2200.0, 2400.0]
+  HAM: 818 amostras fora | lat max=58.7 m | trechos: [0.0, 1800.0, 2000.0, 2200.0, 2400.0, 2800.0, 3000.0]
+  LEC: 761 amostras fora | lat max=63.0 m | trechos: [0.0, 200.0, 1000.0, 1800.0, 2000.0, 2200.0, 2400.0, 2800.0]
+  NOR: 749 amostras fora | lat max=54.2 m | trechos: [0.0, 1800.0, 2000.0, 2200.0, 2400.0, 2800.0]
+  PER: 685 amostras fora | lat max=42.8 m | trechos: [0.0, 1800.0, 2000.0, 2200.0, 2400.0, 2800.0]
+  PIA: 875 amostras fora | lat max=46.3 m | trechos: [0.0, 1800.0, 2000.0, 2200.0, 2400.0, 2800.0, 3000.0, 3600.0]
+  RUS: 719 amostras fora | lat max=63.2 m | trechos: [0.0, 1800.0, 2000.0, 2200.0, 2400.0, 2800.0]
+  SAI: 874 amostras fora | lat max=59.7 m | trechos: [0.0, 1800.0, 2000.0, 2200.0, 2400.0, 3000.0, 3200.0, 3400.0, 3600.0]
+  VER: 966 amostras fora | lat max=70.2 m | trechos: [0.0, 1000.0, 1200.0, 1400.0, 1600.0, 1800.0, 2000.0, 2200.0, 2400.0, 2800.0, 3400.0, 3600.0]
+
+contatos c/ SOLO (todo tick, esperado): 91448 | contatos CARRO-CARRO: 816 amostras, impulso medio 18219 N | dv medio 22.83 m/s
+
+===== R3: FORA-PILOTAGEM vs FORA-PRESO (janelas 30 s) =====
+  ALO: pilotagem= 177 ticks | preso= 445 ticks  <== CARRO-PRESO
+  GAS: pilotagem= 205 ticks | preso= 419 ticks  <== CARRO-PRESO
+  HAM: pilotagem= 150 ticks | preso= 668 ticks  <== CARRO-PRESO
+  LEC: pilotagem= 252 ticks | preso= 509 ticks  <== CARRO-PRESO
+  NOR: pilotagem= 174 ticks | preso= 575 ticks  <== CARRO-PRESO
+  PER: pilotagem= 183 ticks | preso= 502 ticks  <== CARRO-PRESO
+  PIA: pilotagem= 242 ticks | preso= 633 ticks  <== CARRO-PRESO
+  RUS: pilotagem= 148 ticks | preso= 571 ticks  <== CARRO-PRESO
+  SAI: pilotagem= 196 ticks | preso= 678 ticks  <== CARRO-PRESO
+  VER: pilotagem= 157 ticks | preso= 809 ticks  <== CARRO-PRESO
+  TOTAL fora: 7693 ticks (25.6%) | FORA-PILOTAGEM: 1884 (24.5% do fora) | FORA-PRESO: 5809 (75.5% do fora)
+  CARROS-PRESO na sessão: 10 (ALO, GAS, HAM, LEC, NOR, PER, PIA, RUS, SAI, VER — gate exige 0)
+  HESITAÇÕES (v<0,5 m/s por 0,3-3 s, pós-largada): 8 (gate: <=3)

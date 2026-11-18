@@ -137,8 +137,16 @@ class TestEdgeGeometry:
 
 class TestEdgeCrossTrack:
     def test_monza_retas_longas(self):
+        # PISTA-IDENT-1 (prereg 3758661): o pass ANTERIOR deste teste era
+        # INVALIDO — 'Monza' caia no preset Interlagos silencioso (o
+        # teste "passava" na pista ERRADA). Agora resolve_track falha
+        # loud para pistas fora dos mirrors canônicos; a intenção do
+        # teste (Monza REAL) é preservada passando o frozen Monza_v1
+        # EXPLICITAMENTE (resolve_track aceita Track pronto).
         from backend.model_train.f1_env import F1MultiContextEnv
-        env = F1MultiContextEnv(track='Monza', allow_respawn=False, obs_mode='edge')
+        from backend.model_train.f1_env import load_track_frozen
+        monza = load_track_frozen('Monza')
+        env = F1MultiContextEnv(track=monza, allow_respawn=False, obs_mode='edge')
         obs, _ = env.reset()
         rays = obs['telemetry'][23:]
         assert np.all(np.isfinite(rays))

@@ -1,0 +1,1 @@
+Duplicata do worklog.md raiz criada por cwd-flip (entradas FONTE-1/PROF-REPAIR-1 já constam na raiz); movida para cá pelo PISTAS_EXPAND_1 FIXAÇÃO 3 (PATCH_PISTAS_EXPAND_1_A, 2026-10-23) — não deletar.

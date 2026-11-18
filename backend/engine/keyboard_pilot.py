@@ -26,7 +26,7 @@ Comportamento do controle:
 - espaço            — freio de mão; ``R`` — zera tudo
 
 Convenção de steering: **positivo = esquerda** (igual ao docstring de
-:class:`~engine.controllers.CarInput` e a ``scripts/publish_keyboard.py``).
+:class:`~engine.controllers.CarInput` e a ``scripts/simulation/publish_keyboard.py``).
 """
 
 from __future__ import annotations

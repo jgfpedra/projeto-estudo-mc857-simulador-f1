@@ -94,6 +94,16 @@ class ReferenceController:
     PASS_COOLDOWN_TICKS = 100  # sem nova tentativa após aborto/retorno
     PASS_KAPPA_MAX = 0.02  # só PREPARE/PASS em R>50 m (κ local baixo)
     KAPPA_OFFSET_FACTOR = 1.2  # κ da LINHA DE OFFSET ~ κ_central×1,2 (R 100→~83 m)
+    # PASS-1: decisão experimental de passagem. Com a flag ON, o caminho
+    # legado continua até o primeiro engajamento; OFF preserva a política.
+    PASS_DECISION_GAP_MIN_M = 15.0
+    PASS_DECISION_DV_MIN_MPS = 1.0
+    PASS_DECISION_SAMPLES = 15       # amostras a 5 Hz = 3 s sustentados
+    PASS_DECISION_ABORT_GAP_M = 8.0
+    PASS_DECISION_ABORT_S = 8.0
+    PASS_DECISION_PROGRESS_M = 0.5
+    PASS_DECISION_NEARBY_M = 25.0
+    PASS_DECISION_REJOIN_LOCK_S = 10.0
     # FASE 2b — Experimento 1: isolar a máquina. Com _overtake_machine_only,
     # o offset do corredor no FOLLOW é SUPRIMIDO (cap v_ahead+2 MANTIDO) e o
     # único caminho de ultrapassagem passa a ser a máquina _pass_layer.
@@ -102,7 +112,12 @@ class ReferenceController:
     def __init__(self, env, wheelbase_m=3.4, a_lat_max=12.0, a_brake_max=12.0,
                  lookahead_gain=0.6, lookahead_min_m=5.0, lookahead_max_m=45.0,
                  speed_margin=0.93, velocity_profile=None, sf=0.80,
-                 smooth_window_m=20.0, driver_id=None):
+                 smooth_window_m=20.0, driver_id=None, pass_decision=False,
+                 leader_yield=False, prof_control=False,
+                 prof_control_kappa=None, prof_grip=False,
+                 prof_grip_windows=None, prof_pace=False,
+                 prof_pace_windows=None, prof_pace_kappa_inst=None,
+                 prof_pace_eta="eta1"):
         # a_lat/a_brake CONSERVADORES: a física analítica (Pacejka + limites de
         # esterço por velocidade) entrega menos que os 25/30 teóricos na prática.
         self.env = env
@@ -140,6 +155,95 @@ class ReferenceController:
         self._pass_target = None       # (lat_ref_alvo, lado, ticks_fechando)
         self._pass_cooldown = 0
         self._pass_closing = 0
+        self.PASS_DECISION_ENABLED = bool(pass_decision)
+        self.LEADER_YIELD_ENABLED = bool(leader_yield)
+        # PROF-CONTROL-1 (prereg 7fe656ac, Freeze 53ea581): prof_control=True
+        # ativa feedforward cinemático arctan(L*kappa) + lookahead modulado
+        # por curvatura (g = 1/(1 + c_ld*|kappa|)), c_ld derivado do
+        # LAGO_ANATOMY.json pela regra §3. Default OFF = bit-idêntico ao
+        # professor histórico (o caminho OFF não executa nada deste módulo).
+        self.PROF_CONTROL_ENABLED = bool(prof_control)
+        if self.PROF_CONTROL_ENABLED:
+            from backend.model_train import prof_control as _prof_mod
+            if prof_control_kappa is not None:
+                # caminho do runner: κ perfil construído UMA vez pelo
+                # ProfessorRaceController a partir de track.waypoints e
+                # emprestado às instâncias (o adapter _RaceEnvView não
+                # expõe .track)
+                self._prof_kappa_s, self._prof_kappa_v = prof_control_kappa
+            else:
+                # uso direto com o env real (testes/DAgger standalone)
+                from backend.model_train.prof_curva import _instantaneous_kappa_profile
+                kappa_s_arr, kappa_signed_arr = _instantaneous_kappa_profile(
+                    np.array(env.track.waypoints, dtype=np.float64), ds_target=4.0)
+                self._prof_kappa_s = kappa_s_arr
+                self._prof_kappa_v = kappa_signed_arr
+            self._prof_c_ld = float(_prof_mod.derive_c_ld()["c_ld"])
+            self._prof_delta_ff = _prof_mod.delta_ff
+            self._prof_gain = _prof_mod.lookahead_gain_factor
+        else:
+            self._prof_kappa_s = None
+            self._prof_c_ld = 0.0
+            self._prof_delta_ff = None
+            self._prof_gain = None
+        # PROF-GRIP-1 (prereg 6568b9a8, Freeze 715c677): prof_grip=True ativa
+        # o teto de pacing grip-sensível nas janelas canônicas de C01/C06/
+        # C07/C08 — v_alvo = v_plan·min(1,sqrt(grip_atual/0,85))·sqrt(1/1,10),
+        # grip_atual = tyre.grip_multiplier (fonte idêntica à coluna
+        # telemetrada). Default OFF = bit-idêntico (caminho OFF não executa
+        # nada deste módulo). Pacing-only: esterço intocado.
+        self.PROF_GRIP_ENABLED = bool(prof_grip)
+        if self.PROF_GRIP_ENABLED:
+            from backend.model_train import prof_grip as _prof_grip_mod
+            if prof_grip_windows is not None:
+                self._prof_grip_windows = prof_grip_windows
+            else:
+                self._prof_grip_windows = _prof_grip_mod.corner_windows(
+                    np.array(env.track.waypoints, dtype=np.float64))
+            self._prof_grip_mod = _prof_grip_mod
+        else:
+            self._prof_grip_windows = None
+            self._prof_grip_mod = None
+        # PROF-PACE-1 (prereg 6568b9a8-família, Freeze 947c091): prof_pace=True
+        # ativa o pacing preventivo grip_mode=FIXED (grip_ref=0,7895474400345001)
+        # nas janelas canônicas de C01/C06/C07/C08 — v_alvo = v_target_cap
+        # (0,93 + cap η EMBUTIDOS no perfil via prof_pace.py; SEM margin
+        # adicional). Fora de Interlagos: no-op explícito. Default OFF =
+        # bit-idêntico ao professor histórico (caminho OFF não executa nada).
+        self.PROF_PACE_ENABLED = bool(prof_pace)
+        self._prof_pace = None
+        self._prof_pace_noop = False
+        if self.PROF_PACE_ENABLED:
+            from backend.model_train import prof_pace as _pp
+            if prof_pace_windows is None:
+                self._prof_pace_noop = True   # fora de Interlagos: no-op explícito
+            elif prof_pace_kappa_inst is None:
+                raise ValueError("prof_pace com janelas exige prof_pace_kappa_inst")
+            else:
+                self._prof_pace = _pp.build_capped(
+                    self.v_profile.v_plan, self.v_profile.s_arr,
+                    self.v_profile.kappa_arr, prof_pace_windows,
+                    prof_pace_kappa_inst, prof_pace_eta)
+        self._leader_yield_state = {
+            'active': False, 'follower_id': None, 'started_s': None,
+            'start_lat': None, 'target_lat': None,
+        }
+        self._leader_yield_stats = {
+            'engaged': 0, 'consumed': 0, 'aborted': 0, 'attempts': [],
+        }
+        # Estado separado: com a flag OFF, a máquina legada acima é usada sem
+        # ler nem alterar este estado.
+        self._pass_decision_state = {
+            'active': False, 'candidate_id': None, 'candidate_samples': 0,
+            'target_id': None, 'started_s': None, 'start_lat': None,
+            'side': 0.0, 'target_lat': None, 'lateral_progress_m': 0.0,
+        }
+        self._pass_decision_stats = {
+            'opportunities': 0, 'engaged': 0, 'aborted_gap': 0,
+            'aborted_timeout': 0, 'aborted_contact': 0,
+            'aborted_rejoin': 0, 'aborted_target': 0, 'consumed': 0,
+            'attempts': [],
+        }
 
     # ------------------------------------------------------------------
     def _v_target(self, s, v_now):
@@ -169,6 +273,16 @@ class ReferenceController:
     # ------------------------------------------------------------------
     def env_kappa(self, s):
         return self.env._kappa_signed(s)
+
+    def _prof_kappa_local(self, s):
+        """κ local instantânea ASSINADA em s (PROF-CONTROL-1 §2 do prereg).
+
+        Perfil canônico de janela mínima (prof_curva) sobre os waypoints da
+        pista frozen; nunca o perfil suavizado de 30 m. Só existe com a
+        flag ON."""
+        s_arr = self._prof_kappa_s
+        total = float(s_arr[-1] + (s_arr[1] - s_arr[0]))
+        return float(np.interp(s % total, s_arr, self._prof_kappa_v))
 
     def env_track_vmax(self):
         return 85.0  # mesmo V_TGT_MAX do env
@@ -386,7 +500,267 @@ class ReferenceController:
         return False, preopen_offset, self._pass_state
         return False, None, self._pass_state
 
-    def action(self, traffic=None):
+    def _pass_decision_choose_side(self, s_ego, lat_ego, cars, half_width,
+                                   track_len_s):
+        """Escolhe o offset com maior folga lateral disponível.
+
+        A folga considera os demais carros a até ±25 m de arco. Empates usam
+        a distância à borda e, por último, o lado esquerdo (+lat) para manter
+        o resultado determinístico.
+        """
+        half_width = float(half_width)
+        if half_width <= 0.5:
+            return 0.0, float(lat_ego)
+        rows = []
+        for side in (-1.0, 1.0):
+            target_lat = float(np.clip(
+                lat_ego + side * self.LAT_OFFSET_MAX,
+                -half_width + 0.5, half_width - 0.5))
+            clearances = []
+            for car in cars:
+                d = signed_dist_s(float(car['s']), float(s_ego), track_len_s)
+                if abs(d) <= self.PASS_DECISION_NEARBY_M:
+                    clearances.append(abs(target_lat - float(car['lat'])))
+            lateral_clearance = min(clearances) if clearances else float('inf')
+            edge_clearance = min(half_width - target_lat, half_width + target_lat)
+            rows.append((lateral_clearance, edge_clearance, side, target_lat))
+        # lado esquerdo é o desempate determinístico final.
+        _, _, side, target_lat = max(rows, key=lambda row: (row[0], row[1], row[2]))
+        return side, target_lat
+
+    def _pass_decision_close_attempt(self, outcome, now_s):
+        state = self._pass_decision_state
+        if state['active']:
+            self._pass_decision_stats['attempts'].append(dict(
+                target_id=state['target_id'], start_s=state['started_s'],
+                end_s=float(now_s), outcome=str(outcome)))
+
+    def _leader_yield_step(self, context, s_ego, lat_ego):
+        state = self._leader_yield_state
+        now_s = float(context.get('t_s', 0.0))
+        allowed = bool(context.get('leader_yield_allowed', False))
+        contacts = set(context.get('leader_yield_contact_pairs', ()))
+        follower_id = state['follower_id']
+        if state['active']:
+            pair = tuple(sorted((str(self.driver_id), str(follower_id))))
+            follower_cum = float(context.get('leader_yield_follower_cum', 0.0))
+            ego_cum = float(context.get('leader_yield_ego_cum', 0.0))
+            outcome = None
+            if not allowed or pair in contacts:
+                outcome = 'abort'
+            elif follower_cum - ego_cum >= 10.0:
+                outcome = 'consumed'
+            elif now_s - float(state['started_s']) > 8.0:
+                outcome = 'abort_timeout'
+            if outcome is not None:
+                self._leader_yield_stats['attempts'].append(dict(
+                    follower_id=follower_id, start_s=state['started_s'],
+                    end_s=now_s, outcome=outcome))
+                if outcome == 'consumed':
+                    self._leader_yield_stats['consumed'] += 1
+                else:
+                    self._leader_yield_stats['aborted'] += 1
+                state.update(active=False, follower_id=None, started_s=None,
+                             start_lat=None, target_lat=None)
+                return 0.0
+            return float(state['target_lat'])
+
+        target_id = context.get('leader_yield_engage_follower')
+        if target_id is None or not allowed:
+            return None
+        cars = context.get('leader_yield_cars', ())
+        target = next((car for car in cars
+                       if str(car['driver_id']) == str(target_id)), None)
+        if target is None:
+            return None
+        follower_lat = float(target['lat'])
+        side, _ = self._pass_decision_choose_side(
+            s_ego, lat_ego, cars,
+            float(context.get('half_width', getattr(self.env, '_half_width', 6.0))),
+            float(context.get('track_len_s', self.env._track_len_s)))
+        target_lat = follower_lat + math.copysign(3.5, side or 1.0)
+        half_width = float(context.get(
+            'half_width', getattr(self.env, '_half_width', 6.0)))
+        target_lat = float(np.clip(target_lat, -half_width + 0.5,
+                                   half_width - 0.5))
+        state.update(active=True, follower_id=str(target_id),
+                     started_s=now_s, start_lat=float(lat_ego),
+                     target_lat=target_lat)
+        self._leader_yield_stats['engaged'] += 1
+        return target_lat - float(lat_ego)
+
+    def leader_yield_summary(self):
+        return dict(self._leader_yield_stats,
+                    active=(dict(self._leader_yield_state)
+                            if self._leader_yield_state['active'] else None))
+
+    def _pass_decision_candidate(self, s_ego, v_ego, lat_ego, cars,
+                                 track_len_s=None):
+        """Pure candidate lookup shared by the live layer and its history gate."""
+        length = float(track_len_s or self.env._track_len_s)
+        ahead = []
+        for car in cars:
+            gap = signed_dist_s(float(car['s']), float(s_ego), length)
+            if (0.0 < gap < self.D_AHEAD_M
+                    and abs(float(car['lat']) - float(lat_ego))
+                    < self.LAT_SAME_LINE_M):
+                ahead.append((gap, car))
+        nearest = min(ahead, key=lambda item: item[0]) if ahead else None
+        if nearest is None:
+            return None
+        gap, car = nearest
+        if (gap >= self.PASS_DECISION_GAP_MIN_M
+                and abs(float(v_ego) - float(car['speed']))
+                >= self.PASS_DECISION_DV_MIN_MPS):
+            return car
+        return None
+
+    def pass_decision_sustained_target(self, samples, allowed=False):
+        """Purely recognize the frozen 15-sample opportunity window.
+
+        The caller supplies existing diagnostic snapshots plus the current
+        snapshot. This method reads them only and never mutates controller state.
+        """
+        if not allowed or len(samples) != self.PASS_DECISION_SAMPLES:
+            return None
+        target_id = None
+        for sample in samples:
+            if float(sample['t_s']) < 60.0:
+                return None
+            candidate = self._pass_decision_candidate(
+                sample['s_ego'], sample['v_ego'], sample['lat_ego'],
+                sample['cars'], sample.get('track_len_s'))
+            if candidate is None:
+                return None
+            current_id = str(candidate['driver_id'])
+            if target_id is None:
+                target_id = current_id
+            elif current_id != target_id:
+                return None
+        return target_id
+
+    def _pass_decision_layer(self, s_ego, v_ego, lat_ego, v_plan_here,
+                             context=None):
+        """Decisão PASS-1: oportunidade sustentada, lado livre e abortos.
+
+        `context` é fornecido pelo runner professor e contém snapshots dos
+        demais carros, tempo, permissão (largada/rejoin), amostra 5 Hz,
+        progresso acumulado e pares com contato solver no tick anterior.
+        Retorna (levantar_cap, offset_target, estado). O writer não é alterado.
+        """
+        del v_plan_here  # a tentativa libera o cap e usa o plano próprio
+        context = context or {}
+        state = self._pass_decision_state
+        now_s = float(context.get('t_s', 0.0))
+        sample_5hz = bool(context.get('sample_5hz', False))
+        allowed = bool(context.get('allowed', False)) and now_s >= 60.0
+        cars = list(context.get('cars', ()))
+        track_len_s = float(context.get('track_len_s', self.env._track_len_s))
+        half_width = float(context.get(
+            'half_width', getattr(self.env, '_half_width', 6.0)))
+        contact_pairs = set(context.get('contact_pairs', ()))
+
+        candidate = self._pass_decision_candidate(
+            s_ego, v_ego, lat_ego, cars, track_len_s)
+
+        if state['active']:
+            target = next((car for car in cars
+                           if car['driver_id'] == state['target_id']), None)
+            pair = tuple(sorted((str(self.driver_id), str(state['target_id']))))
+            if not allowed:
+                self._pass_decision_close_attempt('abort_rejoin', now_s)
+                state['active'] = False
+                state['candidate_id'] = None
+                state['candidate_samples'] = 0
+                state['target_id'] = None
+                self._pass_decision_stats['aborted_rejoin'] += 1
+                return False, None, 'DECISION_ABORT_REJOIN'
+            if pair in contact_pairs:
+                self._pass_decision_close_attempt('abort_contact', now_s)
+                state['active'] = False
+                state['candidate_id'] = None
+                state['candidate_samples'] = 0
+                state['target_id'] = None
+                self._pass_decision_stats['aborted_contact'] += 1
+                return False, None, 'DECISION_ABORT_CONTACT'
+            if target is None:
+                # A lista contém sempre os demais carros; desaparecer implica
+                # dados inconsistentes e o gate falha fechado para follow.
+                self._pass_decision_close_attempt('abort_target', now_s)
+                state['active'] = False
+                state['candidate_id'] = None
+                state['candidate_samples'] = 0
+                state['target_id'] = None
+                self._pass_decision_stats['aborted_target'] += 1
+                return False, None, 'DECISION_ABORT_TARGET'
+            own_cum = float(context.get('ego_cum_dist', 0.0))
+            target_cum = float(target.get('cum_dist', 0.0))
+            if own_cum - target_cum >= 10.0:
+                self._pass_decision_close_attempt('consumed', now_s)
+                state['active'] = False
+                state['candidate_id'] = None
+                state['candidate_samples'] = 0
+                state['target_id'] = None
+                self._pass_decision_stats['consumed'] += 1
+                return False, None, 'DECISION_CONSUMED'
+            gap = signed_dist_s(float(target['s']), float(s_ego), track_len_s)
+            state['lateral_progress_m'] = max(
+                float(state['lateral_progress_m']),
+                float(state['side']) * (float(lat_ego) - float(state['start_lat'])))
+            if (now_s - float(state['started_s']) > self.PASS_DECISION_ABORT_S):
+                self._pass_decision_close_attempt('abort_timeout', now_s)
+                state['active'] = False
+                state['candidate_id'] = None
+                state['candidate_samples'] = 0
+                state['target_id'] = None
+                self._pass_decision_stats['aborted_timeout'] += 1
+                return False, None, 'DECISION_ABORT_TIMEOUT'
+            if (gap < self.PASS_DECISION_ABORT_GAP_M
+                    and float(state['lateral_progress_m'])
+                    < self.PASS_DECISION_PROGRESS_M):
+                self._pass_decision_close_attempt('abort_gap', now_s)
+                state['active'] = False
+                state['candidate_id'] = None
+                state['candidate_samples'] = 0
+                state['target_id'] = None
+                self._pass_decision_stats['aborted_gap'] += 1
+                return False, None, 'DECISION_ABORT_GAP'
+            return True, float(state['target_lat']), 'DECISION_ACTIVE'
+
+        if sample_5hz:
+            if not allowed or candidate is None:
+                state['candidate_id'] = None
+                state['candidate_samples'] = 0
+            elif candidate['driver_id'] == state['candidate_id']:
+                state['candidate_samples'] += 1
+            else:
+                state['candidate_id'] = candidate['driver_id']
+                state['candidate_samples'] = 1
+
+        if (allowed and candidate is not None
+                and int(state['candidate_samples']) >= self.PASS_DECISION_SAMPLES):
+            side, target_lat = self._pass_decision_choose_side(
+                s_ego, lat_ego, cars, half_width, track_len_s)
+            state.update(active=True, target_id=candidate['driver_id'],
+                         started_s=now_s, start_lat=float(lat_ego), side=side,
+                         target_lat=target_lat, lateral_progress_m=0.0,
+                         candidate_id=None, candidate_samples=0)
+            self._pass_decision_stats['opportunities'] += 1
+            self._pass_decision_stats['engaged'] += 1
+            return True, target_lat, 'DECISION_ACTIVE'
+
+        return False, None, 'FOLLOW'
+
+    def pass_decision_summary(self):
+        """Retorna contadores da decisão opt-in, sem tocar o CSV."""
+        out = dict(self._pass_decision_stats)
+        state = self._pass_decision_state
+        out['active_attempt'] = (dict(
+            target_id=state['target_id'], start_s=state['started_s'])
+            if state['active'] else None)
+        return out
+
+    def action(self, traffic=None, pass_decision_context=None):
         env = self.env
         phys = env.engine.physics.get_state(env.engine.handles[self.driver_id])
         x, y, v = phys['x'], phys['y'], phys['speed_mps']
@@ -406,10 +780,68 @@ class ReferenceController:
                 # FASE 2b (Exp 1): offset do follow SUPRIMIDO — só a máquina
                 # desloca lateralmente (o cap de car-following permanece)
                 offset_target = 0.0
-            # FASE 2 (v15): camada de ULTRAPASSAGEM (pode levantar o cap e
-            # sobrescrever o offset — mesmo mecanismo lateral _lat_offset)
-            lift_cap, pass_offset, p_state = self._pass_layer(
-                s, v, lat_signed, traffic, self.v_profile.at(s))
+            # Antes do primeiro engajamento, a flag ON chama a máquina legada
+            # exatamente como OFF. O runner só entrega decision_engage_target
+            # quando a janela sustentada foi reconhecida por leitura pura da
+            # história 5 Hz já existente. Depois do primeiro engage, a troca
+            # de máquina é permanente, inclusive após abort/retorno.
+            if not self.PASS_DECISION_ENABLED:
+                lift_cap, pass_offset, p_state = self._pass_layer(
+                    s, v, lat_signed, traffic, self.v_profile.at(s))
+            else:
+                decision_context = pass_decision_context or {}
+                decision_state = self._pass_decision_state
+                decision_started = bool(
+                    decision_state['active']
+                    or decision_state['started_s'] is not None)
+                decision_target = decision_context.get('decision_engage_target')
+                if decision_started or decision_target is not None:
+                    if decision_target is not None and not decision_started:
+                        # PASS-PARITY-3 v3: the runner's pure window is the
+                        # authoritative same-tick engagement contract.
+                        side, target_lat = self._pass_decision_choose_side(
+                            s, lat_signed, decision_context.get('cars', ()),
+                            float(decision_context.get(
+                                'half_width',
+                                getattr(env, '_half_width', 6.0))),
+                            float(decision_context.get(
+                                'track_len_s', env._track_len_s)))
+                        now_s = float(decision_context.get('t_s', 0.0))
+                        decision_state.update(
+                            active=True, target_id=str(decision_target),
+                            started_s=now_s, start_lat=float(lat_signed),
+                            side=side, target_lat=target_lat,
+                            lateral_progress_m=0.0, candidate_id=None,
+                            candidate_samples=0)
+                        self._pass_decision_stats['opportunities'] += 1
+                        self._pass_decision_stats['engaged'] += 1
+                        lift_cap, pass_offset, p_state = (
+                            True, target_lat, 'DECISION_ACTIVE')
+                    else:
+                        lift_cap, pass_offset, p_state = (
+                            self._pass_decision_layer(
+                                s, v, lat_signed, self.v_profile.at(s),
+                                context=pass_decision_context))
+                    if (decision_target is not None
+                            and not decision_state['active']):
+                        live_candidate = self._pass_decision_candidate(
+                            s, v, lat_signed,
+                            decision_context.get('cars', ()),
+                            decision_context.get('track_len_s'))
+                        diagnostic = dict(
+                            context=decision_context,
+                            state=dict(decision_state),
+                            candidate=live_candidate,
+                            allowed=bool(decision_context.get('allowed', False)),
+                            sample_5hz=bool(
+                                decision_context.get('sample_5hz', False)),
+                            now_s=float(decision_context.get('t_s', 0.0)))
+                        raise RuntimeError(
+                            'predicado puro de passagem não confirmou o engage '
+                            f'no mesmo tick; payload={diagnostic!r}')
+                else:
+                    lift_cap, pass_offset, p_state = self._pass_layer(
+                        s, v, lat_signed, traffic, self.v_profile.at(s))
             self.last_pass_state = p_state
             if pass_offset is not None:
                 offset_target = pass_offset
@@ -417,6 +849,11 @@ class ReferenceController:
                 v_cap = None          # PASS: alvo = v_plan PRÓPRIO
         else:
             self.last_pass_state = 'FOLLOW'
+        if self.LEADER_YIELD_ENABLED and pass_decision_context:
+            yield_offset = self._leader_yield_step(
+                pass_decision_context, s, lat_signed)
+            if yield_offset is not None:
+                offset_target = yield_offset
         if traffic is not None:
             self._lat_offset = (self.OFFSET_SMOOTH * offset_target +
                                 (1.0 - self.OFFSET_SMOOTH) * self._lat_offset)
@@ -431,6 +868,13 @@ class ReferenceController:
             ld_probe = float(np.clip(self.k_ld * v, self.ld_min, self.ld_max))
             v_for_ld = min(v, self.v_profile.at(s + ld_probe))
         ld = float(np.clip(self.k_ld * v_for_ld, self.ld_min, self.ld_max))
+        kappa_here = 0.0
+        if self.PROF_CONTROL_ENABLED:
+            # PROF-CONTROL-1: ld_eff = clip(k_ld·v, min, max)·g(κ), com
+            # g(κ) = 1/(1 + c_ld·|κ_local|) — mantém o ponto de perseguição
+            # dentro do arco no ápice/saída (C01) e aperta nas quinas (C08).
+            kappa_here = self._prof_kappa_local(s)
+            ld = ld * self._prof_gain(kappa_here, self._prof_c_ld)
         tx, ty, th = env._point_at(s + ld)
         if self._lat_offset != 0.0:
             # desloca o ponto de perseguição lateralmente: +offset = à
@@ -443,11 +887,52 @@ class ReferenceController:
         alpha = math.atan2(dy, dx) - heading
         alpha = (alpha + math.pi) % (2 * math.pi) - math.pi
         steer_rad = math.atan2(2.0 * self.wheelbase * math.sin(alpha), ld)
+        if self.PROF_CONTROL_ENABLED:
+            # PROF-CONTROL-1: feedforward cinemático δ_ff = arctan(L·κ_local)
+            # soma-se ao pure pursuit residual (correção lateral). Em reta
+            # (κ=0) vale 0.0: preservação exata do comportamento em reta.
+            steer_rad += self._prof_delta_ff(kappa_here, self.wheelbase)
 
         # --- Velocidade ---
         v_tgt = self._v_target(s, v) * self.margin
+        # O perfil usa uma janela suavizada de 20 m; ela pode esconder picos
+        # de curvatura em hairpins muito apertados. Faça uma passada de frenagem
+        # sobre a curvatura local à frente para começar a reduzir antes do ápice.
+        local_kappa_fn = getattr(env, '_kappa_signed', None)
+        if (callable(local_kappa_fn)
+                and hasattr(env, '_wps_arr')
+                and hasattr(env, '_track_len_s')):
+            local_brake_mps2 = min(self.a_brake, 4.0)
+            for distance_m in range(0, 97, 8):
+                kappa_local = abs(float(local_kappa_fn(
+                    s + distance_m, window_m=4.0)))
+                if kappa_local <= 1e-3:
+                    continue
+                v_corner = math.sqrt(self.a_lat_max / kappa_local) * self.margin * 0.65
+                v_reachable = math.sqrt(
+                    v_corner * v_corner + 2.0 * local_brake_mps2 * distance_m,
+                )
+                v_tgt = min(v_tgt, v_reachable)
         if v_cap is not None:
             v_tgt = min(v_tgt, v_cap)
+        if self.PROF_PACE_ENABLED and self._prof_pace is not None:
+            # PROF-PACE-1: alvo = perfil capado (0,93 + teto η EMBUTIDOS nas
+            # passadas de prof_curva) — SEM margin adicional. Pacing-only:
+            # esterço intocado. Fora de Interlagos: no-op (perfil ausente).
+            v_tgt = self._prof_pace["v_at"](s)
+        if self.PROF_GRIP_ENABLED:
+            # PROF-GRIP-1: teto grip-sensível nas janelas das 4 crônicas —
+            # grip_atual pela MESMA expressão da coluna telemetrada
+            # (tyre.grip_multiplier × clima), alvo = v_plan(s)·fator (§2 do
+            # prereg), teto nunca ELEVA o alvo histórico. Pacing-only:
+            # esterço intocado.
+            wstate = self.env.engine.weather_model.current
+            tyre = self.env.engine.states[self.driver_id].tyre
+            grip_now = float(tyre.grip_multiplier(wstate.kind,
+                                                  wstate.track_temp))
+            v_tgt = self._prof_grip_mod.cap_v_target(
+                self.v_profile.at(s), v_tgt, s, grip_now,
+                self._prof_grip_windows)
         long_cmd = float(np.clip((v_tgt - v) / 8.0, -1.0, 1.0))
 
         # Normaliza esterço p/ o espaço [-1, 1] da ação (limite depende de v)

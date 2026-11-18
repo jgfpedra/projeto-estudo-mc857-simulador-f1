@@ -98,7 +98,7 @@ export function DriverTeamSelection() {
 
   const handleConfirm = () => {
     if (!isComplete) return
-    navigate("/weather-tires")
+    navigate("/weather-tires-selection")
   }
 
   return (

@@ -1,0 +1,102 @@
+{
+  "C1": {
+    "count": 0,
+    "p95_dxy_m": null,
+    "p95_abs_d_ns_raw": null
+  },
+  "C2": {
+    "count": 0,
+    "p95_dxy_m": null,
+    "p95_abs_d_ns_raw": null
+  },
+  "C3": {
+    "count": 46,
+    "p95_dxy_m": 1.8704425708164663,
+    "p95_abs_d_ns_raw": 416.25
+  },
+  "C5": {
+    "count": 66,
+    "p95_dxy_m": 3.307436586085905,
+    "p95_abs_d_ns_raw": 6.75
+  },
+  "C4": {
+    "count": 0,
+    "rows": []
+  },
+  "nit2_ge10_mapping": {
+    "C1": 0,
+    "C2": 0,
+    "C3": 46,
+    "C5": 66
+  },
+  "headline_ge30_mapping": {
+    "C1": 0,
+    "C2": 0,
+    "C3": 45,
+    "C5": 0
+  },
+  "nit2_ge10_p95_by_class": {
+    "C1": {
+      "count": 0,
+      "p95_dxy_m": null,
+      "p95_abs_d_ns_raw": null
+    },
+    "C2": {
+      "count": 0,
+      "p95_dxy_m": null,
+      "p95_abs_d_ns_raw": null
+    },
+    "C3": {
+      "count": 46,
+      "p95_dxy_m": 1.8704425708164663,
+      "p95_abs_d_ns_raw": 416.25
+    },
+    "C5": {
+      "count": 66,
+      "p95_dxy_m": 3.307436586085905,
+      "p95_abs_d_ns_raw": 6.75
+    }
+  },
+  "headline_ge30_p95_by_class": {
+    "C1": {
+      "count": 0,
+      "p95_dxy_m": null,
+      "p95_abs_d_ns_raw": null
+    },
+    "C2": {
+      "count": 0,
+      "p95_dxy_m": null,
+      "p95_abs_d_ns_raw": null
+    },
+    "C3": {
+      "count": 45,
+      "p95_dxy_m": 1.8713291979009652,
+      "p95_abs_d_ns_raw": 418.59999999999985
+    },
+    "C5": {
+      "count": 0,
+      "p95_dxy_m": null,
+      "p95_abs_d_ns_raw": null
+    }
+  },
+  "classified_pairs_c1_c3": 75,
+  "reconciliation": {
+    "historical_ge10": 112,
+    "historical_ge30": 45,
+    "mapped_ge10": 112,
+    "mapped_ge30": 45,
+    "script_version": "1.2",
+    "script_sha256": "bc0a7ba9a5a9e4194d6195f3bc830a7626133939b465829f8ee1225e30414bdd",
+    "replay_sha256": "6698b55bad9cba1a167c952eab4381ee696a4191545cdecdd3db873e739b2ce7",
+    "anchor_sha256": "6360706f1b3dbf46ed3ad4998e3e3103cae14ea1054a084297cf2a5f423f1022",
+    "historical_jumps_sha256": "b9bcb14d9bb38dceabcbfddc9f90cb3b5bd2cc25fa6719a90ded52eb2b9bb739",
+    "gates": {
+      "g1": "PASS",
+      "g1_replay_projection_sha256": "a2c96670e1c84198365468740929559a55f26e2c0f89b84ea7060dbc41044092",
+      "g1_anchor_projection_sha256": "a2c96670e1c84198365468740929559a55f26e2c0f89b84ea7060dbc41044092",
+      "g2": "PASS",
+      "fields_per_row": 71,
+      "data_rows": 30000
+    }
+  }
+}

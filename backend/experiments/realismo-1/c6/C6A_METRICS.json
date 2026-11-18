@@ -1,0 +1,2341 @@
+{
+  "blind_missing": [
+    {
+      "N": 1,
+      "reason": "corrida cega N=1..4 n\u00e3o dispon\u00edvel; prevista para C6-B",
+      "track": "interlagos"
+    },
+    {
+      "N": 2,
+      "reason": "corrida cega N=1..4 n\u00e3o dispon\u00edvel; prevista para C6-B",
+      "track": "interlagos"
+    },
+    {
+      "N": 3,
+      "reason": "corrida cega N=1..4 n\u00e3o dispon\u00edvel; prevista para C6-B",
+      "track": "interlagos"
+    },
+    {
+      "N": 4,
+      "reason": "corrida cega N=1..4 n\u00e3o dispon\u00edvel; prevista para C6-B",
+      "track": "interlagos"
+    },
+    {
+      "N": 1,
+      "reason": "corrida cega N=1..4 n\u00e3o dispon\u00edvel; prevista para C6-B",
+      "track": "monaco"
+    },
+    {
+      "N": 2,
+      "reason": "corrida cega N=1..4 n\u00e3o dispon\u00edvel; prevista para C6-B",
+      "track": "monaco"
+    },
+    {
+      "N": 3,
+      "reason": "corrida cega N=1..4 n\u00e3o dispon\u00edvel; prevista para C6-B",
+      "track": "monaco"
+    },
+    {
+      "N": 4,
+      "reason": "corrida cega N=1..4 n\u00e3o dispon\u00edvel; prevista para C6-B",
+      "track": "monaco"
+    }
+  ],
+  "derived_offsets_m": {
+    "blind": {
+      "0": 0.2505963375,
+      "1": -0.002860336499999991,
+      "2": -0.5486948054999999,
+      "3": -0.04238477249999997,
+      "4": -0.8786235379999999,
+      "5": -0.5183083518,
+      "6": 0.8961343024999999,
+      "7": 0.142456875,
+      "8": 0.6935913675000001,
+      "9": 0.17962442849999996
+    },
+    "composite": {
+      "0": 0.2727731564999999,
+      "1": -1.0,
+      "2": -0.69266154,
+      "3": 0.589630985,
+      "4": 1.0,
+      "5": -0.784486685,
+      "6": 0.018426517500000072,
+      "7": -0.901684875,
+      "8": 0.06410126100000002,
+      "9": 1.0
+    }
+  },
+  "no_simulation": true,
+  "offset_limit_m": 1.0,
+  "results": [
+    {
+      "N": 0,
+      "drivers": 10,
+      "metrics": {
+        "deadlocks": 1,
+        "glued_rows": 140,
+        "glued_s": 28.0,
+        "laps_total": 44,
+        "train_lap_crossings": 0,
+        "train_lap_fraction": 0.0,
+        "train_row_fraction": 0.011433333333333334,
+        "train_time_s": 68.6
+      },
+      "offset_derivation": {
+        "center_m": -2.7286724099999997,
+        "formula": "clip(median_signed_lat_by_slot - pooled_median, -1, +1)",
+        "limit_m": 1.0,
+        "offsets_m": {
+          "0": -0.54909681,
+          "1": -1.0,
+          "2": -0.8130250800000001,
+          "3": 1.0,
+          "4": 1.0,
+          "5": -1.0,
+          "6": 0.5518257299999996,
+          "7": -1.0,
+          "8": 0.54909681,
+          "9": 1.0
+        }
+      },
+      "pair_episodes": [
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "PIA",
+          "end_tick": 5730,
+          "rows": 45,
+          "start_tick": 5642
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "RUS",
+          "end_tick": 1160,
+          "rows": 18,
+          "start_tick": 1126
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "RUS",
+          "end_tick": 1202,
+          "rows": 15,
+          "start_tick": 1174
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "RUS",
+          "end_tick": 1614,
+          "rows": 47,
+          "start_tick": 1522
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "PER",
+          "end_tick": 78,
+          "rows": 14,
+          "start_tick": 52
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "PER",
+          "end_tick": 5866,
+          "rows": 11,
+          "start_tick": 5846
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 1130,
+          "rows": 13,
+          "start_tick": 1106
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 2932,
+          "rows": 10,
+          "start_tick": 2914
+        }
+      ],
+      "profile": "composite",
+      "sample_rows": 30000,
+      "slot_lateral_medians": {
+        "0": -3.2777692199999997,
+        "1": -4.4744976,
+        "2": -3.54169749,
+        "3": -0.86493552,
+        "4": -1.1830843500000001,
+        "5": -4.0784508,
+        "6": -2.17684668,
+        "7": -4.4147328,
+        "8": -2.1795755999999997,
+        "9": -0.6862288799999999
+      },
+      "slots": {
+        "ALO": 0,
+        "GAS": 1,
+        "HAM": 2,
+        "LEC": 3,
+        "NOR": 4,
+        "PER": 5,
+        "PIA": 6,
+        "RUS": 7,
+        "SAI": 8,
+        "VER": 9
+      },
+      "source": "experiments/composite-1/promocao-1/1_R1_INTERLAGOS_RACE.csv",
+      "source_sha256": "bc87d61509290e852393534b5f343e18a2158cbf85b0d62ce4d91c8031ce4c76",
+      "track": "interlagos"
+    },
+    {
+      "N": 1,
+      "drivers": 10,
+      "metrics": {
+        "deadlocks": 1,
+        "glued_rows": 206,
+        "glued_s": 41.2,
+        "laps_total": 45,
+        "train_lap_crossings": 0,
+        "train_lap_fraction": 0.0,
+        "train_row_fraction": 0.0144,
+        "train_time_s": 86.4
+      },
+      "offset_derivation": {
+        "center_m": -3.962814,
+        "formula": "clip(median_signed_lat_by_slot - pooled_median, -1, +1)",
+        "limit_m": 1.0,
+        "offsets_m": {
+          "0": -0.18691499999999994,
+          "1": -1.0,
+          "2": -0.09494100000000039,
+          "3": 1.0,
+          "4": 1.0,
+          "5": -1.0,
+          "6": 0.7810085999999998,
+          "7": -0.8416903800000002,
+          "8": 0.09494099999999994,
+          "9": 1.0
+        }
+      },
+      "pair_episodes": [
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 50,
+          "rows": 11,
+          "start_tick": 30
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "PER",
+          "end_tick": 76,
+          "rows": 11,
+          "start_tick": 56
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "PER",
+          "end_tick": 118,
+          "rows": 18,
+          "start_tick": 84
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "PIA",
+          "end_tick": 2994,
+          "rows": 29,
+          "start_tick": 2938
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "PIA",
+          "end_tick": 4388,
+          "rows": 14,
+          "start_tick": 4362
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 136,
+          "rows": 10,
+          "start_tick": 118
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "SAI",
+          "end_tick": 1272,
+          "rows": 15,
+          "start_tick": 1244
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "SAI",
+          "end_tick": 1318,
+          "rows": 15,
+          "start_tick": 1290
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "SAI",
+          "end_tick": 1396,
+          "rows": 30,
+          "start_tick": 1338
+        },
+        {
+          "deadlock": true,
+          "drv_a": "PIA",
+          "drv_b": "SAI",
+          "end_tick": 1686,
+          "rows": 63,
+          "start_tick": 1562
+        }
+      ],
+      "profile": "composite",
+      "sample_rows": 30000,
+      "slot_lateral_medians": {
+        "0": -4.149729,
+        "1": -5.181489,
+        "2": -4.057755,
+        "3": -1.6187268300000002,
+        "4": -1.36649562,
+        "5": -5.0148318,
+        "6": -3.1818054,
+        "7": -4.80450438,
+        "8": -3.867873,
+        "9": -0.6477314700000001
+      },
+      "slots": {
+        "ALO": 0,
+        "GAS": 1,
+        "HAM": 2,
+        "LEC": 3,
+        "NOR": 4,
+        "PER": 5,
+        "PIA": 6,
+        "RUS": 7,
+        "SAI": 8,
+        "VER": 9
+      },
+      "source": "experiments/realismo-1/c0/1_OFF_INTERLAGOS_N1.csv",
+      "source_sha256": "de22c061ea42fe8317600d8e78a9067275efa8e563dbace6e8869995cb64d131",
+      "track": "interlagos"
+    },
+    {
+      "N": 2,
+      "drivers": 10,
+      "metrics": {
+        "deadlocks": 3,
+        "glued_rows": 440,
+        "glued_s": 88.0,
+        "laps_total": 44,
+        "train_lap_crossings": 0,
+        "train_lap_fraction": 0.0,
+        "train_row_fraction": 0.028766666666666666,
+        "train_time_s": 172.6
+      },
+      "offset_derivation": {
+        "center_m": -4.34687865,
+        "formula": "clip(median_signed_lat_by_slot - pooled_median, -1, +1)",
+        "limit_m": 1.0,
+        "offsets_m": {
+          "0": -1.0,
+          "1": 0.11284485000000011,
+          "2": -0.54593925,
+          "3": 1.0,
+          "4": 1.0,
+          "5": 0.56562987,
+          "6": -1.0,
+          "7": -0.11284485000000011,
+          "8": -1.0,
+          "9": 1.0
+        }
+      },
+      "pair_episodes": [
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 126,
+          "rows": 41,
+          "start_tick": 46
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "PER",
+          "end_tick": 3060,
+          "rows": 15,
+          "start_tick": 3032
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "PER",
+          "end_tick": 3142,
+          "rows": 37,
+          "start_tick": 3070
+        },
+        {
+          "deadlock": true,
+          "drv_a": "GAS",
+          "drv_b": "PER",
+          "end_tick": 4536,
+          "rows": 66,
+          "start_tick": 4406
+        },
+        {
+          "deadlock": true,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 136,
+          "rows": 54,
+          "start_tick": 30
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "SAI",
+          "end_tick": 270,
+          "rows": 23,
+          "start_tick": 226
+        },
+        {
+          "deadlock": false,
+          "drv_a": "LEC",
+          "drv_b": "SAI",
+          "end_tick": 3428,
+          "rows": 13,
+          "start_tick": 3404
+        },
+        {
+          "deadlock": true,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 212,
+          "rows": 91,
+          "start_tick": 32
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 1434,
+          "rows": 28,
+          "start_tick": 1380
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 1482,
+          "rows": 12,
+          "start_tick": 1460
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 114,
+          "rows": 43,
+          "start_tick": 30
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "VER",
+          "end_tick": 80,
+          "rows": 17,
+          "start_tick": 48
+        }
+      ],
+      "profile": "composite",
+      "sample_rows": 30000,
+      "slot_lateral_medians": {
+        "0": -5.669619,
+        "1": -4.2340338,
+        "2": -4.8928179,
+        "3": -0.75660156,
+        "4": -0.82474146,
+        "5": -3.78124878,
+        "6": -5.7094856400000005,
+        "7": -4.4597235,
+        "8": -5.88899052,
+        "9": -0.8940693
+      },
+      "slots": {
+        "ALO": 0,
+        "GAS": 1,
+        "HAM": 2,
+        "LEC": 3,
+        "NOR": 4,
+        "PER": 5,
+        "PIA": 6,
+        "RUS": 7,
+        "SAI": 8,
+        "VER": 9
+      },
+      "source": "experiments/realismo-1/c0/3_OFF_INTERLAGOS_N2.csv",
+      "source_sha256": "bfcacae20db8c7d762362b2015d685ca7d263046ee3af5ef9d820d8c9b01e7bf",
+      "track": "interlagos"
+    },
+    {
+      "N": 3,
+      "drivers": 10,
+      "metrics": {
+        "deadlocks": 1,
+        "glued_rows": 227,
+        "glued_s": 45.4,
+        "laps_total": 44,
+        "train_lap_crossings": 0,
+        "train_lap_fraction": 0.0,
+        "train_row_fraction": 0.0155,
+        "train_time_s": 93.0
+      },
+      "offset_derivation": {
+        "center_m": -3.5552081700000002,
+        "formula": "clip(median_signed_lat_by_slot - pooled_median, -1, +1)",
+        "limit_m": 1.0,
+        "offsets_m": {
+          "0": 0.8105822100000002,
+          "1": -0.98015016,
+          "2": 1.0,
+          "3": 0.08985921000000019,
+          "4": 1.0,
+          "5": -0.08985921000000019,
+          "6": -1.0,
+          "7": -1.0,
+          "8": -0.9422625299999998,
+          "9": 1.0
+        }
+      },
+      "pair_episodes": [
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 58,
+          "rows": 12,
+          "start_tick": 36
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "HAM",
+          "end_tick": 2868,
+          "rows": 29,
+          "start_tick": 2812
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "SAI",
+          "end_tick": 228,
+          "rows": 37,
+          "start_tick": 156
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "PIA",
+          "end_tick": 1278,
+          "rows": 20,
+          "start_tick": 1240
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 68,
+          "rows": 20,
+          "start_tick": 30
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 150,
+          "rows": 16,
+          "start_tick": 120
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 172,
+          "rows": 10,
+          "start_tick": 154
+        },
+        {
+          "deadlock": true,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 130,
+          "rows": 52,
+          "start_tick": 28
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "SAI",
+          "end_tick": 3056,
+          "rows": 19,
+          "start_tick": 3020
+        },
+        {
+          "deadlock": false,
+          "drv_a": "RUS",
+          "drv_b": "VER",
+          "end_tick": 4086,
+          "rows": 22,
+          "start_tick": 4044
+        }
+      ],
+      "profile": "composite",
+      "sample_rows": 30000,
+      "slot_lateral_medians": {
+        "0": -2.74462596,
+        "1": -4.53535833,
+        "2": -1.35107337,
+        "3": -3.46534896,
+        "4": -0.76829481,
+        "5": -3.6450673800000004,
+        "6": -5.551209,
+        "7": -5.52390855,
+        "8": -4.4974707,
+        "9": -1.2492096
+      },
+      "slots": {
+        "ALO": 0,
+        "GAS": 1,
+        "HAM": 2,
+        "LEC": 3,
+        "NOR": 4,
+        "PER": 5,
+        "PIA": 6,
+        "RUS": 7,
+        "SAI": 8,
+        "VER": 9
+      },
+      "source": "experiments/realismo-1/c0/5_OFF_INTERLAGOS_N3.csv",
+      "source_sha256": "446f5cce5d1213d5b1a46cba16b788a6679b2b49344ed50be245f4880ae47093",
+      "track": "interlagos"
+    },
+    {
+      "N": 4,
+      "drivers": 10,
+      "metrics": {
+        "deadlocks": 1,
+        "glued_rows": 169,
+        "glued_s": 33.8,
+        "laps_total": 43,
+        "train_lap_crossings": 0,
+        "train_lap_fraction": 0.0,
+        "train_row_fraction": 0.011266666666666666,
+        "train_time_s": 67.6
+      },
+      "offset_derivation": {
+        "center_m": -3.919360575,
+        "formula": "clip(median_signed_lat_by_slot - pooled_median, -1, +1)",
+        "limit_m": 1.0,
+        "offsets_m": {
+          "0": 0.35246197499999976,
+          "1": -1.0,
+          "2": -0.37602082500000034,
+          "3": 1.0,
+          "4": 1.0,
+          "5": -0.2794940549999998,
+          "6": 0.14403682500000015,
+          "7": -0.1440368250000006,
+          "8": -0.8161337849999999,
+          "9": 1.0
+        }
+      },
+      "pair_episodes": [
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 78,
+          "rows": 24,
+          "start_tick": 32
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "VER",
+          "end_tick": 2822,
+          "rows": 30,
+          "start_tick": 2764
+        },
+        {
+          "deadlock": true,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 134,
+          "rows": 53,
+          "start_tick": 30
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 124,
+          "rows": 47,
+          "start_tick": 32
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "VER",
+          "end_tick": 2478,
+          "rows": 15,
+          "start_tick": 2450
+        }
+      ],
+      "profile": "composite",
+      "sample_rows": 30000,
+      "slot_lateral_medians": {
+        "0": -3.5668986,
+        "1": -5.4631596,
+        "2": -4.2953814,
+        "3": -1.62547302,
+        "4": -0.80866623,
+        "5": -4.19885463,
+        "6": -3.7753237499999996,
+        "7": -4.0633974,
+        "8": -4.73549436,
+        "9": -0.66031242
+      },
+      "slots": {
+        "ALO": 0,
+        "GAS": 1,
+        "HAM": 2,
+        "LEC": 3,
+        "NOR": 4,
+        "PER": 5,
+        "PIA": 6,
+        "RUS": 7,
+        "SAI": 8,
+        "VER": 9
+      },
+      "source": "experiments/realismo-1/c0/7_OFF_INTERLAGOS_N4.csv",
+      "source_sha256": "643d66d75702681040ad63e62c0e260ef03be61f12a0096c5823b389130b39a1",
+      "track": "interlagos"
+    },
+    {
+      "N": 0,
+      "drivers": 10,
+      "metrics": {
+        "deadlocks": 1,
+        "glued_rows": 377,
+        "glued_s": 75.4,
+        "laps_total": 31,
+        "train_lap_crossings": 0,
+        "train_lap_fraction": 0.0,
+        "train_row_fraction": 0.021,
+        "train_time_s": 126.0
+      },
+      "offset_derivation": {
+        "center_m": -0.81589584,
+        "formula": "clip(median_signed_lat_by_slot - pooled_median, -1, +1)",
+        "limit_m": 1.0,
+        "offsets_m": {
+          "0": 0.19308433800000002,
+          "1": -1.0,
+          "2": -0.572298,
+          "3": 0.17926197,
+          "4": 0.936549015,
+          "5": -1.0,
+          "6": -0.17926196999999988,
+          "7": -1.0,
+          "8": 0.27381306000000005,
+          "9": 0.9771026970000001
+        }
+      },
+      "pair_episodes": [
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 96,
+          "rows": 13,
+          "start_tick": 72
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 1824,
+          "rows": 40,
+          "start_tick": 1746
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 4732,
+          "rows": 14,
+          "start_tick": 4706
+        },
+        {
+          "deadlock": true,
+          "drv_a": "ALO",
+          "drv_b": "PER",
+          "end_tick": 1854,
+          "rows": 60,
+          "start_tick": 1736
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "SAI",
+          "end_tick": 1878,
+          "rows": 17,
+          "start_tick": 1846
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "SAI",
+          "end_tick": 3354,
+          "rows": 16,
+          "start_tick": 3324
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "PER",
+          "end_tick": 1820,
+          "rows": 38,
+          "start_tick": 1746
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "PER",
+          "end_tick": 5968,
+          "rows": 45,
+          "start_tick": 5880
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "SAI",
+          "end_tick": 1784,
+          "rows": 24,
+          "start_tick": 1738
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 420,
+          "rows": 10,
+          "start_tick": 402
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "PER",
+          "end_tick": 5928,
+          "rows": 11,
+          "start_tick": 5908
+        },
+        {
+          "deadlock": false,
+          "drv_a": "LEC",
+          "drv_b": "PIA",
+          "end_tick": 1654,
+          "rows": 25,
+          "start_tick": 1606
+        },
+        {
+          "deadlock": false,
+          "drv_a": "LEC",
+          "drv_b": "PIA",
+          "end_tick": 4412,
+          "rows": 15,
+          "start_tick": 4384
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "PIA",
+          "end_tick": 5686,
+          "rows": 32,
+          "start_tick": 5624
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 1784,
+          "rows": 20,
+          "start_tick": 1746
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 4598,
+          "rows": 31,
+          "start_tick": 4538
+        }
+      ],
+      "profile": "composite",
+      "sample_rows": 30000,
+      "slot_lateral_medians": {
+        "0": -0.622811502,
+        "1": -2.27755023,
+        "2": -1.38819384,
+        "3": -0.63663387,
+        "4": 0.120653175,
+        "5": -2.51008632,
+        "6": -0.9951578099999999,
+        "7": -2.23456908,
+        "8": -0.54208278,
+        "9": 0.16120685699999998
+      },
+      "slots": {
+        "ALO": 0,
+        "GAS": 1,
+        "HAM": 2,
+        "LEC": 3,
+        "NOR": 4,
+        "PER": 5,
+        "PIA": 6,
+        "RUS": 7,
+        "SAI": 8,
+        "VER": 9
+      },
+      "source": "experiments/composite-1/promocao-1/3_R3_MONACO_RACE.csv",
+      "source_sha256": "dfe7b2dc05e5d8c0db95e351e0c8af6bad9af9fadf2c9c9ba2c3b2ccc74669b5",
+      "track": "monaco"
+    },
+    {
+      "N": 1,
+      "drivers": 10,
+      "metrics": {
+        "deadlocks": 1,
+        "glued_rows": 547,
+        "glued_s": 109.4,
+        "laps_total": 31,
+        "train_lap_crossings": 4,
+        "train_lap_fraction": 0.12903225806451613,
+        "train_row_fraction": 0.032733333333333337,
+        "train_time_s": 196.4
+      },
+      "offset_derivation": {
+        "center_m": -1.43741373,
+        "formula": "clip(median_signed_lat_by_slot - pooled_median, -1, +1)",
+        "limit_m": 1.0,
+        "offsets_m": {
+          "0": 1.0,
+          "1": -1.0,
+          "2": -1.0,
+          "3": -1.0,
+          "4": 1.0,
+          "5": -0.5689733699999999,
+          "6": 1.0,
+          "7": -0.9616793699999999,
+          "8": 0.56897337,
+          "9": 1.0
+        }
+      },
+      "pair_episodes": [
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 68,
+          "rows": 15,
+          "start_tick": 40
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "PIA",
+          "end_tick": 696,
+          "rows": 12,
+          "start_tick": 674
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "PIA",
+          "end_tick": 728,
+          "rows": 13,
+          "start_tick": 704
+        },
+        {
+          "deadlock": true,
+          "drv_a": "ALO",
+          "drv_b": "SAI",
+          "end_tick": 848,
+          "rows": 93,
+          "start_tick": 664
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "SAI",
+          "end_tick": 928,
+          "rows": 15,
+          "start_tick": 900
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "PER",
+          "end_tick": 3734,
+          "rows": 20,
+          "start_tick": 3696
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "PIA",
+          "end_tick": 2954,
+          "rows": 28,
+          "start_tick": 2900
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "RUS",
+          "end_tick": 836,
+          "rows": 12,
+          "start_tick": 814
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "PER",
+          "end_tick": 632,
+          "rows": 31,
+          "start_tick": 572
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "PIA",
+          "end_tick": 688,
+          "rows": 39,
+          "start_tick": 612
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "PIA",
+          "end_tick": 1710,
+          "rows": 40,
+          "start_tick": 1632
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "PIA",
+          "end_tick": 1758,
+          "rows": 19,
+          "start_tick": 1722
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "PIA",
+          "end_tick": 4572,
+          "rows": 25,
+          "start_tick": 4524
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "RUS",
+          "end_tick": 128,
+          "rows": 13,
+          "start_tick": 104
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "SAI",
+          "end_tick": 350,
+          "rows": 14,
+          "start_tick": 324
+        },
+        {
+          "deadlock": false,
+          "drv_a": "LEC",
+          "drv_b": "VER",
+          "end_tick": 232,
+          "rows": 28,
+          "start_tick": 178
+        },
+        {
+          "deadlock": false,
+          "drv_a": "LEC",
+          "drv_b": "VER",
+          "end_tick": 428,
+          "rows": 14,
+          "start_tick": 402
+        },
+        {
+          "deadlock": false,
+          "drv_a": "LEC",
+          "drv_b": "VER",
+          "end_tick": 864,
+          "rows": 21,
+          "start_tick": 824
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "RUS",
+          "end_tick": 3006,
+          "rows": 12,
+          "start_tick": 2984
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 48,
+          "rows": 10,
+          "start_tick": 30
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 2946,
+          "rows": 35,
+          "start_tick": 2878
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 3034,
+          "rows": 14,
+          "start_tick": 3008
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "SAI",
+          "end_tick": 728,
+          "rows": 34,
+          "start_tick": 662
+        }
+      ],
+      "profile": "composite",
+      "sample_rows": 30000,
+      "slot_lateral_medians": {
+        "0": -0.21751704299999997,
+        "1": -3.0763656,
+        "2": -2.9659688400000004,
+        "3": -2.78257944,
+        "4": 0.16695366,
+        "5": -2.0063871,
+        "6": -0.13971126,
+        "7": -2.3990931,
+        "8": -0.86844036,
+        "9": 0.316527372
+      },
+      "slots": {
+        "ALO": 0,
+        "GAS": 1,
+        "HAM": 2,
+        "LEC": 3,
+        "NOR": 4,
+        "PER": 5,
+        "PIA": 6,
+        "RUS": 7,
+        "SAI": 8,
+        "VER": 9
+      },
+      "source": "experiments/realismo-1/c0/2_OFF_MONACO_N1.csv",
+      "source_sha256": "c5b63d62ee0751ccd555f3ffb45ac75687ee1bfe8f0b099f38afd7abe7e536d1",
+      "track": "monaco"
+    },
+    {
+      "N": 2,
+      "drivers": 10,
+      "metrics": {
+        "deadlocks": 2,
+        "glued_rows": 487,
+        "glued_s": 97.4,
+        "laps_total": 32,
+        "train_lap_crossings": 2,
+        "train_lap_fraction": 0.0625,
+        "train_row_fraction": 0.032466666666666665,
+        "train_time_s": 194.8
+      },
+      "offset_derivation": {
+        "center_m": -0.719594778,
+        "formula": "clip(median_signed_lat_by_slot - pooled_median, -1, +1)",
+        "limit_m": 1.0,
+        "offsets_m": {
+          "0": -1.0,
+          "1": -0.03326152199999999,
+          "2": -1.0,
+          "3": -0.754884882,
+          "4": 0.38606664600000007,
+          "5": -1.0,
+          "6": 0.7423761618,
+          "7": 0.5021687880000001,
+          "8": 0.0332615220000001,
+          "9": 1.0
+        }
+      },
+      "pair_episodes": [
+        {
+          "deadlock": true,
+          "drv_a": "ALO",
+          "drv_b": "SAI",
+          "end_tick": 2142,
+          "rows": 120,
+          "start_tick": 1904
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "PIA",
+          "end_tick": 756,
+          "rows": 49,
+          "start_tick": 660
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "RUS",
+          "end_tick": 2832,
+          "rows": 23,
+          "start_tick": 2788
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 498,
+          "rows": 14,
+          "start_tick": 472
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 1540,
+          "rows": 29,
+          "start_tick": 1484
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "NOR",
+          "end_tick": 124,
+          "rows": 18,
+          "start_tick": 90
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "NOR",
+          "end_tick": 2814,
+          "rows": 22,
+          "start_tick": 2772
+        },
+        {
+          "deadlock": false,
+          "drv_a": "LEC",
+          "drv_b": "RUS",
+          "end_tick": 5324,
+          "rows": 13,
+          "start_tick": 5300
+        },
+        {
+          "deadlock": false,
+          "drv_a": "LEC",
+          "drv_b": "RUS",
+          "end_tick": 5366,
+          "rows": 19,
+          "start_tick": 5330
+        },
+        {
+          "deadlock": true,
+          "drv_a": "NOR",
+          "drv_b": "PIA",
+          "end_tick": 1482,
+          "rows": 54,
+          "start_tick": 1376
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "PIA",
+          "end_tick": 1854,
+          "rows": 21,
+          "start_tick": 1814
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "PIA",
+          "end_tick": 3122,
+          "rows": 50,
+          "start_tick": 3024
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "PIA",
+          "end_tick": 3210,
+          "rows": 18,
+          "start_tick": 3176
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "VER",
+          "end_tick": 1834,
+          "rows": 14,
+          "start_tick": 1808
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 74,
+          "rows": 23,
+          "start_tick": 30
+        }
+      ],
+      "profile": "composite",
+      "sample_rows": 30000,
+      "slot_lateral_medians": {
+        "0": -2.8997786999999997,
+        "1": -0.7528563,
+        "2": -2.5704960000000003,
+        "3": -1.47447966,
+        "4": -0.333528132,
+        "5": -2.68530312,
+        "6": 0.0227813838,
+        "7": -0.21742599,
+        "8": -0.686333256,
+        "9": 0.88410828
+      },
+      "slots": {
+        "ALO": 0,
+        "GAS": 1,
+        "HAM": 2,
+        "LEC": 3,
+        "NOR": 4,
+        "PER": 5,
+        "PIA": 6,
+        "RUS": 7,
+        "SAI": 8,
+        "VER": 9
+      },
+      "source": "experiments/realismo-1/c0/4_OFF_MONACO_N2.csv",
+      "source_sha256": "664ccccc65fdfc751c2f901e58f9bca8234825eb93a29dbf5d0a7541ccf681c7",
+      "track": "monaco"
+    },
+    {
+      "N": 3,
+      "drivers": 10,
+      "metrics": {
+        "deadlocks": 1,
+        "glued_rows": 457,
+        "glued_s": 91.4,
+        "laps_total": 29,
+        "train_lap_crossings": 4,
+        "train_lap_fraction": 0.13793103448275862,
+        "train_row_fraction": 0.0246,
+        "train_time_s": 147.6
+      },
+      "offset_derivation": {
+        "center_m": -0.51087468,
+        "formula": "clip(median_signed_lat_by_slot - pooled_median, -1, +1)",
+        "limit_m": 1.0,
+        "offsets_m": {
+          "0": 0.441375756,
+          "1": -1.0,
+          "2": -1.0,
+          "3": 0.10718379,
+          "4": -1.0,
+          "5": 1.0,
+          "6": -0.10718379,
+          "7": 0.137331639,
+          "8": -1.0,
+          "9": 1.0
+        }
+      },
+      "pair_episodes": [
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 72,
+          "rows": 15,
+          "start_tick": 44
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "PER",
+          "end_tick": 744,
+          "rows": 38,
+          "start_tick": 670
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "PER",
+          "end_tick": 850,
+          "rows": 28,
+          "start_tick": 796
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "PER",
+          "end_tick": 1264,
+          "rows": 14,
+          "start_tick": 1238
+        },
+        {
+          "deadlock": true,
+          "drv_a": "ALO",
+          "drv_b": "PIA",
+          "end_tick": 844,
+          "rows": 108,
+          "start_tick": 630
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "PIA",
+          "end_tick": 946,
+          "rows": 29,
+          "start_tick": 890
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "RUS",
+          "end_tick": 2940,
+          "rows": 10,
+          "start_tick": 2922
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "RUS",
+          "end_tick": 4310,
+          "rows": 41,
+          "start_tick": 4230
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "RUS",
+          "end_tick": 5420,
+          "rows": 12,
+          "start_tick": 5398
+        },
+        {
+          "deadlock": false,
+          "drv_a": "LEC",
+          "drv_b": "NOR",
+          "end_tick": 242,
+          "rows": 15,
+          "start_tick": 214
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "RUS",
+          "end_tick": 608,
+          "rows": 16,
+          "start_tick": 578
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "PIA",
+          "end_tick": 746,
+          "rows": 39,
+          "start_tick": 670
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "PIA",
+          "end_tick": 844,
+          "rows": 31,
+          "start_tick": 784
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 50,
+          "rows": 11,
+          "start_tick": 30
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "SAI",
+          "end_tick": 5794,
+          "rows": 15,
+          "start_tick": 5766
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "SAI",
+          "end_tick": 5840,
+          "rows": 19,
+          "start_tick": 5804
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "SAI",
+          "end_tick": 5964,
+          "rows": 26,
+          "start_tick": 5914
+        }
+      ],
+      "profile": "composite",
+      "sample_rows": 30000,
+      "slot_lateral_medians": {
+        "0": -0.069498924,
+        "1": -1.8036455999999998,
+        "2": -3.4020079799999996,
+        "3": -0.40369089,
+        "4": -1.6608095999999999,
+        "5": 0.94973658,
+        "6": -0.61805847,
+        "7": -0.373543041,
+        "8": -2.03969067,
+        "9": 1.00295655
+      },
+      "slots": {
+        "ALO": 0,
+        "GAS": 1,
+        "HAM": 2,
+        "LEC": 3,
+        "NOR": 4,
+        "PER": 5,
+        "PIA": 6,
+        "RUS": 7,
+        "SAI": 8,
+        "VER": 9
+      },
+      "source": "experiments/realismo-1/c0/6_OFF_MONACO_N3.csv",
+      "source_sha256": "fae698d0eb15bfc4257509478c0d9801dd3986d1d35f03d72c71df86e4658a5a",
+      "track": "monaco"
+    },
+    {
+      "N": 4,
+      "drivers": 10,
+      "metrics": {
+        "deadlocks": 2,
+        "glued_rows": 486,
+        "glued_s": 97.2,
+        "laps_total": 29,
+        "train_lap_crossings": 2,
+        "train_lap_fraction": 0.06896551724137931,
+        "train_row_fraction": 0.0334,
+        "train_time_s": 200.4
+      },
+      "offset_derivation": {
+        "center_m": -1.03648269,
+        "formula": "clip(median_signed_lat_by_slot - pooled_median, -1, +1)",
+        "limit_m": 1.0,
+        "offsets_m": {
+          "0": 1.0,
+          "1": -1.0,
+          "2": -1.0,
+          "3": 1.0,
+          "4": 1.0,
+          "5": -1.0,
+          "6": -0.32921102999999996,
+          "7": -1.0,
+          "8": 0.32921102999999996,
+          "9": 1.0
+        }
+      },
+      "pair_episodes": [
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 74,
+          "rows": 17,
+          "start_tick": 42
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 1026,
+          "rows": 12,
+          "start_tick": 1004
+        },
+        {
+          "deadlock": true,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 3300,
+          "rows": 56,
+          "start_tick": 3190
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 4790,
+          "rows": 27,
+          "start_tick": 4738
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "NOR",
+          "end_tick": 1726,
+          "rows": 14,
+          "start_tick": 1700
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "PIA",
+          "end_tick": 3322,
+          "rows": 15,
+          "start_tick": 3294
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "PER",
+          "end_tick": 706,
+          "rows": 14,
+          "start_tick": 680
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "PIA",
+          "end_tick": 772,
+          "rows": 39,
+          "start_tick": 696
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 140,
+          "rows": 39,
+          "start_tick": 64
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "PER",
+          "end_tick": 4770,
+          "rows": 10,
+          "start_tick": 4752
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "VER",
+          "end_tick": 1392,
+          "rows": 13,
+          "start_tick": 1368
+        },
+        {
+          "deadlock": false,
+          "drv_a": "LEC",
+          "drv_b": "RUS",
+          "end_tick": 514,
+          "rows": 13,
+          "start_tick": 490
+        },
+        {
+          "deadlock": false,
+          "drv_a": "LEC",
+          "drv_b": "RUS",
+          "end_tick": 1060,
+          "rows": 27,
+          "start_tick": 1008
+        },
+        {
+          "deadlock": true,
+          "drv_a": "LEC",
+          "drv_b": "VER",
+          "end_tick": 1662,
+          "rows": 64,
+          "start_tick": 1536
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "PER",
+          "end_tick": 5816,
+          "rows": 22,
+          "start_tick": 5774
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "PER",
+          "end_tick": 5918,
+          "rows": 27,
+          "start_tick": 5866
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "SAI",
+          "end_tick": 716,
+          "rows": 31,
+          "start_tick": 656
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "VER",
+          "end_tick": 2836,
+          "rows": 10,
+          "start_tick": 2818
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "VER",
+          "end_tick": 3160,
+          "rows": 11,
+          "start_tick": 3140
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 148,
+          "rows": 29,
+          "start_tick": 92
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "VER",
+          "end_tick": 3124,
+          "rows": 16,
+          "start_tick": 3094
+        }
+      ],
+      "profile": "composite",
+      "sample_rows": 30000,
+      "slot_lateral_medians": {
+        "0": 1.7432284500000002,
+        "1": -2.45905677,
+        "2": -2.30912838,
+        "3": 0.03802602299999999,
+        "4": 0.42951726,
+        "5": -3.2154572999999997,
+        "6": -1.3656937199999999,
+        "7": -2.37016044,
+        "8": -0.70727166,
+        "9": 0.355942416
+      },
+      "slots": {
+        "ALO": 0,
+        "GAS": 1,
+        "HAM": 2,
+        "LEC": 3,
+        "NOR": 4,
+        "PER": 5,
+        "PIA": 6,
+        "RUS": 7,
+        "SAI": 8,
+        "VER": 9
+      },
+      "source": "experiments/realismo-1/c0/8_OFF_MONACO_N4.csv",
+      "source_sha256": "5886b5efa0038eaa7236b4aa885ecd7044b586778b5c6d7e2f0d7aa74f71e842",
+      "track": "monaco"
+    },
+    {
+      "N": 0,
+      "drivers": 10,
+      "metrics": {
+        "deadlocks": 6,
+        "glued_rows": 891,
+        "glued_s": 178.2,
+        "laps_total": 49,
+        "train_lap_crossings": 0,
+        "train_lap_fraction": 0.0,
+        "train_row_fraction": 0.050366666666666664,
+        "train_time_s": 302.2
+      },
+      "offset_derivation": {
+        "center_m": -0.469936554,
+        "formula": "clip(median_signed_lat_by_slot - pooled_median, -1, +1)",
+        "limit_m": 1.0,
+        "offsets_m": {
+          "0": 0.23399931000000002,
+          "1": 0.117816486,
+          "2": -0.7831879259999999,
+          "3": -0.11781648599999994,
+          "4": -0.7572470759999999,
+          "5": -0.8029525559999999,
+          "6": 0.792268605,
+          "7": 0.317960691,
+          "8": 0.998736654,
+          "9": -0.12691532400000005
+        }
+      },
+      "pair_episodes": [
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 52,
+          "rows": 19,
+          "start_tick": 16
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 90,
+          "rows": 13,
+          "start_tick": 66
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 5266,
+          "rows": 11,
+          "start_tick": 5246
+        },
+        {
+          "deadlock": true,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 5420,
+          "rows": 52,
+          "start_tick": 5318
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "LEC",
+          "end_tick": 2544,
+          "rows": 43,
+          "start_tick": 2460
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "PER",
+          "end_tick": 3898,
+          "rows": 17,
+          "start_tick": 3866
+        },
+        {
+          "deadlock": true,
+          "drv_a": "ALO",
+          "drv_b": "PER",
+          "end_tick": 4098,
+          "rows": 78,
+          "start_tick": 3944
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "RUS",
+          "end_tick": 5488,
+          "rows": 18,
+          "start_tick": 5454
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "VER",
+          "end_tick": 1260,
+          "rows": 10,
+          "start_tick": 1242
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "VER",
+          "end_tick": 3602,
+          "rows": 38,
+          "start_tick": 3528
+        },
+        {
+          "deadlock": true,
+          "drv_a": "ALO",
+          "drv_b": "VER",
+          "end_tick": 3760,
+          "rows": 56,
+          "start_tick": 3650
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "PER",
+          "end_tick": 1208,
+          "rows": 21,
+          "start_tick": 1168
+        },
+        {
+          "deadlock": true,
+          "drv_a": "GAS",
+          "drv_b": "PER",
+          "end_tick": 1358,
+          "rows": 53,
+          "start_tick": 1254
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "RUS",
+          "end_tick": 5420,
+          "rows": 11,
+          "start_tick": 5400
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "SAI",
+          "end_tick": 84,
+          "rows": 13,
+          "start_tick": 60
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 64,
+          "rows": 25,
+          "start_tick": 16
+        },
+        {
+          "deadlock": true,
+          "drv_a": "HAM",
+          "drv_b": "NOR",
+          "end_tick": 216,
+          "rows": 55,
+          "start_tick": 108
+        },
+        {
+          "deadlock": true,
+          "drv_a": "HAM",
+          "drv_b": "NOR",
+          "end_tick": 328,
+          "rows": 54,
+          "start_tick": 222
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "NOR",
+          "end_tick": 4230,
+          "rows": 14,
+          "start_tick": 4204
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "PIA",
+          "end_tick": 192,
+          "rows": 31,
+          "start_tick": 132
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "RUS",
+          "end_tick": 202,
+          "rows": 43,
+          "start_tick": 118
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "RUS",
+          "end_tick": 2810,
+          "rows": 41,
+          "start_tick": 2730
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "RUS",
+          "end_tick": 202,
+          "rows": 30,
+          "start_tick": 144
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "VER",
+          "end_tick": 68,
+          "rows": 27,
+          "start_tick": 16
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "PIA",
+          "end_tick": 84,
+          "rows": 19,
+          "start_tick": 48
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 100,
+          "rows": 43,
+          "start_tick": 16
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 192,
+          "rows": 31,
+          "start_tick": 132
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 246,
+          "rows": 14,
+          "start_tick": 220
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "SAI",
+          "end_tick": 78,
+          "rows": 11,
+          "start_tick": 58
+        }
+      ],
+      "profile": "blind",
+      "sample_rows": 30000,
+      "slot_lateral_medians": {
+        "0": -0.235937244,
+        "1": -0.352120068,
+        "2": -1.2531244799999999,
+        "3": -0.58775304,
+        "4": -1.2271836299999999,
+        "5": -1.27288911,
+        "6": 0.32233205099999995,
+        "7": -0.15197586300000002,
+        "8": 0.5288001,
+        "9": -0.5968518780000001
+      },
+      "slots": {
+        "ALO": 0,
+        "GAS": 1,
+        "HAM": 2,
+        "LEC": 3,
+        "NOR": 4,
+        "PER": 5,
+        "PIA": 6,
+        "RUS": 7,
+        "SAI": 8,
+        "VER": 9
+      },
+      "source": "experiments/composite-1/base-2/2_R2_INTERLAGOS_RACE_BLIND.csv",
+      "source_sha256": "9d2a08427d4c5bdad0d6611df2caa7b4d7f02c5a5584c71a49d412c763c67e12",
+      "track": "interlagos"
+    },
+    {
+      "N": 0,
+      "drivers": 10,
+      "metrics": {
+        "deadlocks": 3,
+        "glued_rows": 543,
+        "glued_s": 108.6,
+        "laps_total": 32,
+        "train_lap_crossings": 6,
+        "train_lap_fraction": 0.1875,
+        "train_row_fraction": 0.03453333333333333,
+        "train_time_s": 207.2
+      },
+      "offset_derivation": {
+        "center_m": 0.253235379,
+        "formula": "clip(median_signed_lat_by_slot - pooled_median, -1, +1)",
+        "limit_m": 1.0,
+        "offsets_m": {
+          "0": 0.26719336499999996,
+          "1": -0.12353715899999998,
+          "2": -0.314201685,
+          "3": 0.033046940999999996,
+          "4": -1.0,
+          "5": -0.23366414759999998,
+          "6": 1.0,
+          "7": -0.033046940999999996,
+          "8": 0.38844608100000005,
+          "9": 0.486164181
+        }
+      },
+      "pair_episodes": [
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "GAS",
+          "end_tick": 74,
+          "rows": 30,
+          "start_tick": 16
+        },
+        {
+          "deadlock": true,
+          "drv_a": "ALO",
+          "drv_b": "NOR",
+          "end_tick": 5664,
+          "rows": 62,
+          "start_tick": 5542
+        },
+        {
+          "deadlock": false,
+          "drv_a": "ALO",
+          "drv_b": "PER",
+          "end_tick": 80,
+          "rows": 23,
+          "start_tick": 36
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "NOR",
+          "end_tick": 2792,
+          "rows": 19,
+          "start_tick": 2756
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "NOR",
+          "end_tick": 4202,
+          "rows": 10,
+          "start_tick": 4184
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "NOR",
+          "end_tick": 4742,
+          "rows": 12,
+          "start_tick": 4720
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "NOR",
+          "end_tick": 4802,
+          "rows": 16,
+          "start_tick": 4772
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "NOR",
+          "end_tick": 5168,
+          "rows": 25,
+          "start_tick": 5120
+        },
+        {
+          "deadlock": false,
+          "drv_a": "GAS",
+          "drv_b": "PER",
+          "end_tick": 96,
+          "rows": 14,
+          "start_tick": 70
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 56,
+          "rows": 10,
+          "start_tick": 38
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 94,
+          "rows": 11,
+          "start_tick": 74
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 596,
+          "rows": 12,
+          "start_tick": 574
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 690,
+          "rows": 10,
+          "start_tick": 672
+        },
+        {
+          "deadlock": false,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 1296,
+          "rows": 12,
+          "start_tick": 1274
+        },
+        {
+          "deadlock": true,
+          "drv_a": "HAM",
+          "drv_b": "LEC",
+          "end_tick": 1454,
+          "rows": 63,
+          "start_tick": 1330
+        },
+        {
+          "deadlock": false,
+          "drv_a": "LEC",
+          "drv_b": "NOR",
+          "end_tick": 122,
+          "rows": 21,
+          "start_tick": 82
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "SAI",
+          "end_tick": 2822,
+          "rows": 13,
+          "start_tick": 2798
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "VER",
+          "end_tick": 56,
+          "rows": 12,
+          "start_tick": 34
+        },
+        {
+          "deadlock": false,
+          "drv_a": "NOR",
+          "drv_b": "VER",
+          "end_tick": 88,
+          "rows": 13,
+          "start_tick": 64
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PER",
+          "drv_b": "SAI",
+          "end_tick": 54,
+          "rows": 20,
+          "start_tick": 16
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 82,
+          "rows": 35,
+          "start_tick": 14
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 134,
+          "rows": 25,
+          "start_tick": 86
+        },
+        {
+          "deadlock": true,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 356,
+          "rows": 63,
+          "start_tick": 232
+        },
+        {
+          "deadlock": false,
+          "drv_a": "PIA",
+          "drv_b": "RUS",
+          "end_tick": 2170,
+          "rows": 12,
+          "start_tick": 2148
+        }
+      ],
+      "profile": "blind",
+      "sample_rows": 30000,
+      "slot_lateral_medians": {
+        "0": 0.5204287439999999,
+        "1": 0.12969822,
+        "2": -0.060966306000000005,
+        "3": 0.28628232,
+        "4": -0.8173044300000001,
+        "5": 0.0195712314,
+        "6": 1.8003564600000002,
+        "7": 0.220188438,
+        "8": 0.64168146,
+        "9": 0.73939956
+      },
+      "slots": {
+        "ALO": 0,
+        "GAS": 1,
+        "HAM": 2,
+        "LEC": 3,
+        "NOR": 4,
+        "PER": 5,
+        "PIA": 6,
+        "RUS": 7,
+        "SAI": 8,
+        "VER": 9
+      },
+      "source": "experiments/composite-1/base-2/4_R4_MONACO_RACE_BLIND.csv",
+      "source_sha256": "15fb3da069adb7369741e90fdffca00f12cbe2abd75481b217c9c962bfacdd11",
+      "track": "monaco"
+    }
+  ],
+  "schema": "c6a-train-analysis-v1",
+  "scope_note": "composite N=0..4 + blind N=0 dispon\u00edveis; blind N=1..4 reservados ao C6-B",
+  "status": "REPORT_ONLY"
+}

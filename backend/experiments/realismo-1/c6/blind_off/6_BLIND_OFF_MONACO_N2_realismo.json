@@ -1,0 +1,380 @@
+{
+  "arm": "blind",
+  "canonical": {
+    "contacts_5hz_t_le_60s": 290,
+    "contacts_5hz_total": 854,
+    "driver_count": 10,
+    "hesitations": 14,
+    "laps_by_driver": {
+      "ALO": 3,
+      "GAS": 2,
+      "HAM": 3,
+      "LEC": 2,
+      "NOR": 3,
+      "PER": 3,
+      "PIA": 3,
+      "RUS": 3,
+      "SAI": 3,
+      "VER": 3
+    },
+    "laps_total": 28,
+    "metrics_sha256": "161e5b702612ab6bb3bb4ca97f167ee336f524ce5e836f64d93aaea86752be39",
+    "offtrack_pct": 48.5,
+    "run_id": "6_BLIND_OFF_MONACO_N2",
+    "runner_summary": {
+      "driver_count": 10,
+      "hesitations": 14,
+      "offtrack_pct": 48.5,
+      "offtrack_ticks": 14549,
+      "stuck_car_count": 10
+    },
+    "sample_rows": 30000,
+    "schema_version": "base-metrics-v1.0",
+    "solver_event_contacts_by_pair": {
+      "ALO-GAS": 3943,
+      "ALO-HAM": 54,
+      "ALO-NOR": 80,
+      "GAS-LEC": 34872,
+      "GAS-PER": 2278,
+      "GAS-SAI": 1495,
+      "HAM-LEC": 1241,
+      "HAM-PER": 142,
+      "HAM-VER": 2,
+      "LEC-NOR": 82,
+      "LEC-SAI": 2,
+      "NOR-PER": 2,
+      "NOR-RUS": 6,
+      "NOR-SAI": 90,
+      "NOR-VER": 996,
+      "PER-SAI": 1377,
+      "PIA-RUS": 2792
+    },
+    "solver_event_rows": 49454,
+    "source_sha256": {
+      "events": "3934494bc88c178d43c166ec2a805ba4c3365f5774e6d9c49b0524133d451c6d",
+      "log": "341297109f2d66466b49a3a638f64b9da9ba1941585240dcc4109dc278dd9435",
+      "main": "be18640114bf6183e4d34d8421f211b06d45bfddefd388e09f819e0d370362ff"
+    },
+    "stuck_car_count": 10,
+    "stuck_driver_ids": [
+      "ALO",
+      "GAS",
+      "HAM",
+      "LEC",
+      "NOR",
+      "PER",
+      "PIA",
+      "RUS",
+      "SAI",
+      "VER"
+    ]
+  },
+  "cross_checks": {
+    "fora_preso_vs_log": {
+      "computed": 10875,
+      "log": 10875,
+      "match": true
+    },
+    "offtrack_vs_log": {
+      "computed": 14549,
+      "log": 14549,
+      "match": true
+    },
+    "sample_rows_vs_canonical": {
+      "canonical": 30000,
+      "computed": 30000,
+      "match": true
+    }
+  },
+  "events": {
+    "junction": null,
+    "z_reta": [],
+    "z_t1_t_le_60s": [
+      {
+        "corner_id": "C01",
+        "drv": "PIA",
+        "rows": 38,
+        "s": 16.176,
+        "t_s": 4.0,
+        "tick": 40
+      },
+      {
+        "corner_id": "C01",
+        "drv": "RUS",
+        "rows": 31,
+        "s": 21.42,
+        "t_s": 4.2,
+        "tick": 42
+      },
+      {
+        "corner_id": "C01",
+        "drv": "LEC",
+        "rows": 98,
+        "s": 61.124,
+        "t_s": 5.0,
+        "tick": 50
+      },
+      {
+        "corner_id": "C01",
+        "drv": "SAI",
+        "rows": 3,
+        "s": 29.215,
+        "t_s": 5.0,
+        "tick": 50
+      },
+      {
+        "corner_id": "C01",
+        "drv": "ALO",
+        "rows": 45,
+        "s": 24.707,
+        "t_s": 5.2,
+        "tick": 52
+      },
+      {
+        "corner_id": "C01",
+        "drv": "GAS",
+        "rows": 43,
+        "s": 30.365,
+        "t_s": 5.4,
+        "tick": 54
+      }
+    ]
+  },
+  "instrument": {
+    "base_metrics_sha256": "9107c2d0f6bb3b1c7b317020b09b90a7c615390cdfb4e565acb29c27c362d728",
+    "realismo_metrics_sha256": "e5a7ecb42fd9bfd3297935d974a53174b51eb822a877b33e4ed4a208a590ac7b",
+    "saidas_verdict_sha256": "e1ac9f699e6d1339e67b7d53683f6becd5e3041da52102516cc4529c21496d6c",
+    "sanidade1b_verdict_sha256": "c23f3c6692dfdb5add216e5d021cf1db6ba49b4113f1052d2aef2b54a74d8b16",
+    "track_file_sha256": "af3125959ade1f82062d9c9fe0dfa8020d31e431d919408ae4d293f0fac20bf2",
+    "track_sha16": "67ca11dc211c8c78"
+  },
+  "integrity": {
+    "arm": "blind",
+    "checks": {
+      "csv_track_sha": {
+        "detail": {
+          "expected": "67ca11dc211c8c78",
+          "found": [
+            "67ca11dc211c8c78"
+          ]
+        },
+        "pass": true
+      },
+      "events_present": {
+        "detail": "6_BLIND_OFF_MONACO_N2_events.csv",
+        "pass": true
+      },
+      "expected_variedade": {
+        "detail": {
+          "expected": 2,
+          "found": 2
+        },
+        "pass": true
+      },
+      "log_track_sha": {
+        "detail": {
+          "expected": "67ca11dc211c8c78",
+          "frozen_lines": 1
+        },
+        "pass": true
+      },
+      "main_physical_lines": {
+        "detail": {
+          "expected": 30002,
+          "found": 30002
+        },
+        "pass": true
+      },
+      "no_residual_override": {
+        "detail": {
+          "override_lines": 0
+        },
+        "pass": true
+      },
+      "residual_baseline": {
+        "detail": {
+          "expected": [],
+          "found": []
+        },
+        "pass": true
+      },
+      "variedade_frozen": {
+        "detail": {
+          "found": [
+            "2"
+          ]
+        },
+        "pass": true
+      },
+      "variedade_line": {
+        "detail": {
+          "expected": [
+            2
+          ],
+          "found": [
+            2
+          ]
+        },
+        "pass": true
+      }
+    },
+    "ok": true,
+    "variedade": 2
+  },
+  "metrics": {
+    "cascade_event_frac": 0.6363636363636364,
+    "cascade_events": 210,
+    "cascade_events_int": 213,
+    "cascade_offtime_frac": 0.6988796480857791,
+    "cascade_offtime_rows": 10168,
+    "censored_excursions": 4,
+    "contacts_5hz_t_le_60s": 290,
+    "contacts_5hz_total": 854,
+    "corner_exits": {
+      "C01": 21,
+      "C03": 46,
+      "C04": 46,
+      "C05": 32,
+      "C06": 20,
+      "C07": 24,
+      "C08": 5,
+      "C09": 2,
+      "C10": 27,
+      "C11": 46,
+      "C12": 47,
+      "Reta": 14
+    },
+    "deadlocks": 4,
+    "excursions_t_le_60s": 49,
+    "excursions_total": 330,
+    "fora_pilotagem_rows": 3674,
+    "fora_preso_rows": 10875,
+    "glued_rows": 610,
+    "glued_s": 122.0,
+    "hesitations": 14,
+    "junction_exits": null,
+    "laps_total": 28,
+    "new_exit_le_5s": 111,
+    "new_exit_le_5s_per_excursion": 0.33636363636363636,
+    "new_exit_le_5s_per_reentry": 0.34049079754601225,
+    "offtrack_pct": 48.5,
+    "offtrack_rows": 14549,
+    "reentries": 326,
+    "sample_rows": 30000,
+    "wanderer_events": 0,
+    "z_reta_exits": 0,
+    "z_t1_exits_t_le_60s": 6
+  },
+  "metrics_sha256": "d9e91ef5ea8f333c3ad1f1d9f96bd23ffa3635b5a8290799adae357c62786692",
+  "run_id": "6_BLIND_OFF_MONACO_N2",
+  "schema_version": "realismo-metrics-v1.0",
+  "source_sha256": {
+    "events": "3934494bc88c178d43c166ec2a805ba4c3365f5774e6d9c49b0524133d451c6d",
+    "log": "341297109f2d66466b49a3a638f64b9da9ba1941585240dcc4109dc278dd9435",
+    "main": "be18640114bf6183e4d34d8421f211b06d45bfddefd388e09f819e0d370362ff"
+  },
+  "track": "monaco",
+  "zones": {
+    "corners": [
+      {
+        "id": "C01",
+        "kmax": 0.038176,
+        "name": "Complexo de curva 01",
+        "s0": -4.0039,
+        "s1": 36.0349
+      },
+      {
+        "id": "C02",
+        "kmax": 0.006659,
+        "name": "Complexo de curva 02",
+        "s0": 76.0738,
+        "s1": 100.0971
+      },
+      {
+        "id": "C03",
+        "kmax": 0.071178,
+        "name": "Complexo de curva 03",
+        "s0": 164.1592,
+        "s1": 240.233
+      },
+      {
+        "id": "C04",
+        "kmax": 0.099869,
+        "name": "Complexo de curva 04",
+        "s0": 320.3106,
+        "s1": 388.3767
+      },
+      {
+        "id": "C05",
+        "kmax": 0.088838,
+        "name": "Complexo de curva 05",
+        "s0": 428.4155,
+        "s1": 596.5786
+      },
+      {
+        "id": "C06",
+        "kmax": 0.160247,
+        "name": "Complexo de curva 06",
+        "s0": 648.6291,
+        "s1": 728.7067
+      },
+      {
+        "id": "C07",
+        "kmax": 0.083167,
+        "name": "Complexo de curva 07",
+        "s0": 1105.0717,
+        "s1": 1221.1843
+      },
+      {
+        "id": "C08",
+        "kmax": 0.006615,
+        "name": "Complexo de curva 08",
+        "s0": 1477.4328,
+        "s1": 1493.4484
+      },
+      {
+        "id": "C09",
+        "kmax": 0.006096,
+        "name": "Complexo de curva 09",
+        "s0": 1561.5144,
+        "s1": 1565.5183
+      },
+      {
+        "id": "C10",
+        "kmax": 0.029746,
+        "name": "Complexo de curva 10",
+        "s0": 1665.6153,
+        "s1": 1917.86
+      },
+      {
+        "id": "C11",
+        "kmax": 0.086495,
+        "name": "Complexo de curva 11",
+        "s0": 2090.027,
+        "s1": 2442.3687
+      },
+      {
+        "id": "C12",
+        "kmax": 0.125731,
+        "name": "Complexo de curva 12",
+        "s0": 3038.9472,
+        "s1": 3139.0443
+      }
+    ],
+    "grid_back": 3293.2346,
+    "grid_front": 3329.2346,
+    "junction_corner_id": null,
+    "junction_zone": null,
+    "length_m": 3335.2346,
+    "sf_s": 0.0,
+    "t1_corner_id": "C01",
+    "z_reta": [
+      3288.2346,
+      3331.2307
+    ],
+    "z_t1": [
+      3331.2307,
+      66.0349
+    ]
+  }
+}

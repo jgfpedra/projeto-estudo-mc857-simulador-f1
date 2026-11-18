@@ -1,0 +1,197 @@
+{
+  "dataset": {
+    "dataset_sha256": "2089d289c0f3b2adc01b0431c6af7bedb1a5522362101d4e9a39ab3ab3a593bc",
+    "record_count": 30000,
+    "schema": "composite-corpus-v1",
+    "split_counts": {
+      "test": 3000,
+      "train": 24000,
+      "validation": 3000
+    },
+    "split_rule": "rank-80/10/10-per-run-v1"
+  },
+  "dump": {
+    "geometry_id": "monaco_v2",
+    "geometry_sha256": "af3125959ade1f82062d9c9fe0dfa8020d31e431d919408ae4d293f0fac20bf2",
+    "instrument_version": "composite-corpus-dump-v3",
+    "path": "experiments/composite-1/B_ON_dump.jsonl.gz",
+    "row_count": 60000,
+    "run": "B_ON_dump.jsonl",
+    "sha256": "7e65405a0bb839f9f32609df285516c416f6adc45075d18a11e9a15cc6296bd3",
+    "source_git_sha256": "7ef87c8f4e880b979c6dc8c77915a8f57356dd03"
+  },
+  "families": {
+    "hesitations_post_reentry_le_10s": 44,
+    "launch_t_lt_60s": 3000,
+    "monaco_rejoin": 23946,
+    "nose_to_tail_gt_60s": 273
+  },
+  "join": {
+    "dump_rows": 60000,
+    "joined_rows": 30000,
+    "main_csv": "experiments/composite-1/B_ON_main.csv",
+    "main_csv_metadata": {
+      "compounds": "{'VER': 'MEDIUM', 'NOR': 'MEDIUM', 'LEC': 'SOFT', 'HAM': 'SOFT', 'PIA': 'HARD', 'RUS': 'MEDIUM', 'SAI': 'MEDIUM', 'PER': 'MEDIUM', 'ALO': 'HARD', 'GAS': 'SOFT'}",
+      "grid_order": "['ALO', 'HAM', 'SAI', 'RUS', 'PIA', 'PER', 'GAS', 'LEC', 'VER', 'NOR']",
+      "sub_steps": "24",
+      "track_frozen_sha256": "67ca11dc211c8c78",
+      "variance": "grid,compound",
+      "weather_mode": "seeded",
+      "weather_seed": "0",
+      "weather_transitions": "[]"
+    },
+    "main_sha256": "6698b55bad9cba1a167c952eab4381ee696a4191545cdecdd3db873e739b2ce7",
+    "pair_sha256": "45ceb2f4b6d2cd8422efac84a104aa75c11b414205d5db6d8e84151dbb22726d",
+    "paired_by_drv": {
+      "ALO": {
+        "fraction": 0.5,
+        "paired": 3000,
+        "total": 6000
+      },
+      "GAS": {
+        "fraction": 0.5,
+        "paired": 3000,
+        "total": 6000
+      },
+      "HAM": {
+        "fraction": 0.5,
+        "paired": 3000,
+        "total": 6000
+      },
+      "LEC": {
+        "fraction": 0.5,
+        "paired": 3000,
+        "total": 6000
+      },
+      "NOR": {
+        "fraction": 0.5,
+        "paired": 3000,
+        "total": 6000
+      },
+      "PER": {
+        "fraction": 0.5,
+        "paired": 3000,
+        "total": 6000
+      },
+      "PIA": {
+        "fraction": 0.5,
+        "paired": 3000,
+        "total": 6000
+      },
+      "RUS": {
+        "fraction": 0.5,
+        "paired": 3000,
+        "total": 6000
+      },
+      "SAI": {
+        "fraction": 0.5,
+        "paired": 3000,
+        "total": 6000
+      },
+      "VER": {
+        "fraction": 0.5,
+        "paired": 3000,
+        "total": 6000
+      }
+    },
+    "unmatched_dump_rows": 30000
+  },
+  "paired_by_frac": {
+    "ALO": {
+      "fraction": 0.5,
+      "paired": 3000,
+      "total": 6000
+    },
+    "GAS": {
+      "fraction": 0.5,
+      "paired": 3000,
+      "total": 6000
+    },
+    "HAM": {
+      "fraction": 0.5,
+      "paired": 3000,
+      "total": 6000
+    },
+    "LEC": {
+      "fraction": 0.5,
+      "paired": 3000,
+      "total": 6000
+    },
+    "NOR": {
+      "fraction": 0.5,
+      "paired": 3000,
+      "total": 6000
+    },
+    "PER": {
+      "fraction": 0.5,
+      "paired": 3000,
+      "total": 6000
+    },
+    "PIA": {
+      "fraction": 0.5,
+      "paired": 3000,
+      "total": 6000
+    },
+    "RUS": {
+      "fraction": 0.5,
+      "paired": 3000,
+      "total": 6000
+    },
+    "SAI": {
+      "fraction": 0.5,
+      "paired": 3000,
+      "total": 6000
+    },
+    "VER": {
+      "fraction": 0.5,
+      "paired": 3000,
+      "total": 6000
+    }
+  },
+  "provider": {
+    "frozen_file_sha256": "67ca11dc211c8c78",
+    "geometry_id": "monaco_v2",
+    "geometry_sha256": "af3125959ade1f82062d9c9fe0dfa8020d31e431d919408ae4d293f0fac20bf2",
+    "half_width": 6.0,
+    "name": "Monaco Grand Prix (mirror 2021)",
+    "point_at_source": "f1_env.py:638-646",
+    "project_on_path_source": "f1_env.py:607-625",
+    "tables_source": "f1_env.py:405-414",
+    "track_len_s": 3335.2345774147834
+  },
+  "split_counts": {
+    "test": 3000,
+    "train": 24000,
+    "validation": 3000
+  },
+  "split_rule": "rank-80/10/10-per-run-v1",
+  "state_builder": {
+    "half_width": 6.0,
+    "keras_path": "model_train/v10_dagger/dagger_actor_best.keras",
+    "keras_sha256": "b75ab0e56d64457589a7f2a869c4d4140dafb6ad7c6a6a03560dbfe6c0e94b2e",
+    "npz_path": "model_train/v10_dagger/dagger_actor_best_weights.npz",
+    "npz_sha256": "bc5ea6e288a4f0c36eb9257a1ac5d478c6cf51549a9b492ac0b89b90951b93e3",
+    "point_at_source": "F1MultiContextEnv._point_at",
+    "pose_formula": "point_at(s), normal=(-sin(ph),cos(ph)), +lat=left",
+    "quoted_sources": [
+      "f1_env.py:414",
+      "f1_env.py:_project_on_path",
+      "f1_env.py:803-808",
+      "race_diagnostic.py:494,542-544",
+      "run_race_10_cars.py:1686,1805"
+    ],
+    "steer_limit_source": "f1_env.py:530-531",
+    "track_len_s": 3335.2345774147834,
+    "traffic_source": "f1_env.py:803-808:_all_cars_snapshot",
+    "velocity_profile": {
+      "config": {
+        "ds_target": 4.0,
+        "grip_mult": 0.788,
+        "sf": 0.8,
+        "smooth_window_m": 20.0
+      },
+      "object_type": "VelocityProfile",
+      "provider": "race_diagnostic.py:542-544"
+    }
+  }
+}

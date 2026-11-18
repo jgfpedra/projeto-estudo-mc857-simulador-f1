@@ -5,7 +5,7 @@ Cobre duas propriedades:
 1. Enquanto o jogador pilota na janela GUI, o input é re-publicado a cada
    tick (nunca fica "stale" e o fallback não freia o carro sozinho).
 2. Com o piloto em repouso a GUI não publica nada, deixando a fonte externa
-   (ex.: ``scripts/publish_keyboard.py``) assumir o controle.
+   (ex.: ``scripts/simulation/publish_keyboard.py``) assumir o controle.
 """
 
 from __future__ import annotations

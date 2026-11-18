@@ -1,0 +1,19 @@
+perfil,curva_id,curva_nome,eventos,v_1s_med_kmh,v_1s_iqr_kmh,modos
+ALUNO (v10-cego),C03,Complexo de curva 03,30,54.2,17.9,LR:25/SL:5/SP:0
+ALUNO (v10-cego),C04,Complexo de curva 04,30,37.4,8.3,LR:25/SL:5/SP:0
+ALUNO (v10-cego),C11,Complexo de curva 11,30,31.7,43.8,LR:10/SL:10/SP:10
+ALUNO (v10-cego),C10,Complexo de curva 10,20,85.8,42.7,LR:20/SL:0/SP:0
+ALUNO (v10-cego),C12,Complexo de curva 12,20,36.6,12.2,LR:0/SL:20/SP:0
+ALUNO (v10-cego),C07,Complexo de curva 07,15,64.1,13.8,LR:10/SL:5/SP:0
+ALUNO (v10-cego),C05,Complexo de curva 05,10,30.9,25.6,LR:5/SL:5/SP:0
+ALUNO (v10-cego),C01,Complexo de curva 01,5,67.2,0.0,LR:5/SL:0/SP:0
+ALUNO (v10-cego),C06,Complexo de curva 06,5,19.3,0.0,LR:0/SL:5/SP:0
+ALUNO (v10-cego),Reta,Reta / Outro,5,32.1,0.0,LR:5/SL:0/SP:0
+PROFESSOR (solo-frozen),Reta,Reta / Outro,50,37.2,8.6,LR:50/SL:0/SP:0
+PROFESSOR (solo-frozen),C11,Complexo de curva 11,45,34.9,8.1,LR:25/SL:20/SP:0
+PROFESSOR (solo-frozen),C04,Complexo de curva 04,30,42.0,10.4,LR:15/SL:10/SP:5
+PROFESSOR (solo-frozen),C12,Complexo de curva 12,20,33.1,5.9,LR:10/SL:10/SP:0
+PROFESSOR (solo-frozen),C03,Complexo de curva 03,15,53.1,0.5,LR:15/SL:0/SP:0
+PROFESSOR (solo-frozen),C05,Complexo de curva 05,15,48.6,2.5,LR:5/SL:10/SP:0
+PROFESSOR (solo-frozen),C06,Complexo de curva 06,15,30.5,1.1,LR:15/SL:0/SP:0
+PROFESSOR (solo-frozen),C07,Complexo de curva 07,15,45.2,0.0,LR:15/SL:0/SP:0

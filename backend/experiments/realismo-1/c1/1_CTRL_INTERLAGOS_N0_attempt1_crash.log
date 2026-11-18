@@ -1,0 +1,17 @@
+pybullet build time: Sep 11 2026 21:22:29
+[diag] pista FROZEN: São Paulo Grand Prix | 1131 wp | SF wp 729 | sha256 164876196eb12174 | clima=seeded (rng semeado por seed) | variance=off | rejoin_gap=0.0 | launch_cap=False | launch_stagger=False | launch_steer_mute=False | pguard=False | grid=f1 | rejoin=bearing | anti_glue=False | variedade=0 | prof_repair=False | pass_decision=False
+[Grid] reta antes da SF: 45 m | grid ocupa 42 m
+[Grid] 10 carros no grid estilo F1 (5 fileiras x 2 colunas, NA RETA)
+[Model] Carregando pesos neurais (NumPy Engine) de: dagger_actor_best_weights.npz
+[diag] residual baseline sha256=6210fff65b19ad0e
+[diag] ator: dagger_actor_best.keras | input_dim=48 | gov=vplan | profile=composite | composite=residual_best_weights.npz
+Traceback (most recent call last):
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/model_train/race_diagnostic.py", line 1992, in <module>
+    main()
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/model_train/race_diagnostic.py", line 1504, in main
+    actions = ctrl.predict_batch(engine, drivers, wps, track_id=0)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/scripts/run_race_10_cars.py", line 1001, in predict_batch
+    self._res_prev[drv.driver_id] = (float(np.clip(a[i, 0], -1, 1)),
+                                                   ^
+UnboundLocalError: cannot access local variable 'a' where it is not associated with a value

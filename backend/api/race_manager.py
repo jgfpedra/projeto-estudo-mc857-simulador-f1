@@ -16,7 +16,10 @@ pública (``create_race`` / ``subscribe``) não muda.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import math
 import os
+import struct
 import sys
 import threading
 import uuid
@@ -33,6 +36,7 @@ if _BACKEND_ROOT not in sys.path:
 from config import DEFAULT_INTERLAGOS_CONFIG
 from engine import InMemoryInputSource, NullPublisher, Publisher, SimulationEngine
 from engine.events import Event
+from engine.physics import CHASSIS_HEIGHT_M, CHASSIS_LENGTH_M, CHASSIS_WIDTH_M
 
 from .race_setup import RaceSetup
 
@@ -44,27 +48,59 @@ class BroadcastPublisher(Publisher):
     da engine), então não dá para chamar ``await queue.put(...)`` direto daqui
     -- usamos ``asyncio.run_coroutine_threadsafe`` para agendar o broadcast de
     volta na thread principal do FastAPI, que é quem detém o event loop.
+
+    No ``tick``, enriquece cada posição com ``position`` (ordem de corrida),
+    ``progress_m`` e o estado do solver — mesmo contrato do ``LivePublisher``
+    do backend legado, para o viz3d poder animar sem Redis.
     """
 
     def __init__(self, race_id: str, manager: "RaceManager", loop: asyncio.AbstractEventLoop) -> None:
         self.race_id = race_id
         self.manager = manager
         self.loop = loop
+        self.engine: Optional[SimulationEngine] = None
 
     def publish(self, event: Event) -> None:
         payload = event.to_dict()
+        if event.type == "tick" and self.engine is not None:
+            self._enrich_tick(payload)
         asyncio.run_coroutine_threadsafe(
             self.manager.broadcast(self.race_id, payload),
             self.loop,
         )
 
+    def _enrich_tick(self, payload: dict) -> None:
+        """Adiciona ``position``, ``progress_m`` e ``collisions`` ao tick.
+
+        Espelha o ``LivePublisher`` legado (viz3d): rank por ordem de corrida,
+        avanço em metros ao longo da pista e contatos do solver (limpa o
+        collector para o próximo tick).
+        """
+        assert self.engine is not None
+        for rank, position in enumerate(payload["positions"], 1):
+            state = self.engine.states.get(position["driver_id"])
+            if state is None:
+                continue
+            position["position"] = rank
+            position["position_xy"] = [state.position_x, state.position_y]
+            position["heading_deg"] = math.degrees(state.heading_rad)
+            position["velocity_mps"] = state.velocity_mps
+            position["progress_m"] = self.engine.race_progress_m.get(position["driver_id"], 0.0)
+        # Contatos medidos pelo solver em cada subpasso (se o collector
+        # estiver ligado), não inferidos da proximidade das meshes.
+        contacts = getattr(self.engine.physics, "contact_collector", None)
+        payload["collisions"] = list(contacts or [])
+        if contacts is not None:
+            contacts.clear()
+
 
 class RaceHandle:
     """Estado interno de uma corrida ativa."""
 
-    def __init__(self, engine: SimulationEngine, thread: threading.Thread) -> None:
+    def __init__(self, engine: SimulationEngine, thread: threading.Thread, setup: RaceSetup) -> None:
         self.engine = engine
         self.thread = thread
+        self.setup = setup
         self.subscribers: Set[asyncio.Queue] = set()
         # O motor começa a simular assim que o POST responde, ANTES de o front abrir
         # o WebSocket: o race_start seria perdido. Guardamos para entregar a quem
@@ -114,11 +150,16 @@ class RaceManager:
             publisher=publisher,
             input_source=input_source,
         )
+        publisher.engine = engine
+        # Coletor de contatos do solver (o dev o liga por padrão; aqui é opt-in
+        # para não mudar o comportamento dos testes de física existentes).
+        if getattr(engine.physics, "contact_collector", None) is None:
+            engine.physics.contact_collector = []
 
         thread = threading.Thread(target=self._run_engine, args=(engine,), daemon=True)
 
         with self._lock:
-            self._races[race_id] = RaceHandle(engine=engine, thread=thread)
+            self._races[race_id] = RaceHandle(engine=engine, thread=thread, setup=setup)
 
         thread.start()
         return race_id
@@ -129,6 +170,55 @@ class RaceManager:
             engine.run()
         finally:
             engine.teardown()
+
+    # ------------------------------------------------------------------
+    # Metadados (GET /races/{id})
+    # ------------------------------------------------------------------
+
+    def metadata(self, race_id: str) -> Optional[dict]:
+        """Dados estáticos da corrida para a tela de visualização.
+
+        Espelha o formato do ``meta`` legado no Redis (viz3d): waypoints,
+        ``geometry_sha256``, ``car_geometry`` e grid com ``grid_position``.
+        """
+        with self._lock:
+            handle = self._races.get(race_id)
+        if handle is None:
+            return None
+        setup = handle.setup
+        track = setup.track
+        geometry_bytes = b"".join(struct.pack("<dd", float(x), float(y)) for x, y in track.waypoints)
+        geometry_sha256 = hashlib.sha256(geometry_bytes).hexdigest()[:16]
+        return {
+            "race_id": race_id,
+            "num_laps": setup.num_laps,
+            "num_drivers": len(setup.drivers),
+            "season": track.metadata.get("year"),
+            "circuit_id": setup.circuit_id,
+            "layout_id": setup.layout_id,
+            "car_geometry": {
+                "length_m": CHASSIS_LENGTH_M,
+                "width_m": CHASSIS_WIDTH_M,
+                "height_m": CHASSIS_HEIGHT_M,
+            },
+            "track": {
+                "name": track.name,
+                "source": track.source,
+                "geometry_sha256": geometry_sha256,
+                "length_m": track.length_m,
+                "width_m": track.width_m,
+                "start_finish_waypoint": track.start_finish_waypoint,
+                "waypoints": [[float(x), float(y)] for x, y in track.waypoints],
+            },
+            "drivers": [
+                {
+                    "driver_id": entry.driver_id,
+                    "name": entry.name,
+                    "grid_position": entry.position,
+                }
+                for entry in setup.grid
+            ],
+        }
 
     # ------------------------------------------------------------------
     # Pub/sub para os websockets

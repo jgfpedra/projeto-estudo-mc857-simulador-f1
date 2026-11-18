@@ -1,0 +1,19 @@
+perfil,curva_id,curva_nome,eventos,pct_do_perfil,share_ci95_low,share_ci95_high,pct_solo_na_curva
+PROFESSOR (solo-frozen),C03,Complexo de curva 03,15,7.3,3.9,11.2,100.0
+PROFESSOR (solo-frozen),C04,Complexo de curva 04,30,14.6,10.2,19.5,100.0
+PROFESSOR (solo-frozen),C05,Complexo de curva 05,15,7.3,3.9,11.2,100.0
+PROFESSOR (solo-frozen),C06,Complexo de curva 06,15,7.3,3.9,11.2,100.0
+PROFESSOR (solo-frozen),C07,Complexo de curva 07,15,7.3,3.9,11.2,100.0
+PROFESSOR (solo-frozen),C11,Complexo de curva 11,45,22.0,16.6,27.8,100.0
+PROFESSOR (solo-frozen),C12,Complexo de curva 12,20,9.8,5.9,13.7,100.0
+PROFESSOR (solo-frozen),Reta,Reta / Outro,50,24.4,18.5,30.2,100.0
+ALUNO (v10-cego),C01,Complexo de curva 01,5,2.9,0.6,5.9,100.0
+ALUNO (v10-cego),C03,Complexo de curva 03,30,17.6,12.4,23.5,100.0
+ALUNO (v10-cego),C04,Complexo de curva 04,30,17.6,11.8,23.5,100.0
+ALUNO (v10-cego),C05,Complexo de curva 05,10,5.9,2.4,9.4,100.0
+ALUNO (v10-cego),C06,Complexo de curva 06,5,2.9,0.6,5.9,100.0
+ALUNO (v10-cego),C07,Complexo de curva 07,15,8.8,4.7,13.5,100.0
+ALUNO (v10-cego),C10,Complexo de curva 10,20,11.8,7.1,17.1,100.0
+ALUNO (v10-cego),C11,Complexo de curva 11,30,17.6,12.4,23.5,100.0
+ALUNO (v10-cego),C12,Complexo de curva 12,20,11.8,7.1,17.1,100.0
+ALUNO (v10-cego),Reta,Reta / Outro,5,2.9,0.6,5.9,100.0

@@ -122,6 +122,15 @@ class RaceSetupRequest(BaseModel):
         description="ids dos pilotos em ordem de largada (1º = pole). Omitido = 2 pilotos padrão.",
         examples=[["max-verstappen", "lando-norris", "charles-leclerc"]],
     )
+    num_drivers: Optional[int] = Field(
+        None, ge=1, le=MAX_GRID,
+        description="Legado (viz3d): quantidade de corredores quando `grid` não é enviado. "
+        "Ignorado se `grid` estiver presente.",
+    )
+    track: Optional[str] = Field(
+        None, description="Legado (viz3d): nome da pista local (ex.: interlagos). "
+        "Use `circuit` no contrato novo; sem `circuit`, só aliases locais são aceitos.",
+    )
     weather: WeatherName = Field(WeatherName.dry, description="Clima inicial.")
     weather_change: Optional[WeatherChange] = Field(
         None, description="Omitido = o clima não muda durante a corrida."
@@ -147,6 +156,14 @@ class RaceSetupRequest(BaseModel):
                 raise ValueError(
                     "initial_tyre deve ser igual ao composto do 1º stint "
                     f"({self.stints[0].compound.value}); envie só um dos dois ou deixe-os consistentes"
+                )
+        if self.circuit is None and self.track is not None:
+            normalized = self.track.strip().lower()
+            if normalized not in {"interlagos", "são paulo", "sao paulo", "autódromo josé carlos pace",
+                                  "autodromo jose carlos pace", "interlagos-1", "interlagos-2"}:
+                raise ValueError(
+                    f"track legado '{self.track}' não é um alias local de Interlagos; "
+                    "use o campo `circuit` com o id do catálogo (ex.: {\"id\": \"interlagos\"})."
                 )
         return self
 

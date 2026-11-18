@@ -1,0 +1,2 @@
+SELFTEST OK: frozen headers, wrapped arc, circular branch gap, lowest-index tie, synthetic C1/C2/C5, v1.2 p95; no race inputs opened
+script_sha256=4f86cd9996041cddc0fd742c603ae1e89f381513bb54264d8b66c5bd39278ea7

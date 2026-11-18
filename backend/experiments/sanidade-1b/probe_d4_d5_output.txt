@@ -1,0 +1,49 @@
+=== SANIDADE-1b D4/D5 (read-only; slat=obs4×hw, hw=6,00) ===
+
+[D4] G1 v0 s70 (fricção+breaker; SEM preventivo)
+  fora=25.7% | rol med=149s | excursões=160
+  breaker: 6 episódios (6.2 car·s) | excursões <=2s pós-breaker: 3
+  preventivo (exposição 2,5m/10m): 595.6 car·s | excursões <=2s pós-exposição: 54
+  excursões c/ contato <=1s antes (shove): 0 | sem gatilho próximo: 103
+[D4] G3 v0 s72 (fricção+breaker; SEM preventivo)
+  fora=25.6% | rol med=145s | excursões=166
+  breaker: 11 episódios (17.6 car·s) | excursões <=2s pós-breaker: 5
+  preventivo (exposição 2,5m/10m): 596.0 car·s | excursões <=2s pós-exposição: 39
+  excursões c/ contato <=1s antes (shove): 0 | sem gatilho próximo: 122
+[D4] G2 comp s71 (M3 completo)
+  fora=30.0% | rol med=153s | excursões=191
+  breaker: 0 episódios (0.0 car·s) | excursões <=2s pós-breaker: 0
+  preventivo (exposição 2,5m/10m): 193.6 car·s | excursões <=2s pós-exposição: 28
+  excursões c/ contato <=1s antes (shove): 0 | sem gatilho próximo: 163
+[D4] G4 comp s73 (M3 completo)
+  fora=30.3% | rol med=165s | excursões=202
+  breaker: 3 episódios (8.8 car·s) | excursões <=2s pós-breaker: 0
+  preventivo (exposição 2,5m/10m): 213.2 car·s | excursões <=2s pós-exposição: 36
+  excursões c/ contato <=1s antes (shove): 0 | sem gatilho próximo: 166
+
+[D4] REF v0 s0 F4v15 (fricção 0,05; SEM M3)
+  fora=22.1% | rol med=136s | excursões=180
+  breaker: 0 episódios (0.0 car·s) | excursões <=2s pós-breaker: 0
+  preventivo (exposição 2,5m/10m): 1255.2 car·s | excursões <=2s pós-exposição: 90
+  excursões c/ contato <=1s antes (shove): 1 | sem gatilho próximo: 89
+[D4] REF comp s0 F4v15 (fricção 0,05; SEM M3)
+  fora=25.2% | rol med=140s | excursões=219
+  breaker: 0 episódios (0.0 car·s) | excursões <=2s pós-breaker: 0
+  preventivo (exposição 2,5m/10m): 272.0 car·s | excursões <=2s pós-exposição: 21
+  excursões c/ contato <=1s antes (shove): 0 | sem gatilho próximo: 198
+
+[D5] anatomia dos deadlocks (>10 s) do 5_gate_v0_s72.csv:
+
+  DEADLOCK GAS×PIA: 10.2s @t=13.2..23.2
+    t=  13.2 Δlat=1.93 Δs= -0.22 | GAS: v=  3.8 slat=-5.61 off=0 auth=rejoin_gap st=+0.79 | PIA: v=  6.3 slat=-7.54 off=1 auth=rejoin     st=+0.21
+    t=  14.2 Δlat=1.43 Δs= +2.87 | GAS: v=  3.3 slat=-4.57 off=0 auth=anti_glue  st=+0.21 | PIA: v=  7.7 slat=-5.99 off=0 auth=rejoin     st=+0.01
+    t=  15.2 Δlat=1.24 Δs= +3.00 | GAS: v=  3.8 slat=-3.22 off=0 auth=anti_glue  st=-0.08 | PIA: v=  4.7 slat=-4.46 off=0 auth=rejoin_gap st=+0.02
+    t=  16.2 Δlat=0.99 Δs= +2.93 | GAS: v=  3.4 slat=-2.14 off=0 auth=anti_glue  st=-0.23 | PIA: v=  3.0 slat=-3.13 off=0 auth=rejoin_gap st=-0.07
+    t=  17.2 Δlat=1.02 Δs= +3.10 | GAS: v=  4.4 slat=-1.22 off=0 auth=anti_glue  st=-0.28 | PIA: v=  3.4 slat=-2.23 off=0 auth=rejoin_gap st=-0.09
+    t=  18.2 Δlat=1.11 Δs= +3.35 | GAS: v=  2.6 slat=-0.46 off=0 auth=anti_glue  st=-0.34 | PIA: v=  3.6 slat=-1.57 off=0 auth=rejoin_gap st=-0.12
+    t=  19.2 Δlat=1.27 Δs= +3.62 | GAS: v=  2.6 slat=+0.13 off=0 auth=anti_glue  st=-0.42 | PIA: v=  4.0 slat=-1.14 off=0 auth=rejoin_gap st=-0.04
+    t=  20.2 Δlat=1.35 Δs= +3.99 | GAS: v=  2.8 slat=+0.55 off=0 auth=anti_glue  st=-0.34 | PIA: v=  4.4 slat=-0.80 off=0 auth=rejoin_gap st=-0.07
+    t=  21.2 Δlat=1.42 Δs= +4.17 | GAS: v=  3.0 slat=+0.84 off=0 auth=anti_glue  st=-0.35 | PIA: v=  2.6 slat=-0.58 off=0 auth=rejoin_gap st=-0.07
+    t=  22.2 Δlat=1.53 Δs= +4.43 | GAS: v=  3.0 slat=+1.09 off=0 auth=anti_glue  st=-0.39 | PIA: v=  3.0 slat=-0.44 off=0 auth=rejoin_gap st=-0.03
+    t=  23.2 Δlat=1.74 Δs= +4.85 | GAS: v=  6.0 slat=+1.42 off=0 auth=anti_glue  st=+0.40 | PIA: v=  3.5 slat=-0.31 off=0 auth=rejoin_gap st=-0.03
+    authority=anti_glue na corrida INTEIRA: GAS=60 ticks, PIA=1 ticks | engajou dentro da janela (amostra): SIM

@@ -1,0 +1,8 @@
+{
+  "g1": "PASS",
+  "g1_replay_projection_sha256": "a2c96670e1c84198365468740929559a55f26e2c0f89b84ea7060dbc41044092",
+  "g1_anchor_projection_sha256": "a2c96670e1c84198365468740929559a55f26e2c0f89b84ea7060dbc41044092",
+  "g2": "PASS",
+  "fields_per_row": 71,
+  "data_rows": 30000
+}

@@ -58,6 +58,16 @@ export function MainMenu() {
               </Button>
 
               <Button
+                onClick={() => window.location.assign(import.meta.env.VITE_VIZ3D_URL || `${window.location.protocol}//${window.location.hostname}:3001/?live=1`)}
+                variant='outline'
+                size='lg'
+                className='h-16 justify-start gap-3 rounded-none border-border bg-background/70 px-6 text-lg font-bold uppercase tracking-wider'
+              >
+                <Play className='h-5 w-5' />
+                Corrida 3D ao vivo
+              </Button>
+
+              <Button
                 onClick={() => setSettingsOpen(true)}
                 variant='outline'
                 size='lg'

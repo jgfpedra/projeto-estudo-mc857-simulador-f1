@@ -1,0 +1,67 @@
+=================================================================
+ PROF-MONACO-1 — BATERIA MONACO (67ca11dc211c8c78)
+=================================================================
+Curvas derivadas: 12 complexos (κ>0,006; merge 40 m) | HAIRPIN geométrico = C06 (κmax 0.1602 ≈ R 6.2 m) s∈[649,729]
+Âncoras F4v15: N/A neste fluxo (bateria Monaco; cross-era = report)
+Perfis: A = PROFESSOR (solo-frozen) (5 eps) | B = ALUNO (v10-cego) (5 eps)
+
+--- Reconciliação por EP — PROFESSOR (solo-frozen) ---
+  prof_s0.csv: fora=56.9% | eventos=41 | dur_med=6.8s
+  prof_s1.csv: fora=56.9% | eventos=41 | dur_med=6.8s
+  prof_s2.csv: fora=56.9% | eventos=41 | dur_med=6.8s
+  prof_s3.csv: fora=56.9% | eventos=41 | dur_med=6.8s
+  prof_s4.csv: fora=56.9% | eventos=41 | dur_med=6.8s
+--- Reconciliação por EP — ALUNO (v10-cego) ---
+  aluno_s0.csv: fora=45.0% | eventos=34 | dur_med=6.1s
+  aluno_s1.csv: fora=45.0% | eventos=34 | dur_med=6.1s
+  aluno_s2.csv: fora=45.0% | eventos=34 | dur_med=6.1s
+  aluno_s3.csv: fora=45.0% | eventos=34 | dur_med=6.1s
+  aluno_s4.csv: fora=45.0% | eventos=34 | dur_med=6.1s
+
+[PASS] Σ solo por curva == total em ambos os perfis (fail-loud).
+
+Q1 — RANKING DE CURVAS POR EXCURSÕES (top-5):
+  PROFESSOR (solo-frozen):
+    Reta Reta / Outro             ->  50 excursões (24.4%)
+    C11 Complexo de curva 11     ->  45 excursões (22.0%)
+    C04 Complexo de curva 04     ->  30 excursões (14.6%)
+    C12 Complexo de curva 12     ->  20 excursões ( 9.8%)
+    C06 Complexo de curva 06     ->  15 excursões ( 7.3%)
+  ALUNO (v10-cego):
+    C03 Complexo de curva 03     ->  30 excursões (17.6%)
+    C04 Complexo de curva 04     ->  30 excursões (17.6%)
+    C11 Complexo de curva 11     ->  30 excursões (17.6%)
+    C10 Complexo de curva 10     ->  20 excursões (11.8%)
+    C12 Complexo de curva 12     ->  20 excursões (11.8%)
+
+  Q1-mecânico: top-1 professor = Reta Reta / Outro (50 excursões) | FALSIDICAÇÃO-Q1: RETA no top-1 -> lead rejoin-cascata (report-only)
+
+Q2 — Assinatura cinemática por curva (top-5 por perfil):
+  PROFESSOR (solo-frozen):
+    Reta Reta / Outro             n= 50 v_med= 37.2 km/h IQR=  8.6 [LR:50/SL:0/SP:0]
+    C11 Complexo de curva 11     n= 45 v_med= 34.9 km/h IQR=  8.1 [LR:25/SL:20/SP:0]
+    C04 Complexo de curva 04     n= 30 v_med= 42.0 km/h IQR= 10.4 [LR:15/SL:10/SP:5]
+    C12 Complexo de curva 12     n= 20 v_med= 33.1 km/h IQR=  5.9 [LR:10/SL:10/SP:0]
+    C03 Complexo de curva 03     n= 15 v_med= 53.1 km/h IQR=  0.5 [LR:15/SL:0/SP:0]
+  ALUNO (v10-cego):
+    C03 Complexo de curva 03     n= 30 v_med= 54.2 km/h IQR= 17.9 [LR:25/SL:5/SP:0]
+    C04 Complexo de curva 04     n= 30 v_med= 37.4 km/h IQR=  8.3 [LR:25/SL:5/SP:0]
+    C11 Complexo de curva 11     n= 30 v_med= 31.7 km/h IQR= 43.8 [LR:10/SL:10/SP:10]
+    C10 Complexo de curva 10     n= 20 v_med= 85.8 km/h IQR= 42.7 [LR:20/SL:0/SP:0]
+    C12 Complexo de curva 12     n= 20 v_med= 36.6 km/h IQR= 12.2 [LR:0/SL:20/SP:0]
+
+Q3 — ANATOMIA DAS EXCURSÕES (cascata <=10s; wanderer >60s):
+                 perfil         classe  eventos  pct  tempo_acum_s
+PROFESSOR (solo-frozen) REJOIN-CASCATA      194 94.6        1653.4
+PROFESSOR (solo-frozen)    SAIDA_LIMPA       11  5.4          54.6
+       ALUNO (v10-cego) REJOIN-CASCATA      157 92.4        1272.4
+       ALUNO (v10-cego)    SAIDA_LIMPA       13  7.6          77.6
+
+Q4 — HERDADO OU DEGRADADO (fora% por braço; cluster bootstrap por ep):
+  PROFESSOR (solo-frozen): fora=56.93% [IC 95%: 56.93% - 56.93%] (5 eps)
+  ALUNO (v10-cego): fora=45.00% [IC 95%: 45.00% - 45.00%] (5 eps)
+
+  Q4-mecânico: FALSIDICAÇÃO-Q4 — aluno ABAIXO do professor com ICs DISJUNTOS (rótulos inconsistentes) -> PARE IMEDIATO
+
+Bateria concluída — tabelas em: experiments/prof-monaco-1
+Q1 falsificação (reta no top-1): DISPARADA (report-only)

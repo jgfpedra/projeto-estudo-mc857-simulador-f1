@@ -1,0 +1,18 @@
+ts,probe,url,status_http,latency_ms,bytes,nota
+2026-10-23T11:07:49.351008,D,https://api.openf1.org/v1/sessions?year=2024&session_name=Race,200,1378,8583,year=2024 session_name=Race
+2026-10-23T11:07:50.272736,D,https://api.openf1.org/v1/sessions?year=2023&session_name=Race,200,921,8229,year=2023 session_name=Race
+2026-10-23T11:14:22.469216,A,https://api.openf1.org/v1/location?session_key=9566&driver_number=81,200,8976,4555286,session=9566 driver=81
+2026-10-23T11:14:29.572167,A,https://api.openf1.org/v1/location?session_key=9558&driver_number=44,200,6982,4319322,session=9558 driver=44
+2026-10-23T11:14:37.004694,A,https://api.openf1.org/v1/location?session_key=9531&driver_number=1,200,7320,3281193,session=9531 driver=1
+2026-10-23T11:14:46.834203,A,https://api.openf1.org/v1/location?session_key=9472&driver_number=1,200,9744,4524370,session=9472 driver=1
+2026-10-23T11:14:53.599883,A,https://api.openf1.org/v1/location?session_key=9472&driver_number=11,200,6701,4559432,session=9472 driver=11
+2026-10-23T11:15:04.043572,A,https://api.openf1.org/v1/location?session_key=9625&driver_number=55,200,10321,4711185,session=9625 driver=55
+2026-10-23T11:15:10.188278,A,https://api.openf1.org/v1/location?session_key=9582&driver_number=4,200,6033,4345461,session=9582 driver=4
+2026-10-23T11:15:20.327309,A,https://api.openf1.org/v1/location?session_key=9582&driver_number=1,200,10074,4347223,session=9582 driver=1
+2026-10-23T11:15:32.916365,A,https://api.openf1.org/v1/location?session_key=9582&driver_number=16,200,12523,4381351,session=9582 driver=16
+2026-10-23T11:15:43.056927,A,https://api.openf1.org/v1/location?session_key=9496&driver_number=1,200,10012,5268723,session=9496 driver=1
+2026-10-23T11:15:52.579499,A,https://api.openf1.org/v1/location?session_key=9496&driver_number=11,200,9423,5308627,session=9496 driver=11
+2026-10-23T11:16:03.327804,A,https://api.openf1.org/v1/location?session_key=9496&driver_number=55,200,10667,5304876,session=9496 driver=55
+2026-10-23T11:27:12.108937,A,https://api.openf1.org/v1/location?session_key=9644&driver_number=63,200,7440,4237914,session=9644 driver=63
+2026-10-23T11:27:21.936370,A,https://api.openf1.org/v1/location?session_key=9507&driver_number=4,200,8892,4312800,session=9507 driver=4
+2026-10-23T11:27:31.153165,A,https://api.openf1.org/v1/location?session_key=9507&driver_number=1,200,9130,4313782,session=9507 driver=1

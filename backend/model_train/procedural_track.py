@@ -81,8 +81,11 @@ def generate_track(
     Returns:
         Track object ou None se o gate de kappa rejeitar.
     """
-    from backend.domain.track import (Track, _catmull_rom_spline,
-                                       _resample_closed_polyline)
+    from backend.domain.track import (
+        Track,
+        _centripetal_catmull_rom_spline,
+        _resample_closed_polyline,
+    )
 
     rng = random.Random(seed)
     np_rng = np.random.default_rng(seed)
@@ -183,7 +186,7 @@ def generate_track(
         return None
 
     # --- 5. Spline + resample ≤4m ----------------------------------------
-    smooth = _catmull_rom_spline(clean_pts, samples_per_segment=16)
+    smooth = _centripetal_catmull_rom_spline(clean_pts, samples_per_segment=16)
     wps = _resample_closed_polyline(smooth, spacing_m=4.0)
     if len(wps) < 50:
         return None

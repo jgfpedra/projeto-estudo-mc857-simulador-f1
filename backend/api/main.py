@@ -13,6 +13,7 @@ Catálogo (precisa de ``data/catalog.json`` — ``python scripts/build_catalog.p
 
 Corrida:
 - POST /races                    -> cria e inicia uma corrida, devolve {race_id, ws_path, ...}
+- GET  /races/{race_id}          -> dados estáticos (waypoints, grid) para a visualização
 - WS   /ws/races/{race_id}       -> transmite os eventos em tempo real (fecha no race_end)
 """
 
@@ -45,6 +46,10 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:3000",
+        "http://localhost:5174",
+        "http://localhost:3001",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
     ],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -149,6 +154,18 @@ def create_race(
         initial_tyre=setup.initial_tyre,
         warnings=setup.warnings,
     )
+
+
+@app.get("/races/{race_id}", tags=["corrida"])
+def get_race(race_id: str):
+    """Dados estáticos da corrida (waypoints, grid, geometria) para a visualização.
+
+    Chamado uma vez ao abrir a tela; não muda durante a corrida.
+    """
+    meta = race_manager.metadata(race_id)
+    if meta is None:
+        raise HTTPException(status_code=404, detail="Corrida não encontrada")
+    return meta
 
 
 @app.websocket("/ws/races/{race_id}")

@@ -1,0 +1,36 @@
+{
+  "rows": 30000,
+  "drivers": 10,
+  "visible_windows": 345,
+  "expected_windows": 345,
+  "observable_reentries": 344,
+  "censored_windows": 1,
+  "heading_threshold_deg": 20.0,
+  "reentries_heading_abs_gt_20": 302,
+  "reentries_heading_fraction_gt_20": 0.877906976744186,
+  "heading_vs_second_exit_pearson": -0.36125055821851837,
+  "heading_correlation_n": 344,
+  "return_seconds": {
+    "p50": 5.700000000000001,
+    "p95": 24.739999999999988,
+    "max": 36.800000000000004
+  },
+  "hesitations_total": 12,
+  "hesitations_within_10s_after_reentry": 11,
+  "published_comparison": {
+    "R2_ON_hesitations": 28,
+    "published_OFF_threshold": 12,
+    "R2_ON_return_time": "not published in authorized result artifacts"
+  },
+  "angle_course_unidentifiable": 0,
+  "geometry": {
+    "track_length_m": 3335.2345774147834,
+    "waypoint_count": 834,
+    "segments": 834
+  },
+  "input_sha256": "d950f7a60d47d125d829f5c4bf0302eadd9eb8ef7001cd17e690ba7950f6ac95",
+  "track_sha256": "af3125959ade1f82062d9c9fe0dfa8020d31e431d919408ae4d293f0fac20bf2",
+  "audit_sha256": "e106db7882edb58d603358855e86c5776373e0ddba28f676ee3ee7e6560f1d25",
+  "input_path": "experiments/rejoin-tel-2/2_replay_rejoin_tel2_monaco_s0_v35.csv",
+  "track_path": "model_train/tracks_frozen/Monaco_v2.json"
+}

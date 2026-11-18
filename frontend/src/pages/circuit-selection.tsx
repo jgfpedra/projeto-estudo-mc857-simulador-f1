@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { RaceLapsField } from "@/components/race-laps-field"
 
 import { CURRENT_LAYOUT_ID } from "@/types/circuit"
 import { useCircuitStore } from "@/stores/circuit-store"
@@ -262,7 +263,8 @@ export function CircuitSelection() {
 
                     {/* Configuration */}
                     <div className="shrink-0 border-t border-border p-5 lg:p-6">
-                      <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-center">
+                      <div className="grid gap-5 sm:grid-cols-[1fr_160px_auto] sm:items-end">
+                        {/* div da "Variação do circuito" (sem alterações) */}
                         <div>
                           <label className="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
                             Variação do circuito
@@ -288,10 +290,13 @@ export function CircuitSelection() {
                           </Select>
 
                           <p className="mt-2 text-xs text-muted-foreground">
-                            Selecione uma versão histórica para utilizar o traçado correspondente.
+                            Layouts históricos ou atuais.
                           </p>
                         </div>
 
+                        <RaceLapsField />
+
+                        {/* div do botão "Confirmar" (sem alterações) */}
                         <div className="flex items-center justify-center sm:h-full">
                           <Button
                             onClick={handleConfirm}

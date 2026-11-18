@@ -1,0 +1,210 @@
+import { useEffect, useRef } from 'react'
+import type { CarIdentity } from './motion'
+import type { PitReadout } from '../engine/source'
+import { pitText, tyreText } from '../engine/source'
+
+interface Props {
+  cars: CarIdentity[]
+  selected: number
+  onSelect: (index: number) => void
+  /** Written every frame by `Grid`; read here on a timer, never on a render. */
+  readout: { current: { s: number; sUnwrapped: number; d: number; speedMps: number } }
+  lengthM: number
+  widthM: number
+  /**
+   * The followed car's lap number at an unwrapped arc length.
+   *
+   * A function rather than a number, because the two sources answer it
+   * differently: the synthetic field counts laps geometrically, while a replay
+   * uses the *official* timing boundaries — which sit up to 13 m from the
+   * geometric `s = 0` crossing, so near the line the two genuinely disagree.
+   * Passing the question rather than an offset is also what keeps the timeline
+   * and this panel from showing different laps at the same moment.
+   *
+   * Supplied by `App`, which is the only place that knows which source is
+   * running — so lap number never has to enter `FollowState`, and `rig.ts` stays
+   * untouched.
+   */
+  lapAt: (carIndex: number, sUnwrapped: number) => number
+  /**
+   * The followed car's running position, where the source has one: the engine
+   * recording, ranked by interpolated `progress_m`. Polled like everything else
+   * here; absent for the synthetic field and the replay.
+   */
+  rankAt?: (carIndex: number) => number
+  /**
+   * The followed car's tyres and pit state, engine recording only. A stop in
+   * the engine is bookkeeping at the lap line, not a place: the line says so.
+   */
+  pitAt?: (carIndex: number) => PitReadout
+  /** What is driving the cars, for the one line of prose at the bottom. */
+  sourceKind: string
+  /** Debug toggle: a stripe on every wheel, so spin can be seen. */
+  wheelMarkers: boolean
+  onWheelMarkers: (on: boolean) => void
+}
+
+/**
+ * Pick a car and watch its `(s, d)`.
+ *
+ * `s` changes sixty times a second, so it is deliberately *not* React state:
+ * the panel polls the ref on an interval and writes `textContent` directly.
+ * Re-rendering this component at frame rate would drag the whole Canvas subtree
+ * through React's reconciler for the sake of a number nobody can read that
+ * fast. 12 Hz is well past the point where the readout looks live.
+ */
+const READOUT_HZ = 12
+
+export function CarPanel({
+  cars,
+  selected,
+  onSelect,
+  readout,
+  lengthM,
+  widthM,
+  lapAt,
+  rankAt,
+  pitAt,
+  sourceKind,
+  wheelMarkers,
+  onWheelMarkers,
+}: Props) {
+  const sRef = useRef<HTMLSpanElement>(null)
+  const dRef = useRef<HTMLSpanElement>(null)
+  const lapRef = useRef<HTMLSpanElement>(null)
+  const posRef = useRef<HTMLSpanElement>(null)
+  const tyreRef = useRef<HTMLDivElement>(null)
+  const pitRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const tick = () => {
+      const { s, sUnwrapped, d, speedMps } = readout.current
+      if (sRef.current) sRef.current.textContent = `${s.toFixed(1)} m`
+      if (dRef.current) dRef.current.textContent = `${d >= 0 ? '+' : ''}${d.toFixed(2)} m`
+      if (posRef.current) posRef.current.textContent = rankAt ? `P${rankAt(selected)} · ` : ''
+      const pit = pitAt?.(selected)
+      if (tyreRef.current) tyreRef.current.textContent = pit ? `tyres ${tyreText(pit)}` : ''
+      if (pitRef.current) {
+        const text = pit ? pitText(pit) : ''
+        pitRef.current.textContent = text
+        pitRef.current.style.display = text ? 'block' : 'none'
+      }
+      if (lapRef.current) {
+        // Live speed and a real lap count. The old line here estimated a lap time
+        // as `lengthM / speedMps`, which assumed a constant speed — true of the
+        // synthetic field and not of a replay, where it would read as a lap time
+        // that swings by a factor of five through every braking zone.
+        lapRef.current.textContent =
+          `${speedMps.toFixed(1)} m/s · lap ${lapAt(selected, sUnwrapped)} · ` +
+          `${((s / lengthM) * 100).toFixed(1)}% round`
+      }
+    }
+    tick()
+    const id = setInterval(tick, 1000 / READOUT_HZ)
+    return () => clearInterval(id)
+  }, [readout, lengthM, selected, lapAt, rankAt, pitAt])
+
+  const car = cars[selected]
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: 12,
+        left: 12,
+        width: 300,
+        padding: '8px 12px',
+        background: 'rgba(12,12,18,0.82)',
+        border: '1px solid #2c2c38',
+        borderRadius: 4,
+        color: '#d8d8e0',
+        font: '12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace',
+      }}
+    >
+      <div style={{ color: '#fff', marginBottom: 6 }}>
+        {cars.length} cars · following{' '}
+        <span style={{ color: car?.hex }}>
+          {car?.label} {car?.name ?? car?.colourName}
+        </span>
+      </div>
+
+      {/* One swatch per car. A <select> would hide the colours, which are the
+          only thing distinguishing one car from another on track. Under a replay
+          the label is the driver's own code, so the swatch row doubles as the
+          running order — the extractor writes the cars out in race order. */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+        {cars.map((c) => (
+          <button
+            key={c.index}
+            onClick={() => onSelect(c.index)}
+            /* Identity only. `d` and speed used to be in here as static numbers
+               from the car's spec; under a replay both vary every frame, and both
+               are live in the readout below. */
+            title={[c.label, c.name, c.colourName].filter(Boolean).join(' · ')}
+            style={{
+              all: 'unset',
+              cursor: 'pointer',
+              width: 22,
+              height: 18,
+              background: c.hex,
+              borderRadius: 2,
+              outline: c.index === selected ? '2px solid #fff' : '1px solid #00000060',
+              outlineOffset: c.index === selected ? 1 : 0,
+            }}
+          />
+        ))}
+      </div>
+
+      <div>
+        <span ref={posRef} data-testid="car-position" style={{ color: '#fff' }} />
+        s <span ref={sRef} style={{ color: '#fff' }} /> · d{' '}
+        <span ref={dRef} data-testid="car-d" style={{ color: '#ff8a5f' }} />
+      </div>
+      <div style={{ opacity: 0.6, marginTop: 4 }}>
+        <span ref={lapRef} />
+      </div>
+      {pitAt && <div ref={tyreRef} data-testid="car-tyre" style={{ marginTop: 4 }} />}
+      {pitAt && (
+        <div
+          ref={pitRef}
+          data-testid="car-pit"
+          style={{
+            display: 'none',
+            marginTop: 4,
+            padding: '2px 6px',
+            background: '#3a2a10',
+            border: '1px solid #ffb020',
+            borderRadius: 3,
+            color: '#ffd27a',
+          }}
+        />
+      )}
+      <p style={{ margin: '6px 0 0', opacity: 0.6 }}>
+        positive d = right of the direction of travel. Ribbon is {widthM.toFixed(1)} m wide.{' '}
+        {sourceKind === 'replay'
+          ? 'Real telemetry: d is measured against a centreline that is the median ' +
+            'of racing lines, so it stays within a metre and the field runs nearly ' +
+            'single file.'
+          : sourceKind === 'engine'
+            ? "Engine race: cars sit at the engine's own position and heading. d is " +
+              "d_m, our refined projection of that position; s and P come from the " +
+              "engine's race progress. A pit stop is done at the lap line in one " +
+              'tick: the car keeps running and the pit time is added to its next lap.'
+            : 'Cars hold a fixed d and a fixed speed, so the order changes only ' +
+              'because the speeds differ — there is no overtaking logic.'}
+      </p>
+      {/* Debug. The tyres are uniform grey, so without this a wheel spinning
+          the wrong way, or not at all, looks exactly like a correct one. Watch
+          it at 0.25x: at 1x the wheel turns ~150° a frame and aliases. */}
+      <label style={{ display: 'flex', gap: 6, marginTop: 6, opacity: 0.75, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={wheelMarkers}
+          onChange={(e) => onWheelMarkers(e.currentTarget.checked)}
+          style={{ margin: 0, accentColor: '#ffe600' }}
+        />
+        debug: wheel markers (w)
+      </label>
+    </div>
+  )
+}

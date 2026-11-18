@@ -1,0 +1,70 @@
+{
+  "contacts_5hz_t_le_60s": 428,
+  "contacts_5hz_total": 696,
+  "driver_count": 10,
+  "hesitations": 8,
+  "laps_by_driver": {
+    "ALO": 3,
+    "GAS": 3,
+    "HAM": 3,
+    "LEC": 3,
+    "NOR": 3,
+    "PER": 3,
+    "PIA": 4,
+    "RUS": 3,
+    "SAI": 3,
+    "VER": 4
+  },
+  "laps_total": 32,
+  "metrics_sha256": "281fcca3c3363d839d420d8b72e7edbb0ff1737c4d065d3150cf86b3c264d0f8",
+  "offtrack_pct": 47.5,
+  "run_id": "R4_MONACO_RACE_BLIND",
+  "runner_summary": {
+    "driver_count": 10,
+    "hesitations": 8,
+    "offtrack_pct": 47.5,
+    "offtrack_ticks": 14236,
+    "stuck_car_count": 10
+  },
+  "sample_rows": 30000,
+  "schema_version": "base-metrics-v1.0",
+  "solver_event_contacts_by_pair": {
+    "ALO-GAS": 2398,
+    "ALO-NOR": 282,
+    "ALO-PER": 568,
+    "ALO-SAI": 671,
+    "GAS-HAM": 535,
+    "GAS-NOR": 2666,
+    "GAS-PER": 399,
+    "GAS-SAI": 52,
+    "GAS-VER": 31,
+    "HAM-LEC": 5265,
+    "HAM-SAI": 212,
+    "LEC-NOR": 3029,
+    "LEC-VER": 210,
+    "NOR-SAI": 25,
+    "NOR-VER": 3868,
+    "PER-SAI": 1329,
+    "PIA-RUS": 7271,
+    "PIA-VER": 938
+  },
+  "solver_event_rows": 29749,
+  "source_sha256": {
+    "events": "8a5f461e010571341528a17ddf2aa612f245b74152755d3ef1e1596b5c4ca527",
+    "log": "0f49a5e748c33b4afc8cf7cc539eebc9723cd099ad9a402dc751c6c9a69a1fc3",
+    "main": "15fb3da069adb7369741e90fdffca00f12cbe2abd75481b217c9c962bfacdd11"
+  },
+  "stuck_car_count": 10,
+  "stuck_driver_ids": [
+    "ALO",
+    "GAS",
+    "HAM",
+    "LEC",
+    "NOR",
+    "PER",
+    "PIA",
+    "RUS",
+    "SAI",
+    "VER"
+  ]
+}

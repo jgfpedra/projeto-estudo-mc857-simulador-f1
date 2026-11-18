@@ -1,3 +1,8 @@
+> [PROVENIÊNCIA — LARGADA-4, 2026-10-19] Restaurado VERBATIM do histórico
+> (git show 439f402:backend/model_train/AUDITORIA_RL.md — última versão do
+> arquivo; criado em 9099235, atualizado em 3d4f0e9/439f402; perdido no squash
+> da PÓS-CICLO-1). Este bloco é o ÚNICO acréscimo pós-histórico; todo o resto
+> é conteúdo histórico intocado. Referência: worklog LARGADA-4.
 # Auditoria do pipeline de RL (antes da reestruturação)
 
 ## Problemas confirmados em código
@@ -1144,3 +1149,308 @@ limpo do DAgger). O teto do stack é o DAgger: **~108s**.
 - **aluno DAgger (v11b)**: **108s** (herda o teto do professor sf=0.90)
 - Meta C 91.2s: exigiria **racing line ou MPC** no professor (fora do
   escopo do PPO/DAgger — é uma mudança de controlador, não de otimização)
+
+
+---
+
+## R7b→R13 — CADEIA CAUSAL ÚNICA FECHADA (out/2026, ciclo v15 completo)
+
+Diagnóstico por fases, cada uma fechando um elo com instrumento canônico
+(frozen v2 SF729, clima semeado, variância semeada, sequencial-puro, contato
+solver-side v3):
+
+1. **R7b**: física lateral SÃ (scripted: círculo estável até v_allow;
+   understeer 1,45× calibrado). Saídas = comando da política ~24× a
+   necessidade cinemática (slip 16,8° mediano; a_lat 3,9-5 vs 10,4 m/s²).
+   B3.1 histórico rotulado pré-canônico (commit FASE-4 não roda).
+2. **R8**: cap κ-cinemático REFUTADO no piloto (clipa 88-92% dos ticks
+   normais; nenhum k_comp viável).
+3. **R9**: slip-cap MORTO (slip alto = regime NORMAL, 91-98% dos ticks);
+   rate-limiter MORTO (offset sustentado, 0,2% yank). Família camada
+   ENCERRADA.
+4. **R11/R12**: paradas = 100% RECUP-OFF (subproduto de excursões);
+   hesitações = 57% REJOIN-DIP + 25% CORNER-CRAWL; retreino BC offline
+   16d (r12b) VERMELHO no piloto (skew: tráfego vivo nunca visto) —
+   research-negativo, trilha encerrada.
+5. **R13 (gate out-of-sample, 20 corridas seeds 10-19)**: composite FAIL
+   (3/10; adverso 0/4) por CONTATO no retorno (28-44% das amostras com
+   carro fora) e hesitação REJOIN-DIP — o critério de pista (fora)
+   passou em TODAS. Vantagem de segurança consistente (1,5-3,5× menos
+   contatos em 10/10). Veredito R10 PERMANENTE.
+
+**Conclusão**: uma única frente — excursões da política → contatos no
+retorno → hesitação pós-rejoin → paradas. Alavancas futuras: percepção de
+tráfego no rejoin; weave/slide com tráfego VIVO (dados agora logados no
+CSV v3.3). Instrumentos deixados prontos: contato solver-side, clima
+semeado, variância semeada, protocolo sequencial, gate mecânico por
+clima com re-ancoragem por quantis.
+
+## LOC-XY-1 — PARE no gate 3 (2026-10-23)
+
+- Prereg `5fe4ff8` e baseline bruto 20F/349P/3S congelados antes do código.
+  Referência blind Interlagos v3.3: 49 colunas, SHA-256
+  `47df0ed834e8e8a6a5c2f114cee6ee745230ce0f37d7682890debe9d3f15c733`.
+- A implementação `4d22d65` acrescenta `body_x,body_y,ns_raw` ao CSV; foram
+  adicionados exatamente três testes, todos aprovados na execução da suíte.
+  O teste v3.3 do kill-switch reproduziu o fixture pré-mudança byte a byte.
+- Suíte pós-código: **21F/351P/3S**. As 20 falhas do baseline permanecem; a
+  falha adicional não-canônica foi
+  `test_mixed_composite_wiring.py::test_t_regression_v10_cego_bit_identico`,
+  que compara a saída inteira com o header v3.3 de 49 colunas e falha com a
+  expansão de schema.
+- Gate 3 acionou o **PARE** previsto. O smoke formal do gate 4 não foi
+  iniciado; os selftests golden não foram executados após o PARE. Cada suíte
+  (baseline e pós-código) executou o subprocesso de 1.200 ticks incluído no
+  teste de regressão; os CSV/eventos temporários foram removidos após a falha.
+  A instrumentação não foi validada em saída completa de corrida de 6.000
+  ticks. O log bruto pós-suíte tem SHA-256
+  `969628421db6fb3a57e038ef212ea97c017c325da3ae0d5290f24696986fbf6a`.
+- `ns_dist` foi omitido para manter exatamente as três colunas especificadas.
+  Próxima ação requer decisão do dono sobre a expectativa do teste legado;
+  nenhum teste existente foi alterado e nenhuma execução ocorreu após o gate 3.
+
+Ver `experiments/loc-xy-1/relatorio.md` e `experiments/loc-xy-1/3_post_pytest.log`.
+
+## ANEXO LOC-XY-1 — ERRATA E-XY-2 e retomada interrompida (2026-10-23)
+
+**E-XY-2 (aditiva, ratificada pelo dono).** O contrato de
+`test_t_regression_v10_cego_bit_identico` passa a ser: executar no caminho
+default v3.4 e comparar, por linha, os campos `split(',')[:49]` contra o
+fixture pré-wiring v3.3, sem biblioteca CSV. A projeção inclui o header
+(campos 0–48, iguais ao header v3.3). Nome/path do teste permanecem iguais;
+seu docstring ganha a linha: “v3.4: 49 legadas proj. bit-idênticas ao
+pré-wiring; restauração v3.3 provada pelo teste (c) e pelo smoke do gate 4”.
+A restauração de arquivo v3.3 completo continua disponível via
+`RACE_DIAG_NO_XY=1`.
+
+A edição permitida foi aplicada somente ao corpo desse teste. Na suíte
+completa seguinte, o teste legado corrigido e os três testes LOC-XY passaram,
+mas a contagem resultou em **21F/351P/3S**, divergente do ratificado
+**20F/352P/3S**. As 20 falhas canônicas do baseline permaneceram e surgiu
+`test_state_files.py::test_state_files_doc_integrity`; o traceback identifica
+uma linha histórica da cadeia `> (anterior:)` do PROJECT_STATE sem o sufixo
+de referência esperado. O gate 3 acionou PARE. Nenhum smoke formal de 6.000
+ticks nem selftest golden pós-código foi iniciado; pools e pistas frozen
+permanecem intocados.
+
+Log bruto versionado: `experiments/loc-xy-1/4_post_fix_pytest.log`, SHA-256
+`37527575cf3b889d65819f920e6fa0216f00817549674c9fe07e053371f1d675`. O
+relatório completo conserva o PARE anterior e registra a retomada E-XY-2.
+
+## ANEXO LOC-XY-1 — fechamento E-XY-3 (2026-10-23)
+
+E-XY-3 fez a correção doc-only da linha 6 em `PROJECT_STATE.md` e foi
+commitada em `29cf2a2`. A suíte completa então passou: **20F/352P/3S**, com
+exatamente a mesma lista de 20 falhas do baseline. Log
+`experiments/loc-xy-1/5_post_chain_fix_pytest.log`, SHA-256
+`7dcda10548478604dbcf36a65a16b89b2ea085f60b4d202b7d096cfe6d349185`.
+
+Os dois smokes formais de 6000 ticks, seed 0, Interlagos blind foram seriais.
+Smoke A com `RACE_DIAG_NO_XY=1`: CSV completo byte-idêntico à âncora v3.3,
+SHA-256 `47df0ed834e8e8a6a5c2f114cee6ee745230ce0f37d7682890debe9d3f15c733`.
+Smoke B com o kill-switch OFF: as 49 colunas legadas são byte-idênticas por
+projeção dumb (`split(',')[:49]`) sobre header e linhas de dados; hash da
+projeção `ad145f45af4152e5f8097042793a2291b4cffe916ad8c4dd7bd3137a378d00c4`.
+O CSV completo v3.4 tem SHA-256
+`fe5027dcf83fd81bb062443b93e0a0b7b5b8e8f280c916a525c489bcb8003e35`, 52
+colunas, 30.000 linhas e três campos finais `body_x,body_y,ns_raw`; X/Y são
+floats finitos preenchidos e ns_raw inteiro de 0 a 1130 em todas as linhas.
+O sidecar `_events.csv` dos dois smokes é byte-idêntico entre eles e à âncora
+(SHA-256 `11e8c657b6ffc6ab65d98fbeb7af56983d1658447f0b1093edc8a862444ca3b9`).
+
+Selftests golden pós-código: `fail_forensics_verdict.py --selftest` PASS
+(SHA-256 `2112e34309a53dc80ab7771f867560d543d1f4fa31eb9c3cba87f27c4352e100`)
+e `saidas_verdict.py --selftest` PASS (SHA-256
+`430bddf5170d96acb1542992c83b9004712edab989dbaeb99c68eec09da041e3`).
+Orçamento: 2/2 smokes formais, zero corridas de medição, pools e pistas
+frozen intocados. Para novas entradas de cabeçalho/cadeia, incluir `Ver
+<path>` e fechar com `)` antes do próximo ciclo rebaixá-las a `(anterior:)`.
+Relatório consolidado: `experiments/loc-xy-1/relatorio.md`.)
+
+## PROJ-FIX-1 — PARE na reconciliação NIT-2 (Ver `backend/experiments/proj-fix-1/PARE.md`)
+
+Prereg e classificador offline v1.0 foram congelados antes do único replay
+R4 Composite Monaco (commit `a519081`; selftest sintético PASS). O alias
+`--track Monaco` resolveu Monaco_v2, seed 0, writer v3.4 default.
+
+g1 PASS: projeção byte a byte das 49 colunas, incluindo header, igual à âncora
+R4. g2 PASS: 71 campos por linha, XY finitos e `ns_raw` inteiro válido. A
+saída tem 30.000 linhas; clima sem transições. A reconciliação histórica
+falhou antes de produzir classes: o seletor preregistrado encontrou 0 eventos
+NIT-2, contra 112 entradas ≥10 m e 45 ≥30 m esperadas. PARE obrigatório; o
+script não foi editado depois desse resultado, nenhuma classe ou correção é
+declarada. Retomada requer novo prereg para resolver o identificador de run
+histórico e uma nova versão/selftest do instrumento.
+
+Orçamento encerrado em 1/1 replay, zero medições e zero smokes. Runner,
+controles, física, pools e pistas frozen intocados. CSV, sidecar, logs e hashes
+estão preservados em `experiments/proj-fix-1/`.
+
+## PROJ-FIX-2 — PARE em g4 (Ver `backend/experiments/proj-fix-1/PARE_PROJ_FIX_2.md`)
+
+O prereg e o classificador v1.1 foram congelados antes da classificação no commit
+`8222dff`; selftest sintético PASS. g0–g3 passaram, incluindo a projeção
+byte-idêntica do replay e âncora e a seleção de 112 eventos NIT-2 ≥10 m / 45
+≥30 m para `composite_monaco`. A classificação v1.1 parou no evento
+`('ALO', 2130, 2132)`, sem classe XY/ns_raw. PARE obrigatório: não foi produzido
+mapa 1:1 nem resumo de classes/p95, e não há conclusão C1/C2/C3 ou proposta de
+correção. A suíte ficou na referência 20F/352P/3S, sem reexecução; zero corridas
+de medição e zero smokes.
+
+## PROJ-FIX-3 — PARE em g0 (Ver `backend/experiments/proj-fix-1/PARE_PROJ_FIX_3.md`)
+
+O prereg e o classificador v1.2 foram congelados no commit `2330e9f`, após o
+diagnóstico limitado à chave ALO e antes de qualquer agregado por classe. O
+selftest sintético passou. g0 encontrou divergência no hash do relatório PARE
+v2: prereg `a3e7dd18…`, arquivo preservado `e287e5bd…`. PARE obrigatório; g1–g4
+não foram executados, nenhuma classificação C1–C5 foi produzida, e a suíte
+permanece na referência 20F/352P/3S sem reexecução. Sem novas corridas ou smokes.
+
+## ANEXO PROJ-FIX-4 — fechamento offline C1–C5 (2026-10-23) (Ver `backend/experiments/proj-fix-1/EXECUCAO_PROJ_FIX_4.md`)
+
+O novo freeze P4 corrigiu a proveniência do PARE v2: o hash commitado é `e287e5bdbc6a746089f0b53dd3a30e4d25b0ae43405bf3ef8ce9b5af2f0aa08c`; `a3e7…` foi transcrito de rascunho não commitado. P3 e o classificador v1.2 permaneceram intocados. Freeze P4 `574c5ea` (prereg SHA `0d9c8d31bfee6470d045cedea46c25264b3ba5d12d757116e75a300554219392`), manifest `75666b3` (SHA `5715be7b663394e29cc9b2a21a2baf554ccdb9281cc6d25439651d38e0b641ee`, 18/18 PASS), selftest v1.2 recheck PASS (SHA `3b9453b828cc35f31386c6c6d5e285e6b61624cb2209c777f3c438a91e1aa127`).
+
+g0–g3 passaram. g1/g2: projeção legada SHA-256 `a2c96670e1c84198365468740929559a55f26e2c0f89b84ea7060dbc41044092`, 71 campos em 30.000 linhas, XY finitos e `ns_raw` inteiro `[0,833]`; g3: 112 eventos ≥10 m e 45 ≥30 m. A classificação v1.2 mapeou 112 chaves únicas: corte ≥10 m C1=0, C2=0, C3=46, C5=66; headline ≥30 m C1=0, C2=0, C3=45, C5=0. O mapa C5 1:1 está em `experiments/proj-fix-1/classificacao_v12/mapa_nit2_ge10.csv`. p95 de dXY/|d_ns_raw|: ≥10 m C3=1,8704425708164663 m/416,25 e C5=3,307436586085905 m/6,75; ≥30 m C3=1,8713291979009652 m/418,59999999999985. C4 inválido=0; ALO (2130,2132)=C5; entre C5, `offtrack=1` em 66/66 e `offtrack=0` em 0/66.
+
+Nenhuma correção proposta; a escolha RECUP-1 vs projeção/gate retorna ao dono. Zero corridas, zero smokes e nenhuma reexecução da suíte (referência 20F/352P/3S); pools e pistas frozen intocados. Mapa SHA `1f75e75b50ac9d6a78f96b12f04ca0ac422cbff8ec1546d8cafb7aa791f5008f`, resumo SHA `9744db80cb2c55400aac4bc75351af59c89fb7963c0163dbe63b42c5abf5cb05`, log g1/g2 SHA `617ef75e8cae3aa556e8e362c5e54a8099f6446b734c3bb836040a5839807a10`, verificação pós-classificação SHA `e62d487948772713bb76959d21713fa575bcdc7dd63bc9f0de20cc9c18036f30`. Hashes e logs brutos estão no relatório e em `experiments/proj-fix-1/`.
+
+## PROJ-GATE-1 — PARE em g2/g4 (2026-10-23)
+
+V-A foi congelada e implementada com `--proj-gate` default-OFF. g1 passou com
+R1 byte-idêntica. g2 parou: R2 teve 173 pares ≥10 m e 108 ≥30 m. g3 passou nas
+392 reentradas nearest-global. g4 parou com 60,15% fora, 397 episódios, 144
+janelas presas e 28 hesitações; contatos e completude passaram. g5 não foi
+executado por PARE obrigatório. Sem promoção, nova corrida ou reanálise de
+classes; evidências e hashes estão em
+`backend/experiments/proj-gate-1/PARE_PROJ_GATE_1.md`.
+
+## PROJ-GATE-2 (2026-10-24) — autópsia report-only do PARE
+
+- Freeze em dois commits: pré-registro `0a269ff`, script offline v1.0
+  `a6d6775`; selftest sintético PASS, sem abrir dados de corrida. R1/R2 usam
+  a mesma variância `grid,compound`. SHA-256 de disco e `git show` passou para
+  CSVs/events, Monaco frozen, runner, diagnostic writer, classificador v1.2,
+  audit anterior, PARE e DOSSIÊ; headers 71/17 colunas e cada braço com
+  30.000 linhas, dez carros e ticks `0,2,...,5998` válidos.
+- Localidade do proxy `ns_raw` contra o waypoint Euclidiano mais próximo:
+  R1 OFF 0/12.945 amostras off-track erradas; R2 ON 5/18.045 (0,0277%), em
+  cinco amostras isoladas, pico 1.403,663 m. Os outliers pertencem a ALO, PIA,
+  HAM, PER e RUS. R2 teve erro em 6/392 janelas pós-reaquisição de 10 s e
+  nenhum erro em duas amostras consecutivas. Spatial snap (`abs(lat)`) p95
+  5,959 m nas 392 reentradas; distância alvo→descoberta não estimável.
+- g2 reproduzido: R1 112/45 ≥10/≥30 m, normalizado 8,652/3,476 por mil
+  amostras off-track; R2 173/108, normalizado 9,587/5,985. Taxonomia frozen
+  v1.2 C1/C2/C3/C5: R1 ge10 `0/0/46/66`, ge30 `0/0/45/0`; R2 ge10
+  `0/0/110/63`, ge30 `0/0/107/1`. P95s e mapeamento par-level constam em
+  `backend/experiments/proj-gate-1/autopsia/4_g2_class_decomposition.json`.
+- Scorecard: H1 **LOSING** porque a âncora e o alvo não são escritos e a
+  atualização a cada tick lógico não pode ser reconstruída do writer 5 Hz;
+  H2 não é observável diretamente pelo CSV, cujo `ns_raw` é proxy XY/global;
+  H3 confirma que g2 mede discrepância arco/odômetro, não localidade do
+  ponteiro interno. Hesitações R2 recriadas: 28, com cruzamento temporal por
+  reentrada em `backend/experiments/proj-gate-1/autopsia/3_branch_geometry.json`.
+  Encaminhamento único: arquivar esta bifurcação sem afirmar ausência de defeito.
+- Nenhuma simulação/smoke, nenhuma suíte, nenhum ajuste de produção/pool/cache/
+  pista e nenhuma promoção; flag permaneceu default-OFF. Hashes completos de
+  inputs e outputs em `backend/experiments/proj-gate-1/autopsia/3_execution.log`;
+  veredito em `backend/experiments/proj-gate-1/autopsia/5_veredito.md`.
+
+## REJOIN-TEL-1 — PARE antes dos dados (2026-10-24)
+
+- Preregistro de writer v3.5 aditivo congelado em `cc879b0`, com 9 campos
+  (80 colunas); regra de encaminhamento em `f15bb7d`; correção de provenance
+  pré-resultados em `8316af0`. Writer, 5 testes sintéticos e audit v1.0
+  congelados em `b42f694`. A flag `--writer-v35` segue opt-in/default-OFF e
+  `--proj-gate` permanece OFF.
+- Suíte completa: 20F/363P/3S, mesmas 20 identidades da referência 20F/352P/3S;
+  gate sem novas falhas PASS. Log em
+  `backend/experiments/rejoin-tel-1/2_full_suite.log`.
+- A única corrida R4 v3.5 foi interrompida com SIGINT (exit 130) antes de
+  escrever CSV/events. PARE obrigatório pelo orçamento; g1–g3 e audit não
+  foram avaliados. Sem estatísticas de rejoin, ângulo, hesitações, retorno ou
+  encaminhamento RECUP-2/arquivar. Não repetir sem novo preregistro do dono.
+- Instrumentação não muda escolha de ação por construção (alvo capturado em
+  pass-through); contudo, sem o prefixo CSV não há prova de passividade neste
+  replay. Nenhuma promoção ou alteração de env/física/observações/runner/pista/
+  pools/caches ocorreu. Detalhes, comando, logs e hashes em
+  `backend/experiments/rejoin-tel-1/PARE_REJOIN_TEL_1.md`.
+
+## REJOIN-TEL-2 — replay v3.5 report-only (2026-10-24)
+
+- Prereg de renovação congelado antes da única corrida (`9f9dc53`; SHA
+  `7ff5863263b381ca244452ec03ea62c0cbfc0efdc4650827abd308023e023820`). Código
+  frozen `b42f694`, sem diff de produção. Proveniência dupla PASS para R4
+  âncora/CSV/events, Monaco, suíte 20F/363P/3S e audit v1.0.
+- Uma corrida foreground, timeout 9 min, exit 0 em ~3m18; CSV 30.000 × 80,
+  SHA `d950f7a60d47d125d829f5c4bf0302eadd9eb8ef7001cd17e690ba7950f6ac95`.
+  Events SHA `b99007d0673b2b11727f50287451ffd1fe5439db1997065f4884f60b33252ce4`,
+  idêntico ao sidecar v3.4. g1/g2/g3 PASS; g2 comparou 30.001 linhas com
+  cabeçalho e prefixo legado `[:71]` idêntico. g4 usou a referência sem
+  reexecução.
+- Audit: 345 janelas, 344 reentradas e uma censurada; 302/344 (87,79%) com
+  `|heading_err|>20°`; Pearson erro angular × segunda saída em 10 s = −0,3613
+  (n=344); retorno p50/p95/máximo = 5,70/24,74/36,80 s; hesitações 12 total,
+  11 até 10 s após reentrada (referências publicadas: 12 OFF/28 ON).
+- Recomendação report-only ao dono: arquivar a hipótese angular da Etapa 2 e
+  avançar Etapa 3; o critério combinado frozen para RECUP-2 falhou por
+  correlação não positiva. Isso não demonstra ausência de defeito. Nenhum
+  código, flag, suite, pool, cache ou pista foi promovido/alterado. Ver
+  `backend/experiments/rejoin-tel-2/EXECUCAO_REJOIN_TEL_2.md` e hashes dos
+  outputs em seu diretório `autopsia/`.
+
+## TRAFEGO-MED-1B — Etapa 3 report-only (2026-10-24)
+
+- Freeze assinado pelo dono no commit `8136d54ec45f9f49b38a5893a812928474109535`; prereg, manifest e script tiveram blobs byte-idênticos ao disco. O commit usou `git add -f` nos dois arquivos de `experiments/` por causa de `.gitignore:56`. Censo congelado: 47 Tier A + 63 Tier B; hash/schema e blob Git foram conferidos em A, com tamanho/linhas também revalidados em B. Uma análise offline exit 0 processou 52/65 séries; 13 foram excluídas antes de carregar métricas porque cada arquivo tinha um único `drv`.
+- Matriz por corrida/fase/par/braço, agregados, segmentos, transferência e cobertura estão em `backend/experiments/trafego-med-1/{1_phase_pair_arm.csv,1b_phase_pair_aggregate.csv,2_top_segments_car.csv,3_reentry_launch_transfer.csv,3b_transfer_by_arm.csv,3c_run_coverage.csv}`; hashes completos em `4_DOSSIE_TRAFEGO_MED_1B.md`.
+- Nas coortes principais de largada (2 controles por braço, 10 tratamentos por braço), não houve contato 5 Hz ou hesitação na primeira volta identificável (24/24 corridas com geometria). Em REJOIN houve pares com counterpart on-track: 553/460 nos controles e 1.597/1.366 nos dois tratamentos; solver events são subpassos separados. Hesitações agregadas são muito assimétricas, com um run respondendo por 629/632, 924/927, 465/489 e 779/797 eventos por braço.
+- Os tratamentos acumularam 7.416 oportunidades congeladas sem troca sustentada; 76,5–79,9% foram classificadas nose-a-tail e a maioria ocorreu após os primeiros 60 s. Recomendação report-only: medir lado/espaço para passar com gates opt-in, OFF byte-idêntico, segurança não pior e sem transferir eventos da largada para a primeira volta. Alternativa arquivada: protocolo de cedência no follow. Sem inferência causal, edição de produção, simulação, smoke, suíte ou promoção.
+
+## PASS-1 — decisão de passagem (2026-10-24)
+
+- PASS-1 (2026-10-24): audit congelado terminou `all_gates_pass=false`; g3 mediana (+2,22%) e g4 contatos (171 na 1ª volta; 29 pós-rejoin vs 17 OFF) falharam; g4 da largada é PARE informativo dado R1=4.140 contatos. R3 não executada; recomendação ao dono: novo ciclo de diagnóstico/refinamento, sem promoção. Evidências e hashes: `backend/experiments/pass-1/5_EXECUCAO_PASS_1.md`.
+
+- YIELD-1C (2026-10-25): freeze `b9f9061` e código `d4b4eb0` conferidos; R2-Y2 standalone exit 0, 30.000 linhas e CSV byte-idêntico a R1, porém `engaged=0`, `consumed=0`, `aborted=0` em todos os carros. g2 FAIL; YIELD arquivado definitivamente, sem promoção, com pivô para Etapa 4. Ver `backend/experiments/yield-1/EXECUCAO_YIELD_1C.md` e `4_AUDIT_YIELD_1C.json`.
+
+## COMPOSITE-MAP-1 — inventário frozen da Etapa 4 (2026-10-25)
+
+- Inventário report-only congelado em `98a71e672f5241ff0e9f3cfea9481b71322fa23f`; 6 pins críticos conferidos pelo dono (solo/residual/código/runner + corpus rejoin/manifest). Conclusão: Composite treinável pelo residual gating existente (solo v10 congelado, entry residual de `train_dagger.py`), mas os CSVs medidos não são treináveis hoje — conversão, rotulagem (professor-replay), split por episódio e proveniência (fontes SEM_BLOB_HEAD) pendentes. Rumos do dono: contrato residual v15; rotulagem por professor-replay; ordem COMPOSITE-CORPUS-1 → COMPOSITE-BASE-1 → COMPOSITE-TRAIN-1. Ver `backend/experiments/composite-1/PREREG_COMPOSITE_MAP_1.md`.
+
+- COMPOSITE-CORPUS-1 (2026-10-25): instrumento report-only congelado; 7/7 testes focados passaram, censo SHA `fcd29503…` com 0/38 fontes elegíveis e 26 `SEM_BLOB_HEAD`; sem treino, inferência, simulação ou edição de produção. Ver `backend/experiments/composite-1/PREREG_COMPOSITE_CORPUS_1.md`.
+- COMPOSITE-COLLECT-1C (2026-10-26): conversão offline A/B com splits rank-80/10/10, famílias e hashes conferidos; g0 preservou exatamente as 20 falhas canônicas. Dois commits autorizados registram events e shards/audits/logs; recomenda-se ao dono ratificar COMPOSITE-BASE-1 após revisar a ressalva do denominador `monaco_rejoin`. Ver `backend/experiments/composite-1/EXECUCAO_COMPOSITE_COLLECT_1C.md`.
+- COMPOSITE-BASE-1 (2026-10-26): g0 pinado 453 testes (20F/430P/3S, log `db0abd33…`); 4 corridas formais R1-R4 exit 0 com 30.002 linhas e sidecars completos; extrator determinístico (hashes idênticos em 2 leituras); proveniência commits `7cb4f19` (12 artefatos) e `ceeaa20` (4 métricas); deltas Composite vs blind medidos (−36% a −44% contatos, +6,7pp fora em Interlagos); sem treino ou promoção. Ver `backend/experiments/composite-1/EXECUCAO_COMPOSITE_BASE_1.md`.
+- COMPOSITE-TRAIN-1 (2026-10-27): g0 pinado 460 testes (20F/437P/3S, log `bf051732…`); 2 treinos formais (Run 1 candidato + Run 2 réplica seed 42) concluídos exit 0; gates O-1 e réplica PASS (delta val_loss 0.0, max |dW| 0.0, NPZ SHA `6210fff6…` byte-idêntico); proveniência commit `c186ef2` (10 artefatos); sem corrida, simulação ou promoção. Ver `backend/experiments/composite-1/EXECUCAO_COMPOSITE_TRAIN_1.md`.
+COMPOSITE-BASE-2 etapa B executada (agente, 2026-10-27): g0 460=20F/437P/3S fail-set canônico exato; R1'-R4' 4/4 gates (R2'/R4' blind BYTE-IDÊNTICOS ao BASE-1; override 6210fff6/6a2dbf53 nos logs); extração 8/8 determinística; commits ab9da45 (provenance) + 3a02c11 (metrics); EXECUCAO staged; zero PARE; bucket TEST selado intocado.
+COMPOSITE-STAGE-5 etapa B executada (agente, 2026-10-28): desselo TEST em 2 leituras exit 0 (6.000 amostras A_VER+B_SAI); candidato 6210fff6 SANCIONADO (5/5 gates PASS: Huber 0.2885 vs null 0.7077 ratio 0.4077 <= 0.80; MAE 0.5856 < 1.0440; norm 1.5985 <= 2.0; nan/inf 0; determinismo cmp byte-idêntico exit 0); proveniência commit e017874; EXECUCAO staged; zero corrida, zero treino, zero promoção.
+COMPOSITE-STAGE-6 promoção executada (agente, 2026-10-28): backup B3.1 (6a2dbf53/5a2c20ce) em archive/residual_promocao_stage6; PAR candidato (6210fff6/f237ac9e) assume produção; g0 pós 462=20F/439P/3S (460 canônicos + 2 testes do selo, ambos PASS; fail-set canônico exato, diff bit-a-bit — emenda de contagem do dono); R1''/R3'' sem override cmp byte-a-byte vs BASE-2 PASS; g3 residual baseline 6210fff65b19ad0e; commits c8270a5+608e671; EXECUCAO staged; zero PARE.
+- REALISMO-1 C0 (2026-10-29): etapa B executada após freeze `240bacde`; 8 corridas OFF N=1..4 seriais, 32 extrações determinísticas, 2 relatórios de ruído byte-idênticos; g0 20F/458P/3S com fail-set canônico; sem mecanismo/promoção. Ver `backend/experiments/realismo-1/c0/EXECUCAO_REALISMO_C0.md`.
+2026-10-30 REALISMO-1 C1 etapa B: matriz ON N=0..4 (10 corridas) + 2 controles OFF + 48 leituras de extração determinísticas + EXECUCAO_REALISMO_C1.md.
+2026-11-01 REALISMO-1 C2 etapa B: matriz ON N=0..4 (10 corridas) + 2 controles OFF + 48 leituras de extração determinísticas + EXECUCAO_REALISMO_C2.md.
+2026-11-02 REALISMO-1 C3 etapa B: matriz ON N=0..4 (10 corridas) + 2 controles OFF + 48 leituras de extração determinísticas + EXECUCAO_REALISMO_C3.md.
+2026-11-03 REALISMO-1 C4 etapa B: análise offline de geometria (Tasks 10-11); 2.199 voltas filtradas; PARE duro em frame RMS (17,79 m > 5,0 m); ramo GEOMETRIA rejeitado; adoção do ramo FALLBACK (A5); zero corrida; C4_FINDINGS.md.
+2026-11-04 REALISMO-1 C6 etapa B: matriz ON N=0..4 (20 corridas) + 4 controles OFF + 96 leituras de extração determinísticas + EXECUCAO_REALISMO_C6.md.
+2026-11-04 REALISMO-1 C7 consolidação: matriz ON/OFF em N=5..8 (16 corridas) + 64 leituras de extração determinísticas + EXECUCAO_REALISMO_C7.md.
+2026-11-05 REALISMO-1 promoção produção: defaults --rejoin-handoff align e --rejoin-ramp adotados no composite; suíte 20F canônica confirmada; RELATORIO_PROMOCAO_REALISMO_1.md.
+2026-11-06 ABERTURA PERCEPÇÃO-1 + C8-rejoin: selados N=9..12 (confirmação C8) e N=13..16 (confirmação Fase 3); pools 76..79 e shards test/ intocados; PREREG_PERCEPCAO_1_F0.md e PREREG_C8_0.md.
+2026-11-06 C8-0 referência: 10 corridas em N=0..4 (Interlagos e Monaco) + 40 extrações determinísticas cmp=0; EXECUCAO_C8_0.md.
+2026-11-06 C8-B execução: 2 controles OFF cmp=0 + 10 corridas ON N=0..4 + 48 extrações determinísticas; gates primário/B-1/R-2/reentrada não aprovados; EXECUCAO_C8.md.
+2026-11-06 C8-B errata: números agregados N=0..4 confirmam FAIL por B-1 (+48% contatos Interlagos, +17% Monaco) e R-2 (+1,9 pp fora Interlagos); voltas ON=354 passam R-1; PERCEPÇÃO-1 formalmente suspensa por falha do professor na Task 3 (sobreposição 94,1%).
+2026-11-06 ABERTURA PROF-CURVA-1: teto de velocidade local no professor solo; PREREG_PROF_CURVA_1.md.
+2026-11-06 PROF-CURVA-1 Task 2: referência solo 600 s Interlagos confirmada (4 voltas, 24,6% fora, 4 saídas crônicas C01/C06/C07/C08 em 100% das voltas; teto guarda ritmo <=123,05 s); REF_FINDINGS.md.
+2026-11-06 PROF-CURVA-1 Task 4: fronteira v2 250 medições cmp=0; 10 corridas OFF solo Interlagos/Monaco N=0..4 e 20 leituras determinísticas cmp=0; baseline confirma saídas crônicas e 56,4–57,2% fora em Monaco; EXECUCAO_PROF_CURVA_1_0.md; PARE para closing do Dono.
+2026-11-06 PROF-CURVA-1 Task 5: mapa de viabilidade OFFLINE do teto local (determinístico cmp=0 ×2, script e5853aa commitado antes da execução) — MECANISMO COMO PREREGISTRADO INVIÁVEL: guarda Interlagos estoura no PISO (integral capped 131,04 s > teto 123,05 s; Δ+34,84 s), Gate Primário inalcançável (C01 0/22 bind R 107–140 m = saída comportamental, não pacing; C06 4/20), teto engaja 74% da volta Interlagos / 89% Monaco (rastejamento 3,2–5,8 m/s); PARE automático §4 — ZERO corrida ON, orçamento 10 solo 600 s preservado, --prof-curva mantido default OFF bit-idêntico; encaminhamento preregistrado: racing line suavizada (curva geométrica 18 m na Junção) em ciclo próprio a abrir pelo dono; MAPA_VIABILIDADE.md
+2026-11-06 ABERTURA RACING-LINE-1: ciclo separado para linha suavizada local do professor, com curva geométrica R=18 m na Junção; plano/prereg staged, zero corrida e zero alteração no PROF-CURVA-1; aguardando Freeze do Dono.
+2026-11-07 RACING-LINE-1 Task 2: construção geométrica offline do arco R=18 m na janela C08/Junção (instrumento staged antes da execução, R7; determinístico cmp=0 ×2) — PARE §7: sem arco exato com os limites congelados (resíduo dos centros 3,189856 m ≫ 1e-3; corda 35,58 m implica sweep 162,6° vs giro real −140,6° = superdeterminado); evidência report-only: raiz bi-tangente EXATA com limites livres dentro da janela (s 2282,417 → 2342,863 m, giro −139,89°, resíduo <1e-6; +6 raízes degeneradas R_local=18 e 2 fillets locais); corredor/C1/fechamento/auto-interseção da raiz NÃO avaliados (fora do escopo do candidato); ZERO corrida, ZERO produção, pista frozen intocada, orçamento 10 solo intacto; decisão do dono: nova prereg com limites derivados / outra construção (biarc) / arquivar. GEOMETRIA_C08.json/md
+2026-11-07 RACING-LINE-1 Task 3: Emenda nº 1 (limites derivados s=2282,417->2342,863 m, R=18 m); validacao offline de corredor e C1; CORREDOR_C08.md.
+2026-11-07 RACING-LINE-1 arquivado: candidato de arco unico R=18 m inviavel no corredor (|lat|=10,07 m > 6,0 m); orcamento de 10 corridas solo 100% preservado; transicao para diagnostico de controle do professor (PROF-CONTROL-1).
+2026-11-07 ABERTURA PROF-CONTROL-1: controle lateral do professor com feedforward arctan(L*kappa) e ajuste no ápice contra subesterço (LAGO_ANATOMY.md); PREREG_PROF_CONTROL_1.md.
+2026-11-07 PROF-CONTROL-1 Task 2: implementado --prof-control opt-in (delta_ff cinemático + ld modulado por c_ld derivado); testes unitários e bit-identidade OFF PASS.
+2026-11-07 PROF-CONTROL-1 Task 3: 2 controles OFF cmp=0 e 10 corridas ON N=0..4 solo 600 s concluidas com extracoes deterministicas; integridade PASS; EXECUCAO_PROF_CONTROL_1.md.
+2026-11-07 PROF-CONTROL-1 Task 4 closing: avaliacao formal dos gates — REPROVADO (FAIL em Primario: 4/4/4/4 cronicas inalteradas e fora% piorou +1,67 pp; FAIL em Monaco: -0,93 pp < 5 pp com piora em C05/C12; FAIL em Guarda: 132,40 s > 123,05 s); default OFF mantido; EXECUCAO_PROF_CONTROL_1.md.
+2026-11-07 ABERTURA PROF-GRIP-1: pacing grip-sensível com reserva de 10% nas janelas das 4 crônicas (hipótese única da LAGO_APPROACH_FINDINGS + GRIP_PACING_FEASIBILITY); PLANO e PREREG; matriz 2 OFF cmp=0 + 10 ON com --variedade N.
+2026-11-07 PROF-GRIP-1 Task 2: implementado --prof-grip opt-in (teto grip-sensível v_alvo=v_plan·min(1,sqrt(grip/0,85))·sqrt(1/1,10) nas janelas canônicas de C01/C06/C07/C08, grip_atual = tyre.grip_multiplier por tick); bit-identidade OFF exata e 10/10 testes PASS.
+2026-11-07 PROF-GRIP-1 Task 3: 2 controles OFF cmp=0 vs PROF-CONTROL-1 e 10 corridas ON --prof-grip com --variedade N solo 600 s concluidas; extracoes deterministicas cmp=0 12/12; cronicas nao zeradas (C06/C07/C08 4/4/4/4; C01 3 em N1/N2); PRELIMINAR_PROF_GRIP_1.md.
+2026-11-07 PROF-GRIP-1 Task 4 closing: avaliacao formal dos gates — REPROVADO (FAIL em Primario: C06/C07/C08 4/4/4/4 inalteradas e C01 3 em N1/N2; FAIL em Monaco: delta offtrack > 0 em N3/N4 e regressao C05; FAIL em Guarda: mediana 129,0–130,4 s > 123,05 s); causa: teto fator=0,9535*sqrt(grip/0,85) era comparado com v_plan*0,93 e foi no-op em >80% da corrida; default OFF mantido; EXECUCAO_PROF_GRIP_1.md.
+2026-11-07 ABERTURA PROF-PACE-1: pacing preventivo grip_mode=fixed (grip_ref=0,789547 SOFT 6 voltas DRY 42°C; 0,807 NÃO é o pior caso confirmado pelo TyreState canônico); escada η1=0,48848/η2=0,40000; PLANO e PREREG; decisões do dono pendentes (controles OFF, escalada, Guarda voltas limpas).
+2026-11-07 PROF-PACE-1 Task 1 (correção documental): grip_ref recalculado com demonstração n_laps=ceil(600/130,195)+1=6 aplicações exatas; length_factor precisão completa 0,9245415555555555 (versões divergentes removidas); grip_ref=0,7895474400345001; SHAs completos pinados; identidade operacional congelada (--n-cars 1, VER, SOFT, 42,0°C, grip fixed nunca atualizado); decisões do dono marcadas PENDENTE_DO_DONO (controles OFF, escalada η1→η2, Guarda voltas limpas).
+2026-11-07 PROF-PACE-1 Task 1 (auditoria final): decisões do dono registradas (CTRL_OFF pareado N=0..4; ON η1 N=0..4; ON η2 N=0..4 condicional; orçamento máx 15; escalada com 5 condições; Guarda = mediana das voltas limpas por realização, mediana das medianas ≤ 123,05 s, OFF inconclusivo por desenho); auditoria clima/grip: 6 realizações DRY 0 transições grip 0,8420→0,8070 (gate grip_ref PASS); variação N0..N4 = jitter IC (variedade_params); t_base 96,202 / t_margin 103,656 / t_cap η1 105,660 / η2 107,080 com grip_ref 0,789547 (todos cabem).
+2026-11-07 PROF-PACE-1 FREEZE Task 2 (dono): mecanismo --prof-pace congelado (grip_mode=FIXED grip_ref=0,7895474400345001; escada eta1=0,48848/eta2=0,40000; k_inst no v_safe + k suav 20 m nas passadas; tempos do PACE_MARGIN com 30 m superados; exclusividade vs --prof-grip/--prof-control; 0,93 uma vez -> cap -> passadas; correcao wrap-safe da mascara C01 + teste de cobertura circular; equivalencia cap inativo 1e-9; clima 6 realizacoes DRY 0 transicoes, grip_ref <= grip final 0,807); custos canonicos pelo caminho do controlador: t_base 96,201711 / t_margin_only 103,442766 / t_cap eta1 107,410153 / eta2 109,610725 (folga >= 15,6 s); incremental sobre t_margin: +3,97 (eta1) / +6,17 (eta2); reducoes rel max 38%/44%; estimativa 111-113 s observados = extrapolacao exploratoria do dono (sem status de medicao/gate); ressalva 1: os 4 ticks s1872-1884 (frenagem antecipada C06, dist 8,0 m, regra d_b <= 2*ds) com metricas no relatorio do executor; ressalva 2: determinismo pareado verificado estruturalmente (ICs = f(seed,N) puro) e empiricamente para variedade 0 (REF=CTRL bit-identico); N>0 sem duplicatas nos dados existentes (limitacao registrada para a Task 3).

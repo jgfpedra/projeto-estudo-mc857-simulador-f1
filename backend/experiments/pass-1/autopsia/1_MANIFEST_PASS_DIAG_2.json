@@ -1,0 +1,39 @@
+{
+  "schema": "PASS-DIAG-2 freeze manifest v1",
+  "base_commit": "40cd5bc16799afb05546011d6eeb82c17b99dd9a",
+  "base_script_sha256": "85812034fabbb1c6a7c2d2b6f9758bbb77e3d370a5eefcd5f7f64ce5c870af9f",
+  "instrument_version": "1.5",
+  "source_pins": {
+    "experiments/pass-1/1_R1_OFF.csv": "5cb49097fea9bb066e9bef5ae62f4ee7c6f9ceb70485448792d33b533ce5cdaa",
+    "experiments/pass-1/1_R1_OFF.log": "f23a79771bd9f05d8e709f9bf67a93be8a93bf2e8129403db03972b0c0c23273",
+    "experiments/pass-1/2_R2_ON.csv": "7d2c49b9b873fc4fc4888b1413cd47ae3b9dde040a4e1af111ac246c90e0a27c",
+    "experiments/pass-1/2_R2_ON.log": "213fb953c98e59a51e2178a9f05171560dd63ed15f675fcf6c2a86b33c783f1b",
+    "experiments/pass-1/4_AUDIT_PASS_1.json": "347216e6cf65f109ec82d927762bab5ffefea85c4913fca024891bf05e1a134b",
+    "experiments/pass-1/5_EXECUCAO_PASS_1.md": "e4f6ac05383d481c862cf679edac171547ccbde81c44557ecd2072f295281a67",
+    "model_train/tracks_frozen/interlagos_v2.json": "c4617650983df9b1141296dac953b0e4be03f0c06c1de006340233c39e308613"
+  },
+  "census_sha256": {
+    "backend/experiments/pass-1/autopsia/0_CENSO_FORMAS_PASS_DIAG_2.txt": "aaafcb056735d0cfa5c90eb7aabb10b31163ca60c2c7de3315f4332c5d120261",
+    "backend/experiments/pass-1/autopsia/0_CENSO_RESIDUOS_PASS_DIAG_2.txt": "5ba2037387e10ff70287f561e1422bc580529208456fbfd108fb7a09ca796b77",
+    "backend/experiments/pass-1/autopsia/0_CENSO_SCHEMA_AUDIT_PASS_DIAG_2.txt": "c9532d4d146104947f3e3cbdeb40aff8377c4ebcc89594d772928bfdc46aa731"
+  },
+  "freeze_file_sha256": {
+    "backend/experiments/pass-1/autopsia/PREREG_PASS_DIAG_2.md": "4fc292f337bb96827d3ca3b54a89afeb62a521a8db1a82d19dab618c34f5bb51",
+    "backend/scripts/pass_1_diag.py": "115096c20cf318642edd69887e63f151958aff0b5e4b561704996e0eb8a6ccda",
+    "backend/experiments/pass-1/autopsia/0_CENSO_FORMAS_PASS_DIAG_2.txt": "aaafcb056735d0cfa5c90eb7aabb10b31163ca60c2c7de3315f4332c5d120261",
+    "backend/experiments/pass-1/autopsia/0_CENSO_RESIDUOS_PASS_DIAG_2.txt": "5ba2037387e10ff70287f561e1422bc580529208456fbfd108fb7a09ca796b77",
+    "backend/experiments/pass-1/autopsia/0_CENSO_SCHEMA_AUDIT_PASS_DIAG_2.txt": "c9532d4d146104947f3e3cbdeb40aff8377c4ebcc89594d772928bfdc46aa731",
+    "backend/experiments/pass-1/autopsia/0_selftest_v15.log": "1760ea59a068dafbf5cc22e95d15c4d11aefd1f61779cf1b462180c6cfbf855d"
+  },
+  "selftest_sha256": "1760ea59a068dafbf5cc22e95d15c4d11aefd1f61779cf1b462180c6cfbf855d",
+  "selftest": "PASS; synthetic only; did not open race CSVs/logs/audit",
+  "analysis_output_paths_absent_at_freeze": [
+    "backend/experiments/pass-1/autopsia/1_Q1_PRE60_DIVERGENCIA.csv",
+    "backend/experiments/pass-1/autopsia/2_Q2_GAPS_TENTATIVAS.csv",
+    "backend/experiments/pass-1/autopsia/3_Q2_FOLLOW_R1.csv",
+    "backend/experiments/pass-1/autopsia/4_RESUMO_PASS_DIAG_2.json"
+  ],
+  "runs_or_smokes": 0,
+  "production_changes": 0,
+  "suite_rerun": false
+}

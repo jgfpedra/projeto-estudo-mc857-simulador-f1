@@ -51,21 +51,21 @@ def v14_pair(tmp_path_factory):
 
 class TestShapeValidation:
     def test_actor_60d_rejects_edge_mode_with_explicit_error(self, v14_pair):
-        import run_race_10_cars as R
+        from scripts.simulation import run_race_10_cars as R
         _, npz = v14_pair
         with pytest.raises(ValueError, match="INCOMPATÍVEL"):
             R.NeuralRaceController(weights_path=npz, obs_mode='edge',
                                    mappings_path=None, track=None)
 
     def test_actor_60d_rejects_legacy_mode_with_explicit_error(self, v14_pair):
-        import run_race_10_cars as R
+        from scripts.simulation import run_race_10_cars as R
         _, npz = v14_pair
         with pytest.raises(ValueError, match="INCOMPATÍVEL"):
             R.NeuralRaceController(weights_path=npz, obs_mode='legacy',
                                    mappings_path=None, track=None)
 
     def test_actor_60d_builds_in_traffic_mode(self, v14_pair):
-        import run_race_10_cars as R
+        from scripts.simulation import run_race_10_cars as R
         _, npz = v14_pair
         ctrl = R.NeuralRaceController(weights_path=npz, obs_mode='traffic',
                                       mappings_path=None, track=None)
@@ -74,21 +74,23 @@ class TestShapeValidation:
 
 
 class TestDeployProfiles:
-    """PASSO 5 (FASE 4 v14): --profile substitui o default por mtime — os 3
-    candidatos de deploy devem existir, com obs correta, e o default
-    documentado é 'race' (v10)."""
+    """O profile padrão usa regras; os profiles neurais continuam explícitos."""
 
     def test_profiles_exist_default_race_obs_correct(self):
-        import run_race_10_cars as R
-        assert R.DEFAULT_PROFILE == 'race'
-        assert set(R.PROFILES) == {'race', 'quali', 'traffic', 'composite'}
-        for name, prof in R.PROFILES.items():
+        from scripts.simulation import run_race_10_cars as R
+        assert R.DEFAULT_PROFILE == 'apex-rules'
+        assert R.PROFILES['apex-rules']['controller'] == 'apex-rules'
+        neural_profiles = {'race', 'race-blind', 'quali', 'traffic', 'composite'}
+        assert neural_profiles <= set(R.PROFILES)
+        for name in neural_profiles:
+            prof = R.PROFILES[name]
             assert prof['keras'].exists(), f"profile {name}: {prof['keras']} ausente"
-        assert R.PROFILES['race']['obs_mode'] == 'edge'
+        assert R.PROFILES['race']['obs_mode'] == 'traffic'
+        assert R.PROFILES['race-blind']['obs_mode'] == 'edge'
         assert R.PROFILES['quali']['obs_mode'] == 'edge'
         assert R.PROFILES['traffic']['obs_mode'] == 'traffic'
-        # 3 candidatos DISTINCTOS (o default por mtime escolhia errado entre eles)
-        paths = {str(R.PROFILES[k]['keras'].resolve()) for k in R.PROFILES}
+        # race/composite compartilham o ator-base; há três atores neurais.
+        paths = {str(R.PROFILES[k]['keras'].resolve()) for k in neural_profiles}
         assert len(paths) == 3
 
 
@@ -96,7 +98,7 @@ class TestNumpyKerasParity60d:
     def test_parity_on_1000_real_obs(self, v14_pair):
         """≥1000 obs REAIS (env n_traffic=8, ator keras pilotando): o motor
         NumPy da corrida deve reproduzir o Keras (atol 2e-5, float32)."""
-        import run_race_10_cars as R
+        from scripts.simulation import run_race_10_cars as R
         from backend.model_train.f1_env import F1MultiContextEnv
         model, npz = v14_pair
         np_actor = R.NumpyNeuralActor(npz)
@@ -146,7 +148,7 @@ class TestRegistryResolution:
     coerente com o PROFILES."""
 
     def test_resolve_deploy_aliases_exist_and_match_profiles(self):
-        import run_race_10_cars as R
+        from scripts.simulation import run_race_10_cars as R
         from backend.model_train import tracking
         for alias in ('race', 'quali', 'traffic'):
             p = tracking.resolve_deploy(alias)

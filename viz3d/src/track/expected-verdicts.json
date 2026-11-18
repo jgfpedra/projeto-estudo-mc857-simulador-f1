@@ -1,0 +1,61 @@
+{
+  "_comment": "What verify.ts actually says about each committed track, known failures included. Read by src/track/tracks.test.ts and scripts/snapshot.mjs: a verdict that changes in either direction fails both. Nothing here loosens a check - the failures still show red in the viewer. Each FAIL and SKIP is explained in docs/phase0-geometry-report.md.",
+  "monza": {
+    "verdicts": { "A": "PASS", "B": "PASS", "C": "PASS", "D": "PASS", "E": "PASS", "F": "PASS", "G": "PASS" }
+  },
+  "monza_v1": {
+    "verdicts": { "A": "FAIL", "B": "PASS", "C": "PASS", "D": "PASS", "E": "PASS", "F": "FAIL", "G": "PASS" },
+    "why": {
+      "A": "5641.9 m against the published 5793 m, -2.61%: a spline through 11 corner markers is shorter than the track.",
+      "F": "0.940 turns. The loop does turn exactly once (sum of vertex headings); buildFrame's per-sample curvature cannot represent the single 120.4 deg vertex at the T11 marker."
+    }
+  },
+  "interlagos": {
+    "verdicts": { "A": "PASS", "B": "SKIP", "C": "PASS", "D": "SKIP", "E": "PASS", "F": "PASS", "G": "SKIP" },
+    "why": {
+      "A": "4226.1 m against the published 4309 m, -1.92%: passes, 3.5 m inside the 2% tolerance.",
+      "B": "No sourced corner count.",
+      "D": "No sourced first-corner window.",
+      "G": "No sourced per-corner handedness."
+    }
+  },
+  "interlagos_2024": {
+    "verdicts": { "A": "PASS", "B": "SKIP", "C": "PASS", "D": "SKIP", "E": "PASS", "F": "PASS", "G": "SKIP" },
+    "why": {
+      "A": "4226.5 m against the published 4309 m, -1.91%: passes, 4 m inside the 2% tolerance.",
+      "B": "No sourced corner count.",
+      "D": "No sourced first-corner window.",
+      "G": "No sourced per-corner handedness."
+    }
+  },
+  "interlagos_v2": {
+    "verdicts": { "A": "FAIL", "B": "SKIP", "C": "FAIL", "D": "SKIP", "E": "PASS", "F": "PASS", "G": "SKIP" },
+    "why": {
+      "A": "4160.4 m against the published 4309 m, -3.45%.",
+      "B": "No sourced corner count.",
+      "C": "Corners in s order run T12..T15, T1..T11: sf_idx 729 sits between T11 and T12, not before T1.",
+      "D": "No sourced first-corner window.",
+      "G": "No sourced per-corner handedness."
+    }
+  },
+  "engine": {
+    "verdicts": { "A": "FAIL", "B": "SKIP", "C": "SKIP", "D": "SKIP", "E": "PASS", "F": "PASS", "G": "SKIP" },
+    "why": {
+      "A": "interlagos_v2's own waypoints (the recording's race block, rolled to sf_idx 729): 4160.4 m against the published 4309 m, -3.45%, as for interlagos_v2.",
+      "B": "No sourced corner count, and the race block carries no corners.",
+      "C": "The race block carries no corners: the track is built from the recording alone, not from a local track JSON.",
+      "D": "No sourced first-corner window, and no corners.",
+      "G": "No sourced per-corner handedness, and no corners."
+    }
+  },
+  "engine_ours": {
+    "verdicts": { "A": "PASS", "B": "SKIP", "C": "SKIP", "D": "SKIP", "E": "PASS", "F": "PASS", "G": "SKIP" },
+    "why": {
+      "A": "Our Interlagos export (exports/interlagos_2023_v1.json, resampled at <= 4 m from public/tracks/interlagos.json) as the recording's race block: 4225.4 m against the published 4309 m, -1.94%, inside the 2% tolerance (interlagos.json itself: -1.92%).",
+      "B": "No sourced corner count, and the race block carries no corners.",
+      "C": "The race block carries no corners.",
+      "D": "No sourced first-corner window, and no corners.",
+      "G": "No sourced per-corner handedness, and no corners."
+    }
+  }
+}

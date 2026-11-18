@@ -1,0 +1,26 @@
+PROJ-FIX-2 — FASE 0: identidade da fonte NIT-2
+fonte=backend/experiments/fail-forensics-2/veredito/saltos_projecao.csv
+sha256=b9bcb14d9bb38dceabcbfddc9f90cb3b5bd2cc25fa6719a90ded52eb2b9bb739 PASS
+runs_unicos_e_contagens:
+  aluno_monaco_s0: 9
+  aluno_monaco_s1: 9
+  aluno_monaco_s2: 9
+  aluno_monaco_s3: 9
+  aluno_monaco_s4: 9
+  blind_monaco: 9
+  composite_interlagos: 3
+  composite_monaco: 112
+  professor_monaco_s0: 21
+  professor_monaco_s1: 21
+  professor_monaco_s2: 21
+  professor_monaco_s3: 21
+  professor_monaco_s4: 21
+composite_monaco_rows=112
+composite_monaco_ge10=112
+composite_monaco_ge30=45
+cars=ALO,GAS,HAM,LEC,NOR,PER,PIA,RUS,SAI,VER
+tick_min=76 tick_max=5910 range=[0,6000)
+track=monaco
+identity=FF1b R4 experiments/fail-forensics-2/4_composite_monaco_s0.csv; SHA-256 6360706f1b3dbf46ed3ad4998e3e3103cae14ea1054a084297cf2a5f423f1022
+identity_evidence=112/45 closes the FF1b R4 headline; only professor/aluno rows carry seed suffixes; composite_monaco is the unique composite Monaco run.
+checks={"all_ge10": true, "composite_monaco_rows_112": true, "drivers_exact": true, "ge30_45": true, "identity_single_composite_monaco": true, "source_sha256": true, "ticks_in_0_6000": true, "track_monaco": true}

@@ -1,0 +1,11 @@
+seed,clima,transicoes
+60,DAMP,"v2:DRY->CLOUDY; v3:CLOUDY->DAMP"
+61,SECA,"sem transicoes"
+62,SECA,"sem transicoes"
+63,SECA,"sem transicoes"
+64,SECA,"sem transicoes"
+65,SECA,"sem transicoes"
+66,SECA,"v3:DRY->CLOUDY"
+67,SECA,"sem transicoes"
+68,SECA,"v3:DRY->CLOUDY"
+69,SECA,"sem transicoes"

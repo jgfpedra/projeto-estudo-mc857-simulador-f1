@@ -1,0 +1,166 @@
+{
+  "version": "1.0",
+  "status": "PASS",
+  "prereg_commit": "0a269ff9f35d5baac512729a34e824e1861e37f2",
+  "execution_head": "a6d6775cb688eb5882ac871d428f909b5845dded",
+  "schemas": {
+    "R1_csv": {
+      "columns": 71,
+      "header_sha256": "95bca0bdffe8a26697bd9b8ff74d19757bc2cceede1cf83f33d25b3114477f93",
+      "status": "PASS"
+    },
+    "R2_csv": {
+      "columns": 71,
+      "header_sha256": "95bca0bdffe8a26697bd9b8ff74d19757bc2cceede1cf83f33d25b3114477f93",
+      "status": "PASS"
+    },
+    "R1_events": {
+      "columns": 17,
+      "header_sha256": "2d865161fc9fb5a55bbdc806f636fe47f1d05c20c1da39a01c7d2bfbe1723b83",
+      "status": "PASS"
+    },
+    "R2_events": {
+      "columns": 17,
+      "header_sha256": "2d865161fc9fb5a55bbdc806f636fe47f1d05c20c1da39a01c7d2bfbe1723b83",
+      "status": "PASS"
+    }
+  },
+  "pins": {
+    "R1_csv": {
+      "path": "backend/experiments/proj-gate-1/1_repro_off_monaco_s0.csv",
+      "revision": "5c4bf9c",
+      "sha256_disk": "6698b55bad9cba1a167c952eab4381ee696a4191545cdecdd3db873e739b2ce7",
+      "sha256_git_show": "6698b55bad9cba1a167c952eab4381ee696a4191545cdecdd3db873e739b2ce7",
+      "status": "PASS"
+    },
+    "R1_events": {
+      "path": "backend/experiments/proj-gate-1/1_repro_off_monaco_s0_events.csv",
+      "revision": "5c4bf9c",
+      "sha256_disk": "b99007d0673b2b11727f50287451ffd1fe5439db1997065f4884f60b33252ce4",
+      "sha256_git_show": "b99007d0673b2b11727f50287451ffd1fe5439db1997065f4884f60b33252ce4",
+      "status": "PASS"
+    },
+    "R2_csv": {
+      "path": "backend/experiments/proj-gate-1/2_on_monaco_s0.csv",
+      "revision": "5c4bf9c",
+      "sha256_disk": "b9ea18f28a26f2035fe61c9370eec7a70eb2bcaa342897d08a71baaf686a4edc",
+      "sha256_git_show": "b9ea18f28a26f2035fe61c9370eec7a70eb2bcaa342897d08a71baaf686a4edc",
+      "status": "PASS"
+    },
+    "R2_events": {
+      "path": "backend/experiments/proj-gate-1/2_on_monaco_s0_events.csv",
+      "revision": "5c4bf9c",
+      "sha256_disk": "88fa98130b73b881750dab5f54a1fae02d07ce2a2162e1586332afec0660ac6a",
+      "sha256_git_show": "88fa98130b73b881750dab5f54a1fae02d07ce2a2162e1586332afec0660ac6a",
+      "status": "PASS"
+    },
+    "Monaco_frozen": {
+      "path": "backend/model_train/tracks_frozen/Monaco_v2.json",
+      "revision": "f2bd199",
+      "sha256_disk": "af3125959ade1f82062d9c9fe0dfa8020d31e431d919408ae4d293f0fac20bf2",
+      "sha256_git_show": "af3125959ade1f82062d9c9fe0dfa8020d31e431d919408ae4d293f0fac20bf2",
+      "status": "PASS"
+    },
+    "runner_frozen": {
+      "path": "backend/scripts/run_race_10_cars.py",
+      "revision": "f2bd199",
+      "sha256_disk": "6f13b59cfb7e709081483be85e2ad14d7295f65981dc8705ca8bcc9a9b8b03b3",
+      "sha256_git_show": "6f13b59cfb7e709081483be85e2ad14d7295f65981dc8705ca8bcc9a9b8b03b3",
+      "status": "PASS"
+    },
+    "diagnostic_writer_frozen": {
+      "path": "backend/model_train/race_diagnostic.py",
+      "revision": "f2bd199",
+      "sha256_disk": "69f87d163a56fe310212158ff527f58bd891828ffd0e8c5f91c3f5d7d41a0491",
+      "sha256_git_show": "69f87d163a56fe310212158ff527f58bd891828ffd0e8c5f91c3f5d7d41a0491",
+      "status": "PASS"
+    },
+    "classifier_v1_2": {
+      "path": "backend/scripts/proj_fix_3_classify.py",
+      "revision": "f2bd199",
+      "sha256_disk": "bc0a7ba9a5a9e4194d6195f3bc830a7626133939b465829f8ee1225e30414bdd",
+      "sha256_git_show": "bc0a7ba9a5a9e4194d6195f3bc830a7626133939b465829f8ee1225e30414bdd",
+      "status": "PASS"
+    },
+    "g1_audit_source": {
+      "path": "backend/scripts/proj_gate_1_audit.py",
+      "revision": "f2bd199",
+      "sha256_disk": "000537b11b16914d96907f15e80a50de6ab208bd5538fa8a0fe93fabe3cae4e7",
+      "sha256_git_show": "000537b11b16914d96907f15e80a50de6ab208bd5538fa8a0fe93fabe3cae4e7",
+      "status": "PASS"
+    },
+    "PARE_PROJ_GATE_1": {
+      "path": "backend/experiments/proj-gate-1/PARE_PROJ_GATE_1.md",
+      "revision": "a278cbe",
+      "sha256_disk": "6b89f7b03b2313b76c73117e795d0b9089da309fb4cccc6527edb3396673acb9",
+      "sha256_git_show": "6b89f7b03b2313b76c73117e795d0b9089da309fb4cccc6527edb3396673acb9",
+      "status": "PASS"
+    },
+    "DOSSIER_PROJ_FIX_1": {
+      "path": "backend/experiments/proj-fix-1/DOSSIÊ_PROJ_GATE.md",
+      "revision": "f2bd199",
+      "sha256_disk": "663d4ad9ff561080d4c2e1fe8d981dd00da01a10a919bb21e1b418a44c80185f",
+      "sha256_git_show": "663d4ad9ff561080d4c2e1fe8d981dd00da01a10a919bb21e1b418a44c80185f",
+      "status": "PASS"
+    },
+    "PROJ_GATE_2_autopsy_v1_0": {
+      "path": "backend/scripts/proj_gate_2_autopsy.py",
+      "revision": "HEAD",
+      "sha256_disk": "4f86cd9996041cddc0fd742c603ae1e89f381513bb54264d8b66c5bd39278ea7",
+      "sha256_git_show": "4f86cd9996041cddc0fd742c603ae1e89f381513bb54264d8b66c5bd39278ea7",
+      "status": "PASS"
+    }
+  },
+  "event_rows": {
+    "R1_events": 110794,
+    "R2_events": 22083
+  },
+  "run_validation": {
+    "R1": {
+      "data_rows": 30000,
+      "drivers": [
+        "ALO",
+        "GAS",
+        "HAM",
+        "LEC",
+        "NOR",
+        "PER",
+        "PIA",
+        "RUS",
+        "SAI",
+        "VER"
+      ],
+      "offtrack_samples": 12945
+    },
+    "R2": {
+      "data_rows": 30000,
+      "drivers": [
+        "ALO",
+        "GAS",
+        "HAM",
+        "LEC",
+        "NOR",
+        "PER",
+        "PIA",
+        "RUS",
+        "SAI",
+        "VER"
+      ],
+      "offtrack_samples": 18045
+    }
+  },
+  "outputs": {
+    "3_branch_geometry.json": "b6596c15d05b15d1989846548b90ef422d525d9da6d899e6d79c430ff6b8c21f",
+    "4_g2_class_decomposition.json": "b558715bc1c6e46ac87d06b855094e5577e3f04f587b50d40007f4a8e9fe9128",
+    "5_veredito.md": "1cf16016896a10fc7d0b7d3a58cdaa5fadc4f82a45c39b1183a58f0f4088801b",
+    "2_selftest.log": "14d51f809b6aaea8180d5899998f37bf82aa9c1d954b0a4976d1c686e0e93488"
+  },
+  "script_sha256": "4f86cd9996041cddc0fd742c603ae1e89f381513bb54264d8b66c5bd39278ea7",
+  "report_finalization": "Added the verified shared grid,compound metadata and source line references; no metric recalculation.",
+  "prereg": {
+    "path": "backend/experiments/proj-gate-1/PREREG_PROJ_GATE_2.md",
+    "commit": "0a269ff9f35d5baac512729a34e824e1861e37f2",
+    "sha256_disk": "18d378eb851bd49cb3476a8e11880f76b369d815f328f42fd45ea71c78be00ef",
+    "sha256_git_show": "18d378eb851bd49cb3476a8e11880f76b369d815f328f42fd45ea71c78be00ef"
+  }
+}

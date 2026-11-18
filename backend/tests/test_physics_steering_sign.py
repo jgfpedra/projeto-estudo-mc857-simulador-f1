@@ -1,7 +1,7 @@
 """Valida a convenção de sinal do steering na física: positivo = esquerda.
 
 Regressão para a inversão A/D: o docstring de ``CarInput`` e o
-``scripts/publish_keyboard.py`` definem ``steering_yaw_rad > 0`` como
+``scripts/simulation/publish_keyboard.py`` definem ``steering_yaw_rad > 0`` como
 esquerda; o modelo lateral (bicycle + Pacejka) precisa confirmar isso.
 """
 
