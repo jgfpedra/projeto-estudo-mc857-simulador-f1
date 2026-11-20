@@ -1,0 +1,5 @@
+# Dependências usadas apenas pelo importador offline de mapas históricos.
+numpy>=1.26,<3
+scipy>=1.13,<2
+Pillow>=10,<13
+scikit-image==0.25.2

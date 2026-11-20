@@ -85,6 +85,35 @@ class PitStopEvent(Event):
 
 
 @dataclass
+class PitRequestedEvent(Event):
+    """Confirma que a engine registrou o pedido feito pelo usuário."""
+    type: str = "pit_requested"
+    driver_id: str = ""
+    driver_name: str = ""
+    lap: int = 0
+    tyre_compound: str = ""
+    source: str = "user"
+
+
+@dataclass
+class PitCancelledEvent(Event):
+    type: str = "pit_cancelled"
+    driver_id: str = ""
+    driver_name: str = ""
+    lap: int = 0
+    source: str = "user"
+
+
+@dataclass
+class PitCancelRejectedEvent(Event):
+    type: str = "pit_cancel_rejected"
+    driver_id: str = ""
+    driver_name: str = ""
+    lap: int = 0
+    reason: str = "already_in_pit_lane"
+
+
+@dataclass
 class PositionUpdateEvent(Event):
     """Snapshot periódico com a posição de todos os pilotos."""
     type: str = "position_update"

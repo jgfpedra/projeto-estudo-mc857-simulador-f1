@@ -1,216 +1,178 @@
-"""Testes HTTP/WebSocket da api com TestClient (sem rodar simulação nem baixar dados)."""
-
-import asyncio
-import concurrent.futures
-import time
+"""HTTP/WebSocket contract tests for the Redis-backed race manager."""
+import json
+import os
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from api import main
-from api.catalog import CatalogUnavailable
-from api.race_manager import RaceManager, race_manager
-from api_fixtures import FakeLoader, make_catalog
+from api.providers.race_data import driver_record
+from api.race_manager import RaceManager
+from config.live_tracks import load_live_track
 
 
-@pytest.fixture()
-def loader():
-    return FakeLoader()
+class MemoryStore:
+    def __init__(self): self.values = {}
+    def ping(self): return True
+    def set(self, key, value, ex=None): self.values[key] = value
+    def get(self, key): return self.values.get(key)
 
 
-@pytest.fixture()
-def client(monkeypatch, loader):
-    # O POST cria a engine mas não a executa (sem thread de simulação / PyBullet).
-    monkeypatch.setattr(RaceManager, "_run_engine", staticmethod(lambda engine: None))
-    main.app.dependency_overrides[main.required_catalog] = make_catalog
-    main.app.dependency_overrides[main.optional_catalog] = make_catalog
-    main.app.dependency_overrides[main.get_track_loader] = lambda: loader
-    with TestClient(main.app) as c:
-        yield c
-    main.app.dependency_overrides.clear()
+class FakeProvider:
+    def load(self, circuit, season):
+        if circuit != 'interlagos':
+            raise ValueError('Circuito indisponível')
+        track = load_live_track(track_name='interlagos', year=2023)
+        return track, [driver_record('VER', 'Max Verstappen', 1, 'Red Bull', '3671C6'),
+                       driver_record('NOR', 'Lando Norris', 4, 'McLaren', 'FF8000')], {
+                           'track_source': 'test', 'driver_source': 'test'}
 
 
-# -- catálogo ---------------------------------------------------------------------
-
-def test_circuits_traz_o_que_o_front_pediu(client):
-    r = client.get("/circuits")
-    assert r.status_code == 200
-    interlagos = next(c for c in r.json() if c["id"] == "interlagos")
-    assert interlagos["name"] == "José Carlos Pace"
-    assert interlagos["city"] == "São Paulo"
-    assert interlagos["country"] == {"name": "Brazil", "code": "BR"}      # código p/ emoji de bandeira
-    assert interlagos["svg"]["black-outline"].endswith(".svg")
-    assert [l["id"] for l in interlagos["layouts"]] == ["interlagos-1", "interlagos-2"]  # variações
-    assert interlagos["layouts"][1]["is_current"] is True
-    assert "fastf1" not in interlagos["layouts"][1]                       # detalhe interno não vaza
+class FakeEngine:
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        self.physics = SimpleNamespace(contact_collector=None)
+    def set_controller(self, *_args): pass
 
 
-def test_seasons_lista_do_mais_recente_para_o_mais_antigo(client):
-    assert client.get("/seasons").json() == [2025, 2024]
+class FakeThread:
+    def __init__(self, **_kwargs): pass
+    def start(self): pass
 
 
-def test_pilotos_da_temporada(client):
-    r = client.get("/seasons/2024/drivers")
-    assert r.status_code == 200
-    ver = next(d for d in r.json() if d["id"] == "max-verstappen")
-    assert ver == {
-        "id": "max-verstappen", "name": "Max Verstappen", "abbreviation": "VER", "number": 1,
-        "team": "Red Bull", "team_id": "red-bull", "country": {"name": "Netherlands", "code": "NL"},
-    }
-    assert client.get("/seasons/2025/drivers").json()[0]["number"] == 3   # número muda por temporada
+DRIVERS = [
+    {'id': 'max-verstappen', 'name': 'Max Verstappen', 'abbreviation': 'VER',
+     'permanent_number': 1, 'team_name': 'Red Bull', 'team_color': '#3671C6',
+     'team': {'id': 'red-bull'}, 'country_name': 'Netherlands', 'country_code': 'NL'},
+    {'id': 'lando-norris', 'name': 'Lando Norris', 'abbreviation': 'NOR',
+     'permanent_number': 4, 'team_name': 'McLaren', 'team_color': '#FF8000',
+     'team': {'id': 'mclaren'}, 'country_name': 'United Kingdom', 'country_code': 'GB'},
+]
 
 
-def test_temporada_inexistente_e_404(client):
-    assert client.get("/seasons/1800/drivers").status_code == 404
+@pytest.fixture
+def context(monkeypatch):
+    import api.race_manager as module
+    url = os.environ.get('TEST_REDIS_URL')
+    if url:
+        import redis
+        store = redis.Redis.from_url(url, decode_responses=True)
+        monkeypatch.setattr(main, 'REDIS_URL', url)
+    else:
+        store = MemoryStore()
+    manager = RaceManager(client=store, provider=FakeProvider())
+    monkeypatch.setattr(main, 'race_manager', manager)
+    monkeypatch.setattr(module, 'SimulationEngine', FakeEngine)
+    monkeypatch.setattr(module.threading, 'Thread', FakeThread)
+    monkeypatch.setattr(main.driver_service, 'get_available_seasons', lambda: [2025, 2024, 1973])
+    monkeypatch.setattr(main.driver_service, 'list_drivers',
+                        lambda year=None, **_kwargs: DRIVERS if year in (2024, 2025) else [])
+    with TestClient(main.app) as client:
+        yield SimpleNamespace(client=client, manager=manager, store=store, redis_url=url)
+    if url:
+        for race_id in manager._engines:
+            for suffix in ('meta', 'snapshot', 'state', 'start', 'result'):
+                store.delete(f'race:{race_id}:{suffix}')
 
 
-def test_catalogo_ausente_e_503_com_instrucao(monkeypatch):
-    def boom():
-        raise CatalogUnavailable("catálogo não encontrado. Gere com: python scripts/build_catalog.py")
-    monkeypatch.setattr(main, "get_catalog", boom)
-    with TestClient(main.app) as c:
-        r = c.get("/circuits")
-    assert r.status_code == 503 and "build_catalog.py" in r.json()["detail"]
+def test_circuit_catalog_matches_2d_client(context):
+    result = context.client.get('/circuits')
+    assert result.status_code == 200
+    entry = next(c for c in result.json()['circuits'] if c['id'] == 'interlagos')
+    assert entry['country']['code'] == 'BR' and entry['city']
+    assert entry['simulable'] and len(entry['layouts']) >= 2
+    assert all('simulable' in layout and 'is_current' in layout for layout in entry['layouts'])
+    assert next(layout for layout in entry['layouts'] if layout['id'] == 'interlagos-1')['simulable']
 
 
-# -- POST /races -------------------------------------------------------------------
-
-def test_post_races_contrato_completo(client, loader):
-    body = {
-        "circuit": {"id": "interlagos"},
-        "laps": 6,
-        "grid": ["lando-norris", "max-verstappen"],
-        "weather": "light_rain",
-        "weather_change": {"probability_per_lap": 0.1, "possible": ["cloudy", "rain"]},
-        "stints": [{"compound": "soft", "laps": 2}, {"compound": "hard", "laps": 4}],
-    }
-    r = client.post("/races", json=body)
-    assert r.status_code == 200, r.text
-    j = r.json()
-    assert j["race_id"].startswith("race_") and j["ws_path"] == f"/ws/races/{j['race_id']}"
-    assert (j["circuit_id"], j["layout_id"], j["num_laps"]) == ("interlagos", "interlagos-2", 6)
-    assert [(g["position"], g["driver_id"]) for g in j["grid"]] == [(1, "lando-norris"), (2, "max-verstappen")]
-    assert j["initial_weather"] == {"requested": "light_rain", "engine_kind": "DAMP", "rainfall_mm_h": 0.5}
-    assert j["initial_tyre"] == "soft"
-    assert any("stints" in w for w in j["warnings"])
-    assert loader.calls == [("21", 2025)]
-    assert race_manager.exists(j["race_id"])
+def test_season_drivers_match_2d_client(context):
+    assert context.client.get('/seasons').json() == [2025, 2024, 1973]
+    drivers = context.client.get('/seasons/2024/drivers').json()
+    assert drivers[0]['id'] == 'max-verstappen'
+    assert drivers[0]['team'] == 'Red Bull' and drivers[0]['country']['code'] == 'NL'
+    assert context.client.get('/seasons/1800/drivers').json() == []
 
 
-def test_post_minimo_continua_funcionando_como_antes(client):
-    r = client.post("/races", json={"laps": 3})
-    assert r.status_code == 200
-    j = r.json()
-    assert j["track_name"] == "Interlagos" and j["num_laps"] == 3
-    assert [g["driver_id"] for g in j["grid"]] == ["drv_01", "drv_02"] and j["warnings"] == []
+def test_unavailable_circuit_catalog_returns_503(context):
+    context.manager.catalog = None
+    assert context.client.get('/circuits').status_code == 503
 
 
-def test_post_sem_catalogo_ainda_aceita_pedido_minimo(monkeypatch, loader):
-    monkeypatch.setattr(RaceManager, "_run_engine", staticmethod(lambda engine: None))
-    main.app.dependency_overrides[main.optional_catalog] = lambda: None
-    main.app.dependency_overrides[main.get_track_loader] = lambda: loader
+def test_create_2d_race_keeps_selected_grid_and_configuration(context):
+    body = {'circuit': {'id': 'interlagos', 'layout_id': 'interlagos-2'},
+            'year': 2023, 'laps': 6, 'grid': ['lando-norris', 'max-verstappen'],
+            'weather': 'rain', 'initial_tyre': 'wet',
+            'stints': [{'compound': 'wet', 'laps': 2}, {'compound': 'hard', 'laps': 4}]}
+    # The season source is mocked, without relying on network access.
+    from api import main
+    original = main.driver_service.list_drivers
+    main.driver_service.list_drivers = lambda **_kwargs: DRIVERS
     try:
-        with TestClient(main.app) as c:
-            assert c.post("/races", json={"laps": 2}).status_code == 200
-            r = c.post("/races", json={"grid": ["max-verstappen"]})
-            assert r.status_code == 503
+        response = context.client.post('/races', json=body)
     finally:
-        main.app.dependency_overrides.clear()
+        main.driver_service.list_drivers = original
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result['grid'] == body['grid'] and result['initial_weather'] == 'rain'
+    assert result['warnings'] and result['ws_path'] == f"/ws/races/{result['race_id']}"
+    meta = context.manager.metadata(result['race_id'])
+    assert [driver['driver_id'] for driver in meta['drivers']] == body['grid']
+    assert meta['track']['pit_lane']['waypoints']
+    engine = context.manager._engines[result['race_id']]
+    assert engine.kwargs['drivers'][0].starting_tyre_compound.value == 'WET'
+    assert engine.kwargs['weather_model'].current.kind.value == 'WET'
 
 
-@pytest.mark.parametrize("body,fragment", [
-    ({"grid": ["max-verstappen", "ghost"]}, "desconhecidos"),
-    ({"circuit": {"id": "narnia"}}, "não existe no catálogo"),
-    ({"circuit": {"id": "oldtrack"}}, "não é simulável"),
+def test_minimal_race_returns_ws_path_and_snapshot(context):
+    response = context.client.post('/races', json={'laps': 3})
+    assert response.status_code == 200
+    result = response.json()
+    assert result['num_laps'] == 3 and result['ws_path'] == f"/ws/races/{result['race_id']}"
+    assert context.client.get(f"/races/{result['race_id']}/snapshot").json()['status'] == 'starting'
+
+
+@pytest.mark.parametrize('body', [
+    {'laps': 0}, {'weather': 'snow'}, {'grid': ['a', 'a']},
+    {'laps': 10, 'stints': [{'compound': 'soft', 'laps': 3}]},
+    {'unexpected': True},
 ])
-def test_post_erros_de_dominio_sao_422_com_mensagem(client, body, fragment):
-    r = client.post("/races", json=body)
-    assert r.status_code == 422 and fragment in r.json()["detail"]
+def test_invalid_setup_is_rejected(context, body):
+    assert context.client.post('/races', json=body).status_code == 422
 
 
-def test_post_validacao_do_schema_e_422(client):
-    assert client.post("/races", json={"laps": 0}).status_code == 422
-    assert client.post("/races", json={"weather": "snow"}).status_code == 422
-    r = client.post("/races", json={"laps": 10, "stints": [{"compound": "soft", "laps": 3}]})
-    assert r.status_code == 422 and "soma das voltas" in r.text
+def test_unknown_grid_driver_returns_clear_error(context):
+    response = context.client.post('/races', json={'year': 2024, 'grid': ['ghost']})
+    assert response.status_code == 400 and 'ghost' in response.json()['detail']
 
 
-def test_falha_do_fastf1_vira_502(client):
-    from config import CircuitLoadError
-
-    def broken(*a, **k):
-        raise CircuitLoadError("sem rede")
-    main.app.dependency_overrides[main.get_track_loader] = lambda: broken
-    r = client.post("/races", json={"circuit": {"id": "interlagos"}})
-    assert r.status_code == 502 and "FastF1" in r.json()["detail"]
+def test_unavailable_track_returns_clear_error(context):
+    response = context.client.post('/races', json={'track': 'narnia', 'year': 2024})
+    assert response.status_code == 400 and 'indisponível' in response.json()['detail']
 
 
-# -- WebSocket ----------------------------------------------------------------------
-
-def _recv(ws, timeout=3.0):
-    """receive_json com timeout: sem isso, um bug de 'mensagem perdida' trava o pytest."""
-    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    fut = pool.submit(ws.receive_json)
-    try:
-        return fut.result(timeout=timeout)
-    except concurrent.futures.TimeoutError:
-        raise AssertionError(f"nenhuma mensagem em {timeout}s no websocket") from None
-    finally:
-        pool.shutdown(wait=False)   # não esperar a thread presa no receive
-
-
-def _wait_subscribed(race_id, timeout=3.0):
-    end = time.time() + timeout
-    while time.time() < end:
-        with race_manager._lock:
-            if race_manager._races[race_id].subscribers:
-                return
-        time.sleep(0.01)
-    raise AssertionError("websocket não se inscreveu a tempo")
-
-
-def _publish(payload, race_id):
-    asyncio.run_coroutine_threadsafe(race_manager.broadcast(race_id, payload), race_manager.loop).result(3)
-
-
-def test_websocket_transmite_e_fecha_no_race_end(client):
-    race_id = client.post("/races", json={"laps": 1}).json()["race_id"]
-    with client.websocket_connect(f"/ws/races/{race_id}") as ws:
-        _wait_subscribed(race_id)
-        _publish({"type": "tick", "lap": 0}, race_id)
-        assert _recv(ws) == {"type": "tick", "lap": 0}
-        _publish({"type": "race_end"}, race_id)
-        assert _recv(ws) == {"type": "race_end"}
-        with pytest.raises(WebSocketDisconnect) as exc:
-            _recv(ws)
-        assert exc.value.code == 1000                      # o servidor encerra o stream
-
-
-def test_websocket_de_corrida_inexistente_fecha_com_4404(client):
+def test_websocket_unknown_race_closes_4404(context):
+    if not context.redis_url:
+        pytest.skip('requires isolated Redis')
     with pytest.raises(WebSocketDisconnect) as exc:
-        with client.websocket_connect("/ws/races/race_nao_existe"):
+        with context.client.websocket_connect('/ws/races/race_nao_existe'):
             pass
     assert exc.value.code == 4404
 
 
-def test_assinante_tardio_recebe_o_race_start(client):
-    """O motor começa antes do WS conectar: o race_start não pode se perder."""
-    race_id = client.post("/races", json={"laps": 1}).json()["race_id"]
-    _publish({"type": "race_start", "race_id": race_id}, race_id)   # publicado ANTES de alguém conectar
-    _publish({"type": "tick", "lap": 0}, race_id)                   # tick comum não é guardado
-    with client.websocket_connect(f"/ws/races/{race_id}") as ws:
-        assert _recv(ws) == {"type": "race_start", "race_id": race_id}
-        _wait_subscribed(race_id)
-        _publish({"type": "tick", "lap": 1}, race_id)
-        assert _recv(ws) == {"type": "tick", "lap": 1}      # o tick antigo não volta
-
-
-def test_race_start_nao_duplica_para_quem_ja_estava_conectado(client):
-    race_id = client.post("/races", json={"laps": 1}).json()["race_id"]
-    with client.websocket_connect(f"/ws/races/{race_id}") as ws:
-        _wait_subscribed(race_id)
-        _publish({"type": "race_start", "race_id": race_id}, race_id)
-        _publish({"type": "tick", "lap": 0}, race_id)
-        assert _recv(ws)["type"] == "race_start"
-        assert _recv(ws)["type"] == "tick"                   # sem race_start repetido
+def test_websocket_replays_start_and_latest_tick_and_forwards_end(context):
+    if not context.redis_url:
+        pytest.skip('requires isolated Redis')
+    result = context.client.post('/races', json={'laps': 1}).json()
+    race_id = result['race_id']
+    start = {'type': 'race_start', 'race_id': race_id}
+    tick = {'type': 'tick', 'sim_ts': 1.0, 'positions': []}
+    context.store.set(f'race:{race_id}:start', json.dumps(start))
+    context.store.set(f'race:{race_id}:state', json.dumps(tick))
+    with context.client.websocket_connect(f'/ws/races/{race_id}') as ws:
+        assert ws.receive_json() == start
+        assert ws.receive_json() == tick
+        end = {'type': 'race_end', 'race_id': race_id}
+        context.store.publish(f'race:{race_id}:events', json.dumps(end))
+        assert ws.receive_json() == end

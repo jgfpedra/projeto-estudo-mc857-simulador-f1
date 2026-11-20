@@ -1,14 +1,15 @@
 """Driver Service for Formula 1 driver information and statistics.
 
 Provides query, search, team and color access for driver records in a season year.
-Supports database dependency injection (defaults to FastF1DriverDatabase with local caching).
+Supports database dependency injection (defaults to OpenF1DriverDatabase with FastF1 fallback).
 """
 
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from database.driver_db import DriverDatabase, FastF1DriverDatabase
+from database.driver_db import DriverDatabase
+from database.openf1_driver_db import OpenF1DriverDatabase
 
 
 class DriverService:
@@ -18,11 +19,11 @@ class DriverService:
         self,
         db: Optional[DriverDatabase] = None,
     ):
-        """Initialize DriverService with an injected database or fallback to FastF1DriverDatabase."""
+        """Initialize DriverService with an injected database or fallback to OpenF1DriverDatabase."""
         if db is not None:
             self.db: DriverDatabase = db
         else:
-            self.db = FastF1DriverDatabase()
+            self.db = OpenF1DriverDatabase()
 
     def list_drivers(
         self,

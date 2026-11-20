@@ -4,6 +4,8 @@ __pycache__
 experiments
 archive
 *.csv
+data/*.csv
+data/**/*.csv
 *.npz
 *.log
 model_train/cache_fastf1

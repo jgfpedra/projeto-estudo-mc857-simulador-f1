@@ -172,6 +172,7 @@ class TyreState:
         track_length_km: float,
         weather_grip_factor: float,
         aggressive: float = 1.0,
+        lap_fraction: float = 1.0,
     ) -> float:
         """Aplica uma volta de uso ao pneu.
 
@@ -184,6 +185,8 @@ class TyreState:
             pista molhada consomem mais.
         aggressive : float
             Fator de agressividade do piloto (1.0 = nominal).
+        lap_fraction : float
+            Fração da volta percorrida com este jogo (após uma troca).
 
         Retorna
         -------
@@ -207,9 +210,10 @@ class TyreState:
             * weather_wear_penalty
             * length_factor
             * aggressive
+            * max(0.0, min(1.0, lap_fraction))
         )
         self.tyre_life = max(0.0, self.tyre_life - decay)
-        self.age_laps += 1.0
+        self.age_laps += max(0.0, min(1.0, lap_fraction))
 
         if self.age_laps >= 1.0:
             self.fresh = False

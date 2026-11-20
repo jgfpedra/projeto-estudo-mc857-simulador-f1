@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { ArrowLeft, Check, Dices, RotateCcw, Trash2, Users } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
@@ -11,8 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { GridSlot } from "@/components/grid-slot"
-import { driversBySeason } from "@/data/drivers"
 import { useDriverStore } from "@/stores/driver-store"
+import { api } from "@/services/api"
 
 const GRID_SIZE = 20
 
@@ -41,13 +41,48 @@ export function DriverTeamSelection() {
   const setDrivers = useDriverStore((state) => state.setDrivers)
   const clearGrid = useDriverStore((state) => state.clearGrid)
 
-  // Temporário: mantém os dados locais até a integração com a API da temporada.
-  useEffect(() => {
-    setAvailableDrivers(driversBySeason[Number(season)])
-  }, [season, setAvailableDrivers])
+    const [seasons, setSeasons] = useState<number[]>([])
+    const [isLoadingDrivers, setIsLoadingDrivers] = useState(false)
+    const [driversError, setDriversError] = useState<string | null>(null)
 
-  // Temporário: as temporadas serão carregadas do backend.
-  const seasons = ["2025", "2024", "2023", "2022", "2021"]
+    // Temporadas da API. Se a salva não existir mais, usa a mais recente.
+    useEffect(() => {
+      api
+        .getSeasons()
+        .then(setSeasons)
+        .catch(() => setDriversError("Não foi possível carregar as temporadas."))
+    }, [])
+
+    useEffect(() => {
+      if (seasons.length > 0 && !seasons.includes(Number(season))) {
+        setSeason(String(Math.max(...seasons)))
+      }
+    }, [seasons, season, setSeason])
+
+    // Pilotos da temporada selecionada.
+    useEffect(() => {
+      let active = true
+      setIsLoadingDrivers(true)
+      setDriversError(null)
+
+      api
+        .getDrivers(Number(season))
+        .then((list) => {
+          if (active) setAvailableDrivers(list)
+        })
+        .catch((error: unknown) => {
+          if (active) {
+            setDriversError(error instanceof Error ? error.message : "Erro ao carregar pilotos.")
+          }
+        })
+        .finally(() => {
+          if (active) setIsLoadingDrivers(false)
+        })
+
+      return () => {
+        active = false
+      }
+    }, [season, setAvailableDrivers])
 
   const selectedCount = grid.filter((driver) => driver !== null).length
   const isComplete = selectedCount === GRID_SIZE && grid.length === GRID_SIZE
@@ -252,17 +287,11 @@ export function DriverTeamSelection() {
                 </SelectTrigger>
 
                 <SelectContent className="rounded-none border-border">
-
                   {seasons.map((year) => (
-
-                    <SelectItem key={year} value={year}>
-
+                    <SelectItem key={year} value={String(year)}>
                       Temporada {year}
-
                     </SelectItem>
-
                   ))}
-
                 </SelectContent>
 
               </Select>
@@ -273,17 +302,17 @@ export function DriverTeamSelection() {
 
             <div className="min-h-0 flex-1 overflow-y-auto">
 
-              <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
-
-                {grid.map((_, index) => (
-                  <GridSlot
-                    key={index}
-                    position={index + 1}
-                    disabled={mode === "random"}
-                  />
-                ))}
-
-              </div>
+              {isLoadingDrivers ? (
+                <div className="p-6 text-sm text-muted-foreground">Carregando pilotos...</div>
+              ) : driversError ? (
+                <div className="p-6 text-sm text-primary">{driversError}</div>
+              ) : (
+                <div className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
+                  {grid.map((_, index) => (
+                    <GridSlot key={index} position={index + 1} disabled={mode === "random"} />
+                  ))}
+                </div>
+              )}
 
             </div>
 

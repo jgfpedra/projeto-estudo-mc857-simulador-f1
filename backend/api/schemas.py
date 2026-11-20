@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 MAX_GRID = 24  # slots do grid do motor (SimulationConfig.num_slots)
 
@@ -113,7 +113,13 @@ class StintIn(BaseModel):
 
 
 class RaceSetupRequest(BaseModel):
-    """Configuração enviada pelo front. Todos os campos são opcionais."""
+    """Payload enviado pelo front para configurar/criar uma corrida.
+
+    Interlagos 2023 e Monza 2024 usam traçados locais derivados de telemetria;
+    outros anos ou circuitos seguem ``config.load_track``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
 
     circuit: Optional[CircuitChoice] = Field(None, description="Omitido = Interlagos (pista local).")
     laps: int = Field(10, ge=1, le=200, description="Número de voltas.")
@@ -122,16 +128,20 @@ class RaceSetupRequest(BaseModel):
         description="ids dos pilotos em ordem de largada (1º = pole). Omitido = 2 pilotos padrão.",
         examples=[["max-verstappen", "lando-norris", "charles-leclerc"]],
     )
-    num_drivers: Optional[int] = Field(
-        None, ge=1, le=MAX_GRID,
-        description="Legado (viz3d): quantidade de corredores quando `grid` não é enviado. "
+    num_drivers: int = Field(
+        2, ge=1, le=MAX_GRID,
+        description="Quantidade de corredores quando `grid` não é enviado. "
         "Ignorado se `grid` estiver presente.",
     )
     track: Optional[str] = Field(
-        None, description="Legado (viz3d): nome da pista local (ex.: interlagos). "
-        "Use `circuit` no contrato novo; sem `circuit`, só aliases locais são aceitos.",
+        None, description="Circuito local legado (ex.: interlagos). "
+        "Use `circuit` no contrato novo; sem `circuit`, o `track` é resolvido pelos providers.",
     )
-    weather: WeatherName = Field(WeatherName.dry, description="Clima inicial.")
+    layout_id: Optional[str] = None
+    year: Optional[int] = Field(None, description="Temporada dos pilotos; com grid e layout explícitos, a pista pode usar outro ano de referência do mesmo layout.")
+    season: Optional[int] = Field(None, description="Alias de year para a temporada dos pilotos.")
+    user_driver_id: Optional[str] = Field(None, description="Piloto cujo pit stop é solicitado manualmente.")
+    weather: Optional[WeatherName] = Field(None, description="Clima inicial. Omitido = dry.")
     weather_change: Optional[WeatherChange] = Field(
         None, description="Omitido = o clima não muda durante a corrida."
     )
@@ -145,11 +155,13 @@ class RaceSetupRequest(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _consistency(self) -> "RaceSetupRequest":
+    def validate_race_setup(self):
         if self.grid is not None and len(set(self.grid)) != len(self.grid):
             raise ValueError("grid não pode ter pilotos repetidos")
+        if self.user_driver_id is not None and self.grid is not None and self.user_driver_id not in self.grid:
+            raise ValueError("user_driver_id deve pertencer ao grid")
         if self.stints is not None:
-            total = sum(s.laps for s in self.stints)
+            total = sum(stint.laps for stint in self.stints)
             if total != self.laps:
                 raise ValueError(f"a soma das voltas dos stints ({total}) deve ser igual a laps ({self.laps})")
             if self.initial_tyre is not None and self.stints[0].compound != self.initial_tyre:
@@ -157,41 +169,50 @@ class RaceSetupRequest(BaseModel):
                     "initial_tyre deve ser igual ao composto do 1º stint "
                     f"({self.stints[0].compound.value}); envie só um dos dois ou deixe-os consistentes"
                 )
-        if self.circuit is None and self.track is not None:
-            normalized = self.track.strip().lower()
-            if normalized not in {"interlagos", "são paulo", "sao paulo", "autódromo josé carlos pace",
-                                  "autodromo jose carlos pace", "interlagos-1", "interlagos-2"}:
-                raise ValueError(
-                    f"track legado '{self.track}' não é um alias local de Interlagos; "
-                    "use o campo `circuit` com o id do catálogo (ex.: {\"id\": \"interlagos\"})."
-                )
         return self
 
 
 class GridEntryOut(BaseModel):
-    position: int = Field(..., description="Posição de largada (1 = pole).")
+    position: int
     driver_id: str
     name: str
 
 
 class InitialWeatherOut(BaseModel):
     requested: WeatherName
-    engine_kind: str = Field(..., description="Como o motor enxerga (o stream WS usa DRY/CLOUDY/DAMP/WET).")
+    engine_kind: str
     rainfall_mm_h: float
 
 
 class RaceSetupResponse(BaseModel):
-    race_id: str = Field(..., description="Use para abrir o WebSocket.")
-    ws_path: str = Field(..., examples=["/ws/races/race_1a2b3c4d"])
+    race_id: str
     track_name: str
     num_laps: int
-    circuit_id: Optional[str] = None
-    layout_id: Optional[str] = None
-    grid: List[GridEntryOut]
-    initial_weather: InitialWeatherOut
-    initial_tyre: Optional[TyreName] = Field(
-        None, description="Pneu aplicado a todos. null = pneus padrão do grid padrão."
-    )
-    warnings: List[str] = Field(
-        default_factory=list, description="Itens aceitos mas não aplicados (ou aproximados) pelo motor."
-    )
+    ws_path: str
+    grid: List[str] = Field(default_factory=list)
+    initial_weather: str = "dry"
+    warnings: List[str] = Field(default_factory=list)
+
+
+class PitStopRequest(BaseModel):
+    """Pedido de troca na próxima entrada dos boxes."""
+    model_config = ConfigDict(extra="forbid")
+    tyre_compound: TyreName
+
+    @field_validator('tyre_compound', mode='before')
+    @classmethod
+    def normalize_compound(cls, value):
+        return value.lower() if isinstance(value, str) else value
+
+
+class PitStopResponse(BaseModel):
+    race_id: str
+    driver_id: str
+    tyre_compound: TyreName
+    status: str = 'queued'
+
+
+class PitStopCancelResponse(BaseModel):
+    race_id: str
+    driver_id: str
+    status: str = 'cancellation_queued'

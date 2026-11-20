@@ -224,10 +224,10 @@ def build_race_setup(
     ]
 
     # -- clima ---------------------------------------------------------------
-    weather_model = build_weather_model(req.weather, req.weather_change, seed)
+    weather_model = build_weather_model(req.weather or WeatherName.dry, req.weather_change, seed)
     cur = weather_model.current
     initial_weather = InitialWeatherOut(
-        requested=req.weather, engine_kind=cur.kind.value, rainfall_mm_h=cur.rainfall
+        requested=req.weather or WeatherName.dry, engine_kind=cur.kind.value, rainfall_mm_h=cur.rainfall
     )
     if req.weather_change and any(
         w in (WeatherName.light_rain, WeatherName.heavy_rain) for w in req.weather_change.possible
