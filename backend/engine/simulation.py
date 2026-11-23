@@ -95,11 +95,14 @@ class SimulationConfig:
     input_source_type: str = "memory"  # "memory" | "redis"
     input_fallback: str = "brake"       # "brake" (freia aos poucos) | "neutral" (parado)
     input_stale_after_s: float = 1.0    # input sem atualização há mais de N segundos → fallback
-    track_progress_laps: bool = False   # encerra voltas pelo avanço na pista
+    # Aviso de colisão carro×carro (só detecta e publica CollisionEvent; não altera
+    # a física nem aplica consequência). DESLIGADO por padrão: o treino de RL
+    # chama _step_tick em laço quente e não precisa do custo extra.
     collision_events: bool = False
-    collision_force_threshold_n: float = 1.0
-    collision_penetration_m: float = 0.001
-    collision_release_s: float = 0.5
+    collision_force_threshold_n: float = 1.0  # força normal mínima por ponto de contato
+    collision_penetration_m: float = 0.001    # OU penetração mínima (0 desliga); ver engine/collisions.py
+    collision_release_s: float = 0.5          # s sem contato para o par ser dado como separado
+    track_progress_laps: bool = False   # encerra voltas pelo avanço na pista
 
 
 # ---------------------------------------------------------------------------

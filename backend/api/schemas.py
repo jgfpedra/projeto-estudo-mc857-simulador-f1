@@ -121,19 +121,38 @@ class RaceSetupRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    laps: int = Field(default=10, ge=1, le=200)
-    num_drivers: int = Field(default=2, ge=1, le=24)
-    track: Optional[str] = None
+    circuit: Optional[CircuitChoice] = Field(None, description="Omitido = Interlagos (pista local).")
+    laps: int = Field(10, ge=1, le=200, description="Número de voltas.")
+    grid: Optional[List[str]] = Field(
+        None, min_length=1, max_length=MAX_GRID,
+        description="ids dos pilotos em ordem de largada (1º = pole). Omitido = 2 pilotos padrão.",
+        examples=[["max-verstappen", "lando-norris", "charles-leclerc"]],
+    )
+    num_drivers: int = Field(
+        2, ge=1, le=MAX_GRID,
+        description="Quantidade de corredores quando `grid` não é enviado. "
+        "Ignorado se `grid` estiver presente.",
+    )
+    track: Optional[str] = Field(
+        None, description="Circuito local legado (ex.: interlagos). "
+        "Use `circuit` no contrato novo; sem `circuit`, o `track` é resolvido pelos providers.",
+    )
     layout_id: Optional[str] = None
     year: Optional[int] = Field(None, description="Temporada dos pilotos; com grid e layout explícitos, a pista pode usar outro ano de referência do mesmo layout.")
     season: Optional[int] = Field(None, description="Alias de year para a temporada dos pilotos.")
-    circuit: Optional[CircuitChoice] = None
-    grid: Optional[List[str]] = Field(None, min_length=1, max_length=24)
     user_driver_id: Optional[str] = Field(None, description="Piloto cujo pit stop é solicitado manualmente.")
-    weather: Optional[WeatherName] = None
-    weather_change: Optional[WeatherChange] = None
-    initial_tyre: Optional[TyreName] = None
-    stints: Optional[List[StintIn]] = Field(None, min_length=1)
+    weather: Optional[WeatherName] = Field(None, description="Clima inicial. Omitido = dry.")
+    weather_change: Optional[WeatherChange] = Field(
+        None, description="Omitido = o clima não muda durante a corrida."
+    )
+    initial_tyre: Optional[TyreName] = Field(
+        None, description="Pneu inicial de todos. Omitido = 1º stint de `stints`, ou medium."
+    )
+    stints: Optional[List[StintIn]] = Field(
+        None, min_length=1,
+        description="Estratégia de stints (composto + voltas). A soma das voltas deve ser igual a `laps`. "
+        "ATENÇÃO: é validada e aceita, mas o motor ainda NÃO aplica (veja `warnings` na resposta).",
+    )
 
     @model_validator(mode="after")
     def validate_race_setup(self):
@@ -145,8 +164,11 @@ class RaceSetupRequest(BaseModel):
             total = sum(stint.laps for stint in self.stints)
             if total != self.laps:
                 raise ValueError(f"a soma das voltas dos stints ({total}) deve ser igual a laps ({self.laps})")
-            if self.initial_tyre is not None and self.initial_tyre != self.stints[0].compound:
-                raise ValueError("initial_tyre deve ser igual ao composto do primeiro stint")
+            if self.initial_tyre is not None and self.stints[0].compound != self.initial_tyre:
+                raise ValueError(
+                    "initial_tyre deve ser igual ao composto do 1º stint "
+                    f"({self.stints[0].compound.value}); envie só um dos dois ou deixe-os consistentes"
+                )
         return self
 
 

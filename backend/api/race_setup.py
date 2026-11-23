@@ -189,9 +189,18 @@ def build_race_setup(
     # -- grid ----------------------------------------------------------------
     drivers: List[Driver] = []
     if req.grid is None:
+        default_drivers = DEFAULT_DRIVERS
+        if req.num_drivers is not None:
+            # Legado (viz3d): quantos corredores do grid padrão usar.
+            if not 1 <= req.num_drivers <= len(DEFAULT_DRIVERS):
+                raise SetupError(
+                    f"num_drivers deve estar entre 1 e {len(DEFAULT_DRIVERS)} "
+                    f"(recebido: {req.num_drivers}); para mais pilotos envie `grid`."
+                )
+            default_drivers = DEFAULT_DRIVERS[: req.num_drivers]
         drivers = [
             replace(d, starting_tyre_compound=TYRE_MAP[tyre]) if tyre else d
-            for d in DEFAULT_DRIVERS
+            for d in default_drivers
         ]
     else:
         if catalog is None:
