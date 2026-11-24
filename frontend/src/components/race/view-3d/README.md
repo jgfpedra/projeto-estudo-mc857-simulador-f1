@@ -15,7 +15,8 @@ isso o código foi **copiado e adaptado**, não importado.
 | Arquivo | O que faz | Portado de (`viz3d/`, commit do arquivo) |
 |---|---|---|
 | `race-view-3d.tsx` | Contrato de props do Luiz (inalterado) + `React.lazy`/`Suspense` e um *error boundary*. É o único módulo do 3D no bundle principal. | — |
-| `race-scene.tsx` | `<Canvas>`, luzes, pista, carros, câmera; botões Perseguição/A bordo; sair do seguimento por arrasto, rolagem ou Esc. Chunk preguiçoso. | `src/live/LiveRace.tsx` (`aa32ad2`), só a parte da cena |
+| `race-scene.tsx` | `<Canvas>`, luzes, pista, carros, câmera; botões Perseguição/A bordo; seletor de cenário (por portal na barra da página); sair do seguimento por arrasto, rolagem ou Esc. Chunk preguiçoso. | `src/live/LiveRace.tsx` (`aa32ad2`), só a parte da cena |
+| `toolbar-slot.ts` | Contexto com o lugar da barra de cima onde a cena põe o seletor de cenário. | — |
 | `scene/track-frame.ts` | Referencial `(s, d)` → mundo, `wrapS`, `toWorld`, curvatura; `nearestS` (novo). | `src/track/frame.ts` (`3fb91fa`) |
 | `scene/race-track.ts` | Waypoints do backend → Three.js, rotação para `startFinishWaypoint` = s 0, via dos boxes, extremos da linha de chegada, enquadramento da visão geral. | `src/live/track.ts` (`aa32ad2`) |
 | `scene/geometry.ts` | Faixa da pista, superfície e contorno da via dos boxes, linha de chegada. | `src/track/ribbon.ts` (`3fb91fa`), `src/live/pitRibbon.ts` (`aa32ad2`), `src/live/StartFinishLine.tsx` (`35baba2`) |
@@ -187,8 +188,8 @@ qualquer pista ganha cenário, inclusive as do OpenF1 com pontos a 14–42 m.
   não cabe é descartado. Cada modelo repetido é um `InstancedMesh` por
   primitiva, com a geometria e o material do cache do `useGLTF`. A semente
   vem dos próprios pontos: a mesma pista sempre tem o mesmo cenário.
-- **Qualidade.** Um seletor "Cenário" na barra de cima, à direita, na altura
-  da chave 2D/3D (embaixo do canvas o cartão do piloto selecionado o cobria):
+- **Qualidade.** Um seletor "Cenário" na barra de cima, logo depois da chave
+  2D/3D (embaixo do canvas o cartão do piloto selecionado o cobria):
   *Alta* (sombras, 2600 árvores), *Baixa* (sem sombras, 35% das árvores), *Sem
   cenário* (o visual antigo: fundo liso, só a faixa da pista e o renderizador
   sem mapa de sombras). A escolha fica no `localStorage`. O seletor fica fora
@@ -196,8 +197,13 @@ qualquer pista ganha cenário, inclusive as do OpenF1 com pontos a 14–42 m.
   com WebGL por software às vezes avisava "glBlitFramebuffer: Blit feedback
   loop" ao montar ou desmontar o 3D (3 em 300 alternâncias; 0 em 300 sem o
   elemento e 0 em 300 no `origin/dev`). É um `<select>` nativo: a lista abre
-  fora do documento. Ele fica por cima da ponta direita da faixa de eventos
-  da página (`race-banner.tsx`), que ocupa a mesma barra.
+  fora do documento. A página monta a barra como uma linha flexível (chave
+  2D/3D, um lugar para os controles do 3D, a faixa de eventos no que sobra)
+  e passa o lugar por contexto (`toolbar-slot.ts`); a cena põe o seletor ali
+  por portal, sem mudar as props de `RaceView3D`. Assim a faixa de eventos
+  começa depois do seletor no 3D e onde sempre esteve no 2D (o lugar vazio
+  some). Medido a 1440×900 com uma mensagem na faixa e o cartão do piloto
+  aberto: chave x 145-245, seletor 253-436, faixa 448-911; nada se sobrepõe.
   Sem escolha guardada, o padrão é *Alta*, exceto com WebGL por software
   (SwiftShader, llvmpipe, sem GPU: `softwareRendering()` em `quality.ts`),
   onde o padrão é *Sem cenário*. A detecção cria um contexto descartável uma

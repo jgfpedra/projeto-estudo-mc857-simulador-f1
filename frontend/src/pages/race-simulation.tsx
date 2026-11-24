@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { AlertTriangle, ArrowLeft, Radio, X } from "lucide-react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
 
@@ -7,6 +7,7 @@ import { DriverCard } from "@/components/race/driver-card"
 import { EventFeed } from "@/components/race/event-feed"
 import { RaceBanner } from "@/components/race/race-banner"
 import { RaceView3D } from "@/components/race/view-3d/race-view-3d"
+import { View3DToolbarSlot } from "@/components/race/view-3d/toolbar-slot"
 import { ViewToggle } from "@/components/race/view-toggle"
 import { TimingPanel } from "@/components/race/timing-panel"
 import { Track2D } from "@/components/race/track-2d"
@@ -44,6 +45,8 @@ export function RaceSimulation() {
   const disconnect = useLiveRaceStore((s) => s.disconnect)
   const selectDriver = useLiveRaceStore((s) => s.selectDriver)
   const setViewMode = useLiveRaceStore((s) => s.setViewMode)
+  // Onde o 3D põe o seletor de cenário, ao lado da chave 2D/3D.
+  const [toolbarSlot, setToolbarSlot] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (raceId) void load(raceId)
@@ -149,8 +152,13 @@ export function RaceSimulation() {
         <div className="container mx-auto grid min-h-0 flex-1 grid-cols-1 gap-6 px-6 py-5 lg:grid-cols-[1fr_360px] lg:px-12 lg:py-7">
           <section className="flex min-h-[420px] flex-col border border-border bg-card/40 lg:min-h-0">
             <div className="relative min-h-0 flex-1 bg-background/50">
-              <div className="absolute left-4 top-4 z-20">
-                <ViewToggle value={viewMode} onChange={setViewMode} />
+              {/* Uma linha: chave 2D/3D, controles do 3D e a faixa de eventos no espaço que sobra. */}
+              <div className="pointer-events-none absolute left-4 right-4 top-4 z-20 flex min-w-0 items-start gap-3">
+                <div className="pointer-events-auto flex shrink-0 items-start gap-2">
+                  <ViewToggle value={viewMode} onChange={setViewMode} />
+                  <div ref={setToolbarSlot} className="flex empty:hidden" />
+                </div>
+                <RaceBanner items={feed} simTs={frame?.simTs ?? 0} />
               </div>
 
               <div className="absolute inset-0 p-6 pt-16">
@@ -163,16 +171,17 @@ export function RaceSimulation() {
                     </div>
                   )
                 ) : (
-                  <RaceView3D
-                    race={race}
-                    frame={frame}
-                    selectedDriverId={selectedDriverId}
-                    onSelectDriver={selectDriver}
-                  />
+                  <View3DToolbarSlot.Provider value={toolbarSlot}>
+                    <RaceView3D
+                      race={race}
+                      frame={frame}
+                      selectedDriverId={selectedDriverId}
+                      onSelectDriver={selectDriver}
+                    />
+                  </View3DToolbarSlot.Provider>
                 )}
               </div>
 
-              <RaceBanner items={feed} simTs={frame?.simTs ?? 0} />
               {selectedDriverId && (
                 <DriverCard
                   race={race}

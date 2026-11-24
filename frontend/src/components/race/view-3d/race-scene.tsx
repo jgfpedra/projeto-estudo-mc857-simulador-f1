@@ -5,7 +5,8 @@
  * Portada da página ao vivo do viz3d (`viz3d/src/live/LiveRace.tsx`), sem a
  * conexão própria: a corrida, os ticks e a seleção vêm do frontend.
  */
-import { Suspense, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { Suspense, memo, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { Canvas, useThree } from "@react-three/fiber"
 import { Sphere } from "three"
 
@@ -28,6 +29,7 @@ import type { ScenePitLane, SceneTrack } from "./scene/race-track"
 import { buildFrame } from "./scene/track-frame"
 import type { TrackFrame } from "./scene/track-frame"
 import { PitLaneRibbon, StartFinishLine, TrackRibbon } from "./scene/track-meshes"
+import { View3DToolbarSlot } from "./toolbar-slot"
 
 type FollowMode = Exclude<CameraMode, "orbit">
 
@@ -201,6 +203,7 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
   const [followMode, setFollowMode] = useState<FollowMode>("chase")
   const mode: CameraMode = selectedDriverId ? followMode : "orbit"
   const [quality, setQuality] = useState<Quality>(loadQuality)
+  const toolbarSlot = useContext(View3DToolbarSlot)
   // Buffer de frames enquanto o 3D está montado; ao sair, ele (e um congelamento do gancho) se vai.
   useEffect(() => acquirePlayback(), [])
   const chooseQuality = (q: Quality) => {
@@ -235,26 +238,30 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
 
   const start = overviewPose(scene.center.center, scene.center.radius, 45, 16 / 9)
 
+  // Seletor de cenário: na barra de cima, ao lado da chave 2D/3D (pelo portal da página; a faixa
+  // de eventos vem depois dele). Embaixo do canvas o cartão do piloto selecionado o cobria. Fica
+  // fora do canvas (ver abaixo), e um <select> nativo abre a lista fora do documento.
+  const qualityControl = (
+    <label className="flex h-[38px] items-center border border-border bg-background/90 text-[10px] font-bold uppercase tracking-wider">
+      <span className="pl-2.5 text-muted-foreground">Cenário</span>
+      <select
+        value={quality}
+        onChange={(e) => chooseQuality(e.target.value as Quality)}
+        aria-label="Qualidade do cenário 3D"
+        className="h-full cursor-pointer bg-transparent pl-1.5 pr-1 text-xs font-black uppercase text-foreground outline-none"
+      >
+        {QUALITIES.map((q) => (
+          <option key={q} value={q} className="bg-background text-foreground">
+            {QUALITY_LABEL[q]}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+
   return (
     <div className="relative flex h-full w-full flex-col" data-testid="race-view-3d">
-      {/* Qualidade na barra de cima da página, à direita, na altura da chave 2D/3D: embaixo do
-          canvas o cartão do piloto selecionado a cobria. Fora do canvas (ver abaixo); um
-          <select> nativo abre a lista fora do documento. */}
-      <label className="absolute -top-12 right-[-8px] z-30 flex h-9 items-center border border-border bg-background/90 text-[10px] font-bold uppercase tracking-wider">
-        <span className="pl-2.5 text-muted-foreground">Cenário</span>
-        <select
-          value={quality}
-          onChange={(e) => chooseQuality(e.target.value as Quality)}
-          aria-label="Qualidade do cenário 3D"
-          className="h-full cursor-pointer bg-transparent pl-1.5 pr-1 text-xs font-black uppercase text-foreground outline-none"
-        >
-          {QUALITIES.map((q) => (
-            <option key={q} value={q} className="bg-background text-foreground">
-              {QUALITY_LABEL[q]}
-            </option>
-          ))}
-        </select>
-      </label>
+      {toolbarSlot ? createPortal(qualityControl, toolbarSlot) : <div className="absolute -top-12 right-[-8px] z-30">{qualityControl}</div>}
 
       {/* O canvas fica sozinho na sua área: um elemento HTML sempre por cima dele mudava a
           composição do Chrome e, com WebGL por software, às vezes gerava um aviso
