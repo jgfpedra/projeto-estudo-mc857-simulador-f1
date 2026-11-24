@@ -71,6 +71,7 @@ npm test             # vitest, one run
 npm run test:watch
 npm run snapshot     # build, then render-verify in headless Chromium (see below)
 node scripts/check-3d-frontend.mjs   # live check of the frontend's 3D (backend + frontend dev server running; see its header)
+node scripts/check-3d-frontend.mjs --gpu --quality high   # same on the GPU, scenery forced on (default: SwiftShader, page picks: off on software WebGL)
 
 # Track extraction (run once per circuit, output is committed). FastF1 3.8.3,
 # always offline: --cache must be an existing cache (outside the repo; read a copy)
@@ -183,6 +184,20 @@ the minus in `z = -y` fails placement by 44 m-1.7 km and a NaN `progress_m`
 flattens chase and T-cam, and anchoring the T-cam on `progress_m` again fails
 the T-cam check (docs/phase3-engine-race.md section 5). First run needs
 `npx playwright install chromium`.
+
+The frontend's production 3D (`frontend/src/components/race/view-3d/`) has its
+own live check, `scripts/check-3d-frontend.mjs` (15 checks; its header has the
+details). It renders on SwiftShader by default, where the page defaults its
+scenery to *off* (software WebGL: ~225 ms per frame with the scenery on high,
+~9 ms off). `--gpu` renders on the GPU instead; `--quality high|low|off`
+presets `localStorage["race3d.quality"]` and overrides the page default. Every
+screenshot and its position read-out run with the 3D clock frozen
+(`window.__race3d.freeze()` / `unfreeze()`, dev only), after the camera has
+settled, so the marker-colour and chase-centring checks do not depend on render
+speed; for the marker colours it freezes at an instant when no two markers
+overlap on screen (retrying every 0.5 s, up to 4 min; cars nose to tail after
+the start overlap). Both `node scripts/check-3d-frontend.mjs` and
+`node scripts/check-3d-frontend.mjs --gpu --quality high` must pass 15/15.
 
 ## Known gotchas
 

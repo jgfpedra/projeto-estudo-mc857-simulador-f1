@@ -28,6 +28,7 @@ export const QUALITY: Record<Quality, QualitySettings> = {
 const KEY = "race3d.quality"
 
 let software: boolean | null = null
+let probeCanvas: HTMLCanvasElement | null = null
 const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render/i
 
 /**
@@ -40,9 +41,16 @@ export function softwareRendering(): boolean {
   if (software !== null) return software
   software = false
   try {
-    const strict = document.createElement("canvas").getContext("webgl2", { failIfMajorPerformanceCaveat: true })
+    // Uma vez por página (resultado guardado em `software`). O canvas fica
+    // referenciado até o evento de perda chegar: `loseContext()` o despacha
+    // depois, e um canvas solto pode ser coletado antes, sem o evento.
+    const canvas = document.createElement("canvas")
+    probeCanvas = canvas
+    canvas.addEventListener("webglcontextlost", () => (probeCanvas = null), { once: true })
+    const strict = canvas.getContext("webgl2", { failIfMajorPerformanceCaveat: true })
     if (!strict) {
       software = true
+      probeCanvas = null
     } else {
       // Com o SwiftShader pedido explicitamente (ex.: Chrome headless) o
       // contexto acima não falha; o nome do renderizador entrega.
@@ -55,6 +63,11 @@ export function softwareRendering(): boolean {
     // Sem como testar: assume GPU.
   }
   return software
+}
+
+/** O contexto descartável de `softwareRendering()` já foi liberado (evento de perda recebido)? */
+export function softwareProbeReleased(): boolean {
+  return probeCanvas === null
 }
 
 /** Escolha guardada; sem ela, alta com GPU e sem cenário com WebGL por software. */

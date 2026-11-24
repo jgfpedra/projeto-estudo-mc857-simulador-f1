@@ -17,6 +17,8 @@ import {
 import { carColors } from "../src/components/race/view-3d/scene/car-colors.ts"
 import { overviewPose, pitLaneFromRace, rotateToStart, trackFromRace } from "../src/components/race/view-3d/scene/race-track.ts"
 import { poseMatrix } from "../src/components/race/view-3d/scene/car-model.ts"
+import { CHASE, chasePose, newFollowState, newPose, newRigState, stepRig } from "../src/components/race/view-3d/scene/camera-math.ts"
+import { PIN_FADE, pinOpacity } from "../src/components/race/view-3d/scene/pin-fade.ts"
 import { buildFrame, nearestS, sampleAt, toWorld } from "../src/components/race/view-3d/scene/track-frame.ts"
 import { buildRibbonGeometry } from "../src/components/race/view-3d/scene/geometry.ts"
 import { cornerPeaks, kappaAt, robustCurvature } from "../src/components/race/view-3d/scene/environment/curvature.ts"
@@ -732,4 +734,52 @@ test("low quality: no shadows and a third of the trees; off: no environment", ()
   assert.ok(QUALITY.low.treeFraction > 0 && QUALITY.low.treeFraction < 0.5)
   assert.equal(QUALITY.high.treeFraction, 1)
   assert.equal(QUALITY.off.environment, false)
+})
+
+// --- chase camera off-axis cap and marker fade -----------------------------------
+
+test("chase camera keeps a settled, stopped car within 8 degrees of the view axis, even in a 25 m hairpin", () => {
+  const R = 25
+  const pts = []
+  for (let k = 0; k < 40; k++) {
+    const a = (k / 40) * Math.PI * 2
+    pts.push(new Vector3(R * Math.cos(a), 0, R * Math.sin(a)))
+  }
+  const frame = buildFrame(pts)
+  const offAxis = (cfg) => {
+    const follow = newFollowState()
+    const s = 40
+    const at = toWorld(frame, s)
+    Object.assign(follow, { sUnwrapped: s, speedMps: 0, carIndex: 0, posed: true, x: at.x, z: at.z })
+    const rig = newRigState()
+    for (let i = 0; i < 200; i++) stepRig(rig, frame, follow, 1 / 60, cfg)
+    const p = chasePose(frame, rig, follow, cfg, newPose())
+    const yaw = (v) => Math.atan2(v.x, v.z)
+    const toCar = p.anchor.clone().sub(p.position)
+    const toTarget = p.target.clone().sub(p.position)
+    return { gap: angleGap(yaw(toCar), yaw(toTarget)), behind: Math.abs(rig.u - (s - cfg.trailM)) }
+  }
+  const free = offAxis({ ...CHASE, maxOffAxisRad: Math.PI })
+  assert.ok(free.gap > deg(20), `uncapped the car is ${(free.gap * 180) / Math.PI} deg off axis (test must be meaningful)`)
+  const capped = offAxis(CHASE)
+  assert.ok(capped.gap <= CHASE.maxOffAxisRad + 1e-9, `capped: ${(capped.gap * 180) / Math.PI} deg`)
+  // Speed 0 (a frozen clock): the rig settles exactly trailM behind the car.
+  assert.ok(capped.behind < 1e-6, `rig ${capped.behind} m off the trail`)
+})
+
+test("car markers fade in only far from the cars: opaque at overview distance, gone in close views", () => {
+  const D = 1500
+  assert.equal(pinOpacity(D * 0.63, D), 1, "nearest car in the overview is >= 0.63 D away")
+  assert.equal(pinOpacity(D, D), 1)
+  assert.equal(pinOpacity(110, D), 0, "grid view")
+  assert.equal(pinOpacity(40, D), 0, "corner / chase")
+  const mid = pinOpacity(((PIN_FADE.from + PIN_FADE.to) / 2) * D, D)
+  close(mid, 0.5, 1e-9)
+  // Monotonic in between.
+  let prev = -1
+  for (let k = 0; k <= 20; k++) {
+    const v = pinOpacity((PIN_FADE.from + ((PIN_FADE.to - PIN_FADE.from) * k) / 20) * D, D)
+    assert.ok(v >= prev)
+    prev = v
+  }
 })

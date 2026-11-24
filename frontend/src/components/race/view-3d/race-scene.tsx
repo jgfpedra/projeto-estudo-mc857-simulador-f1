@@ -16,6 +16,7 @@ import type { CameraMode, FollowState } from "./scene/camera-math"
 import { carColors } from "./scene/car-colors"
 import { Cars } from "./scene/cars"
 import { createProbe } from "./scene/dev-probe"
+import { unfreezeLive } from "./scene/live-clock"
 import { Environment } from "./scene/environment/environment"
 import { buildLayout } from "./scene/environment/layout"
 import type { Layout } from "./scene/environment/layout"
@@ -147,6 +148,7 @@ function Content({ race, scene, layout, quality, followRef, mode, selectedDriver
         carBox={race.carGeometry}
         selectedIndex={selectedIndex}
         showPins={mode === "orbit"}
+        overviewDistance={overview.distance}
         followRef={followRef}
         onPick={(id) => onSelectDriver(id)}
         probe={probe?.sink ?? null}
@@ -199,6 +201,8 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
   const [followMode, setFollowMode] = useState<FollowMode>("chase")
   const mode: CameraMode = selectedDriverId ? followMode : "orbit"
   const [quality, setQuality] = useState<Quality>(loadQuality)
+  // Um congelamento do gancho de desenvolvimento não sobrevive ao 3D.
+  useEffect(() => () => unfreezeLive(), [])
   const chooseQuality = (q: Quality) => {
     setQuality(q)
     saveQuality(q)

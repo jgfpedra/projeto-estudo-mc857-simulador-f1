@@ -68,6 +68,13 @@ export interface ChaseConfig {
   targetHeightM: number
   tauS: number
   fovDeg: number
+  /**
+   * Quanto a direção da câmera pode se afastar do carro na horizontal. Num
+   * grampo, mirar `lookaheadM` à frente pela pista poria o carro na borda da
+   * tela (~29° fora do eixo num raio de 25 m); com o limite ele fica perto do
+   * centro e a câmera ainda gira para dentro da curva.
+   */
+  maxOffAxisRad: number
 }
 
 export interface OnboardConfig {
@@ -90,6 +97,7 @@ export const CHASE: ChaseConfig = {
   targetHeightM: 0.8,
   tauS: 0.3,
   fovDeg: 45,
+  maxOffAxisRad: MathUtils.degToRad(8),
 }
 
 /** T-cam: acima e logo atrás do centro do carro, olhando ao longo dele. */
@@ -189,8 +197,25 @@ export function chasePose(
     out.position.add(shift)
     out.target.add(shift)
   }
+  clampOffAxis(out, cfg.maxOffAxisRad)
   out.up.copy(WORLD_UP)
   return out
+}
+
+/** Gira o alvo em torno da vertical da câmera até ficar a no máximo `maxRad` do carro. */
+export function clampOffAxis(pose: CameraPose, maxRad: number): void {
+  const cx = pose.anchor.x - pose.position.x
+  const cz = pose.anchor.z - pose.position.z
+  const tx = pose.target.x - pose.position.x
+  const tz = pose.target.z - pose.position.z
+  const horiz = Math.hypot(tx, tz)
+  if (horiz < 1e-6 || Math.hypot(cx, cz) < 1e-6) return
+  const toCar = Math.atan2(cx, cz)
+  const delta = Math.atan2(Math.sin(Math.atan2(tx, tz) - toCar), Math.cos(Math.atan2(tx, tz) - toCar))
+  if (Math.abs(delta) <= maxRad) return
+  const yaw = toCar + Math.sign(delta) * maxRad
+  pose.target.x = pose.position.x + Math.sin(yaw) * horiz
+  pose.target.z = pose.position.z + Math.cos(yaw) * horiz
 }
 
 function posedOnboard(follow: FollowState, groundY: number, cfg: OnboardConfig, out: CameraPose) {

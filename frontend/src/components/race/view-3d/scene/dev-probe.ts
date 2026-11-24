@@ -8,14 +8,15 @@
  * Em produção `import.meta.env.DEV` é falso e nada disso é instalado.
  */
 import { Matrix4, Vector3 } from "three"
-import type { Camera, InstancedMesh, Scene, WebGLRenderer } from "three"
+import type { Camera, InstancedMesh, MeshBasicMaterial, Scene, WebGLRenderer } from "three"
 
 import { interpolateCars } from "@/helpers/race-live"
 import type { Frame } from "@/types/race"
 import type { CameraMode } from "./camera-math"
-import { softwareRendering } from "./environment/quality"
+import { softwareProbeReleased, softwareRendering } from "./environment/quality"
 import type { Quality } from "./environment/quality"
 import type { ViewPose } from "./environment/views"
+import { freezeLive, liveFrozen, unfreezeLive } from "./live-clock"
 import { frameAlpha } from "./live-pose"
 
 type StoreView = { frame: Frame | null; prevFrame: Frame | null; frameAt: number; tickIntervalMs: number }
@@ -26,7 +27,9 @@ type Drawn = {
   prevFrame: Frame | null
   frameAt: number
   tickIntervalMs: number
-  cars: { driverId: string; x: number; y: number; pinTop: [number, number, number] | null }[]
+  cars: { driverId: string; x: number; y: number; pinTop: [number, number, number] | null; pinScale: number }[]
+  /** Opacidade dos marcadores neste quadro (0 = escondidos). */
+  pinOpacity: number
 }
 
 export type ProbeSink = {
@@ -60,7 +63,7 @@ export function createProbe(ctx: Context): { sink: ProbeSink; install: () => () 
   const sink: ProbeSink = {
     record(now, s, body, pins, ids) {
       if (!body || !s.frame) {
-        last = { now, frame: s.frame, prevFrame: s.prevFrame, frameAt: s.frameAt, tickIntervalMs: s.tickIntervalMs, cars: [] }
+        last = { now, frame: s.frame, prevFrame: s.prevFrame, frameAt: s.frameAt, tickIntervalMs: s.tickIntervalMs, cars: [], pinOpacity: 0 }
         return
       }
       const present = new Set(s.frame.cars.map((c) => c.driverId))
@@ -74,9 +77,10 @@ export function createProbe(ctx: Context): { sink: ProbeSink; install: () => () 
         pins.getMatrixAt(i, m)
         const k = m.elements[5]
         v.setFromMatrixPosition(m)
-        cars.push({ driverId, x, y, pinTop: k > 0 ? [v.x, v.y + 2.4 * k * 0.8, v.z] : null })
+        cars.push({ driverId, x, y, pinTop: k > 0 ? [v.x, v.y + 2.4 * k * 0.8, v.z] : null, pinScale: k })
       })
-      last = { now, frame: s.frame, prevFrame: s.prevFrame, frameAt: s.frameAt, tickIntervalMs: s.tickIntervalMs, cars }
+      const pinOpacity = pins.visible ? (pins.material as MeshBasicMaterial).opacity : 0
+      last = { now, frame: s.frame, prevFrame: s.prevFrame, frameAt: s.frameAt, tickIntervalMs: s.tickIntervalMs, cars, pinOpacity }
     },
   }
 
@@ -89,6 +93,14 @@ export function createProbe(ctx: Context): { sink: ProbeSink; install: () => () 
       y: ((1 - q.y) / 2) * rect.height,
       onScreen: q.z > -1 && q.z < 1 && Math.abs(q.x) <= 1 && Math.abs(q.y) <= 1,
     }
+  }
+
+  const radiusPx = (p: [number, number, number], r: number) => {
+    const cam = ctx.three().camera
+    const right = new Vector3().setFromMatrixColumn(cam.matrixWorld, 0).normalize()
+    const a = toScreen(p)
+    const b = toScreen([p[0] + right.x * r, p[1] + right.y * r, p[2] + right.z * r])
+    return Math.hypot(b.x - a.x, b.y - a.y)
   }
 
   const api = {
@@ -114,6 +126,9 @@ export function createProbe(ctx: Context): { sink: ProbeSink; install: () => () 
         color: ctx.colors.get(c.driverId) ?? null,
         car: toScreen([c.x, 0.4, -c.y]),
         pin: c.pinTop ? toScreen(c.pinTop) : null,
+        // Raio do disco do marcador na tela (base do cone, 0,9 * escala), px CSS.
+        pinRadiusPx: c.pinTop ? radiusPx(c.pinTop, 0.9 * c.pinScale) : 0,
+        pinOpacity: last?.pinOpacity ?? 0,
       }))
     },
     /**
@@ -163,6 +178,19 @@ export function createProbe(ctx: Context): { sink: ProbeSink; install: () => () 
         size: [gl.domElement.width, gl.domElement.height],
       }
     },
+    /**
+     * Congela o relógio do 3D: os carros param na pose deste instante (o
+     * WebSocket e o 2D seguem). Para capturas e leituras de posição
+     * consistentes em qualquer velocidade de renderização.
+     */
+    freeze() {
+      freezeLive()
+      return true
+    },
+    unfreeze() {
+      unfreezeLive()
+      return true
+    },
     state() {
       const { gl, scene } = ctx.three()
       const fog = scene.fog as { near?: number; far?: number } | null
@@ -170,10 +198,17 @@ export function createProbe(ctx: Context): { sink: ProbeSink; install: () => () 
         mode: ctx.mode,
         followed: ctx.followed,
         quality: ctx.quality,
+        frozen: liveFrozen(),
+        renderer: (() => {
+          const g = gl.getContext()
+          const info = g.getExtension("WEBGL_debug_renderer_info")
+          return info ? String(g.getParameter(info.UNMASKED_RENDERER_WEBGL)) : null
+        })(),
         environment: {
           fog: fog ? { near: Math.round(fog.near ?? 0), far: Math.round(fog.far ?? 0) } : null,
           exposure: gl.toneMappingExposure,
           softwareRendering: softwareRendering(),
+          softwareProbeReleased: softwareProbeReleased(),
           shadowCasters: scene.getObjectsByProperty("castShadow", true).filter((o) => "isLight" in o).length,
         },
         memory: { ...gl.info.memory },
