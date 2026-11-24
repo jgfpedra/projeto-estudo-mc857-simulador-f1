@@ -81,7 +81,7 @@ def build_tracks():
 def solo_lap(track, force_untuned: bool = False) -> dict:
     from backend.domain import BASE_CONDITIONS, CarSpecs, Driver, WeatherKind, WeatherModel
     from backend.engine import RuleBasedRaceController, SimulationConfig, SimulationEngine
-    from backend.scripts.run_race_10_cars import place_grid
+    from backend.scripts.simulation.run_race_10_cars import place_grid
 
     driver = Driver("VER", "Max Verstappen", CarSpecs("Red Bull", 750, 798, 110))
     cfg = SimulationConfig(num_laps=1, logic_step_hz=10.0, physics_sub_steps=24,

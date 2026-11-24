@@ -1,5 +1,6 @@
 import type {
   CarFrame,
+  CarGeometry,
   FinalEntry,
   Frame,
   LiveMessage,
@@ -63,6 +64,9 @@ function parseCar(raw: unknown): CarFrame | null {
     gapToLeaderS: num(raw.gap_to_leader_s) ?? null,
     lapsBehind: num(raw.laps_behind) ?? 0,
     headingDeg: num(raw.heading_deg) ?? null,
+    progressM: num(raw.progress_m) ?? null,
+    sM: num(raw.s_m) ?? null,
+    dM: num(raw.d_m) ?? null,
   }
 }
 
@@ -94,6 +98,7 @@ function parseDriver(raw: unknown): RaceDriver | null {
     number: num(raw.number) ?? null,
     team: str(raw.team) ?? null,
     teamColor: str(raw.team_color) ?? null,
+    teamColorSource: str(raw.team_color_source) ?? null,
     gridPosition: num(raw.grid_position) ?? 0,
   }
 }
@@ -104,6 +109,16 @@ function parsePitLane(raw: unknown): RacePitLane | null {
   const widthM = num(raw.width_m)
   if (points.length < 2 || !points.every(isPoint) || widthM === undefined || widthM <= 0) return null
   return { waypoints: points, widthM, source: str(raw.source) ?? null }
+}
+
+function parseCarGeometry(raw: unknown): CarGeometry | null {
+  if (!isObj(raw)) return null
+  const lengthM = num(raw.length_m)
+  const widthM = num(raw.width_m)
+  const heightM = num(raw.height_m)
+  if (lengthM === undefined || widthM === undefined || heightM === undefined) return null
+  if (lengthM <= 0 || widthM <= 0 || heightM <= 0) return null
+  return { lengthM, widthM, heightM }
 }
 
 function parseTrack(raw: unknown): RaceTrack | null {
@@ -133,6 +148,7 @@ export function parseRaceInfo(raw: unknown): RaceInfo | null {
     layoutId: str(raw.layout_id) ?? null,
     numLaps,
     track,
+    carGeometry: parseCarGeometry(raw.car_geometry),
     drivers: Array.isArray(raw.drivers) ? raw.drivers.map(parseDriver).filter(isDriver) : [],
   }
 }

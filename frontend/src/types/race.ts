@@ -35,6 +35,8 @@ export type RaceDriver = {
   team: string | null
   /** Pode vir nulo enquanto o backend não envia a cor da temporada. */
   teamColor: string | null
+  /** Origem da cor no backend; "unknown" indica o cinza de emergência. */
+  teamColorSource: string | null
   gridPosition: number
 }
 
@@ -43,6 +45,13 @@ export type RacePitLane = {
   waypoints: [number, number][]
   widthM: number
   source: string | null
+}
+
+/** Caixa de colisão do chassi no backend, em metros. */
+export type CarGeometry = {
+  lengthM: number
+  widthM: number
+  heightM: number
 }
 
 export type RaceTrack = {
@@ -63,6 +72,8 @@ export type RaceInfo = {
   layoutId: string | null
   numLaps: number
   track: RaceTrack
+  /** Nulo em corridas antigas que não enviam `car_geometry`. */
+  carGeometry: CarGeometry | null
   drivers: RaceDriver[]
 }
 
@@ -85,6 +96,12 @@ export type CarFrame = {
   gapToLeaderS: number | null
   lapsBehind: number
   headingDeg: number | null
+  /** Progresso acumulado na corrida, em metros (`progress_m`). */
+  progressM: number | null
+  /** Distância desde a linha de chegada na volta atual, em metros (`s_m`). */
+  sM: number | null
+  /** Deslocamento lateral assinado, positivo à direita (`d_m`). */
+  dM: number | null
 }
 
 export type Frame = {
