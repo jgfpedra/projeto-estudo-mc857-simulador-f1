@@ -225,6 +225,8 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
           f.d = 0
           // Congelado (gancho de desenvolvimento), o carro está parado para a câmera.
           f.speedMps = frozen ? 0 : pose.speedMps
+          f.wallMs = now
+          f.frozen = frozen
           f.carIndex = i
           f.posed = true
           f.x = x

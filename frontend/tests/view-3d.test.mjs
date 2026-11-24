@@ -18,6 +18,7 @@ import { carColors } from "../src/components/race/view-3d/scene/car-colors.ts"
 import { overviewPose, pitLaneFromRace, rotateToStart, trackFromRace } from "../src/components/race/view-3d/scene/race-track.ts"
 import { poseMatrix } from "../src/components/race/view-3d/scene/car-model.ts"
 import { CHASE, chasePose, newFollowState, newPose, newRigState, stepRig } from "../src/components/race/view-3d/scene/camera-math.ts"
+import { angleJitter, bearing } from "../src/components/race/view-3d/scene/camera-jitter.ts"
 import { PIN_FADE, pinOpacity } from "../src/components/race/view-3d/scene/pin-fade.ts"
 import { buildFrame, nearestS, sampleAt, toWorld } from "../src/components/race/view-3d/scene/track-frame.ts"
 import { buildRibbonGeometry } from "../src/components/race/view-3d/scene/geometry.ts"
@@ -740,7 +741,7 @@ test("low quality: no shadows and a third of the trees; off: no environment", ()
 
 // --- chase camera off-axis cap and marker fade -----------------------------------
 
-test("chase camera keeps a settled, stopped car within 8 degrees of the view axis, even in a 25 m hairpin", () => {
+test("chase camera without a pose (track fallback) keeps a settled, stopped car within 8 degrees of the view axis, even in a 25 m hairpin", () => {
   const R = 25
   const pts = []
   for (let k = 0; k < 40; k++) {
@@ -752,7 +753,7 @@ test("chase camera keeps a settled, stopped car within 8 degrees of the view axi
     const follow = newFollowState()
     const s = 40
     const at = toWorld(frame, s)
-    Object.assign(follow, { sUnwrapped: s, speedMps: 0, carIndex: 0, posed: true, x: at.x, z: at.z })
+    Object.assign(follow, { sUnwrapped: s, speedMps: 0, carIndex: 0, posed: false, x: at.x, z: at.z })
     const rig = newRigState()
     for (let i = 0; i < 200; i++) stepRig(rig, frame, follow, 1 / 60, cfg)
     const p = chasePose(frame, rig, follow, cfg, newPose())
@@ -767,6 +768,147 @@ test("chase camera keeps a settled, stopped car within 8 degrees of the view axi
   assert.ok(capped.gap <= CHASE.maxOffAxisRad + 1e-9, `capped: ${(capped.gap * 180) / Math.PI} deg`)
   // Speed 0 (a frozen clock): the rig settles exactly trailM behind the car.
   assert.ok(capped.behind < 1e-6, `rig ${capped.behind} m off the trail`)
+})
+
+// --- chase camera behind the car, on a coarse (OpenF1-style) track --------------
+
+/**
+ * A smooth closed course in three (x, z): long bends, an S and two tight ends
+ * (minimum radius ~20 m). The car drives the analytic curve; the served track
+ * is the same curve sampled every 14-42 m with 0.4 m of lateral noise, like
+ * the OpenF1 tracks, so its chords bend every 14-42 m.
+ */
+function coarseCourse() {
+  const curve = (t) => [500 * Math.cos(t) + 90 * Math.cos(3 * t), 300 * Math.sin(t) - 70 * Math.sin(2 * t)]
+  const N = 40000
+  const P = []
+  const S = [0]
+  for (let i = 0; i <= N; i++) P.push(curve((i / N) * 2 * Math.PI))
+  for (let i = 1; i <= N; i++) S.push(S[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]))
+  const L = S[N]
+  /** Position and model yaw (forward = (-sin yaw, -cos yaw)) at arc length s of the smooth curve. */
+  const at = (s) => {
+    s = ((s % L) + L) % L
+    let lo = 0
+    let hi = N
+    while (hi - lo > 1) {
+      const m = (lo + hi) >> 1
+      if (S[m] <= s) lo = m
+      else hi = m
+    }
+    const a = (s - S[lo]) / (S[hi] - S[lo])
+    const fx = P[hi][0] - P[lo][0]
+    const fz = P[hi][1] - P[lo][1]
+    return { x: P[lo][0] + a * fx, z: P[lo][1] + a * fz, yaw: Math.atan2(-fx, -fz) }
+  }
+  let seed = 7
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+  const pts = []
+  for (let s = 0; s < L - 14; s += 14 + 28 * rand()) {
+    const p = at(s)
+    const n = (rand() - 0.5) * 0.8
+    pts.push(new Vector3(p.x + Math.cos(p.yaw) * n, 0, p.z - Math.sin(p.yaw) * n))
+  }
+  return { L, at, frame: buildFrame(pts), points: pts.length }
+}
+
+/**
+ * The car at 45 m/s, posed from 10 Hz ticks interpolated like the playback
+ * (position lerp, heading by the short arc), rendered at 60 Hz for 40 s.
+ * Returns the camera yaw and the car's angle off the view axis per frame
+ * (after a 2 s warm-up) and every pose.
+ */
+function driveChase(course, { rig = "heading", progressNoiseM = 0, cutAtS = null } = {}) {
+  const { L, at, frame } = course
+  const v = 45
+  const tick = 0.1
+  const dt = 1 / 60
+  let seed = 99
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+  const follow = newFollowState()
+  const state = newRigState()
+  const pose = newPose()
+  const yaw = []
+  const off = []
+  const poses = []
+  for (let f = 0; f < 60 * 40; f++) {
+    const t = f * dt
+    const i = Math.floor(t / tick)
+    const a = t / tick - i
+    const p0 = at(v * tick * i)
+    const p1 = at(v * tick * (i + 1))
+    if (cutAtS !== null && Math.abs(t - cutAtS) < dt / 2) follow.cut++
+    Object.assign(follow, {
+      sUnwrapped: v * t * (frame.lengthM / L) + progressNoiseM * (rand() - 0.5) * 2,
+      speedMps: v,
+      carIndex: 0,
+      posed: true,
+      x: p0.x + a * (p1.x - p0.x),
+      z: p0.z + a * (p1.z - p0.z),
+      yawRad: lerpAngle(p0.yaw, p1.yaw, a),
+    })
+    stepRig(state, frame, follow, dt)
+    const c = chasePose(frame, state, follow, CHASE, pose, rig)
+    poses.push({ position: c.position.clone(), target: c.target.clone(), rigYaw: state.yaw, carYaw: follow.yawRad })
+    if (f < 120) continue
+    const y = bearing(c.position.x, c.position.z, c.target.x, c.target.z)
+    const toCar = bearing(c.position.x, c.position.z, c.anchor.x, c.anchor.z)
+    yaw.push({ wallMs: t * 1000, rad: y, key: follow.cut })
+    off.push({ wallMs: t * 1000, rad: Math.atan2(Math.sin(toCar - y), Math.cos(toCar - y)), key: follow.cut })
+  }
+  return { camera: angleJitter(yaw), carOnScreen: angleJitter(off), maxOffDeg: (Math.max(...off.map((o) => Math.abs(o.rad))) * 180) / Math.PI, poses }
+}
+
+test("chase camera on a coarse 14-42 m track: yaw-rate jitter < 1 deg/s and the car centred (old track-frame rig as the baseline)", () => {
+  const course = coarseCourse()
+  assert.ok(course.points > 60 && course.points < 210, `${course.points} points`)
+  const old = driveChase(course, { rig: "track" })
+  const now = driveChase(course)
+  // The baseline must show the problem, or the test proves nothing.
+  assert.ok(old.camera.jitterDegS > 2, `old rig camera jitter ${old.camera.jitterDegS} deg/s`)
+  assert.ok(old.maxOffDeg > 7.9, `old rig pins the car at the 8 deg cap (${old.maxOffDeg})`)
+  assert.ok(now.camera.jitterDegS < 1, `camera yaw-rate jitter ${now.camera.jitterDegS} deg/s`)
+  // It still turns with the car (rms yaw rate of the same order as the old rig's).
+  assert.ok(now.camera.rateRmsDegS > 5, `camera turns ${now.camera.rateRmsDegS} deg/s rms`)
+  assert.ok(now.carOnScreen.jitterDegS < 0.01, `car-on-screen jitter ${now.carOnScreen.jitterDegS} deg/s`)
+  assert.ok(now.maxOffDeg < 1e-6, `car ${now.maxOffDeg} deg off the view axis`)
+})
+
+test("chase camera ignores progressM: +-3 m of noise on it does not move the camera", () => {
+  const course = coarseCourse()
+  const clean = driveChase(course)
+  const noisy = driveChase(course, { progressNoiseM: 3 })
+  let worst = 0
+  clean.poses.forEach((p, i) => {
+    worst = Math.max(worst, p.position.distanceTo(noisy.poses[i].position), p.target.distanceTo(noisy.poses[i].target))
+  })
+  assert.equal(worst, 0, `camera moved ${worst} m`)
+})
+
+test("chase camera yaw is a frame-rate independent damp of the car heading, and cuts on a new selection", () => {
+  const course = coarseCourse()
+  const { frame } = course
+  // Same 0.5 s of a 90 deg/s turn at 30 Hz and at 240 Hz: same yaw at the end.
+  const settle = (hz) => {
+    const follow = newFollowState()
+    Object.assign(follow, { carIndex: 0, posed: true, yawRad: 0 })
+    const state = newRigState()
+    stepRig(state, frame, follow, 0)
+    for (let k = 1; k <= hz / 2; k++) {
+      follow.yawRad = deg(90) * (k / hz)
+      stepRig(state, frame, follow, 1 / hz)
+    }
+    return state.yaw
+  }
+  close(settle(30), settle(240), deg(1.5))
+  // Lags the turn by about rate * tau (90 deg/s * 0.25 s), not more.
+  const lag = deg(45) - settle(240)
+  assert.ok(lag > deg(15) && lag < deg(25), `lag ${(lag * 180) / Math.PI} deg`)
+  // A cut (new selection, resync) snaps the yaw to the car instead of damping.
+  const run = driveChase(course, { cutAtS: 20 })
+  const k = Math.round(20 * 60)
+  close(run.poses[k].rigYaw, run.poses[k].carYaw, 1e-12)
+  assert.ok(run.camera.jitterDegS < 1)
 })
 
 test("car markers fade in only far from the cars: opaque at overview distance, gone in close views", () => {

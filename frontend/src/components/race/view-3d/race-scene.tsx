@@ -155,7 +155,13 @@ function Content({ race, scene, layout, quality, followRef, mode, selectedDriver
         onPick={(id) => onSelectDriver(id)}
         probe={probe?.sink ?? null}
       />
-      <CameraRig frame={frame} mode={selectedIndex >= 0 ? mode : "orbit"} followRef={followRef} overview={overview} />
+      <CameraRig
+        frame={frame}
+        mode={selectedIndex >= 0 ? mode : "orbit"}
+        followRef={followRef}
+        overview={overview}
+        probeCamera={probe?.sink.camera ?? null}
+      />
     </>
   )
 }
