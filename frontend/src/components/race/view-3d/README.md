@@ -1,8 +1,9 @@
 # Visualização 3D da corrida (`view-3d/`)
 
 O modo **3D** da tela de corrida (`pages/race-simulation.tsx`). Mostra a mesma
-corrida ao vivo que o mapa 2D, no mesmo instante, com os carros posicionados
-pela pose da engine.
+corrida ao vivo que o mapa 2D, ~150 ms atrás dele (reprodução com buffer, para
+o movimento não tremer com a chegada irregular dos ticks), com os carros
+posicionados pela pose da engine.
 
 O 3D de produção fica aqui. `viz3d/` continua sendo o laboratório (verificações
 de pista, gravações, replay, `npm run snapshot`) e não é importado: o build do
@@ -14,7 +15,8 @@ isso o código foi **copiado e adaptado**, não importado.
 | Arquivo | O que faz | Portado de (`viz3d/`, commit do arquivo) |
 |---|---|---|
 | `race-view-3d.tsx` | Contrato de props do Luiz (inalterado) + `React.lazy`/`Suspense` e um *error boundary*. É o único módulo do 3D no bundle principal. | — |
-| `race-scene.tsx` | `<Canvas>`, luzes, pista, carros, câmera; botões Perseguição/A bordo; sair do seguimento por arrasto, rolagem ou Esc. Chunk preguiçoso. | `src/live/LiveRace.tsx` (`aa32ad2`), só a parte da cena |
+| `race-scene.tsx` | `<Canvas>`, luzes, pista, carros, câmera; botões Perseguição/A bordo; seletor de cenário (por portal na barra da página); sair do seguimento por arrasto, rolagem ou Esc. Chunk preguiçoso. | `src/live/LiveRace.tsx` (`aa32ad2`), só a parte da cena |
+| `toolbar-slot.ts` | Contexto com o lugar da barra de cima onde a cena põe o seletor de cenário. | — |
 | `scene/track-frame.ts` | Referencial `(s, d)` → mundo, `wrapS`, `toWorld`, curvatura; `nearestS` (novo). | `src/track/frame.ts` (`3fb91fa`) |
 | `scene/race-track.ts` | Waypoints do backend → Three.js, rotação para `startFinishWaypoint` = s 0, via dos boxes, extremos da linha de chegada, enquadramento da visão geral. | `src/live/track.ts` (`aa32ad2`) |
 | `scene/geometry.ts` | Faixa da pista, superfície e contorno da via dos boxes, linha de chegada. | `src/track/ribbon.ts` (`3fb91fa`), `src/live/pitRibbon.ts` (`aa32ad2`), `src/live/StartFinishLine.tsx` (`35baba2`) |
@@ -25,8 +27,10 @@ isso o código foi **copiado e adaptado**, não importado.
 | `scene/camera-math.ts` | Perseguição (direção a no máximo 8° do carro na horizontal), T-cam (a bordo), amortecimento e inclinação. | `src/cameras/rig.ts` (`39b2589`) |
 | `scene/camera-rig.tsx` | Órbita (visão geral), perseguição e a bordo. | `src/cameras/CameraRig.tsx` (`f6c843d`) |
 | `scene/car-colors.ts` | Cor de equipe ou, se nula/"unknown", uma cor distinta da paleta. | — |
-| `scene/dev-probe.ts` | `window.__race3d`, só em desenvolvimento, para a verificação headless; `freeze()`/`unfreeze()`, `view()` e `bench()`. | — |
-| `scene/live-clock.ts` | Relógio e store como o 3D os lê a cada quadro; o gancho de desenvolvimento pode congelá-los. | — |
+| `scene/dev-probe.ts` | `window.__race3d`, só em desenvolvimento, para a verificação headless; `sample()`, `freeze()`/`unfreeze()`, `view()`, `bench()`, `playback()` e `smoothness()`. | — |
+| `scene/playback.ts` | Reprodução com buffer: frames por `simTs`, instante desenhado ~150 ms atrás do mais novo, taxa ajustada em ±5%, sem extrapolação, ressincronização. | — |
+| `scene/live-clock.ts` | Liga a store ao relógio de `playback.ts` enquanto o 3D está montado e entrega a cada quadro o par de frames e o `alpha`; o gancho de desenvolvimento pode congelar a vista ou voltar ao caminho antigo. | — |
+| `scene/smoothness.ts` | Medida do passo do carro seguido quadro a quadro (dispersão, paradas, saltos, ré). | — |
 | `scene/pin-fade.ts` | Opacidade dos marcadores pela distância ao carro mais próximo. | — |
 | `scene/environment/curvature.ts` | Curvatura em metros (Menger com vizinhos a ≥ 12 m, suavização de ±16 m), trechos acima de um limiar, ápices. | — |
 | `scene/environment/layout.ts` | Regras de posicionamento do cenário (função pura, com semente), caixas dos modelos, folgas, `propMatrix`. | protótipo de cenário (`env-prototype/main.js`), reescrito |
@@ -53,21 +57,67 @@ Não atualize o three ou o R3F separadamente: o par de versões quebra fácil.
 
 ```
 WebSocket ─► live-race-store (frame, prevFrame, frameAt, tickIntervalMs, selectedDriverId)
-                 │                                   │
-        track-2d.tsx (d3)                    race-view-3d.tsx ─lazy─► race-scene.tsx
-                                                                      │
-                     useFrame: useLiveRaceStore.getState()  ◄─────────┘
-                     alpha = clamp((now - frameAt) / tickIntervalMs, 0, 1)   (igual ao 2D)
-                     (x, y) = interpolateCars(prevFrame, frame, alpha)       (mesma função)
+                 │                         │ subscribe (só com o 3D montado)
+        track-2d.tsx (d3)          live-clock.ts ─► playback.ts: últimos ~3 s de frames, por simTs
+        (borda ao vivo)                    │
+                     useFrame: readLive() ─┘  t = instante de simulação ~150 ms atrás do mais novo
+                     prev ≤ t < cur do buffer, alpha = (t - prev.simTs) / (cur.simTs - prev.simTs)
+                     (x, y) = interpolateCars(prev, cur, alpha)              (mesma função do 2D)
                      direção: heading_deg interpolado pelo arco mais curto
                      three.x = x, three.z = -y, yaw = heading - 90°
                      ─► matrizes de instância (corpo, rodas, marcador) ─► câmera
 ```
 
-- **Um relógio.** Nenhum buffer próprio: o 3D usa os mesmos `prevFrame`,
-  `frame`, `frameAt` e `tickIntervalMs` que o 2D, lidos com `getState()` dentro
-  do `useFrame`. O React não re-renderiza a cena a cada tick (`RaceScene` é
-  `memo` e não recebe `frame`).
+- **Reprodução com buffer.** O 2D desenha na borda ao vivo (`prevFrame ->
+  frame`, `alpha` desde a chegada do tick). Os ticks chegam com 87-112 ms de
+  intervalo mesmo no localhost, então ali o carro para quando um tick atrasa e
+  salta quando um adianta; na perseguição isso tremia nas curvas (as direções
+  da engine são lisas: 2ª diferença p95 de 0,16°). O 3D guarda os frames
+  (`playback.ts`, por `simTs`; mesmo `simTs` substitui, como na mudança de
+  clima) e desenha um instante `t` que avança pelo tempo de parede do quadro
+  de animação (`document.timeline.currentTime`) vezes a taxa da simulação, com
+  um ajuste de no máximo ±5% para manter o atraso médio de 150 ms atrás do
+  frame mais novo. A taxa começa em 1 (a engine roda em tempo real) e é
+  medida pelo contorno inferior das chegadas nos últimos 20 s: atrasos só
+  empurram uma chegada para depois, então as mais adiantadas dão o ritmo.
+  Um mínimos-quadrados sobre todas as chegadas lia o lote de ticks entregue
+  depois de uma parada da página (ao montar o 3D com SwiftShader, por
+  exemplo) como simulação acelerada, e o 3D ficava parado no frame mais novo
+  por ~10 s; lotes (chegadas a < 30 ms) e a primeira chegada depois de uma
+  pausa de > 0,5 s ficam fora da medida. Com a engine mais lenta que o tempo
+  real, os primeiros ~3 s podem parar no frame mais novo enquanto a taxa é
+  aprendida. No primeiro quadro desde que o relógio começou, `t` parte do
+  atraso alvo (a cena pode levar ~0,7 s para carregar com 20 carros e
+  cenário alto; sem isso o 3D começava esse tempo atrás). Isso absorve um
+  tick até ~100 ms atrasado; se `t` alcança o frame mais novo, ele para ali
+  (nunca extrapola) e o ajuste reconstrói o atraso. Uma engine que oscila
+  muito abaixo do tempo real (medido: 0,55-0,8x com quatro corridas ao mesmo
+  tempo no WSL) não cabe no ajuste de ±5% e faz o 3D parar às vezes.
+  Ressincroniza na hora (e a câmera corta) depois de um snapshot (carga,
+  reconexão: a store zera `prevFrame`), de um salto de mais de 1 s no tempo de
+  simulação, de tempo voltando, ou se ficar mais de 1 s atrás. Carros, direção,
+  progresso, rodas, marcadores e câmera saem desse instante; o 2D, o painel de
+  tempos e o cartão do piloto continuam na borda ao vivo. O React não
+  re-renderiza a cena a cada tick (`RaceScene` é `memo` e não recebe `frame`).
+
+  Medido ao vivo (24/11/2026): corrida de 20 carros em Interlagos (OpenF1),
+  Chrome headless na GTX 1660 SUPER, cenário alto, seguindo o líder por uma
+  volta em cada modo (`playback("live")` e depois o padrão), com
+  `smoothness()` no S do Senna (s 200-600 m) e na Junção (s 3000-3350 m).
+  Sem vsync, o headless desenhou ~300-400 quadros/s, então as contagens
+  absolutas não se comparam às de uma tela de 60 Hz; o antes e o depois sim.
+
+  | Modo | Trecho | Quadros | Dispersão | Paradas | Saltos | Parado no mais novo | Atraso médio |
+  |---|---|---|---|---|---|---|---|
+  | antes (borda ao vivo) | S do Senna | 4068 | 0,519 | 291 | 194 | 71 | 48 ms |
+  | antes (borda ao vivo) | Junção | 2813 | 0,598 | 248 | 135 | 23 | 48 ms |
+  | antes (borda ao vivo) | volta | 26859 | 0,530 | 1857 | 1287 | 298 | 48 ms |
+  | depois (com buffer) | S do Senna | 4078 | 0,001 | 0 | 0 | 0 | 148 ms |
+  | depois (com buffer) | Junção | 2868 | 0,001 | 0 | 0 | 0 | 148 ms |
+  | depois (com buffer) | volta | 31109 | 0,001 | 0 | 0 | 0 | 148 ms |
+
+  Nos dois modos, 3D e interpolação do 2D no instante desenhado diferem
+  < 0,0001 m. Nenhum passo de ré em nenhum dos dois.
 - **Pista.** Exatamente os waypoints servidos (`GET /races/{id}`), rotacionados
   para que `startFinishWaypoint` seja s = 0, com largura `widthM` (12 m se
   nula) e a via dos boxes `track.pitLane`. Sem suavização: desenhamos o que a
@@ -138,14 +188,22 @@ qualquer pista ganha cenário, inclusive as do OpenF1 com pontos a 14–42 m.
   não cabe é descartado. Cada modelo repetido é um `InstancedMesh` por
   primitiva, com a geometria e o material do cache do `useGLTF`. A semente
   vem dos próprios pontos: a mesma pista sempre tem o mesmo cenário.
-- **Qualidade.** Botões na faixa abaixo do canvas: *Alta* (sombras, 2600
-  árvores), *Baixa* (sem sombras, 35% das árvores), *Sem cenário* (o visual
-  antigo: fundo liso, só a faixa da pista e o renderizador sem mapa de
-  sombras). A escolha fica no `localStorage`. A faixa fica fora do canvas de
-  propósito: com um elemento HTML sempre por cima dele, o Chrome com WebGL por
-  software às vezes avisava "glBlitFramebuffer: Blit feedback loop" ao montar
-  ou desmontar o 3D (3 em 300 alternâncias; 0 em 300 sem o elemento e 0 em
-  300 no `origin/dev`).
+- **Qualidade.** Um seletor "Cenário" na barra de cima, logo depois da chave
+  2D/3D (embaixo do canvas o cartão do piloto selecionado o cobria):
+  *Alta* (sombras, 2600 árvores), *Baixa* (sem sombras, 35% das árvores), *Sem
+  cenário* (o visual antigo: fundo liso, só a faixa da pista e o renderizador
+  sem mapa de sombras). A escolha fica no `localStorage`. O seletor fica fora
+  do canvas de propósito: com um elemento HTML sempre por cima dele, o Chrome
+  com WebGL por software às vezes avisava "glBlitFramebuffer: Blit feedback
+  loop" ao montar ou desmontar o 3D (3 em 300 alternâncias; 0 em 300 sem o
+  elemento e 0 em 300 no `origin/dev`). É um `<select>` nativo: a lista abre
+  fora do documento. A página monta a barra como uma linha flexível (chave
+  2D/3D, um lugar para os controles do 3D, a faixa de eventos no que sobra)
+  e passa o lugar por contexto (`toolbar-slot.ts`); a cena põe o seletor ali
+  por portal, sem mudar as props de `RaceView3D`. Assim a faixa de eventos
+  começa depois do seletor no 3D e onde sempre esteve no 2D (o lugar vazio
+  some). Medido a 1440×900 com uma mensagem na faixa e o cartão do piloto
+  aberto: chave x 145-245, seletor 253-436, faixa 448-911; nada se sobrepõe.
   Sem escolha guardada, o padrão é *Alta*, exceto com WebGL por software
   (SwiftShader, llvmpipe, sem GPU: `softwareRendering()` em `quality.ts`),
   onde o padrão é *Sem cenário*. A detecção cria um contexto descartável uma
@@ -159,7 +217,7 @@ qualquer pista ganha cenário, inclusive as do OpenF1 com pontos a 14–42 m.
   | 1006×1081 | GTX 1660 SUPER | 2,0 ms | 1,1 ms | 0,5 ms |
   | 750×541 | SwiftShader | 225 ms | 77 ms | 9 ms |
 
-  Medido com o canvas ainda sem a faixa de qualidade embaixo (hoje 750×513, 28 px a menos de altura).
+  Sem a faixa de qualidade embaixo, o canvas voltou a ter a altura toda da área (750×541 nessa janela).
 
   A verificação ao vivo (`viz3d/scripts/check-3d-frontend.mjs`) usa
   SwiftShader por padrão, então roda sem cenário; `--gpu --quality high` roda
@@ -194,11 +252,20 @@ Testes: `npm test` (inclui `tests/view-3d.test.mjs`: direção através de
 cenário: caixas dos modelos iguais às dos GLBs, curvatura em pista grossa,
 nenhum modelo sobre o asfalto ou a via dos boxes em Interlagos, Monza e no
 Interlagos do OpenF1, orientação dos boxes e arquibancadas, semente; limite
-de 8° da perseguição num grampo, esmaecimento dos marcadores),
-`npm run lint`, `npm run build`. Em desenvolvimento, `window.__race3d.sample()`
-devolve as posições desenhadas pelo 3D (lidas das matrizes de instância) e as
-do 2D para o mesmo `performance.now()`; `view("overview" | "grid" | "corner")`
-põe a câmera nos pontos de vista das capturas, `bench(n)` mede o tempo de
-quadro (n renderizações, cada uma esperando a GPU) e `freeze()` /
-`unfreeze()` congelam e soltam o relógio do 3D (os carros param na pose do
-instante; o WebSocket e o 2D seguem; ao sair do 3D o congelamento é desfeito).
+de 8° da perseguição num grampo, esmaecimento dos marcadores; a reprodução
+com buffer com tremor sintético de ±30 ms e rajadas de 3 ticks, uma parada de
+250 ms da página, ticks atrasados demais, simulação a 0,9x e as
+ressincronizações), `npm run lint`, `npm run build`. Em desenvolvimento,
+`window.__race3d.sample()` devolve as posições desenhadas pelo 3D (lidas das
+matrizes de instância) e as da interpolação do 2D no instante de simulação
+que o 3D desenhou (de uma cópia própria dos frames da store), mais o atraso
+atrás do frame mais novo; `view("overview" | "grid" | "corner")` põe a câmera
+nos pontos de vista das capturas, `bench(n)` mede o tempo de quadro (n
+renderizações, cada uma esperando a GPU) e `freeze()` / `unfreeze()`
+congelam e soltam a vista do 3D (os carros param na pose do último quadro; o
+WebSocket, o buffer e o 2D seguem; ao sair do 3D o congelamento é desfeito).
+`traceReset()` e `smoothness({ sRanges, playback })` medem o carro seguido
+quadro a quadro (`smoothness.ts`: `r` = velocidade aparente do quadro / mediana
+de ±15 quadros; `spread` = desvio-padrão de `r`, paradas `r` < 0,5, saltos `r`
+> 1,5, passos de ré), e `playback("live")` volta ao caminho antigo (borda ao
+vivo, como o 2D) para comparar; `playback("buffered")` é o padrão.

@@ -8,7 +8,7 @@ import type { CarGeometry as ChassisBox, RaceDriver } from "@/types/race"
 import { carGeometry, poseMatrix, raceCarSpec, wheelAngle, wheelMatrix } from "./car-model"
 import type { CarPart } from "./car-model"
 import type { FollowState } from "./camera-math"
-import { LapUnwrapper, WheelOdometer, engineYaw, frameAlpha, interpolatePoses, toThreeX, toThreeZ } from "./live-pose"
+import { LapUnwrapper, WheelOdometer, engineYaw, interpolatePoses, toThreeX, toThreeZ } from "./live-pose"
 import type { CarPose } from "./live-pose"
 import { nearestS, wrapS } from "./track-frame"
 import type { TrackFrame } from "./track-frame"
@@ -72,9 +72,10 @@ function pinGeometry(): ConeGeometry {
 /**
  * Os carros na pista. Portado de `viz3d/src/cars/Grid.tsx`: um `InstancedMesh`
  * por primitiva do modelo, rodas giradas pelo hodômetro. A diferença é a
- * fonte: em vez do `LiveBuffer` do viz3d, a pose vem da store do frontend,
- * lida com `getState()` dentro do `useFrame` (sem re-render por tick), e é
- * interpolada exatamente como em `track-2d.tsx`.
+ * fonte: em vez do `LiveBuffer` do viz3d, a pose vem da reprodução com buffer
+ * (`live-clock.ts`), lida dentro do `useFrame` (sem re-render por tick), e é
+ * interpolada com a mesma função do 2D (`interpolateCars`), num instante
+ * ~150 ms atrás do frame mais novo.
  */
 export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, overviewDistance, followRef, onPick, probe }: Props) {
   const spec = useMemo(
@@ -143,7 +144,7 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
       lastHeading: new Map<string, number>(),
       odometer: new WheelOdometer(),
       unwrap: new LapUnwrapper(),
-      lastFrame: null as unknown,
+      lastResyncs: -1,
       lastSelected: -2,
   })
   // Altura do teto do carro, para o marcador, medida na própria geometria.
@@ -160,12 +161,12 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
   const pinsRef = useRef<InstancedMesh>(null)
 
   useFrame((state) => {
-    const { now, s, frozen } = readLive()
+    const { now, view, frozen } = readLive()
     const scratch = scratchRef.current
     const f = followRef.current
     let nearest = Infinity
 
-    if (!s.frame) {
+    if (!view.cur) {
       for (let i = 0; i < count; i++) {
         for (const m of meshes.body) m.setMatrixAt(i, scratch.hidden)
         for (const w of meshes.wheels) for (const m of w.meshes) m.setMatrixAt(i, scratch.hidden)
@@ -173,15 +174,14 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
       }
       f.carIndex = -1
     } else {
-      const alpha = frameAlpha(now, s.frameAt, s.tickIntervalMs)
-      const poses = interpolatePoses(s.prevFrame, s.frame, alpha, scratch.lastHeading)
-      scratch.odometer.update(s.prevFrame, s.frame)
+      const alpha = view.alpha
+      const poses = interpolatePoses(view.prev, view.cur, alpha, scratch.lastHeading)
+      scratch.odometer.update(view.prev, view.cur)
       // Ressincronização: o carro seguido pode ter saltado; a câmera corta.
-      const jumped = s.frame !== scratch.lastFrame && s.prevFrame === null && scratch.lastFrame !== null
-      scratch.lastFrame = s.frame
-      if (jumped || selectedIndex !== scratch.lastSelected) {
+      if (view.resyncs !== scratch.lastResyncs || selectedIndex !== scratch.lastSelected) {
         scratch.unwrap.reset()
         f.cut++
+        scratch.lastResyncs = view.resyncs
         scratch.lastSelected = selectedIndex
       }
       const cam = state.camera.position
@@ -254,7 +254,7 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
     for (const w of meshes.wheels) publish(w.meshes, false)
     publish([meshes.pins], true)
 
-    probe?.record(now, s, meshes.body[0] ?? null, meshes.pins, ids)
+    probe?.record(now, view, meshes.body[0] ?? null, meshes.pins, ids)
   })
 
   const pick = (e: ThreeEvent<MouseEvent>) => {

@@ -187,7 +187,8 @@ the T-cam check (docs/phase3-engine-race.md section 5). First run needs
 
 The frontend's production 3D (`frontend/src/components/race/view-3d/`) has its
 own live check, `scripts/check-3d-frontend.mjs` (15 checks; its header has the
-details). It renders on SwiftShader by default, where the page defaults its
+details; 3D vs 2D is compared at the sim time the 3D drew, ~150 ms behind the
+newest tick, and `--toggles n` sets the 2D/3D toggle count). It renders on SwiftShader by default, where the page defaults its
 scenery to *off* (software WebGL: ~225 ms per frame with the scenery on high,
 ~9 ms off). `--gpu` renders on the GPU instead; `--quality high|low|off`
 presets `localStorage["race3d.quality"]` and overrides the page default. Every
