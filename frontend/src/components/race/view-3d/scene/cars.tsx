@@ -92,7 +92,7 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
   const meshes = useMemo(() => {
     const body = parts.body.map((p) => instanced(p, count))
     const wheels = parts.wheels.map((w) => ({ wheel: w, meshes: w.parts.map((p) => instanced(p, count)) }))
-    const pins = new InstancedMesh(pinGeometry(), new MeshBasicMaterial({ color: "#ffffff", toneMapped: false, fog: false, transparent: true }), count)
+    const pins = new InstancedMesh(pinGeometry(), new MeshBasicMaterial({ color: "#ffffff", toneMapped: false, fog: false }), count)
     pins.instanceMatrix.setUsage(DynamicDrawUsage)
     pins.frustumCulled = false
     pins.name = "car-pins"
@@ -238,7 +238,14 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
     const pins = pinsRef.current
     if (pins) {
       const opacity = showPins ? pinOpacity(nearest, overviewDistance) : 0
-      ;(pins.material as MeshBasicMaterial).opacity = opacity
+      const mat = pins.material as MeshBasicMaterial
+      mat.opacity = opacity
+      // Transparente só durante o esmaecimento; opaco (cor exata, como antes) no resto.
+      const fading = opacity < 0.999
+      if (mat.transparent !== fading) {
+        mat.transparent = fading
+        mat.needsUpdate = true
+      }
       // Invisível também não é clicável.
       pins.visible = opacity > 0.01
     }

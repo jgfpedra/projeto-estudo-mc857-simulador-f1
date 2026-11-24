@@ -240,7 +240,8 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
       <Canvas
         key={race.raceId}
         dpr={[1, 2]}
-        shadows="soft"
+        // Sem cenário, o renderizador fica como era antes dele (sem mapa de sombras).
+        shadows={envOn ? "soft" : false}
         camera={{ fov: 45, near: 1, far: start.distance * 6, position: start.position.toArray() }}
         aria-label="Visualização 3D da corrida"
       >
