@@ -12,19 +12,23 @@
  * que segue o carro e da posição dele na tela (`camera-jitter.ts`), e
  * `chaseRig("track")` volta à perseguição antiga, pela pista, para comparar.
  * `shadowOffset()` mede onde a sombra do carro seguido caiu no mapa de sombra
- * do último quadro, no referencial do carro. Em produção
+ * do último quadro, no referencial do carro. `tyreBands()` lê a cor e a
+ * visibilidade das faixas de composto (do buffer de instâncias),
+ * `tyreView(id)` põe a câmera ao lado de um carro e `weather()` devolve o
+ * clima misturado e os parâmetros da cena. Em produção
  * `import.meta.env.DEV` é falso e nada disso é instalado.
  */
-import { Matrix4, Vector3 } from "three"
+import { Color, Matrix4, Vector3 } from "three"
 import type { Camera, DirectionalLight, InstancedMesh, MeshBasicMaterial, Scene, WebGLRenderer } from "three"
 
 import { interpolateCars } from "@/helpers/race-live"
 import { useLiveRaceStore } from "@/stores/live-race-store"
-import type { Frame } from "@/types/race"
+import type { Frame, Weather } from "@/types/race"
 import { chaseRigMode, setChaseRigMode } from "./camera-math"
 import type { CameraMode, CameraPose, ChaseRig } from "./camera-math"
 import { angleJitter, bearing } from "./camera-jitter"
 import type { AngleSample } from "./camera-jitter"
+import { forceWeather, weatherSnapshot } from "./environment/weather"
 import { softwareProbeReleased, softwareRendering } from "./environment/quality"
 import type { Quality } from "./environment/quality"
 import type { ViewPose } from "./environment/views"
@@ -36,13 +40,28 @@ import type { TraceSample } from "./smoothness"
 type Drawn = {
   now: number
   view: LiveView
-  cars: { driverId: string; x: number; y: number; pinTop: [number, number, number] | null; pinScale: number }[]
+  cars: {
+    driverId: string
+    x: number
+    y: number
+    /** Frente do carro no three (unitária, no plano). */
+    fx: number
+    fz: number
+    pinTop: [number, number, number] | null
+    pinScale: number
+  }[]
   /** Opacidade dos marcadores neste quadro (0 = escondidos). */
   pinOpacity: number
+  bands: TyreBands | null
+  /** Pilotos na ordem das instâncias. */
+  ids: string[]
 }
 
+/** Faixas de composto: o InstancedMesh (carro k, roda w -> k * perCar + w) e a cor aplicada a cada carro. */
+export type TyreBands = { mesh: InstancedMesh; perCar: number; hex: (string | null | undefined)[] }
+
 export type ProbeSink = {
-  record: (now: number, view: LiveView, body: InstancedMesh | null, pins: InstancedMesh, ids: string[]) => void
+  record: (now: number, view: LiveView, body: InstancedMesh | null, pins: InstancedMesh, ids: string[], bands: TyreBands | null) => void
   /** Chamado pelo rig depois de pôr a câmera, no mesmo quadro de `record`. */
   camera: (pose: CameraPose, cut: number) => void
 }
@@ -136,11 +155,11 @@ export function createProbe(ctx: Context): { sink: ProbeSink; install: () => () 
   const v = new Vector3()
 
   const sink: ProbeSink = {
-    record(now, view, body, pins, ids) {
+    record(now, view, body, pins, ids, bands) {
       pending = null
       followedPose = null
       if (!body || !view.cur) {
-        last = { now, view, cars: [], pinOpacity: 0 }
+        last = { now, view, cars: [], pinOpacity: 0, bands, ids }
         return
       }
       const followedIndex = ctx.followed ? ids.indexOf(ctx.followed) : -1
@@ -178,13 +197,17 @@ export function createProbe(ctx: Context): { sink: ProbeSink; install: () => () 
         v.setFromMatrixPosition(m)
         const x = v.x
         const y = -v.z
+        const e = m.elements
+        const fl = Math.hypot(e[8], e[10]) || 1
+        const fx = -e[8] / fl
+        const fz = -e[10] / fl
         pins.getMatrixAt(i, m)
         const k = m.elements[5]
         v.setFromMatrixPosition(m)
-        cars.push({ driverId, x, y, pinTop: k > 0 ? [v.x, v.y + 2.4 * k * 0.8, v.z] : null, pinScale: k })
+        cars.push({ driverId, x, y, fx, fz, pinTop: k > 0 ? [v.x, v.y + 2.4 * k * 0.8, v.z] : null, pinScale: k })
       })
       const pinOpacity = pins.visible ? (pins.material as MeshBasicMaterial).opacity : 0
-      last = { now, view, cars, pinOpacity }
+      last = { now, view, cars, pinOpacity, bands, ids }
     },
     camera(pose, cut) {
       if (!pending) return
@@ -281,6 +304,67 @@ export function createProbe(ctx: Context): { sink: ProbeSink; install: () => () 
       camera.lookAt(pose.target)
       if (c.enabled) c.update()
       return true
+    },
+    /**
+     * Faixas de composto como foram para a GPU: por carro, o composto do frame
+     * desenhado, a cor da instância (hex, sRGB) e se os anéis estão visíveis
+     * (escala da matriz > 0).
+     */
+    tyreBands() {
+      const b = last?.bands
+      if (!last || !b || !last.view.cur) return []
+      const tyre = new Map(last.view.cur.cars.map((c) => [c.driverId, c.tyre]))
+      const colour = new Color()
+      const ids = last.ids
+      return ids.map((driverId, k) => {
+        let visible = 0
+        for (let w = 0; w < b.perCar; w++) {
+          b.mesh.getMatrixAt(k * b.perCar + w, m)
+          if (Math.abs(m.determinant()) > 1e-12) visible++
+        }
+        if (b.mesh.instanceColor) b.mesh.getColorAt(k * b.perCar, colour)
+        return { driverId, compound: tyre.get(driverId) ?? null, applied: b.hex[k] ?? null, colour: `#${colour.getHexString()}`, visibleRings: visible, rings: b.perCar }
+      })
+    },
+    /**
+     * Câmera parada ao lado de um carro (o seguido, se nenhum for dado), na
+     * pose do último quadro, para ver as faixas de perto. Use com `freeze()` e
+     * fora do seguimento (precisa da órbita, que fica desligada até
+     * `view("overview")`).
+     */
+    tyreView(driverId?: string, distanceM = 5) {
+      const id = driverId ?? ctx.followed
+      const car = last?.cars.find((c) => c.driverId === id)
+      const { camera, controls } = ctx.three()
+      const c = controls as Controls | null
+      if (!car || !c) return false
+      const cx = car.x
+      const cz = -car.y
+      // Direita do carro = frente girada -90° no plano (three: x, z).
+      const rx = -car.fz
+      const rz = car.fx
+      c.enabled = false
+      // Na órbita o plano near cresce com a pista (distância da visão geral / 200, ~7 m): fica além dele.
+      const near = "near" in camera ? (camera.near as number) : 1
+      const d = Math.max(distanceM, near * 1.8)
+      // De cima (~30°): olhando quase na horizontal, o chão mais perto que o near some.
+      camera.position.set(cx + rx * d + car.fx * 1.5, Math.max(1.2, d * 0.55), cz + rz * d + car.fz * 1.5)
+      c.target.set(cx, 0.35, cz)
+      camera.lookAt(c.target)
+      return true
+    },
+    /** Clima misturado, alvo, andamento da mistura, neblina e riscos de chuva do último quadro (null sem cenário). */
+    weather() {
+      return weatherSnapshot()
+    },
+    /**
+     * Força o clima desenhado (`{ kind, rainfall, trackTemp }`), como se viesse
+     * no frame; `null` volta ao clima do frame. A mudança mistura em 5 s como
+     * uma real. Desfeito ao sair do 3D (`live-clock.ts`), não ao trocar de carro.
+     */
+    forceWeather(w: Weather | null) {
+      forceWeather(w)
+      return weatherSnapshot()
     },
     /**
      * Tempo de quadro, ms: `n` renderizações síncronas, cada uma esperando a
@@ -512,6 +596,7 @@ export function createProbe(ctx: Context): { sink: ProbeSink; install: () => () 
           const info = g.getExtension("WEBGL_debug_renderer_info")
           return info ? String(g.getParameter(info.UNMASKED_RENDERER_WEBGL)) : null
         })(),
+        weather: weatherSnapshot(),
         environment: {
           fog: fog ? { near: Math.round(fog.near ?? 0), far: Math.round(fog.far ?? 0) } : null,
           exposure: gl.toneMappingExposure,

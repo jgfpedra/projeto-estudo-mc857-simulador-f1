@@ -23,6 +23,7 @@ import { useLiveRaceStore } from "@/stores/live-race-store"
 import type { Frame } from "@/types/race"
 import { frameAlpha } from "./live-pose"
 import { PlaybackClock } from "./playback"
+import { forceWeather } from "./environment/weather"
 
 export type PlaybackMode = "buffered" | "live"
 
@@ -80,6 +81,8 @@ export function acquirePlayback(): () => void {
     last = null
     frozen = null
     mode = "buffered"
+    // Clima forçado pelo gancho de desenvolvimento: vale só enquanto o 3D está montado.
+    forceWeather(null)
   }
 }
 
@@ -114,6 +117,15 @@ export function readLive(): { now: number; view: LiveView; frozen: boolean } {
   }
   last = { now, view }
   return { now, view, frozen: false }
+}
+
+/**
+ * O último par desenhado (o de `readLive()` deste quadro ou do anterior), sem
+ * avançar o relógio. Para quem precisa do mesmo frame dos carros fora deles
+ * (o clima do cenário).
+ */
+export function lastLive(): { now: number; view: LiveView } | null {
+  return frozen ?? last
 }
 
 export function freezeLive(): void {
