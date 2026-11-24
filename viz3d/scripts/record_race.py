@@ -81,7 +81,7 @@ sys.path.insert(0, str(ROOT))
 
 from centreline import frame_from_three, project_global, project_windowed, wrap_s  # noqa: E402
 
-RACE_SCRIPT = ROOT / "backend" / "scripts" / "run_race_10_cars.py"
+RACE_SCRIPT = ROOT / "backend" / "scripts" / "simulation" / "run_race_10_cars.py"
 DEFAULT_OUT = ROOT / "viz3d" / ".cache" / "recordings"
 
 #: The profile this reproduces. Only apex-rules: the neural profiles need
