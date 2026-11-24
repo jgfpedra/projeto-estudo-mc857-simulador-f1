@@ -72,6 +72,7 @@ npm run test:watch
 npm run snapshot     # build, then render-verify in headless Chromium (see below)
 node scripts/check-3d-frontend.mjs   # live check of the frontend's 3D (backend + frontend dev server running; see its header)
 node scripts/check-3d-frontend.mjs --gpu --quality high   # same on the GPU, scenery forced on (default: SwiftShader, page picks: off on software WebGL)
+node scripts/check-3d-frontend.mjs --gpu --quality high --weather heavy_rain   # same, race created in heavy rain (+1 check: the 3D shows it)
 
 # Track extraction (run once per circuit, output is committed). FastF1 3.8.3,
 # always offline: --cache must be an existing cache (outside the repo; read a copy)

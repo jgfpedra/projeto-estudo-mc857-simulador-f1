@@ -30,6 +30,11 @@
  *                                      i.e. off under the default SwiftShader)
  *   --out <dir>       F1_CHECK_OUT     screenshots + report.json (default viz3d/.cache/check-3d-frontend)
  *   --toggles <n>     F1_CHECK_TOGGLES 2D/3D toggles in the resource check (default 10)
+ *   --weather <w>     F1_CHECK_WEATHER race weather: dry | cloudy | light_rain | rain | heavy_rain. Written
+ *                                      into the outgoing POST /races (like the grid trim); without it the
+ *                                      setup flow's own choice is sent. Adds one check: the 3D shows that
+ *                                      weather (blended state reached, rain streaks iff it rains), and
+ *                                      the overview/chase screenshots are taken in it
  *
  * The setup flow always sends a 20-driver grid (GRID_SIZE = 20 in the frontend), so the
  * script trims the outgoing POST /races grid to --cars drivers and keeps the rest of the
@@ -81,6 +86,9 @@ const onlyAgreement = args.includes("--only-agreement")
 const TOGGLES = Number(opt("--toggles", "F1_CHECK_TOGGLES", "10"))
 if (!Number.isInteger(TOGGLES) || TOGGLES < 1) throw new Error(`--toggles must be a positive integer, got ${TOGGLES}`)
 const TOLERANCE_M = 0.5
+const WEATHER = opt("--weather", "F1_CHECK_WEATHER", null)
+const WEATHERS = ["dry", "cloudy", "light_rain", "rain", "heavy_rain"]
+if (WEATHER !== null && !WEATHERS.includes(WEATHER)) throw new Error(`--weather must be one of ${WEATHERS.join(", ")}, got ${WEATHER}`)
 if (!Number.isInteger(N_CARS) || N_CARS < 1 || N_CARS > 24) throw new Error(`--cars must be 1..24, got ${N_CARS}`)
 mkdirSync(OUT, { recursive: true })
 
@@ -279,6 +287,7 @@ async function main() {
       sentGrid = { fromUi: body.grid.length, sent: N_CARS }
       // The UI requires a 20-car grid (GRID_SIZE = 20); keep the first N_CARS of it.
       body.grid = body.grid.slice(0, N_CARS)
+      if (WEATHER) body.weather = WEATHER
       report.postBody = body
       await route.continue({ postData: JSON.stringify(body) })
     })
@@ -342,6 +351,18 @@ async function main() {
   report.render = { gpuFlag: GPU, requestedQuality: QUALITY, ...env }
   console.log(`renderer: ${env.renderer}; 3D quality: ${env.quality}${QUALITY ? " (requested)" : " (page default)"}`)
   if (QUALITY && env.quality !== QUALITY) throw new Error(`requested --quality ${QUALITY}, the page runs ${env.quality}`)
+
+  if (WEATHER) {
+    // The 3D opens in the race's weather (no blend on the first one); give it a few frames.
+    await frames(page, 30)
+    const w = await page.evaluate(() => window.__race3d.weather())
+    report.weather = { requested: WEATHER, drawn: w }
+    const raining = ["light_rain", "rain", "heavy_rain"].includes(WEATHER)
+    const ok = env.quality === "off"
+      ? w === null
+      : w !== null && w.progress === 1 && (raining ? w.streaks > 0 && w.look.wet > 0 : w.streaks === 0) && (WEATHER === "dry" ? w.look.cloud === 0 : w.look.cloud === 1)
+    check(`3D shows the race weather (${WEATHER}${env.quality === "off" ? ", none without scenery" : ""})`, ok, { drawn: w })
+  }
 
   const agree = await agreement(page, "overview")
   check(`3D drawn positions match 2D within ${TOLERANCE_M} m at the 3D's sim time (overview)`, agree.worstErrorM <= TOLERANCE_M && buffered(agree), agree)

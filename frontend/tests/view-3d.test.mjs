@@ -28,6 +28,8 @@ import { LAYERS, bandGeometry } from "../src/components/race/view-3d/scene/envir
 import { QUALITY } from "../src/components/race/view-3d/scene/environment/quality.ts"
 import { PLAYBACK, PlaybackClock } from "../src/components/race/view-3d/scene/playback.ts"
 import { smoothness } from "../src/components/race/view-3d/scene/smoothness.ts"
+import { COMPOUND_COLOR, compoundColor } from "../src/components/race/view-3d/scene/tyre-compound.ts"
+import { WEATHER, WeatherBlend, fogRange, rainStreakCount, weatherLook, weatherParams } from "../src/components/race/view-3d/scene/environment/weather.ts"
 
 const deg = (d) => (d * Math.PI) / 180
 const close = (a, b, eps = 1e-9, msg) => assert.ok(Math.abs(a - b) <= eps, msg ?? `${a} != ${b} (eps ${eps})`)
@@ -1156,4 +1158,163 @@ test("smoothness metric: uniform motion is 0 spread; a 3-frame stall counts 3 st
   const back = line(100)
   back[50].x -= 2
   assert.equal(smoothness(back).backwards, 1)
+})
+
+// --- tyre compound bands ------------------------------------------------------
+
+test("compound band colour: the five compounds, any case; unknown or missing -> no band", () => {
+  const want = { SOFT: "#E10600", MEDIUM: "#FFD12E", HARD: "#F0F0F0", INTERMEDIATE: "#43B02A", WET: "#0067AD" }
+  assert.deepEqual(COMPOUND_COLOR, want)
+  for (const [k, hex] of Object.entries(want)) {
+    assert.equal(compoundColor(k), hex)
+    assert.equal(compoundColor(k.toLowerCase()), hex)
+  }
+  assert.equal(compoundColor("Medium"), want.MEDIUM)
+  assert.equal(compoundColor(" hard "), want.HARD)
+  assert.equal(compoundColor("Intermediate"), want.INTERMEDIATE)
+  assert.equal(compoundColor("wEt"), want.WET)
+  // "UNKNOWN" is what the parser keeps without tyre_compound.
+  for (const raw of ["UNKNOWN", "", "SUPERSOFT", "INTER", "toString", "__proto__", null, undefined, 3])
+    assert.equal(compoundColor(raw), null, String(raw))
+})
+
+// --- weather ------------------------------------------------------------------
+
+const W = (kind, rainfall = 0, trackTemp = 30) => ({ kind, rainfall, trackTemp })
+const OD = 1500
+
+test("dry weather (and no weather, or an unknown kind) gives exactly the scene from before", () => {
+  for (const w of [W("DRY", 0, 42), W("dry"), null, undefined, W("FOG")]) {
+    const look = weatherLook(w)
+    assert.deepEqual(look, { cloud: 0, wet: 0, rain: 0 }, JSON.stringify(w))
+    const p = weatherParams(look)
+    assert.equal(p.sunIntensity, 2.4)
+    assert.equal(p.hemiIntensity, 0.9)
+    assert.equal(p.overcast, 0)
+    assert.equal(p.turbidity, 3)
+    assert.equal(p.rayleigh, 1.2)
+    assert.equal(p.mie, 0.004)
+    assert.deepEqual(p.fogColor.map((v) => Math.round(v * 255)), [0xb9, 0xcf, 0xe0])
+    assert.deepEqual(p.sunColor.map((v) => Math.round(v * 255)), [0xff, 0xf3, 0xe0])
+    assert.deepEqual(p.hemiSky.map((v) => Math.round(v * 255)), [0xcf, 0xe3, 0xff])
+    assert.equal(p.asphaltShade, 1)
+    assert.equal(p.asphaltRoughness, 0.92)
+    assert.equal(rainStreakCount("high", p.rain), 0)
+    // Fog as before in every camera: overviewDistance .. 3x.
+    for (const cam of [9.6, 120, OD]) assert.deepEqual(fogRange(look, OD, cam), { near: OD, far: 3 * OD })
+  }
+})
+
+test("cloudy: greyer sky, dimmer sun, nearer fog, cooler light; no rain, dry asphalt", () => {
+  const look = weatherLook(W("CLOUDY", 0, 35))
+  const p = weatherParams(look)
+  const dry = weatherParams(weatherLook(null))
+  assert.ok(p.overcast >= 0.8, `overcast ${p.overcast}`)
+  const sat = (c) => Math.max(...c) - Math.min(...c)
+  assert.ok(sat(p.fogColor) < sat(dry.fogColor), "fog greyer")
+  assert.ok(p.sunIntensity < 0.5 * dry.sunIntensity, `sun ${p.sunIntensity}`)
+  const f = fogRange(look, OD, OD)
+  assert.ok(f.near < OD && f.far < 3 * OD, JSON.stringify(f))
+  // Cooler: the sun loses its warm tint; the ambient sky light turns grey-blue.
+  assert.ok(p.sunColor[2] / p.sunColor[0] > dry.sunColor[2] / dry.sunColor[0], "sun less warm")
+  assert.ok(sat(p.hemiSky) < sat(dry.hemiSky) && p.hemiSky[2] > p.hemiSky[0], "ambient grey-blue")
+  assert.equal(p.rain, 0)
+  assert.equal(p.asphaltShade, 1)
+  assert.equal(rainStreakCount("high", p.rain), 0)
+})
+
+test("rain: light (DAMP 0.5 mm/h) and heavy (WET 8 mm/h) look different; wet asphalt darker and glossier", () => {
+  const cloudy = weatherParams(weatherLook(W("CLOUDY")))
+  const light = weatherLook(W("DAMP", 0.5, 24))
+  const heavy = weatherLook(W("wet", 8, 19))
+  const lp = weatherParams(light)
+  const hp = weatherParams(heavy)
+  // Cloudy plus rain.
+  for (const p of [lp, hp]) {
+    assert.ok(p.overcast >= cloudy.overcast)
+    assert.ok(p.sunIntensity <= cloudy.sunIntensity)
+    assert.ok(p.asphaltShade < 1 && p.asphaltRoughness < 0.92, JSON.stringify(p))
+  }
+  close(light.rain, 1 - Math.exp(-0.5 / 3), 1e-12)
+  close(heavy.rain, 1 - Math.exp(-8 / 3), 1e-12)
+  // Streaks scale with rainfall: heavy has several times the light rain's.
+  const nl = rainStreakCount("high", lp.rain)
+  const nh = rainStreakCount("high", hp.rain)
+  assert.ok(nl > 0 && nh > 4 * nl, `light ${nl}, heavy ${nh}`)
+  // Denser fog with rainfall, closer in the chase camera than in the overview.
+  const chaseL = fogRange(light, OD, 9.6)
+  const chaseH = fogRange(heavy, OD, 9.6)
+  const overH = fogRange(heavy, OD, OD)
+  assert.ok(chaseH.near < chaseL.near && chaseH.far < chaseL.far, JSON.stringify({ chaseL, chaseH }))
+  assert.ok(chaseH.far < 1000, `heavy rain closes the chase view: far ${chaseH.far}`)
+  assert.ok(overH.far > 1.5 * OD, `overview still readable: far ${overH.far}`)
+  // Heavy rain: darker sky than light rain, fully wet track.
+  assert.ok(hp.overcastColor[0] < lp.overcastColor[0])
+  assert.ok(hp.asphaltShade <= lp.asphaltShade)
+  // WET without rainfall uses the backend's default rain.
+  close(weatherLook(W("WET", 0)).rain, 1 - Math.exp(-WEATHER.wetDefaultMmH / 3), 1e-12)
+  // DAMP without rainfall: wet track, no streaks.
+  assert.equal(rainStreakCount("high", weatherLook(W("DAMP", 0)).rain), 0)
+})
+
+test("weather blend: the first weather applies at once, a change is continuous and finishes in 5 s", () => {
+  const dry = weatherLook(W("DRY"))
+  const heavy = weatherLook(W("WET", 8))
+  const b = new WeatherBlend()
+  // Opening the 3D in heavy rain shows heavy rain right away.
+  assert.deepEqual(b.update(heavy, 0), heavy)
+  assert.equal(b.progress(0), 1, "nothing to blend after the first weather")
+  assert.deepEqual(new WeatherBlend().update(dry, 0), dry)
+
+  const t0 = 10_000
+  b.update(heavy, t0 - 16)
+  let prev = b.update(dry, t0)
+  assert.deepEqual(prev, heavy, "no jump on the change itself")
+  let prevSun = weatherParams(prev).sunIntensity
+  let maxStep = 0
+  let maxSunStep = 0
+  let doneAt = null
+  for (let t = t0 + 16; t <= t0 + 7000; t += 16) {
+    const cur = b.update(dry, t)
+    maxStep = Math.max(maxStep, Math.abs(cur.cloud - prev.cloud), Math.abs(cur.wet - prev.wet), Math.abs(cur.rain - prev.rain))
+    const sun = weatherParams(cur).sunIntensity
+    maxSunStep = Math.max(maxSunStep, Math.abs(sun - prevSun))
+    if (doneAt === null && cur.cloud === 0 && cur.wet === 0 && cur.rain === 0) doneAt = t - t0
+    prev = cur
+    prevSun = sun
+  }
+  // smoothstep: steepest slope 1.5 / 5 s -> at most ~0.005 per 16 ms frame.
+  assert.ok(maxStep < 0.006, `max step ${maxStep}`)
+  assert.ok(maxSunStep < 0.01, `max sun step ${maxSunStep}`)
+  assert.ok(doneAt !== null && doneAt >= 4900 && doneAt <= 5016, `finished after ${doneAt} ms`)
+  assert.equal(WEATHER.blendS, 5)
+
+  // Halfway there, a new target restarts from the current value (no jump).
+  const c = new WeatherBlend()
+  c.update(dry, 0)
+  c.update(heavy, 1000)
+  const mid = c.update(heavy, 3500)
+  assert.ok(mid.rain > 0.2 && mid.rain < heavy.rain - 0.2, JSON.stringify(mid))
+  const cloudy = weatherLook(W("CLOUDY"))
+  const after = c.update(cloudy, 3516)
+  assert.ok(Math.abs(after.rain - mid.rain) < 0.01, "retarget is continuous")
+  assert.equal(c.update(cloudy, 3516 + 5000).rain, 0)
+  // Frozen clock (same now): the blend holds.
+  assert.deepEqual(c.update(cloudy, 3516 + 5000), cloudy)
+})
+
+test("rain streak count per quality: high full, low far fewer, 'Sem cenário' none", () => {
+  const heavy = weatherLook(W("WET", 8)).rain
+  const light = weatherLook(W("DAMP", 0.5)).rain
+  const high = rainStreakCount("high", heavy)
+  const low = rainStreakCount("low", heavy)
+  assert.equal(high, Math.round(WEATHER.streaks.high * heavy))
+  assert.ok(low > 0 && low * 5 <= high, `high ${high}, low ${low}`)
+  assert.equal(rainStreakCount("off", heavy), 0)
+  assert.equal(rainStreakCount("off", 1), 0)
+  assert.ok(rainStreakCount("low", light) < low)
+  assert.equal(rainStreakCount("high", 0), 0)
+  assert.equal(rainStreakCount("high", 1), WEATHER.streaks.high)
+  // "Sem cenário" mounts no environment at all, so no weather visuals there.
+  assert.equal(QUALITY.off.environment, false)
 })

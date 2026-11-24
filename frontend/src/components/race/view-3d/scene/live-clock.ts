@@ -116,6 +116,15 @@ export function readLive(): { now: number; view: LiveView; frozen: boolean } {
   return { now, view, frozen: false }
 }
 
+/**
+ * O último par desenhado (o de `readLive()` deste quadro ou do anterior), sem
+ * avançar o relógio. Para quem precisa do mesmo frame dos carros fora deles
+ * (o clima do cenário).
+ */
+export function lastLive(): { now: number; view: LiveView } | null {
+  return frozen ?? last
+}
+
 export function freezeLive(): void {
   if (frozen) return
   frozen = last ?? readLive()
