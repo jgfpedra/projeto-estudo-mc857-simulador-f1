@@ -16,6 +16,15 @@ backend by design and change nothing in it. Run every command below from `viz3d/
 Design rationale, data pipeline details and the milestone list live in
 `docs/3d-design.md`. Read it before making architectural changes.
 
+**The production 3D now lives in the frontend**, in
+`frontend/src/components/race/view-3d/` (the 3D mode of the race screen). The
+live-mode pieces were copied there, not imported (the frontend's Docker build
+context is `./frontend`): track frame and ribbon, start/finish line, pit lane,
+car model and instancing with wheel odometry, and the camera rig. Its README
+lists each file's origin and commit. This directory stays the lab: track
+checks, recordings, replay and `npm run snapshot`. A fix to one of the copied
+modules here does not reach the race screen; port it there too.
+
 ## Non-goals
 
 Do not build these unless explicitly asked. They belong to the group project,
