@@ -70,6 +70,7 @@ npm run typecheck
 npm test             # vitest, one run
 npm run test:watch
 npm run snapshot     # build, then render-verify in headless Chromium (see below)
+node scripts/check-3d-frontend.mjs   # live check of the frontend's 3D (backend + frontend dev server running; see its header)
 
 # Track extraction (run once per circuit, output is committed). FastF1 3.8.3,
 # always offline: --cache must be an existing cache (outside the repo; read a copy)
