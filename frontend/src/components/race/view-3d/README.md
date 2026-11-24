@@ -24,10 +24,11 @@ isso o código foi **copiado e adaptado**, não importado.
 | `scene/car-model.ts` | Correção de eixos/escala do glTF, geometria para instâncias, matrizes de pose e de roda. | `src/cars/model.ts` (`a7763c5`), `src/cars/instance.ts` (`2d25e8a`) |
 | `scene/cars.tsx` | Um `InstancedMesh` por primitiva, rodas pelo hodômetro, marcadores clicáveis que só aparecem com a câmera longe dos carros. | `src/cars/Grid.tsx` (`a7763c5`), sem a verificação J e sem as marcas de roda |
 | `scene/live-pose.ts` | Interpolação igual à do 2D, direção pelo arco mais curto, mapeamento de eixos, hodômetro, desembrulho de `s`. | `src/live/buffer.ts` (`a7763c5`), `src/cars/odometry.ts` (`a7763c5`), `engineYaw` de `src/engine/source.ts` (`a7763c5`) |
-| `scene/camera-math.ts` | Perseguição (direção a no máximo 8° do carro na horizontal), T-cam (a bordo), amortecimento e inclinação. | `src/cameras/rig.ts` (`39b2589`) |
+| `scene/camera-math.ts` | Perseguição atrás do carro pela direção dele suavizada (sem pose: o rig antigo, pela pista, com o limite de 8°), T-cam (a bordo), amortecimento e inclinação. | `src/cameras/rig.ts` (`39b2589`), perseguição reescrita |
+| `scene/camera-jitter.ts` | Tremor de um ângulo quadro a quadro (taxa menos a média de ±0,25 s), para a direção da câmera e o carro na tela. | — |
 | `scene/camera-rig.tsx` | Órbita (visão geral), perseguição e a bordo. | `src/cameras/CameraRig.tsx` (`f6c843d`) |
 | `scene/car-colors.ts` | Cor de equipe ou, se nula/"unknown", uma cor distinta da paleta. | — |
-| `scene/dev-probe.ts` | `window.__race3d`, só em desenvolvimento, para a verificação headless; `sample()`, `freeze()`/`unfreeze()`, `view()`, `bench()`, `playback()` e `smoothness()`. | — |
+| `scene/dev-probe.ts` | `window.__race3d`, só em desenvolvimento, para a verificação headless; `sample()`, `freeze()`/`unfreeze()`, `view()`, `bench()`, `playback()`, `smoothness()`, `chaseRig()`, `cameraJitter()` e `shadowOffset()`. | — |
 | `scene/playback.ts` | Reprodução com buffer: frames por `simTs`, instante desenhado ~150 ms atrás do mais novo, taxa ajustada em ±5%, sem extrapolação, ressincronização. | — |
 | `scene/live-clock.ts` | Liga a store ao relógio de `playback.ts` enquanto o 3D está montado e entrega a cada quadro o par de frames e o `alpha`; o gancho de desenvolvimento pode congelar a vista ou voltar ao caminho antigo. | — |
 | `scene/smoothness.ts` | Medida do passo do carro seguido quadro a quadro (dispersão, paradas, saltos, ré). | — |
@@ -127,15 +128,53 @@ WebSocket ─► live-race-store (frame, prevFrame, frameAt, tickIntervalMs, sel
   modelo é escalado para 2,0 m de largura. Rodas giram pelo deslocamento no
   chão entre ticks.
 - **Câmera.** `selectedDriverId` definido → perseguição desse carro (ou
-  *a bordo*, pelo botão no canto). A direção da perseguição e o ponto à frente
-  usam `progressM` quando existe (senão `sM` desembrulhado, senão a projeção
-  na pista); a âncora fica sobre a pose. `null` → visão geral ajustada à pista
-  e ao formato do elemento. Clicar num carro (ou no marcador acima dele na
-  visão geral) chama `onSelectDriver(id)`; arrastar, rolar ou Esc durante o
+  *a bordo*, pelo botão no canto). `null` → visão geral ajustada à pista e ao
+  formato do elemento. Clicar num carro (ou no marcador acima dele na visão
+  geral) chama `onSelectDriver(id)`; arrastar, rolar ou Esc durante o
   seguimento chamam `onSelectDriver(null)`, como o botão "Visão geral".
-  Na perseguição, a direção não se afasta mais de 8° do carro na horizontal:
-  num grampo de 25 m, mirar 25 m à frente pela pista poria o carro a ~29° do
-  eixo, na borda da tela.
+
+  A perseguição fica atrás do carro, pela direção desenhada dele (a mesma do
+  modelo) suavizada com um amortecimento independente da taxa de quadros
+  (`yawTauS` = 0,25 s): posição = carro − 9 m na direção + 3,2 m de altura,
+  alvo = carro + 25 m na direção (0,8 m de altura). Não lê a pista nem o
+  `progressM`, e o carro fica sempre no eixo da câmera na horizontal. Corta
+  (sem amortecer) ao trocar de carro e numa ressincronização. O passo do
+  amortecimento sai do carimbo do quadro da reprodução, o mesmo que moveu o
+  carro, e não do `delta` do R3F (`performance.now()` na hora do callback):
+  com os dois relógios a câmera girava em passos desiguais em relação ao carro
+  (medido: 8-9 graus/s de tremor só por isso). Congelado, usa o `delta` para
+  assentar.
+
+  O rig antigo, portado do viz3d, mirava por pontos da pista (`u` = s − 9 m
+  atrás, s + 25 m à frente, pelo `progressM`). Nas curvas essa mira ficava a
+  mais de 8° do carro, o limite de 8° a prendia, e a direção da câmera passava
+  a seguir as cordas da polilinha servida, que nas pistas do OpenF1 dobra a
+  cada 14-42 m: a câmera balançava nas curvas. Ele ficou só para o carro sem
+  pose (com o limite de 8°) e, em desenvolvimento, atrás de
+  `__race3d.chaseRig("track")`, para comparar.
+
+  Medido ao vivo (24/11/2026), na mesma configuração da tabela da reprodução
+  (20 carros, Interlagos do OpenF1 com 280 pontos, GTX 1660 SUPER, cenário
+  alto, ~240 quadros/s no headless), seguindo o líder por ~95 s com cada rig
+  (antigo e depois o novo), `cameraJitter()` (graus/s; `carHeading` é a mesma
+  medida na direção do próprio carro, a referência):
+
+  | Rig | Trecho | Quadros | Câmera | Carro na tela | Direção do carro | Carro fora do eixo (máx.) |
+  |---|---|---|---|---|---|---|
+  | antigo (pela pista) | S do Senna | 1803 | 7,63 | 7,43 | 2,87 | 8,0° |
+  | antigo (pela pista) | Junção* | 281 | 0,41 | 0,78 | 0,65 | 0,8° |
+  | antigo (pela pista) | volta | 20635 | 7,31 | 5,58 | 2,27 | 8,0° |
+  | novo (atrás do carro) | S do Senna | 3824 | 1,28 | 0 | 3,03 | 0° |
+  | novo (atrás do carro) | Junção | 2278 | 0,86 | 0 | 2,10 | 0° |
+  | novo (atrás do carro) | volta | 20541 | 0,98 | 0 | 2,24 | 0° |
+
+  \* Só o fim da Junção caiu na janela do rig antigo, já na reta. O que sobra
+  no rig novo (~1 grau/s) não é tremor: num S rápido a média de ±0,25 s não
+  acompanha toda a rotação real (uma direção lisa, sem ruído, também lê ~2
+  graus/s no teste sintético), e a câmera fica abaixo da direção do próprio
+  carro. Fora do teste ao vivo, num percurso sintético com pontos a 14-42 m
+  (`tests/view-3d.test.mjs`): antigo 3,5 graus/s na câmera e 11,9 no carro na
+  tela; novo 0,07 e 0.
 - **Marcadores.** Só com a câmera longe dos carros: a opacidade vai de 0 a 1
   entre 25% e 40% da distância da visão geral, medida até o carro mais
   próximo (`pin-fade.ts`). Na visão geral o carro mais próximo fica a pelo
@@ -224,6 +263,15 @@ qualquer pista ganha cenário, inclusive as do OpenF1 com pontos a 14–42 m.
   na GPU com o cenário. Em ambos os casos ela congela o relógio do 3D
   (`__race3d.freeze()`) antes de cada captura e da leitura de posições que vai
   com ela, então o resultado não depende da velocidade de renderização.
+- **Sombra em velocidade.** A sombra do carro não fica para trás: o three
+  0.169 avança o contador de quadros antes de desenhar as sombras, então o
+  passo da sombra já envia as matrizes de instância do quadro. Medido com
+  `shadowOffset()` (centro da superfície do carro no mapa de sombra, no
+  referencial do carro): na mesma pose, desenhada andando e depois congelada,
+  12 pares a 22-31 m/s diferem de −0,018 a +0,014 m (meio texel de 0,037 m),
+  quando um quadro de atraso daria 0,09-0,13 m (0,53 m no único quadro de
+  16,7 ms). A "cópia escura" vista em velocidade não veio do mapa de sombra
+  atrasado; não foi reproduzida aqui.
 - **Sombra no primeiro quadro.** O three desenha as sombras antes de montar as
   luzes do quadro; no primeiro quadro de um renderizador as luzes estão vazias
   e os modelos já em cache compilariam uma variante extra do material de
@@ -251,8 +299,11 @@ Testes: `npm test` (inclui `tests/view-3d.test.mjs`: direção através de
 ±180°, rotação dos waypoints, cores, pose igual à interpolação 2D; e o
 cenário: caixas dos modelos iguais às dos GLBs, curvatura em pista grossa,
 nenhum modelo sobre o asfalto ou a via dos boxes em Interlagos, Monza e no
-Interlagos do OpenF1, orientação dos boxes e arquibancadas, semente; limite
-de 8° da perseguição num grampo, esmaecimento dos marcadores; a reprodução
+Interlagos do OpenF1, orientação dos boxes e arquibancadas, semente; a
+perseguição num percurso com pontos a 14-42 m (tremor da câmera < 1 grau/s,
+carro no eixo, o rig antigo como referência), ruído no `progressM` sem mover
+a câmera, amortecimento independente da taxa de quadros e corte; limite de 8°
+do caminho sem pose num grampo, esmaecimento dos marcadores; a reprodução
 com buffer com tremor sintético de ±30 ms e rajadas de 3 ticks, uma parada de
 250 ms da página, ticks atrasados demais, simulação a 0,9x e as
 ressincronizações), `npm run lint`, `npm run build`. Em desenvolvimento,
@@ -268,4 +319,10 @@ WebSocket, o buffer e o 2D seguem; ao sair do 3D o congelamento é desfeito).
 quadro a quadro (`smoothness.ts`: `r` = velocidade aparente do quadro / mediana
 de ±15 quadros; `spread` = desvio-padrão de `r`, paradas `r` < 0,5, saltos `r`
 > 1,5, passos de ré), e `playback("live")` volta ao caminho antigo (borda ao
-vivo, como o 2D) para comparar; `playback("buffered")` é o padrão.
+vivo, como o 2D) para comparar; `playback("buffered")` é o padrão. `cameraJitter({ sRanges, chaseRig })`
+mede a câmera de perseguição desde o `traceReset()` (`camera-jitter.ts`:
+taxa de giro de cada quadro menos a média de ±0,25 s, RMS; para a direção da
+câmera, para o ângulo do carro em relação ao eixo e, como referência, para a
+direção do carro), `chaseRig("track")` volta ao rig antigo para comparar
+(`"heading"` é o padrão) e `shadowOffset()` lê o mapa de sombra do último
+quadro em volta do carro seguido.

@@ -5,8 +5,8 @@ import { OrbitControls } from "@react-three/drei"
 import { PerspectiveCamera } from "three"
 import type { Camera } from "three"
 
-import { CHASE, ONBOARD, chasePose, newPose, newRigState, onboardPose, stepRig } from "./camera-math"
-import type { CameraMode, FollowState } from "./camera-math"
+import { CHASE, ONBOARD, chasePose, chaseRigMode, newPose, newRigState, onboardPose, stepRig } from "./camera-math"
+import type { CameraMode, CameraPose, FollowState } from "./camera-math"
 import type { Overview } from "./race-track"
 import type { TrackFrame } from "./track-frame"
 
@@ -28,6 +28,8 @@ type Props = {
   /** Escrito a cada quadro por `Cars`, lido aqui; nunca renderizado. */
   followRef: { current: FollowState }
   overview: Overview
+  /** Gancho de desenvolvimento: recebe a pose da câmera de cada quadro seguindo um carro. */
+  probeCamera?: ((pose: CameraPose, cut: number) => void) | null
 }
 
 /**
@@ -41,11 +43,13 @@ type Props = {
  * pista (não ao último ponto de vista salvo), porque `selectedDriverId = null`
  * significa "visão geral" na página.
  */
-export function CameraRig({ frame, mode, followRef, overview }: Props) {
+export function CameraRig({ frame, mode, followRef, overview, probeCamera }: Props) {
   const camera = useThree((s) => s.camera)
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null)
   const rig = useRef(newRigState())
   const pose = useRef(newPose())
+  /** `wallMs` do último quadro em que o rig andou. */
+  const lastWallMs = useRef(Number.NaN)
 
   useLayoutEffect(() => {
     const far = overview.distance * 6
@@ -70,16 +74,27 @@ export function CameraRig({ frame, mode, followRef, overview }: Props) {
   useFrame((_, delta) => {
     if (mode === "orbit") return
     const f = followRef.current
-    stepRig(rig.current, frame, f, delta)
+    // O passo do rig sai do mesmo relógio que moveu o carro (o carimbo do
+    // quadro da reprodução), não do `delta` do R3F (performance.now() na hora
+    // do callback): com os dois relógios, a câmera girava em passos desiguais
+    // em relação ao carro. Congelado, o carimbo para; aí o `delta` deixa a
+    // câmera assentar. O rig antigo (comparação) fica com o `delta`, como era.
+    const dt =
+      f.frozen || chaseRigMode() === "track" || !(f.wallMs >= lastWallMs.current)
+        ? delta
+        : (f.wallMs - lastWallMs.current) / 1000
+    lastWallMs.current = f.wallMs
+    stepRig(rig.current, frame, f, dt)
     // Sem semente (carro sem pose ainda): deixa a câmera onde está.
     if (rig.current.carIndex < 0) return
     const p =
       mode === "chase"
-        ? chasePose(frame, rig.current, f, CHASE, pose.current)
+        ? chasePose(frame, rig.current, f, CHASE, pose.current, chaseRigMode())
         : onboardPose(frame, rig.current, f, ONBOARD, pose.current)
     camera.position.copy(p.position)
     camera.up.copy(p.up)
     camera.lookAt(p.target)
+    probeCamera?.(p, rig.current.cut)
   })
 
   return (
