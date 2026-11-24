@@ -1,14 +1,21 @@
-import { currentLap } from "@/helpers/race-live"
+import { Component, Suspense, lazy } from "react"
+import type { ReactNode } from "react"
+
 import type { Frame, RaceInfo } from "@/types/race"
 
 /**
- * Contrato da visualização 3D. A implementação real é feita em outro módulo e deve:
- * - aceitar estas props;
- * - quando `selectedDriverId` não for nulo, colocar a câmera em terceira pessoa seguindo esse piloto
- *   (usar `headingDeg` do carro, quando existir, para orientar a câmera);
- * - interpolar entre ticks com `interpolateCars` (helpers/race-live), usando `prevFrame`,
- *   `frame` e `frameAt` do `useLiveRaceStore`;
- * - chamar `onSelectDriver(null)` quando o usuário quiser sair do seguimento.
+ * Contrato da visualização 3D (definido pelo Luiz; as props não mudam):
+ * - quando `selectedDriverId` não for nulo, a câmera segue esse piloto em
+ *   terceira pessoa, orientada pelo `headingDeg` do carro;
+ * - a posição entre ticks é interpolada com `interpolateCars` (helpers/race-live),
+ *   usando `prevFrame`, `frame`, `frameAt` e `tickIntervalMs` do `useLiveRaceStore`,
+ *   exatamente como o mapa 2D;
+ * - `onSelectDriver(null)` é chamado quando o usuário sai do seguimento.
+ *
+ * Este módulo é pequeno e entra no bundle da página; a cena (three, R3F, drei)
+ * fica em `race-scene.tsx`, carregada com `React.lazy` só quando o 3D é aberto.
+ * `frame` não é repassado: a cena lê a store dentro do `useFrame`, sem
+ * re-renderizar o React a cada tick.
  */
 export type RaceView3DProps = {
   race: RaceInfo
@@ -17,14 +24,36 @@ export type RaceView3DProps = {
   onSelectDriver: (driverId: string | null) => void
 }
 
-export function RaceView3D({ race, frame, selectedDriverId }: RaceView3DProps) {
+const RaceScene = lazy(() => import("./race-scene"))
+
+function Message({ children }: { children: ReactNode }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-      <span className="font-black uppercase tracking-wider">Visualização 3D em integração</span>
-      <span className="text-xs">
-        {race.track.name} · volta {currentLap(frame?.lap ?? 0, race.numLaps)}/{race.numLaps}
-        {selectedDriverId ? ` · câmera em ${selectedDriverId}` : ""}
-      </span>
-    </div>
+    <div className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">{children}</div>
+  )
+}
+
+/** WebGL indisponível ou falha ao carregar o chunk/modelo: mostra o erro sem derrubar a página. */
+class View3DBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+
+  render() {
+    if (this.state.error) {
+      return <Message>Não foi possível abrir a visualização 3D: {this.state.error.message}</Message>
+    }
+    return this.props.children
+  }
+}
+
+export function RaceView3D({ race, selectedDriverId, onSelectDriver }: RaceView3DProps) {
+  return (
+    <View3DBoundary>
+      <Suspense fallback={<Message>Carregando visualização 3D...</Message>}>
+        <RaceScene race={race} selectedDriverId={selectedDriverId} onSelectDriver={onSelectDriver} />
+      </Suspense>
+    </View3DBoundary>
   )
 }
