@@ -29,6 +29,7 @@
  *                                      picks its own default (high on a GPU, off on software WebGL,
  *                                      i.e. off under the default SwiftShader)
  *   --out <dir>       F1_CHECK_OUT     screenshots + report.json (default viz3d/.cache/check-3d-frontend)
+ *   --toggles <n>     F1_CHECK_TOGGLES 2D/3D toggles in the resource check (default 10)
  *
  * The setup flow always sends a 20-driver grid (GRID_SIZE = 20 in the frontend), so the
  * script trims the outgoing POST /races grid to --cars drivers and keeps the rest of the
@@ -43,11 +44,13 @@
  * the start overlap); the wait is printed and kept in report.json (markerWait).
  *
  * Checks: 3D-drawn positions (read back from the instance matrices) equal the 2D
- * interpolation within 0.5 m at the same performance.now(); one car per driver; overview,
+ * interpolation within 0.5 m at the same sampled sim time (the 3D plays back ~150 ms behind
+ * the newest tick; the hook evaluates interpolateCars at the sim time the 3D drew, from its own
+ * copy of the store's frames), with the buffered playback on; one car per driver; overview,
  * chase and onboard canvases not blank; each driver's marker visible in its colour;
- * clicking a car follows it; Esc and "Visão geral" return to the overview; 10x 2D/3D
- * toggles with no console errors or WebGL warnings, every context released and the same
- * GPU resource counts. Exit code 1 on any failure.
+ * clicking a car follows it; Esc and "Visão geral" return to the overview; 10x (--toggles)
+ * 2D/3D toggles with no console errors or WebGL warnings (e.g. "Blit feedback loop"), every
+ * context released and the same GPU resource counts. Exit code 1 on any failure.
  */
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
@@ -75,6 +78,8 @@ const GPU = args.includes("--gpu") || process.env.F1_CHECK_GPU === "1"
 const QUALITY = opt("--quality", "F1_CHECK_QUALITY", null)
 if (QUALITY !== null && !["high", "low", "off"].includes(QUALITY)) throw new Error(`--quality must be high, low or off, got ${QUALITY}`)
 const onlyAgreement = args.includes("--only-agreement")
+const TOGGLES = Number(opt("--toggles", "F1_CHECK_TOGGLES", "10"))
+if (!Number.isInteger(TOGGLES) || TOGGLES < 1) throw new Error(`--toggles must be a positive integer, got ${TOGGLES}`)
 const TOLERANCE_M = 0.5
 if (!Number.isInteger(N_CARS) || N_CARS < 1 || N_CARS > 24) throw new Error(`--cars must be 1..24, got ${N_CARS}`)
 mkdirSync(OUT, { recursive: true })
@@ -204,20 +209,38 @@ async function freezeSeparated(page, n, timeoutMs = 240_000) {
   }
 }
 
+/**
+ * 3D-drawn positions vs the 2D interpolation at the sim time the 3D drew (`sample()`), over
+ * `samples` frames. Also reports the playback mode and how far behind the newest tick it ran.
+ */
 async function agreement(page, label, samples = 40) {
   let worst = 0
   let carsSeen = new Set()
   let counts = []
+  const lags = []
+  const playback = new Set()
   for (let i = 0; i < samples; i++) {
     await frames(page, 2)
     const s = await page.evaluate(() => window.__race3d?.sample())
     if (!s) continue
     worst = Math.max(worst, s.maxErrorM)
     counts.push(s.cars.length)
+    lags.push(s.lagMs)
+    playback.add(s.playback)
     s.cars.forEach((c) => carsSeen.add(c.driverId))
   }
-  return { label, worstErrorM: worst, samples: counts.length, carsPerSample: [Math.min(...counts), Math.max(...counts)], distinctCars: carsSeen.size }
+  const r = (v) => Math.round(v)
+  return {
+    label,
+    worstErrorM: worst,
+    samples: counts.length,
+    carsPerSample: [Math.min(...counts), Math.max(...counts)],
+    distinctCars: carsSeen.size,
+    playback: [...playback],
+    lagMs: lags.length ? { min: r(Math.min(...lags)), mean: r(lags.reduce((a, b) => a + b, 0) / lags.length), max: r(Math.max(...lags)) } : null,
+  }
 }
+const buffered = (a) => a.playback.length === 1 && a.playback[0] === "buffered"
 
 async function main() {
   const browser = await chromium.launch({
@@ -321,7 +344,7 @@ async function main() {
   if (QUALITY && env.quality !== QUALITY) throw new Error(`requested --quality ${QUALITY}, the page runs ${env.quality}`)
 
   const agree = await agreement(page, "overview")
-  check(`3D drawn positions match 2D within ${TOLERANCE_M} m (overview)`, agree.worstErrorM <= TOLERANCE_M, agree)
+  check(`3D drawn positions match 2D within ${TOLERANCE_M} m at the 3D's sim time (overview)`, agree.worstErrorM <= TOLERANCE_M && buffered(agree), agree)
   check("one car per driver in the 3D", agree.carsPerSample[0] === nDrivers && agree.carsPerSample[1] === nDrivers, { drivers: nDrivers, ...agree })
   if (onlyAgreement) return finish(browser)
 
@@ -359,7 +382,7 @@ async function main() {
   await sleep(1500)
   await frames(page, 30)
   const agreeFollow = await agreement(page, "chase", 20)
-  check(`3D matches 2D within ${TOLERANCE_M} m (following)`, agreeFollow.worstErrorM <= TOLERANCE_M, agreeFollow)
+  check(`3D matches 2D within ${TOLERANCE_M} m at the 3D's sim time (following)`, agreeFollow.worstErrorM <= TOLERANCE_M && buffered(agreeFollow), agreeFollow)
   await freeze(page)
   const ch = await measureCanvas(page, "followed-chase.png")
   check("chase canvas is not blank", ch.nonBackground > 0.05, { nonBackground: ch.nonBackground, colours: ch.colours })
@@ -399,10 +422,10 @@ async function main() {
   await measureCanvas(page, "overview-after.png")
   await unfreeze(page)
 
-  // --- Toggle 2D/3D 10 times ---
+  // --- Toggle 2D/3D TOGGLES times ---
   const before = await page.evaluate(() => ({ gl: { ...window.__gl }, state: window.__race3d.state() }))
   const consoleMark = consoleLines.length
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < TOGGLES; i++) {
     await page.getByRole("button", { name: "2D", exact: true }).click()
     await page.waitForFunction(() => !document.querySelector('[data-testid="race-view-3d"]'))
     await frames(page, 15)
@@ -418,10 +441,10 @@ async function main() {
   const toggleLines = consoleLines.slice(consoleMark)
   const bad = toggleLines.filter((l) => l.type === "error" || l.type === "pageerror" || /webgl|context/i.test(l.text))
   report.toggle = { before, afterIn3d, afterIn2d, consoleDuringToggle: toggleLines.length, bad }
-  check("10x 2D/3D toggle: no console errors or WebGL/context warnings", bad.length === 0, bad.slice(0, 5))
-  check("10x toggle: every context created is released (0 live in 2D)", afterIn2d.gl.created - afterIn2d.gl.lost === 0 && afterIn2d.canvases === 0, afterIn2d)
+  check(`${TOGGLES}x 2D/3D toggle: no console errors or WebGL/context warnings`, bad.length === 0, bad.slice(0, 5))
+  check(`${TOGGLES}x toggle: every context created is released (0 live in 2D)`, afterIn2d.gl.created - afterIn2d.gl.lost === 0 && afterIn2d.canvases === 0, afterIn2d)
   check(
-    "10x toggle: same GPU resource counts on the 11th mount as on the 1st",
+    `${TOGGLES}x toggle: same GPU resource counts on mount ${TOGGLES + 1} as on the 1st`,
     JSON.stringify(afterIn3d.state.memory) === JSON.stringify(before.state.memory) && afterIn3d.state.programs === before.state.programs,
     { first: before.state.memory, firstPrograms: before.state.programs, last: afterIn3d.state.memory, lastPrograms: afterIn3d.state.programs },
   )

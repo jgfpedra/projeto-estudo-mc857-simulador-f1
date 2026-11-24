@@ -16,7 +16,7 @@ import type { CameraMode, FollowState } from "./scene/camera-math"
 import { carColors } from "./scene/car-colors"
 import { Cars } from "./scene/cars"
 import { createProbe } from "./scene/dev-probe"
-import { unfreezeLive } from "./scene/live-clock"
+import { acquirePlayback } from "./scene/live-clock"
 import { Environment } from "./scene/environment/environment"
 import { buildLayout } from "./scene/environment/layout"
 import type { Layout } from "./scene/environment/layout"
@@ -201,8 +201,8 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
   const [followMode, setFollowMode] = useState<FollowMode>("chase")
   const mode: CameraMode = selectedDriverId ? followMode : "orbit"
   const [quality, setQuality] = useState<Quality>(loadQuality)
-  // Um congelamento do gancho de desenvolvimento não sobrevive ao 3D.
-  useEffect(() => () => unfreezeLive(), [])
+  // Buffer de frames enquanto o 3D está montado; ao sair, ele (e um congelamento do gancho) se vai.
+  useEffect(() => acquirePlayback(), [])
   const chooseQuality = (q: Quality) => {
     setQuality(q)
     saveQuality(q)
@@ -236,7 +236,26 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
   const start = overviewPose(scene.center.center, scene.center.radius, 45, 16 / 9)
 
   return (
-    <div className="flex h-full w-full flex-col" data-testid="race-view-3d">
+    <div className="relative flex h-full w-full flex-col" data-testid="race-view-3d">
+      {/* Qualidade na barra de cima da página, à direita, na altura da chave 2D/3D: embaixo do
+          canvas o cartão do piloto selecionado a cobria. Fora do canvas (ver abaixo); um
+          <select> nativo abre a lista fora do documento. */}
+      <label className="absolute -top-12 right-[-8px] z-30 flex h-9 items-center border border-border bg-background/90 text-[10px] font-bold uppercase tracking-wider">
+        <span className="pl-2.5 text-muted-foreground">Cenário</span>
+        <select
+          value={quality}
+          onChange={(e) => chooseQuality(e.target.value as Quality)}
+          aria-label="Qualidade do cenário 3D"
+          className="h-full cursor-pointer bg-transparent pl-1.5 pr-1 text-xs font-black uppercase text-foreground outline-none"
+        >
+          {QUALITIES.map((q) => (
+            <option key={q} value={q} className="bg-background text-foreground">
+              {QUALITY_LABEL[q]}
+            </option>
+          ))}
+        </select>
+      </label>
+
       {/* O canvas fica sozinho na sua área: um elemento HTML sempre por cima dele mudava a
           composição do Chrome e, com WebGL por software, às vezes gerava um aviso
           "Blit feedback loop" ao montar/desmontar o 3D. */}
@@ -277,25 +296,6 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
             ))}
           </div>
         )}
-      </div>
-
-      <div
-        className="flex shrink-0 items-center justify-end border-t border-border text-[10px] font-bold uppercase tracking-wider"
-        role="group"
-        aria-label="Qualidade do cenário 3D"
-      >
-        <span className="px-2 text-muted-foreground">Cenário</span>
-        {QUALITIES.map((q) => (
-          <button
-            key={q}
-            type="button"
-            onClick={() => chooseQuality(q)}
-            aria-pressed={quality === q}
-            className={`px-2.5 py-1.5 ${quality === q ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
-          >
-            {QUALITY_LABEL[q]}
-          </button>
-        ))}
       </div>
     </div>
   )

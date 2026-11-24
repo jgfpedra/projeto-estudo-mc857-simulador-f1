@@ -25,6 +25,8 @@ import { cornerPeaks, kappaAt, robustCurvature } from "../src/components/race/vi
 import { MODELS, PEAK_SEPARATION_M, PROP_KINDS, buildLayout, propMatrix } from "../src/components/race/view-3d/scene/environment/layout.ts"
 import { LAYERS, bandGeometry } from "../src/components/race/view-3d/scene/environment/surfaces.ts"
 import { QUALITY } from "../src/components/race/view-3d/scene/environment/quality.ts"
+import { PLAYBACK, PlaybackClock } from "../src/components/race/view-3d/scene/playback.ts"
+import { smoothness } from "../src/components/race/view-3d/scene/smoothness.ts"
 
 const deg = (d) => (d * Math.PI) / 180
 const close = (a, b, eps = 1e-9, msg) => assert.ok(Math.abs(a - b) <= eps, msg ?? `${a} != ${b} (eps ${eps})`)
@@ -782,4 +784,234 @@ test("car markers fade in only far from the cars: opaque at overview distance, g
     assert.ok(v >= prev)
     prev = v
   }
+})
+
+// --- buffered playback ------------------------------------------------------------
+
+/**
+ * A car lapping a 150 m circle at 45-75 m/s (speed changing like braking and
+ * accelerating), ticks every 0.1 s of sim time. `arrivals(k)` gives the wall
+ * time (ms) at which tick k reaches the page; the render loop runs at 60 Hz
+ * (`renderAt` can drop frames for a stalled main thread). Each rendered
+ * frame pushes the ticks that arrived, samples the clock (or, for the old
+ * path, the live-edge alpha) and records the followed car's drawn pose.
+ */
+function simulatePlayback({ arrivals, seconds = 60, mode = "buffered", renderAt = () => true, simRate = 1, skipS = 2 }) {
+  const R = 150
+  const speed = (s) => 60 + 15 * Math.sin(s * 0.7)
+  const angleAt = (s) => (60 * s - (15 / 0.7) * (Math.cos(s * 0.7) - 1)) / R
+  const tick = (k) => {
+    const s = Math.round(k) / 10
+    const th = angleAt(s)
+    return frame(s, [
+      car("ver", R * Math.cos(th), R * Math.sin(th), { headingDeg: ((th + Math.PI / 2) * 180) / Math.PI, speedKmh: speed(s) * 3.6 }),
+    ])
+  }
+  const nTicks = Math.ceil((seconds * 10) * simRate) + 20
+  const arr = Array.from({ length: nTicks }, (_, k) => arrivals(k))
+  const clock = new PlaybackClock()
+  const store = { frame: null, prevFrame: null, frameAt: 0, tickIntervalMs: 100 }
+  const trace = []
+  const drawn = []
+  let next = 0
+  for (let w = 0; w < seconds * 1000; w += 1000 / 60) {
+    if (!renderAt(w)) continue
+    while (next < nTicks && arr[next] <= w) {
+      const at = arr[next]
+      const f = tick(next)
+      // The store's tick handler, as in live-race-store.ts.
+      const measured = store.frameAt > 0 ? at - store.frameAt : 0
+      if (measured > 0 && measured < 1000) store.tickIntervalMs = 0.8 * store.tickIntervalMs + 0.2 * measured
+      store.prevFrame = store.frame
+      store.frame = f
+      store.frameAt = at
+      clock.push(f, at)
+      next++
+    }
+    if (!store.frame) continue
+    let prev, cur, alpha, resyncs, s
+    if (mode === "buffered") {
+      s = clock.sample(w)
+      ;({ prev, cur, alpha, resyncs } = s)
+    } else {
+      prev = store.prevFrame
+      cur = store.frame
+      alpha = frameAlpha(w, store.frameAt, store.tickIntervalMs)
+      resyncs = 0
+    }
+    const pose = interpolatePoses(prev, cur, alpha).get("ver")
+    trace.push({ wallMs: w, x: pose.x, y: pose.y, headingRad: pose.headingRad, resyncs })
+    drawn.push({ w, s, newestTs: store.frame.simTs })
+  }
+  return { stats: smoothness(trace.filter((t) => t.wallMs >= skipS * 1000)), trace, drawn, clock }
+}
+
+/** Seeded uniform in [-1, 1). */
+function rng(seed) {
+  let x = seed
+  return () => ((x = (x * 16807) % 2147483647) / 2147483647) * 2 - 1
+}
+
+/** +-30 ms jitter around a 100 ms tick; every 20 ticks the server flushes 3 ticks at once. */
+function jitterWithBursts(seed) {
+  const r = rng(seed)
+  const jitter = Array.from({ length: 2000 }, () => 30 * r())
+  return (k) => {
+    // Burst: ticks 20m+1 and 20m+2 arrive 1 ms and 2 ms after tick 20m.
+    const pos = k % 20
+    if (k >= 20 && (pos === 1 || pos === 2)) return 100 * (k - pos) + jitter[k - pos] + pos
+    return 100 * k + jitter[k]
+  }
+}
+
+test("live-edge baseline: +-30 ms tick jitter makes the followed car stall and jump", () => {
+  const { stats } = simulatePlayback({ arrivals: jitterWithBursts(11), mode: "live" })
+  assert.ok(stats.spread > 0.1, `baseline spread ${stats.spread}`)
+  assert.ok(stats.stalls + stats.jumps > 0, JSON.stringify(stats))
+})
+
+test("buffered playback: +-30 ms jitter plus 3-tick bursts -> spread < 0.05, no stalls, jumps or backwards steps", () => {
+  for (const seed of [11, 12, 13]) {
+    const { stats, drawn } = simulatePlayback({ arrivals: jitterWithBursts(seed) })
+    assert.ok(stats.frames > 3000, JSON.stringify(stats))
+    assert.ok(stats.spread < 0.05, `seed ${seed}: ${JSON.stringify(stats)}`)
+    assert.equal(stats.stalls, 0, JSON.stringify(stats))
+    assert.equal(stats.jumps, 0, JSON.stringify(stats))
+    assert.equal(stats.backwards, 0, JSON.stringify(stats))
+    // Sim time only moves forward, never past the newest tick, and settles ~150 ms behind it.
+    for (let i = 1; i < drawn.length; i++) {
+      assert.ok(drawn[i].s.simTs >= drawn[i - 1].s.simTs, "sim time went backwards")
+      assert.ok(drawn[i].s.simTs <= drawn[i].newestTs + 1e-12, "extrapolated past the newest tick")
+    }
+    const tail = drawn.slice(600)
+    assert.equal(tail.filter((d) => d.s.held).length, 0, "held at the newest tick")
+    const meanLag = tail.reduce((a, d) => a + d.s.lagMs, 0) / tail.length
+    assert.ok(Math.abs(meanLag - PLAYBACK.delayMs) < 10, `mean lag ${meanLag} ms`)
+    assert.ok(tail.every((d) => Math.abs(d.s.rate - 1) <= PLAYBACK.maxNudge + 0.01), "rate nudge outside +-5%")
+  }
+})
+
+test("buffered playback: a 250 ms main-thread stall (render loop paused, 3 ticks queued) is absorbed", () => {
+  const r = rng(5)
+  const jitter = Array.from({ length: 2000 }, () => 30 * r())
+  // Every 4 s the page renders nothing for 250 ms; the ticks that arrive meanwhile are handled together.
+  const { stats } = simulatePlayback({ arrivals: (k) => 100 * k + jitter[k], renderAt: (w) => w % 4000 < 3750 })
+  assert.ok(stats.spread < 0.05, JSON.stringify(stats))
+  assert.equal(stats.stalls + stats.jumps + stats.backwards, 0, JSON.stringify(stats))
+})
+
+test("buffered playback: ticks queued behind a 1.5 s busy page (e.g. mounting the 3D) do not speed it up", () => {
+  const r = rng(21)
+  const jitter = Array.from({ length: 2000 }, () => 30 * r())
+  // 6 s in: the page renders nothing for 1.5 s and the ticks of that time are handled together at the end.
+  const busy = (w) => w >= 6000 && w < 7500
+  const arrivals = (k) => (busy(100 * k + jitter[k]) ? 7500 : 100 * k + jitter[k])
+  const { drawn, clock } = simulatePlayback({ arrivals, renderAt: (w) => !busy(w), seconds: 20 })
+  close(clock.rate, 1, 0.01)
+  const after = drawn.filter((d) => d.w >= 9000)
+  assert.equal(after.filter((d) => d.s.held).length, 0, "held at the newest tick after the stall")
+  const meanLag = after.reduce((a, d) => a + d.s.lagMs, 0) / after.length
+  assert.ok(Math.abs(meanLag - PLAYBACK.delayMs) < 15, `mean lag ${meanLag} ms`)
+})
+
+test("buffered playback: a tick later than the buffer can absorb holds at the newest tick, never extrapolates or goes back", () => {
+  const r = rng(9)
+  const jitter = Array.from({ length: 2000 }, () => 10 * r())
+  // Every 3 s, tick k is 200 ms late and tick k+1 100 ms late: both arrive with k+2.
+  const arrivals = (k) => (k % 30 === 10 ? 100 * (k + 2) : k % 30 === 11 ? 100 * (k + 1) : 100 * k + jitter[k])
+  const { stats, drawn } = simulatePlayback({ arrivals })
+  assert.equal(stats.backwards, 0)
+  assert.ok(drawn.some((d) => d.s.held), "expected the clock to hold")
+  for (let i = 1; i < drawn.length; i++) {
+    assert.ok(drawn[i].s.simTs >= drawn[i - 1].s.simTs)
+    assert.ok(drawn[i].s.simTs <= drawn[i].newestTs + 1e-12)
+  }
+  // No resync for a short hold: the clock slows down by at most 5% and rebuilds the delay.
+  assert.equal(drawn.at(-1).s.resyncs, drawn[0].s.resyncs)
+})
+
+test("buffered playback follows a simulation slower than real time (0.9x)", () => {
+  const r = rng(3)
+  const jitter = Array.from({ length: 2000 }, () => 30 * r())
+  // The rate starts at 1 (the engine runs in real time) and is learned from 2 s of ticks: measured from 4 s on.
+  const { stats, drawn, clock } = simulatePlayback({ arrivals: (k) => (100 * k) / 0.9 + jitter[k], simRate: 0.9, skipS: 4 })
+  close(clock.rate, 0.9, 0.02)
+  assert.ok(stats.spread < 0.05, JSON.stringify(stats))
+  assert.equal(stats.stalls + stats.jumps + stats.backwards, 0, JSON.stringify(stats))
+  const tail = drawn.slice(1200)
+  const meanLag = tail.reduce((a, d) => a + d.s.lagMs, 0) / tail.length
+  assert.ok(Math.abs(meanLag - PLAYBACK.delayMs) < 20, `mean lag ${meanLag} ms`)
+})
+
+test("buffered playback starts the target delay behind the newest tick on its first frame, however long the scene took to load", () => {
+  const f = (ts) => frame(ts, [car("ver", ts * 50, 0)])
+  const clock = new PlaybackClock()
+  // Ticks from the mount on; the first rendered frame comes 0.8 s later (models, shaders).
+  for (let k = 0; k <= 8; k++) clock.push(f(k / 10), k * 100)
+  const s = clock.sample(816)
+  close(s.lagMs, PLAYBACK.delayMs, 1e-6)
+  assert.equal(s.held, false)
+})
+
+test("buffered playback resyncs on a snapshot, a sim-time gap, time going back, or a lag over 1 s", () => {
+  const f = (ts) => frame(ts, [car("ver", ts * 50, 0)])
+  const clock = new PlaybackClock()
+  assert.equal(clock.sample(0), null)
+  let s
+  for (let k = 0; k <= 20; k++) {
+    clock.push(f(k / 10), k * 100)
+    s = clock.sample(k * 100 + 16)
+  }
+  assert.equal(s.resyncs, 2)
+  // Same simTs replaces the frame (e.g. a weather change), no resync.
+  clock.push(f(2), 2010)
+  assert.equal(clock.sample(2016).resyncs, 2)
+  // Snapshot (the store clears prevFrame).
+  clock.push(f(2.1), 2100, true)
+  s = clock.sample(2116)
+  assert.equal(s.resyncs, 3)
+  assert.equal(s.prev, null, "nothing older than the snapshot is kept")
+  // Gap of more than 1 s of sim time.
+  clock.push(f(5), 2200)
+  assert.equal(clock.sample(2216).resyncs, 4)
+  // Time going back (another race on the same socket).
+  clock.push(f(1), 2300)
+  assert.equal(clock.sample(2316).resyncs, 5)
+  // No frames for 2 s: the clock holds at the newest...
+  for (let k = 1; k <= 10; k++) {
+    clock.push(f(Math.round(10 + k) / 10), 2300 + k * 100)
+    clock.sample(2316 + k * 100)
+  }
+  s = clock.sample(5400)
+  assert.ok(s.held)
+  close(s.simTs, 2, 1e-9)
+  // ...and when ticks resume more than 1 s ahead of it, it jumps instead of crawling at +5%.
+  for (let k = 1; k <= 9; k++) clock.push(f(Math.round(20 + k) / 10), 5400 + k * 10)
+  assert.equal(clock.sample(5500).resyncs, 5, "0.9 s behind: still within the 1 s budget")
+  for (let k = 0; k <= 4; k++) clock.push(f(Math.round(30 + k) / 10), 5600 + k * 10)
+  s = clock.sample(5716)
+  assert.equal(s.resyncs, 6, `${3.4 - s.simTs} s behind`)
+  close(s.simTs, 3.4 - PLAYBACK.delayMs / 1000, 1e-9)
+})
+
+test("smoothness metric: uniform motion is 0 spread; a 3-frame stall counts 3 stalls and its catch-up jump", () => {
+  const line = (n, stall = -1) => {
+    const out = []
+    let x = 0
+    for (let i = 0; i < n; i++) {
+      if (!(i >= stall && i < stall + 3)) x += 1
+      if (i === stall + 3) x += 3
+      out.push({ wallMs: i * 16, x, y: 0, headingRad: 0, resyncs: 0 })
+    }
+    return out
+  }
+  const smooth = smoothness(line(200))
+  close(smooth.spread, 0, 1e-12)
+  assert.equal(smooth.stalls + smooth.jumps + smooth.backwards, 0)
+  const bumpy = smoothness(line(200, 100))
+  assert.equal(bumpy.stalls, 3)
+  assert.equal(bumpy.jumps, 1)
+  const back = line(100)
+  back[50].x -= 2
+  assert.equal(smoothness(back).backwards, 1)
 })
