@@ -8,11 +8,14 @@
  * Em produção `import.meta.env.DEV` é falso e nada disso é instalado.
  */
 import { Matrix4, Vector3 } from "three"
-import type { Camera, InstancedMesh, WebGLRenderer } from "three"
+import type { Camera, InstancedMesh, Scene, WebGLRenderer } from "three"
 
 import { interpolateCars } from "@/helpers/race-live"
 import type { Frame } from "@/types/race"
 import type { CameraMode } from "./camera-math"
+import { softwareRendering } from "./environment/quality"
+import type { Quality } from "./environment/quality"
+import type { ViewPose } from "./environment/views"
 import { frameAlpha } from "./live-pose"
 
 type StoreView = { frame: Frame | null; prevFrame: Frame | null; frameAt: number; tickIntervalMs: number }
@@ -32,11 +35,16 @@ export type ProbeSink = {
 
 type Context = {
   /** `useThree((s) => s.get)`: estado atual do Canvas. */
-  three: () => { gl: WebGLRenderer; camera: Camera }
+  three: () => { gl: WebGLRenderer; camera: Camera; scene: Scene; controls: unknown }
   mode: CameraMode
   followed: string | null
   colors: Map<string, string>
+  quality: Quality
+  /** Pontos de vista fixos para capturas (só com o cenário ligado). */
+  views: Record<string, ViewPose> | null
 }
+
+type Controls = { target: Vector3; enabled: boolean; update: () => void }
 
 declare global {
   interface Window {
@@ -108,13 +116,69 @@ export function createProbe(ctx: Context): { sink: ProbeSink; install: () => () 
         pin: c.pinTop ? toScreen(c.pinTop) : null,
       }))
     },
+    /**
+     * Põe a câmera num ponto de vista fixo ("overview" | "grid" | "corner").
+     * Desliga a órbita até a próxima chamada com "overview".
+     */
+    view(name: string) {
+      const pose = ctx.views?.[name]
+      const { camera, controls } = ctx.three()
+      const c = controls as Controls | null
+      if (!pose || !c) return false
+      c.enabled = name === "overview"
+      camera.position.copy(pose.position)
+      c.target.copy(pose.target)
+      camera.lookAt(pose.target)
+      if (c.enabled) c.update()
+      return true
+    },
+    /**
+     * Tempo de quadro, ms: `n` renderizações síncronas, cada uma esperando a
+     * GPU (lê 1 pixel). Devolve mediana, p90 e média.
+     */
+    bench(n = 60) {
+      const { gl, scene, camera } = ctx.three()
+      const g = gl.getContext()
+      const px = new Uint8Array(4)
+      const once = () => {
+        gl.render(scene, camera)
+        g.readPixels(0, 0, 1, 1, g.RGBA, g.UNSIGNED_BYTE, px)
+      }
+      for (let i = 0; i < 5; i++) once()
+      const t: number[] = []
+      for (let i = 0; i < n; i++) {
+        const t0 = performance.now()
+        once()
+        t.push(performance.now() - t0)
+      }
+      t.sort((a, b) => a - b)
+      const r = (v: number) => Math.round(v * 100) / 100
+      return {
+        n,
+        medianMs: r(t[Math.floor(n / 2)]),
+        p90Ms: r(t[Math.floor(n * 0.9)]),
+        meanMs: r(t.reduce((a, b) => a + b, 0) / n),
+        calls: gl.info.render.calls,
+        triangles: gl.info.render.triangles,
+        size: [gl.domElement.width, gl.domElement.height],
+      }
+    },
     state() {
-      const gl = ctx.three().gl
+      const { gl, scene } = ctx.three()
+      const fog = scene.fog as { near?: number; far?: number } | null
       return {
         mode: ctx.mode,
         followed: ctx.followed,
+        quality: ctx.quality,
+        environment: {
+          fog: fog ? { near: Math.round(fog.near ?? 0), far: Math.round(fog.far ?? 0) } : null,
+          exposure: gl.toneMappingExposure,
+          softwareRendering: softwareRendering(),
+          shadowCasters: scene.getObjectsByProperty("castShadow", true).filter((o) => "isLight" in o).length,
+        },
         memory: { ...gl.info.memory },
         programs: gl.info.programs?.length ?? 0,
+        programNames: (gl.info.programs ?? []).map((p) => p.name),
         contextLost: gl.getContext().isContextLost(),
       }
     },

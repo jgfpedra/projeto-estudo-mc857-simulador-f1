@@ -39,6 +39,9 @@ type Props = {
 function instanced(part: CarPart, count: number): InstancedMesh {
   const mesh = new InstancedMesh(part.geometry, part.material, count)
   mesh.instanceMatrix.setUsage(DynamicDrawUsage)
+  // Sombra no chão do cenário (a luz só projeta sombra na qualidade alta).
+  mesh.castShadow = true
+  mesh.receiveShadow = true
   // As instâncias se espalham pela volta inteira: um volume único só pode estar errado.
   mesh.frustumCulled = false
   return mesh
@@ -86,7 +89,7 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
   const meshes = useMemo(() => {
     const body = parts.body.map((p) => instanced(p, count))
     const wheels = parts.wheels.map((w) => ({ wheel: w, meshes: w.parts.map((p) => instanced(p, count)) }))
-    const pins = new InstancedMesh(pinGeometry(), new MeshBasicMaterial({ color: "#ffffff", toneMapped: false }), count)
+    const pins = new InstancedMesh(pinGeometry(), new MeshBasicMaterial({ color: "#ffffff", toneMapped: false, fog: false }), count)
     pins.instanceMatrix.setUsage(DynamicDrawUsage)
     pins.frustumCulled = false
     pins.name = "car-pins"

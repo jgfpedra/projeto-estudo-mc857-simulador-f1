@@ -16,7 +16,14 @@ import type { CameraMode, FollowState } from "./scene/camera-math"
 import { carColors } from "./scene/car-colors"
 import { Cars } from "./scene/cars"
 import { createProbe } from "./scene/dev-probe"
+import { Environment } from "./scene/environment/environment"
+import { buildLayout } from "./scene/environment/layout"
+import type { Layout } from "./scene/environment/layout"
+import { QUALITIES, QUALITY, QUALITY_LABEL, loadQuality, saveQuality } from "./scene/environment/quality"
+import type { Quality } from "./scene/environment/quality"
+import { showcaseViews } from "./scene/environment/views"
 import { overviewPose, pitLaneFromRace, trackFromRace } from "./scene/race-track"
+import type { ScenePitLane, SceneTrack } from "./scene/race-track"
 import { buildFrame } from "./scene/track-frame"
 import type { TrackFrame } from "./scene/track-frame"
 import { PitLaneRibbon, StartFinishLine, TrackRibbon } from "./scene/track-meshes"
@@ -83,22 +90,31 @@ function FollowExit({ following, onExit }: { following: boolean; onExit: () => v
   return null
 }
 
-type ContentProps = {
-  race: RaceInfo
+type SceneData = {
+  track: SceneTrack
   frame: TrackFrame
+  pitLane: ScenePitLane | null
   center: Sphere
   drivers: RaceInfo["drivers"]
   colors: Map<string, string>
+}
+
+type ContentProps = {
+  race: RaceInfo
+  scene: SceneData
+  layout: Layout | null
+  quality: Quality
+  followRef: { current: FollowState }
   mode: CameraMode
   selectedDriverId: string | null
   onSelectDriver: (driverId: string | null) => void
 }
 
 /** Carros, câmera e gancho de desenvolvimento: precisam do estado do Canvas. */
-function Content({ race, frame, center, drivers, colors, mode, selectedDriverId, onSelectDriver }: ContentProps) {
+function Content({ race, scene, layout, quality, followRef, mode, selectedDriverId, onSelectDriver }: ContentProps) {
+  const { frame, center, drivers, colors } = scene
   const size = useThree((s) => s.size)
   const getThree = useThree((s) => s.get)
-  const followRef = useRef<FollowState>(newFollowState())
   const overview = useMemo(
     () => overviewPose(center.center, center.radius, 45, size.width / Math.max(1, size.height)),
     [center, size.width, size.height],
@@ -107,9 +123,16 @@ function Content({ race, frame, center, drivers, colors, mode, selectedDriverId,
   const probe = useMemo(
     () =>
       import.meta.env.DEV
-        ? createProbe({ three: getThree, mode, followed: selectedDriverId, colors })
+        ? createProbe({
+            three: getThree,
+            mode,
+            followed: selectedDriverId,
+            colors,
+            quality,
+            views: layout ? showcaseViews(frame, layout, overview) : null,
+          })
         : null,
-    [getThree, mode, selectedDriverId, colors],
+    [getThree, mode, selectedDriverId, colors, quality, layout, frame, overview],
   )
   useEffect(() => probe?.install(), [probe])
 
@@ -133,9 +156,53 @@ function Content({ race, frame, center, drivers, colors, mode, selectedDriverId,
   )
 }
 
+/**
+ * Tudo dentro do `<Canvas>`: o cenário (ou o visual antigo, sem cenário) e o
+ * conteúdo. O `followRef` nasce aqui para que a sombra siga o mesmo alvo da câmera.
+ */
+function Stage(props: Omit<ContentProps, "followRef"> & { overviewDistance: number }) {
+  const followRef = useRef<FollowState>(newFollowState())
+  const { scene, layout, quality, overviewDistance } = props
+  const env = QUALITY[quality].environment ? layout : null
+  return (
+    <>
+      {env ? (
+        <Environment
+          layout={env}
+          frame={scene.frame}
+          widthM={scene.track.widthM}
+          pitLane={scene.pitLane}
+          center={scene.center.center}
+          radius={scene.center.radius}
+          overviewDistance={overviewDistance}
+          quality={quality}
+          followRef={followRef}
+        />
+      ) : (
+        <>
+          <color attach="background" args={["#111116"]} />
+          <hemisphereLight args={["#ffffff", "#30303c", 1.1]} />
+          <directionalLight position={[600, 1200, 400]} intensity={1.2} />
+          <TrackRibbon frame={scene.frame} widthM={scene.track.widthM} />
+          {scene.pitLane && <PitLaneRibbon lane={scene.pitLane} />}
+        </>
+      )}
+      <StartFinishLine track={scene.track} />
+      <Suspense fallback={null}>
+        <Content {...props} followRef={followRef} />
+      </Suspense>
+    </>
+  )
+}
+
 function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
   const [followMode, setFollowMode] = useState<FollowMode>("chase")
   const mode: CameraMode = selectedDriverId ? followMode : "orbit"
+  const [quality, setQuality] = useState<Quality>(loadQuality)
+  const chooseQuality = (q: Quality) => {
+    setQuality(q)
+    saveQuality(q)
+  }
 
   const scene = useMemo(() => {
     const track = trackFromRace(race.track)
@@ -146,6 +213,13 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
     const drivers = [...race.drivers].sort((a, b) => a.gridPosition - b.gridPosition)
     return { track, frame, pitLane, center, drivers, colors: carColors(drivers) }
   }, [race])
+
+  // Só com o cenário ligado (~0,1 s numa pista de 4 m).
+  const envOn = QUALITY[quality].environment
+  const layout = useMemo(
+    () => (scene && envOn ? buildLayout(scene.frame, scene.track.widthM, scene.pitLane) : null),
+    [scene, envOn],
+  )
 
   if (!scene) {
     return (
@@ -162,29 +236,41 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
       <Canvas
         key={race.raceId}
         dpr={[1, 2]}
+        shadows="soft"
         camera={{ fov: 45, near: 1, far: start.distance * 6, position: start.position.toArray() }}
         aria-label="Visualização 3D da corrida"
       >
-        <color attach="background" args={["#111116"]} />
-        <hemisphereLight args={["#ffffff", "#30303c", 1.1]} />
-        <directionalLight position={[600, 1200, 400]} intensity={1.2} />
-        <TrackRibbon frame={scene.frame} widthM={scene.track.widthM} />
-        {scene.pitLane && <PitLaneRibbon lane={scene.pitLane} />}
-        <StartFinishLine track={scene.track} />
-        <Suspense fallback={null}>
-          <Content
-            race={race}
-            frame={scene.frame}
-            center={scene.center}
-            drivers={scene.drivers}
-            colors={scene.colors}
-            mode={mode}
-            selectedDriverId={selectedDriverId}
-            onSelectDriver={onSelectDriver}
-          />
-        </Suspense>
+        <Stage
+          race={race}
+          scene={scene}
+          layout={layout}
+          quality={quality}
+          overviewDistance={start.distance}
+          mode={mode}
+          selectedDriverId={selectedDriverId}
+          onSelectDriver={onSelectDriver}
+        />
         <FollowExit following={selectedDriverId !== null} onExit={() => onSelectDriver(null)} />
       </Canvas>
+
+      <div
+        className="absolute bottom-2 left-2 z-10 flex items-center border border-border bg-background/80 text-[10px] font-bold uppercase tracking-wider"
+        role="group"
+        aria-label="Qualidade do cenário 3D"
+      >
+        <span className="px-2 text-muted-foreground">Cenário</span>
+        {QUALITIES.map((q) => (
+          <button
+            key={q}
+            type="button"
+            onClick={() => chooseQuality(q)}
+            aria-pressed={quality === q}
+            className={`px-2.5 py-1.5 ${quality === q ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
+          >
+            {QUALITY_LABEL[q]}
+          </button>
+        ))}
+      </div>
 
       {selectedDriverId && (
         <div className="absolute right-2 top-2 z-10 flex border border-border bg-background/80 text-[10px] font-bold uppercase tracking-wider">
