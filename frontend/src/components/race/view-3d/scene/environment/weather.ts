@@ -17,6 +17,7 @@
  */
 import type { Weather } from "@/types/race"
 import type { Quality } from "./quality"
+import { pinOpacity } from "../pin-fade.ts"
 
 export type WeatherLook = { cloud: number; wet: number; rain: number }
 
@@ -166,8 +167,10 @@ export const LOOK = {
   },
   wet: {
     /** Asfalto e via dos boxes multiplicados por isto com `wet` = 1; rugosidade do asfalto molhado. */
-    shade: 0.58,
-    asphaltRoughness: 0.55,
+    shade: 0.72,
+    asphaltRoughness: 0.5,
+    /** Brilho do céu no asfalto molhado: emissivo = cor da neblina x isto (um reflexo difuso, sem envMap). */
+    sheen: 0.09,
   },
 } as const
 
@@ -187,6 +190,8 @@ export type WeatherParams = {
   /** Multiplica a cor do asfalto e da via dos boxes (1 = seco). */
   asphaltShade: number
   asphaltRoughness: number
+  /** Emissivo do asfalto (x cor da neblina): 0 seco. */
+  asphaltSheen: number
   rain: number
 }
 
@@ -209,6 +214,7 @@ export function weatherParams(look: WeatherLook): WeatherParams {
     fogColor: mix(mix(d.fog, c.fog, cloud), r.fog, rain),
     asphaltShade: lerp(1, LOOK.wet.shade, wet),
     asphaltRoughness: lerp(d.asphaltRoughness, LOOK.wet.asphaltRoughness, wet),
+    asphaltSheen: LOOK.wet.sheen * wet,
     rain,
   }
 }
@@ -226,6 +232,16 @@ export function fogRange(look: WeatherLook, overviewDistance: number, cameraDist
   const near = lerp(od, 0.3 * view, look.rain) * (1 - 0.25 * look.cloud)
   const far = lerp(3 * od, 1.9 * view, look.rain) * (1 - 0.15 * look.cloud)
   return { near, far: Math.max(far, near + 1) }
+}
+
+/**
+ * Visibilidade dos riscos de chuva pela distância da câmera ao alvo: o
+ * contrário dos marcadores (`pin-fade.ts`). Inteira perto dos carros
+ * (perseguição, a bordo, grid), some entre 25% e 40% da distância da visão
+ * geral, e na visão geral não há riscos (o céu cinza e a neblina ficam).
+ */
+export function rainVisibility(cameraDistance: number, overviewDistance: number): number {
+  return 1 - pinOpacity(cameraDistance, overviewDistance)
 }
 
 /** Riscos de chuva desenhados com esta qualidade e intensidade. */
@@ -248,4 +264,21 @@ export function setWeatherDebug(read: () => object): () => void {
 /** Clima desenhado no último quadro (`__race3d.weather()`); null sem cenário. */
 export function weatherSnapshot(): object | null {
   return debugSource ? debugSource() : null
+}
+
+/*
+ * Clima forçado, só pelo gancho de desenvolvimento (`__race3d.forceWeather`),
+ * para capturar a mistura ao vivo: o backend sorteia o clima na largada e por
+ * piloto a cada volta, então uma mudança real não tem hora marcada. Em
+ * produção ninguém chama `forceWeather`, e o clima é sempre o do frame.
+ */
+let forced: Weather | null = null
+
+export function forceWeather(w: Weather | null): void {
+  forced = w
+}
+
+/** O clima a desenhar: o forçado, se houver, senão o do frame. */
+export function effectiveWeather(frameWeather: Weather | null | undefined): Weather | null {
+  return forced ?? frameWeather ?? null
 }

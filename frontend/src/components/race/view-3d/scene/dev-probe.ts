@@ -23,12 +23,12 @@ import type { Camera, DirectionalLight, InstancedMesh, MeshBasicMaterial, Scene,
 
 import { interpolateCars } from "@/helpers/race-live"
 import { useLiveRaceStore } from "@/stores/live-race-store"
-import type { Frame } from "@/types/race"
+import type { Frame, Weather } from "@/types/race"
 import { chaseRigMode, setChaseRigMode } from "./camera-math"
 import type { CameraMode, CameraPose, ChaseRig } from "./camera-math"
 import { angleJitter, bearing } from "./camera-jitter"
 import type { AngleSample } from "./camera-jitter"
-import { weatherSnapshot } from "./environment/weather"
+import { forceWeather, weatherSnapshot } from "./environment/weather"
 import { softwareProbeReleased, softwareRendering } from "./environment/quality"
 import type { Quality } from "./environment/quality"
 import type { ViewPose } from "./environment/views"
@@ -355,6 +355,15 @@ export function createProbe(ctx: Context): { sink: ProbeSink; install: () => () 
     },
     /** Clima misturado, alvo, andamento da mistura, neblina e riscos de chuva do último quadro (null sem cenário). */
     weather() {
+      return weatherSnapshot()
+    },
+    /**
+     * Força o clima desenhado (`{ kind, rainfall, trackTemp }`), como se viesse
+     * no frame; `null` volta ao clima do frame. A mudança mistura em 5 s como
+     * uma real. Desfeito ao sair do 3D (`live-clock.ts`), não ao trocar de carro.
+     */
+    forceWeather(w: Weather | null) {
+      forceWeather(w)
       return weatherSnapshot()
     },
     /**

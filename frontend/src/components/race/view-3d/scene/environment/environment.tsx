@@ -32,7 +32,18 @@ import { QUALITY } from "./quality"
 import type { Quality } from "./quality"
 import { LAYERS, bandGeometry, groundGeometry, openBandGeometry, openLaterals } from "./surfaces"
 import { PALETTE, kerbTexture, noiseTexture } from "./textures"
-import { DRY_LOOK, WEATHER, WeatherBlend, fogRange, rainStreakCount, setWeatherDebug, weatherLook, weatherParams } from "./weather"
+import {
+  DRY_LOOK,
+  WEATHER,
+  WeatherBlend,
+  effectiveWeather,
+  fogRange,
+  rainStreakCount,
+  rainVisibility,
+  setWeatherDebug,
+  weatherLook,
+  weatherParams,
+} from "./weather"
 import type { RGB, WeatherLook, WeatherParams } from "./weather"
 
 /** Sol a 32° de elevação (58° do zênite), azimute 210°, como no protótipo. */
@@ -108,6 +119,7 @@ function snapshot(w: WeatherState) {
       fogColor: w.params.fogColor.map(r),
       asphaltShade: r(w.params.asphaltShade),
       asphaltRoughness: r(w.params.asphaltRoughness),
+      asphaltSheen: r(w.params.asphaltSheen),
     },
   }
 }
@@ -130,7 +142,7 @@ export function Environment(props: Props) {
       />
       <Surfaces {...props} weatherRef={weatherRef} />
       {WEATHER.streaks[props.quality] > 0 && (
-        <RainStreaks key={props.quality} quality={props.quality} followRef={props.followRef} weatherRef={weatherRef} />
+        <RainStreaks key={props.quality} quality={props.quality} overviewDistance={props.overviewDistance} followRef={props.followRef} weatherRef={weatherRef} />
       )}
       <Suspense fallback={null}>
         <KitProps layout={props.layout} treeFraction={q.treeFraction} />
@@ -285,7 +297,7 @@ function SkyAndLight({ shadows, mapSize, radius, overviewDistance, followRef, we
     ws.cameraDistance = dist
     const live = lastLive()
     if (live?.view.cur) {
-      ws.look = ws.blend.update(weatherLook(live.view.cur.weather), live.now)
+      ws.look = ws.blend.update(weatherLook(effectiveWeather(live.view.cur.weather)), live.now)
       ws.target = ws.blend.target
       ws.progress = ws.blend.progress(live.now)
     }
@@ -315,10 +327,12 @@ function SkyAndLight({ shadows, mapSize, radius, overviewDistance, followRef, we
     const { asphalt, pit } = ws.materials
     if (asphalt) {
       asphalt.color.setScalar(p.asphaltShade)
+      asphalt.emissive.setRGB(p.fogColor[0], p.fogColor[1], p.fogColor[2], SRGBColorSpace).multiplyScalar(p.asphaltSheen)
       asphalt.roughness = p.asphaltRoughness
     }
     if (pit) {
       pit.color.copy(pitBase).multiplyScalar(p.asphaltShade)
+      pit.emissive.copy(asphalt?.emissive ?? pit.emissive)
       pit.roughness = MathUtils.lerp(0.9, p.asphaltRoughness, ws.look.wet)
     }
   })
@@ -531,7 +545,7 @@ function seeded(seed: number): () => number {
  * desenhado). A caixa cresce com a distância da câmera ao alvo, para a chuva
  * aparecer também na visão geral.
  */
-type RainProps = { quality: Quality; followRef: { current: FollowState }; weatherRef: { current: WeatherState } }
+type RainProps = { quality: Quality; overviewDistance: number; followRef: { current: FollowState }; weatherRef: { current: WeatherState } }
 
 /** Quantos riscos desenhar (0 esconde). */
 function showStreaks(lines: LineSegments, n: number): void {
@@ -547,7 +561,7 @@ function rainUniforms(lines: LineSegments, timeS: number, camera: Vector3, scale
   u.uOpacity.value = opacity
 }
 
-function RainStreaks({ quality, followRef, weatherRef }: RainProps) {
+function RainStreaks({ quality, overviewDistance, followRef, weatherRef }: RainProps) {
   const max = WEATHER.streaks[quality]
   const lines = useMemo(() => {
     const rnd = seeded(0x5eed + max)
@@ -596,16 +610,17 @@ function RainStreaks({ quality, followRef, weatherRef }: RainProps) {
   useFrame((state) => {
     const ws = weatherRef.current
     const rain = ws.look.rain
-    const n = rainStreakCount(quality, rain)
+    // Some com a distância da câmera (como os marcadores aparecem): nenhum risco na visão geral.
+    const visibility = rainVisibility(ws.cameraDistance, overviewDistance)
+    const n = visibility > 0.01 ? rainStreakCount(quality, rain) : 0
     ws.streaks = n
     showStreaks(lines, n)
     if (!n) return
     // Tempo do quadro desenhado (congelado junto com os carros); limitado para a precisão do float.
     const timeS = ((lastLive()?.now ?? 0) / 1000) % 10_000
-    // Perto do carro (perseguição, a bordo) escala 1; na visão geral até 25x.
+    // Perto do carro (perseguição, a bordo) escala 1; de mais longe a caixa cresce, enquanto some.
     const scale = followRef.current.carIndex >= 0 ? 1 : MathUtils.clamp(ws.cameraDistance / 15, 1, 25)
-    // De longe os riscos são grandes e cobrem a pista: mais transparentes.
-    const opacity = (0.25 + 0.3 * rain) * MathUtils.lerp(1, 0.45, Math.min(1, (scale - 1) / 8))
+    const opacity = (0.25 + 0.3 * rain) * visibility
     rainUniforms(lines, timeS, state.camera.position, scale, opacity)
   })
 

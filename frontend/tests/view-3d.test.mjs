@@ -29,7 +29,7 @@ import { QUALITY } from "../src/components/race/view-3d/scene/environment/qualit
 import { PLAYBACK, PlaybackClock } from "../src/components/race/view-3d/scene/playback.ts"
 import { smoothness } from "../src/components/race/view-3d/scene/smoothness.ts"
 import { COMPOUND_COLOR, compoundColor } from "../src/components/race/view-3d/scene/tyre-compound.ts"
-import { WEATHER, WeatherBlend, fogRange, rainStreakCount, weatherLook, weatherParams } from "../src/components/race/view-3d/scene/environment/weather.ts"
+import { WEATHER, WeatherBlend, effectiveWeather, fogRange, forceWeather, rainStreakCount, rainVisibility, weatherLook, weatherParams } from "../src/components/race/view-3d/scene/environment/weather.ts"
 
 const deg = (d) => (d * Math.PI) / 180
 const close = (a, b, eps = 1e-9, msg) => assert.ok(Math.abs(a - b) <= eps, msg ?? `${a} != ${b} (eps ${eps})`)
@@ -1199,6 +1199,7 @@ test("dry weather (and no weather, or an unknown kind) gives exactly the scene f
     assert.deepEqual(p.hemiSky.map((v) => Math.round(v * 255)), [0xcf, 0xe3, 0xff])
     assert.equal(p.asphaltShade, 1)
     assert.equal(p.asphaltRoughness, 0.92)
+    assert.equal(p.asphaltSheen, 0)
     assert.equal(rainStreakCount("high", p.rain), 0)
     // Fog as before in every camera: overviewDistance .. 3x.
     for (const cam of [9.6, 120, OD]) assert.deepEqual(fogRange(look, OD, cam), { near: OD, far: 3 * OD })
@@ -1317,4 +1318,41 @@ test("rain streak count per quality: high full, low far fewer, 'Sem cenário' no
   assert.equal(rainStreakCount("high", 1), WEATHER.streaks.high)
   // "Sem cenário" mounts no environment at all, so no weather visuals there.
   assert.equal(QUALITY.off.environment, false)
+})
+
+test("rain streaks fade out with camera distance: full in chase/onboard, none at overview distance", () => {
+  for (const cam of [0.5, 9.6, 50, 0.25 * OD]) assert.equal(rainVisibility(cam, OD), 1, `cam ${cam}`)
+  for (const cam of [0.4 * OD, 0.63 * OD, OD, 2 * OD]) assert.equal(rainVisibility(cam, OD), 0, `cam ${cam}`)
+  let prev = 1
+  for (let cam = 0.25 * OD; cam <= 0.4 * OD; cam += 1) {
+    const v = rainVisibility(cam, OD)
+    assert.ok(v <= prev + 1e-12 && prev - v < 0.02, `continuous, monotone at ${cam}`)
+    prev = v
+  }
+  // The overview keeps the grey sky and the fog: those do not depend on the camera.
+  const heavy = weatherParams(weatherLook(W("WET", 8)))
+  assert.ok(heavy.overcast > 0.9)
+  assert.ok(fogRange(weatherLook(W("WET", 8)), OD, OD).near < OD)
+})
+
+test("wet asphalt: lighter than near-black, with a faint sky sheen; dry has none", () => {
+  const wet = weatherParams(weatherLook(W("WET", 8)))
+  assert.ok(wet.asphaltShade >= 0.7 && wet.asphaltShade < 1, `shade ${wet.asphaltShade}`)
+  assert.ok(wet.asphaltSheen > 0 && wet.asphaltSheen < 0.15, `sheen ${wet.asphaltSheen}`)
+  assert.ok(weatherParams(weatherLook(W("DAMP", 0, 40))).asphaltSheen < wet.asphaltSheen)
+})
+
+test("forced weather (dev hook) overrides the frame's until cleared", () => {
+  const frameW = W("DRY", 0, 42)
+  assert.equal(effectiveWeather(frameW), frameW)
+  assert.equal(effectiveWeather(null), null)
+  const rain = W("WET", 8, 19)
+  forceWeather(rain)
+  try {
+    assert.equal(effectiveWeather(frameW), rain)
+    assert.equal(effectiveWeather(undefined), rain)
+  } finally {
+    forceWeather(null)
+  }
+  assert.equal(effectiveWeather(frameW), frameW)
 })

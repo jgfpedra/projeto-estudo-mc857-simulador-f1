@@ -29,7 +29,7 @@ isso o código foi **copiado e adaptado**, não importado.
 | `scene/camera-rig.tsx` | Órbita (visão geral), perseguição e a bordo. | `src/cameras/CameraRig.tsx` (`f6c843d`) |
 | `scene/tyre-compound.ts` | Composto do frame → cor da faixa no pneu (ou nenhuma). | — |
 | `scene/car-colors.ts` | Cor de equipe ou, se nula/"unknown", uma cor distinta da paleta. | — |
-| `scene/dev-probe.ts` | `window.__race3d`, só em desenvolvimento, para a verificação headless; `sample()`, `freeze()`/`unfreeze()`, `view()`, `bench()`, `playback()`, `smoothness()`, `chaseRig()`, `cameraJitter()`, `shadowOffset()`, `tyreBands()`, `tyreView()` e `weather()`. | — |
+| `scene/dev-probe.ts` | `window.__race3d`, só em desenvolvimento, para a verificação headless; `sample()`, `freeze()`/`unfreeze()`, `view()`, `bench()`, `playback()`, `smoothness()`, `chaseRig()`, `cameraJitter()`, `shadowOffset()`, `tyreBands()`, `tyreView()`, `weather()` e `forceWeather()`. | — |
 | `scene/playback.ts` | Reprodução com buffer: frames por `simTs`, instante desenhado ~150 ms atrás do mais novo, taxa ajustada em ±5%, sem extrapolação, ressincronização. | — |
 | `scene/live-clock.ts` | Liga a store ao relógio de `playback.ts` enquanto o 3D está montado e entrega a cada quadro o par de frames e o `alpha`; o gancho de desenvolvimento pode congelar a vista ou voltar ao caminho antigo. | — |
 | `scene/smoothness.ts` | Medida do passo do carro seguido quadro a quadro (dispersão, paradas, saltos, ré). | — |
@@ -330,8 +330,9 @@ intensidades, então a cena nunca salta:
 - **Chuva** (`WET`, e `DAMP` com `rainfall` > 0, que é a "chuva fraca" do
   backend): nublado, mais o céu mais escuro com a chuva, sol e ambiente
   menores (sol 0,58 na chuva forte), riscos de chuva em volta da câmera em
-  número proporcional a `rain`, asfalto e via dos boxes mais escuros (×0,58)
-  e mais lisos (rugosidade 0,92 → 0,55), e uma neblina que fecha com a chuva
+  número proporcional a `rain`, asfalto e via dos boxes mais escuros (×0,72)
+  e mais lisos (rugosidade 0,92 → 0,5), com um leve brilho do céu
+  (emissivo = cor da neblina × 0,09; sem envMap), e uma neblina que fecha com a chuva
   numa escala que acompanha a câmera (25x a distância até o alvo, entre 250 m
   e a da visão geral): na perseguição em chuva forte ela vai de ~160 m a
   ~730 m; na visão geral a pista continua legível. `DAMP` sem chuva: só o
@@ -342,8 +343,11 @@ intensidades, então a cena nunca salta:
 Os riscos são um `LineSegments` com todos os riscos da qualidade (alta 9000,
 baixa 1500), animados no vertex shader (queda de 12 m/s com um pouco de
 vento, numa caixa de 40 m que acompanha a câmera e dá a volta); a intensidade
-só muda o `drawRange`, e sem chuva nada é desenhado. Na visão geral a caixa
-cresce com a distância (até 25x) e os riscos ficam mais transparentes. O
+só muda o `drawRange`, e sem chuva nada é desenhado. Os riscos somem com a
+distância da câmera ao alvo, o contrário dos marcadores (`rainVisibility`,
+com as faixas de `pin-fade.ts`): inteiros até 25% da distância da visão
+geral (perseguição, a bordo, grid, zoom de perto), nenhum a partir de 40%, e
+na visão geral nenhum risco é desenhado; o céu cinza e a neblina ficam. O
 tempo é o do quadro desenhado: congelado (`freeze()`), a chuva para.
 
 **Mistura.** O primeiro clima entra na hora (abrir o 3D com chuva mostra
@@ -363,11 +367,16 @@ fora do git): corrida criada com chuva forte (`weather: heavy_rain`, 8 mm/h,
 pneus de chuva) na perseguição, a bordo e na visão geral, nas três qualidades;
 corrida seca; pit stop pedido no carro seguido
 (`POST /races/{id}/drivers/{driver}/pit-stop`, `soft`) com a faixa amarela
-antes e vermelha depois, ao lado e na perseguição. Uma mudança de clima ao
-vivo com `weather_change` a 1,0 por volta não pôde ser capturada: o backend
-sorteia o clima na largada (a corrida "seca" já abriu em chuva, 2,5 mm/h) e,
-nas duas tentativas, não trocou de novo na virada da volta 1 para a 2; a
-mistura está coberta pelos testes. Tempo de quadro com `bench(150)` (mediana,
+antes e vermelha depois, ao lado e na perseguição. A mistura seco → chuva
+forte foi capturada numa corrida seca forçando o clima pelo gancho
+(`__race3d.forceWeather({ kind: "WET", rainfall: 8, trackTemp: 19 })`): o
+backend sorteia o clima na largada e por piloto a cada volta, então uma
+mudança real de `weather_change` não tem hora marcada. Amostrada a cada
+~80 ms, a mistura terminou em 5,08 s, com taxa máxima de 0,30/s em `cloud`
+(o pico da `smoothstep`, 1,5/5 s): sem salto. Com o mesmo gancho, chuva
+fraca (`DAMP`, 0,5 mm/h) na perseguição dá 1382 riscos e neblina de 953 a
+3272 m; chuva forte, 8375 riscos e 130 a 639 m; na visão geral, 0 riscos.
+Tempo de quadro com `bench(150)` (mediana,
 canvas de 750×541; perseguição atrás do líder; p90 entre parênteses):
 
 | Clima | Alta | Baixa | Sem cenário | Visão geral, alta |
@@ -376,7 +385,8 @@ canvas de 750×541; perseguição atrás do líder; p90 entre parênteses):
 | chuva forte | 1,3 ms (1,7) | 0,7 ms (1,1) | 0,5 ms (0,8) | 1,6 ms (2,1) |
 
 A chuva custa uma chamada de desenho (42 contra 41 na perseguição) e ~0,1-0,2
-ms na alta; na baixa, nada mensurável.
+ms na alta; na baixa, nada mensurável. A tabela é de antes do esmaecimento
+dos riscos pela distância: hoje a visão geral em chuva não desenha riscos.
 
 ## Como rodar
 
@@ -405,7 +415,8 @@ com buffer com tremor sintético de ±30 ms e rajadas de 3 ticks, uma parada de
 250 ms da página, ticks atrasados demais, simulação a 0,9x e as
 ressincronizações; composto → cor, clima → parâmetros da cena em seco, nublado,
 chuva fraca e forte, a mistura contínua que termina em 5 s e os riscos de
-chuva por qualidade, zero em *Sem cenário*), `npm run lint`, `npm run build`. Em desenvolvimento,
+chuva por qualidade, zero em *Sem cenário*, o esmaecimento deles pela
+distância da câmera, o asfalto molhado e o clima forçado), `npm run lint`, `npm run build`. Em desenvolvimento,
 `window.__race3d.sample()` devolve as posições desenhadas pelo 3D (lidas das
 matrizes de instância) e as da interpolação do 2D no instante de simulação
 que o 3D desenhou (de uma cópia própria dos frames da store), mais o atraso
@@ -426,5 +437,7 @@ direção do carro), `chaseRig("track")` volta ao rig antigo para comparar
 (`"heading"` é o padrão), `tyreBands()` lê a cor e a visibilidade das faixas de
 composto do buffer de instâncias, `tyreView(id)` põe a câmera parada ao lado de um
 carro (fora do seguimento, com `freeze()`), `weather()` devolve o clima misturado,
-o alvo, o andamento da mistura, a neblina e os riscos, e `shadowOffset()` lê o mapa de sombra do último
+o alvo, o andamento da mistura, a neblina e os riscos, `forceWeather(w | null)`
+força o clima desenhado (mistura em 5 s como um real; desfeito ao sair do 3D),
+e `shadowOffset()` lê o mapa de sombra do último
 quadro em volta do carro seguido.

@@ -23,6 +23,7 @@ import { useLiveRaceStore } from "@/stores/live-race-store"
 import type { Frame } from "@/types/race"
 import { frameAlpha } from "./live-pose"
 import { PlaybackClock } from "./playback"
+import { forceWeather } from "./environment/weather"
 
 export type PlaybackMode = "buffered" | "live"
 
@@ -80,6 +81,8 @@ export function acquirePlayback(): () => void {
     last = null
     frozen = null
     mode = "buffered"
+    // Clima forçado pelo gancho de desenvolvimento: vale só enquanto o 3D está montado.
+    forceWeather(null)
   }
 }
 
