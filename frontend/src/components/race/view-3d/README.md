@@ -159,6 +159,8 @@ qualquer pista ganha cenário, inclusive as do OpenF1 com pontos a 14–42 m.
   | 1006×1081 | GTX 1660 SUPER | 2,0 ms | 1,1 ms | 0,5 ms |
   | 750×541 | SwiftShader | 225 ms | 77 ms | 9 ms |
 
+  Medido com o canvas ainda sem a faixa de qualidade embaixo (hoje 750×513, 28 px a menos de altura).
+
   A verificação ao vivo (`viz3d/scripts/check-3d-frontend.mjs`) usa
   SwiftShader por padrão, então roda sem cenário; `--gpu --quality high` roda
   na GPU com o cenário. Em ambos os casos ela congela o relógio do 3D
