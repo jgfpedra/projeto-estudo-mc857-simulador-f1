@@ -23,11 +23,24 @@
  *   --circuit <name>  F1_CHECK_CIRCUIT circuit name as listed in the setup flow (default "José Carlos Pace")
  *   --chrome <path>   CHROME_PATH      Chrome executable; without it, Playwright's installed-Chrome
  *                                      channel ("chrome") is used
+ *   --gpu             F1_CHECK_GPU=1   render on the GPU (ANGLE/D3D11) instead of SwiftShader
+ *   --quality <q>     F1_CHECK_QUALITY 3D scenery quality: high | low | off. Preset in localStorage
+ *                                      ("race3d.quality") before the page loads; without it the page
+ *                                      picks its own default (high on a GPU, off on software WebGL,
+ *                                      i.e. off under the default SwiftShader)
  *   --out <dir>       F1_CHECK_OUT     screenshots + report.json (default viz3d/.cache/check-3d-frontend)
  *
  * The setup flow always sends a 20-driver grid (GRID_SIZE = 20 in the frontend), so the
  * script trims the outgoing POST /races grid to --cars drivers and keeps the rest of the
  * request as the UI built it.
+ *
+ * Determinism: every screenshot and the position read-out that goes with it happen with the 3D
+ * clock frozen (window.__race3d.freeze(): cars hold the pose of that instant, the WebSocket and
+ * the 2D keep running), after the camera has settled; then the clock is unfrozen. So the marker
+ * colour and chase-centring checks do not depend on how fast the page renders. For the marker
+ * colours (and the click that follows) the script freezes at an instant when no marker covers
+ * another one on screen, retrying every 0.5 s for up to 4 minutes (cars nose to tail just after
+ * the start overlap); the wait is printed and kept in report.json (markerWait).
  *
  * Checks: 3D-drawn positions (read back from the instance matrices) equal the 2D
  * interpolation within 0.5 m at the same performance.now(); one car per driver; overview,
@@ -58,6 +71,9 @@ const CIRCUIT = opt("--circuit", "F1_CHECK_CIRCUIT", "José Carlos Pace")
 const CHROME = opt("--chrome", "CHROME_PATH", "")
 const OUT = resolve(opt("--out", "F1_CHECK_OUT", join(ROOT, ".cache", "check-3d-frontend")))
 const argRace = opt("--race", "F1_CHECK_RACE", null)
+const GPU = args.includes("--gpu") || process.env.F1_CHECK_GPU === "1"
+const QUALITY = opt("--quality", "F1_CHECK_QUALITY", null)
+if (QUALITY !== null && !["high", "low", "off"].includes(QUALITY)) throw new Error(`--quality must be high, low or off, got ${QUALITY}`)
 const onlyAgreement = args.includes("--only-agreement")
 const TOLERANCE_M = 0.5
 if (!Number.isInteger(N_CARS) || N_CARS < 1 || N_CARS > 24) throw new Error(`--cars must be 1..24, got ${N_CARS}`)
@@ -147,6 +163,47 @@ async function frames(page, n) {
   }), n)
 }
 
+/**
+ * Freeze the 3D clock and let the camera settle: at least `ms` of wall time and `n` frames
+ * (the rig clamps each step to 0.1 s, so slow frames still advance it).
+ */
+async function freeze(page, ms = 2500, n = 30) {
+  await page.evaluate(() => window.__race3d.freeze())
+  const t0 = Date.now()
+  await frames(page, n)
+  const left = ms - (Date.now() - t0)
+  if (left > 0) await sleep(left)
+  await frames(page, 2)
+}
+const unfreeze = (page) => page.evaluate(() => window.__race3d?.unfreeze())
+
+/**
+ * Freeze at an instant when no car marker covers another marker's centre on screen. Cars running
+ * nose to tail put markers on top of each other (a geometry fact, not a rendering one), and the
+ * colour check needs every marker uncovered. Freezes, measures the markers' screen separation
+ * against their projected radius, and if two overlap unfreezes and retries every 0.5 s, up to
+ * `timeoutMs`. Returns how long it waited and the separation it froze at.
+ */
+async function freezeSeparated(page, n, timeoutMs = 240_000) {
+  const t0 = Date.now()
+  let best = { minPx: 0, radiusPx: 0 }
+  for (let attempt = 1; ; attempt++) {
+    await freeze(page, 300, 3)
+    const pins = (await page.evaluate(() => window.__race3d.screen())).filter((c) => c.pin?.onScreen)
+    const radiusPx = Math.max(0, ...pins.map((c) => c.pinRadiusPx ?? 0))
+    let minPx = Infinity
+    for (let i = 0; i < pins.length; i++)
+      for (let j = i + 1; j < pins.length; j++)
+        minPx = Math.min(minPx, Math.hypot(pins[i].pin.x - pins[j].pin.x, pins[i].pin.y - pins[j].pin.y))
+    const waitedS = Math.round((Date.now() - t0) / 100) / 10
+    if (pins.length === n && minPx >= radiusPx + 2) return { waitedS, attempts: attempt, minPx: Math.round(minPx * 10) / 10, radiusPx: Math.round(radiusPx * 10) / 10 }
+    if (minPx > best.minPx) best = { minPx: Math.round(minPx * 10) / 10, radiusPx: Math.round(radiusPx * 10) / 10 }
+    if (Date.now() - t0 > timeoutMs) return { timedOut: true, waitedS, attempts: attempt, best }
+    await unfreeze(page)
+    await sleep(500)
+  }
+}
+
 async function agreement(page, label, samples = 40) {
   let worst = 0
   let carsSeen = new Set()
@@ -166,12 +223,13 @@ async function main() {
   const browser = await chromium.launch({
     ...(CHROME ? { executablePath: CHROME } : { channel: "chrome" }),
     headless: true,
-    args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
+    args: GPU ? ["--use-angle=d3d11", "--ignore-gpu-blocklist"] : ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"],
   })
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
   const consoleLines = []
   page.on("console", (m) => consoleLines.push({ type: m.type(), text: m.text() }))
   page.on("pageerror", (e) => consoleLines.push({ type: "pageerror", text: e.message }))
+  if (QUALITY) await page.addInitScript((q) => localStorage.setItem("race3d.quality", q), QUALITY)
   // Count WebGL contexts created and lost.
   await page.addInitScript(() => {
     window.__gl = { created: 0, lost: 0 }
@@ -208,8 +266,14 @@ async function main() {
     await page.getByRole("textbox", { name: "voltas da corrida" }).fill(LAPS)
     await page.getByRole("button", { name: "Confirmar" }).click()
     await page.waitForURL("**/driver-team-selection")
-    await page.getByText("Aleatório", { exact: true }).click()
-    await page.getByText("Grid completo", { exact: false }).waitFor({ timeout: 30_000 })
+    // "Aleatório" picks from the season's driver list; on a cold backend that list arrives late and a
+    // click before it fills nothing. Click again until the grid is complete (up to 120 s).
+    for (const t0 = Date.now(); ; ) {
+      await page.getByText("Aleatório", { exact: true }).click()
+      const done = await page.getByText("Grid completo", { exact: false }).waitFor({ timeout: 5_000 }).then(() => true, () => false)
+      if (done) break
+      if (Date.now() - t0 > 120_000) throw new Error("random grid never completed (driver list not loaded?)")
+    }
     await page.getByRole("button", { name: /Clima \/ Pneus/ }).click()
     await page.waitForURL("**/weather-tires-selection")
     const start = page.getByRole("button", { name: /Iniciar Corrida/ })
@@ -247,12 +311,24 @@ async function main() {
   await page.getByRole("button", { name: "3D", exact: true }).click()
   await page.waitForFunction(() => window.__race3d && document.querySelector('[data-testid="race-view-3d"] canvas'), null, { timeout: 60_000 })
   await frames(page, 60)
+  const env = await page.evaluate(() => {
+    // From the 3D view's own context: no extra WebGL context (the toggle check counts them).
+    const st = window.__race3d.state()
+    return { quality: st.quality, softwareRendering: st.environment?.softwareRendering ?? null, renderer: st.renderer ?? null }
+  })
+  report.render = { gpuFlag: GPU, requestedQuality: QUALITY, ...env }
+  console.log(`renderer: ${env.renderer}; 3D quality: ${env.quality}${QUALITY ? " (requested)" : " (page default)"}`)
+  if (QUALITY && env.quality !== QUALITY) throw new Error(`requested --quality ${QUALITY}, the page runs ${env.quality}`)
 
   const agree = await agreement(page, "overview")
   check(`3D drawn positions match 2D within ${TOLERANCE_M} m (overview)`, agree.worstErrorM <= TOLERANCE_M, agree)
   check("one car per driver in the 3D", agree.carsPerSample[0] === nDrivers && agree.carsPerSample[1] === nDrivers, { drivers: nDrivers, ...agree })
   if (onlyAgreement) return finish(browser)
 
+  const markerWait = await freezeSeparated(page, nDrivers)
+  report.markerWait = markerWait
+  console.log(`markers separated after ${markerWait.waitedS} s (${markerWait.attempts} freezes): ${JSON.stringify(markerWait)}`)
+  await freeze(page)
   const ov = await measureCanvas(page, "overview.png")
   check("overview canvas is not blank", ov.nonBackground > 0.001, { nonBackground: ov.nonBackground, colours: ov.colours, size: [ov.width, ov.height] })
   const scr = await page.evaluate(() => window.__race3d.screen())
@@ -277,23 +353,28 @@ async function main() {
   report.click = { target: target.driverId, isolationPx: Math.round(isolation(target)) }
   await page.mouse.click(box.x + target.pin.x, box.y + target.pin.y)
   await frames(page, 10)
+  await unfreeze(page)
   let st = await page.evaluate(() => window.__race3d.state())
   check("clicking a car selects and follows it", st.followed === target.driverId && st.mode === "chase", { clicked: target.driverId, ...st })
   await sleep(1500)
   await frames(page, 30)
   const agreeFollow = await agreement(page, "chase", 20)
   check(`3D matches 2D within ${TOLERANCE_M} m (following)`, agreeFollow.worstErrorM <= TOLERANCE_M, agreeFollow)
+  await freeze(page)
   const ch = await measureCanvas(page, "followed-chase.png")
   check("chase canvas is not blank", ch.nonBackground > 0.05, { nonBackground: ch.nonBackground, colours: ch.colours })
   const followedScreen = (await page.evaluate(() => window.__race3d.screen())).find((c) => c.driverId === target.driverId)
   const carPx = await colourNear(page, ch.png, followedScreen.car.x, followedScreen.car.y, "#000000", 2)
   const bg = [(ch.background) & 255, (ch.background >> 8) & 255, (ch.background >> 16) & 255]
   check("followed car is on screen near the centre", followedScreen.car.onScreen && Math.abs(followedScreen.car.x / box.width - 0.5) < 0.2, { car: followedScreen.car, pixel: carPx.rgb, background: bg })
+  await unfreeze(page)
 
   // Onboard.
   await page.getByRole("button", { name: "A bordo" }).click()
   await frames(page, 40)
+  await freeze(page)
   const ob = await measureCanvas(page, "followed-onboard.png")
+  await unfreeze(page)
   st = await page.evaluate(() => window.__race3d.state())
   check("onboard camera renders", st.mode === "onboard" && ob.nonBackground > 0.05, { mode: st.mode, nonBackground: ob.nonBackground })
   await page.getByRole("button", { name: "Perseguição" }).click()
@@ -314,7 +395,9 @@ async function main() {
   st = await page.evaluate(() => window.__race3d.state())
   check("timing-panel selection follows; 'Visão geral' returns to overview", followedFromPanel !== null && st.followed === null && st.mode === "orbit", { followedFromPanel, after: st })
   await frames(page, 30)
+  await freeze(page)
   await measureCanvas(page, "overview-after.png")
+  await unfreeze(page)
 
   // --- Toggle 2D/3D 10 times ---
   const before = await page.evaluate(() => ({ gl: { ...window.__gl }, state: window.__race3d.state() }))
