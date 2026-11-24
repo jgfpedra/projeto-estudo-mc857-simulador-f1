@@ -236,30 +236,51 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
   const start = overviewPose(scene.center.center, scene.center.radius, 45, 16 / 9)
 
   return (
-    <div className="relative h-full w-full" data-testid="race-view-3d">
-      <Canvas
-        key={race.raceId}
-        dpr={[1, 2]}
-        // Sem cenário, o renderizador fica como era antes dele (sem mapa de sombras).
-        shadows={envOn ? "soft" : false}
-        camera={{ fov: 45, near: 1, far: start.distance * 6, position: start.position.toArray() }}
-        aria-label="Visualização 3D da corrida"
-      >
-        <Stage
-          race={race}
-          scene={scene}
-          layout={layout}
-          quality={quality}
-          overviewDistance={start.distance}
-          mode={mode}
-          selectedDriverId={selectedDriverId}
-          onSelectDriver={onSelectDriver}
-        />
-        <FollowExit following={selectedDriverId !== null} onExit={() => onSelectDriver(null)} />
-      </Canvas>
+    <div className="flex h-full w-full flex-col" data-testid="race-view-3d">
+      {/* O canvas fica sozinho na sua área: um elemento HTML sempre por cima dele mudava a
+          composição do Chrome e, com WebGL por software, às vezes gerava um aviso
+          "Blit feedback loop" ao montar/desmontar o 3D. */}
+      <div className="relative min-h-0 flex-1">
+        <Canvas
+          key={race.raceId}
+          dpr={[1, 2]}
+          // Sem cenário, o renderizador fica como era antes dele (sem mapa de sombras).
+          shadows={envOn ? "soft" : false}
+          camera={{ fov: 45, near: 1, far: start.distance * 6, position: start.position.toArray() }}
+          aria-label="Visualização 3D da corrida"
+        >
+          <Stage
+            race={race}
+            scene={scene}
+            layout={layout}
+            quality={quality}
+            overviewDistance={start.distance}
+            mode={mode}
+            selectedDriverId={selectedDriverId}
+            onSelectDriver={onSelectDriver}
+          />
+          <FollowExit following={selectedDriverId !== null} onExit={() => onSelectDriver(null)} />
+        </Canvas>
+
+        {selectedDriverId && (
+          <div className="absolute right-2 top-2 z-10 flex border border-border bg-background/80 text-[10px] font-bold uppercase tracking-wider">
+            {(Object.keys(FOLLOW_LABEL) as FollowMode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setFollowMode(m)}
+                aria-pressed={followMode === m}
+                className={`px-2.5 py-1.5 ${followMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
+              >
+                {FOLLOW_LABEL[m]}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div
-        className="absolute bottom-2 left-2 z-10 flex items-center border border-border bg-background/80 text-[10px] font-bold uppercase tracking-wider"
+        className="flex shrink-0 items-center justify-end border-t border-border text-[10px] font-bold uppercase tracking-wider"
         role="group"
         aria-label="Qualidade do cenário 3D"
       >
@@ -276,22 +297,6 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
           </button>
         ))}
       </div>
-
-      {selectedDriverId && (
-        <div className="absolute right-2 top-2 z-10 flex border border-border bg-background/80 text-[10px] font-bold uppercase tracking-wider">
-          {(Object.keys(FOLLOW_LABEL) as FollowMode[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setFollowMode(m)}
-              aria-pressed={followMode === m}
-              className={`px-2.5 py-1.5 ${followMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
-            >
-              {FOLLOW_LABEL[m]}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
