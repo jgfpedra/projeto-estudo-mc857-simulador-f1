@@ -64,6 +64,15 @@ class TimingTracker:
         leader['gap_to_leader_s'] = 0.0
         leader['laps_behind'] = 0
         for pos in positions[1:]:
+            if leader.get('finished') and pos.get('finished'):
+                pos['laps_behind'] = max(0, leader['lap'] - pos['lap'])
+                leader_time, finish_time = leader.get('finish_time_s'), pos.get('finish_time_s')
+                pos['gap_to_leader_s'] = (
+                    round(max(0.0, finish_time - leader_time), 3)
+                    if not pos['laps_behind'] and leader_time is not None and finish_time is not None
+                    else None
+                )
+                continue
             distance = pos['progress_m']
             behind = max(0.0, lead - distance)
             pos['laps_behind'] = int(behind // length) if length > 0 else 0
@@ -197,7 +206,7 @@ class RaceManager:
         self._engines_lock = threading.RLock()
 
     def create_race(self, laps, track, year, num_drivers=2, layout_id=None, selected_roster=None,
-                    weather=None, weather_change=None, initial_tyre=None, user_driver_id=None):
+                    weather=None, weather_change=None, initial_tyre=None, user_driver_id=None, random_seed=None):
         if not 1 <= num_drivers <= 24:
             raise ValueError('A quantidade de corredores deve estar entre 1 e 24.')
         self.redis.ping()
@@ -274,13 +283,16 @@ class RaceManager:
                            **({'starting_tyre_compound': TyreCompound(initial_tyre.upper())} if initial_tyre else {}))
                    for i, entry in enumerate(roster)]
         race_id = f'race_{uuid.uuid4().hex}'
+        # A separate seed per race avoids replaying the exact same bot rhythm
+        # while preserving deterministic experiments when a seed is supplied.
+        bot_seed = int(race_id[5:13], 16) if random_seed is None else int(random_seed)
         gui = os.environ.get('F1_PYBULLET_GUI', '').lower() in ('1','true','yes','on')
         camera = os.environ.get('F1_GUI_CAMERA', 'follow') if gui else 'none'
         if camera not in ('follow', 'overview', 'none'):
             raise ValueError(f'Modo de câmera inválido: {camera}')
         config = replace(DEFAULT_INTERLAGOS_CONFIG, race_id=race_id, num_laps=laps, gui=gui,
                          camera_mode=camera, draw_track=gui, draw_track_details=False,
-                         realtime=True, track_progress_laps=True)
+                         realtime=True, track_progress_laps=True, random_seed=bot_seed)
         pit = ensure_pit_lane(track_obj)
         geometry = b''.join(struct.pack('<dd', float(x), float(y)) for x,y in track_obj.waypoints)
         digest = hashlib.sha256(geometry).hexdigest()[:16]
@@ -290,7 +302,8 @@ class RaceManager:
                 'layout_reference':{'source':'F1DB','basis':reference['basis'], 'years':layout['years'],
                                     'track_year':track_year,
                                     'catalog_generated_at':self.catalog.data.get('generated_at')} if layout else None,
-                'num_laps':laps, 'num_drivers':num_drivers, 'user_driver_id':user_driver_id, 'sources':sources,
+                'num_laps':laps, 'num_drivers':num_drivers, 'user_driver_id':user_driver_id,
+                'random_seed':bot_seed, 'sources':sources,
                 'car_geometry':{'length_m':CHASSIS_LENGTH_M,'width_m':CHASSIS_WIDTH_M,'height_m':CHASSIS_HEIGHT_M},
                 'track':{'name':track_obj.name, 'source':track_obj.source, 'geometry_sha256':digest,
                          'length_m':track_obj.length_m, 'width_m':track_obj.width_m,

@@ -24,7 +24,7 @@ import { buildFrame, nearestS, sampleAt, toWorld } from "../src/components/race/
 import { buildRibbonGeometry } from "../src/components/race/view-3d/scene/geometry.ts"
 import { cornerPeaks, kappaAt, robustCurvature } from "../src/components/race/view-3d/scene/environment/curvature.ts"
 import { MODELS, PEAK_SEPARATION_M, PROP_KINDS, buildLayout, propMatrix } from "../src/components/race/view-3d/scene/environment/layout.ts"
-import { LAYERS, bandGeometry } from "../src/components/race/view-3d/scene/environment/surfaces.ts"
+import { LAYERS, bandGeometry, kerbBands } from "../src/components/race/view-3d/scene/environment/surfaces.ts"
 import { QUALITY } from "../src/components/race/view-3d/scene/environment/quality.ts"
 import { PLAYBACK, PlaybackClock } from "../src/components/race/view-3d/scene/playback.ts"
 import { smoothness } from "../src/components/race/view-3d/scene/smoothness.ts"
@@ -429,6 +429,17 @@ const scene = (key, make) => {
 const interlagos = () => scene("interlagos", () => fileTrack("interlagos_2023_v1.json"))
 const monza = () => scene("monza", () => fileTrack("monza_2024_v1.json"))
 const openf1 = () => scene("openf1", openF1Track)
+const ainDiab = () => scene("ain-diab", () => {
+  const snapshot = JSON.parse(readFileSync(new URL("../../backend/config/historical_tracks/f1results_tracks.json", import.meta.url), "utf8"))
+  const race = snapshot.races["ain-diab:1958"]
+  const points = snapshot.geometries[String(race.source_layout_id)].points
+  const perimeter = points.reduce((sum, a, i) => {
+    const b = points[(i + 1) % points.length]
+    return sum + Math.hypot(b[0] - a[0], b[1] - a[1])
+  }, 0)
+  const scale = race.length_m / perimeter
+  return servedTrack("Ain-Diab", points.map(([x, y]) => [x * scale, y * scale]), 0, 12)
+})
 const monzaCoarse = () => scene("monza-coarse", () => coarsen(fileTrack("monza_2024_v1.json")))
 
 // Independent 2D geometry for the overlap test (does not use layout.ts helpers).
@@ -690,30 +701,35 @@ test("layout is seeded by the track: same input, same scene; another track, anot
   assert.notEqual(interlagos().layout.seed, b.seed)
 })
 
-test("kerb and sand bands start exactly at the asphalt edge, also on a coarse track", () => {
-  const { track, frame, layout } = openf1()
-  const h = track.widthM / 2
-  const asphalt = buildRibbonGeometry(frame, track.widthM)
-  const ap = asphalt.getAttribute("position")
-  const n = frame.points.length
-  // Right edge of the asphalt as segments (vertex 2i + 1).
-  const edge = []
-  for (let i = 0; i < n; i++) {
-    const a = 2 * i + 1
-    const b = 2 * ((i + 1) % n) + 1
-    edge.push([
-      [ap.getX(a), ap.getZ(a)],
-      [ap.getX(b), ap.getZ(b)],
-    ])
+test("kerbs stay inside the engine asphalt width at Ain-Diab and on a coarse track", () => {
+  for (const { track, frame, layout } of [openf1(), ainDiab()]) {
+    const h = track.widthM / 2
+    const asphalt = buildRibbonGeometry(frame, track.widthM)
+    const ap = asphalt.getAttribute("position")
+    const bands = kerbBands(track.widthM)
+    close(bands.left[0], -h, 1e-9)
+    close(bands.left[1], -h + 1.3, 1e-9)
+    close(bands.right[0], h - 1.3, 1e-9)
+    close(bands.right[1], h, 1e-9)
+    for (const [offsets, side] of [[bands.left, 0], [bands.right, 1]]) {
+      const edge = []
+      for (let i = 0; i < frame.points.length; i++) {
+        const a = 2 * i + side
+        const b = 2 * ((i + 1) % frame.points.length) + side
+        edge.push([[ap.getX(a), ap.getZ(a)], [ap.getX(b), ap.getZ(b)]])
+      }
+      const kerb = bandGeometry(frame, ...offsets, layout.kerbs, { y: LAYERS.kerb.y })
+      const kp = kerb.getAttribute("position")
+      assert.ok(kp.count > 20, "kerbs exist on the track")
+      // Outer edge coincides with the asphalt boundary; stripe extends inward.
+      for (let v = side; v < kp.count; v += 2) {
+        const d = Math.min(...edge.map(([a, b]) => ptSeg([kp.getX(v), kp.getZ(v)], a, b)))
+        assert.ok(d < 1e-3, `kerb outer edge ${d.toFixed(4)} m off the asphalt edge`)
+        close(kp.getY(v), LAYERS.kerb.y, 1e-6)
+      }
+    }
   }
-  const kerb = bandGeometry(frame, h, h + 1.3, layout.kerbs, { y: LAYERS.kerb.y })
-  const kp = kerb.getAttribute("position")
-  assert.ok(kp.count > 20, "kerbs exist on the OpenF1 track")
-  for (let v = 0; v < kp.count; v += 2) {
-    const d = Math.min(...edge.map(([a, b]) => ptSeg([kp.getX(v), kp.getZ(v)], a, b)))
-    assert.ok(d < 1e-3, `kerb inner edge ${d.toFixed(4)} m off the asphalt edge`)
-    close(kp.getY(v), LAYERS.kerb.y, 1e-6)
-  }
+  assert.deepEqual(kerbBands(2), { left: [-1, 0], right: [0, 1] })
 })
 
 test("surface layers are stacked: distinct heights in order, nothing coplanar", () => {

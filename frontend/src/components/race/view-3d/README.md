@@ -205,7 +205,9 @@ qualquer pista ganha cenário, inclusive as do OpenF1 com pontos a 14–42 m.
   verificação ao vivo mede a cor deles).
 - **Chão.** Grama, faixa de grama aparada (±6 m além da borda), asfalto com
   grão, linhas brancas nas bordas, zebras vermelhas e brancas e brita por fora
-  das curvas onde |curvatura| > 1/140 1/m (alargadas 40 m), via dos boxes com
+  das curvas onde |curvatura| > 1/140 1/m (alargadas 40 m). As zebras são
+  desenhadas nos 1,3 m internos da largura servida pela engine; além da borda,
+  a física usa a superfície fora da pista. Via dos boxes com
   linhas brancas só onde ela já saiu do asfalto. Paleta do kit (grama
   `#4d8f6d`, asfalto `#444444`, brita `#c7b795`, vermelho `#e85452`). Cada
   camada tem altura e `polygonOffset` próprios (`LAYERS` em `surfaces.ts`),
