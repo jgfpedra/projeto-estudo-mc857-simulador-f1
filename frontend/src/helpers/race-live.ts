@@ -51,6 +51,7 @@ export const TRACK_STATUS_LABEL: Record<TrackStatus, string> = {
 export const KIND_LABEL: Record<FeedKind, string> = {
   overtake: "Ultrapassagem",
   pit_stop: "Pit stop",
+  pit_request: "Box",
   tyre_worn: "Pneu",
   weather: "Clima",
   collision: "Contato",

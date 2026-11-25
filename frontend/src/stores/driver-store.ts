@@ -10,6 +10,9 @@ type DriverStore = {
   availableDrivers: Driver[]
   /** A ordem do array representa a ordem do grid; null representa uma vaga vazia. */
   drivers: (Driver | null)[]
+  /** Piloto controlado pelo usuário. Só vale se estiver no grid (ver validação na tela). */
+  userDriverId: string | null
+  setUserDriverId: (driverId: string | null) => void
   setSeason: (season: string) => void
   setMode: (mode: DriverMode) => void
   setAvailableDrivers: (drivers: Driver[]) => void
@@ -29,6 +32,7 @@ export const useDriverStore = create<DriverStore>()(
   persist(
     (set, get) => ({
       season: DEFAULT_SEASON,
+      userDriverId: null,
       mode: "custom",
       availableDrivers: [],
       drivers: createEmptyGrid(),
@@ -39,6 +43,7 @@ export const useDriverStore = create<DriverStore>()(
         // Ao trocar de temporada, limpa o grid e os dados da temporada anterior.
         set({
           season,
+          userDriverId: null,
           availableDrivers: [],
           drivers: createEmptyGrid(),
           mode: "custom",
@@ -46,6 +51,8 @@ export const useDriverStore = create<DriverStore>()(
       },
 
       setMode: (mode) => set({ mode }),
+
+      setUserDriverId: (userDriverId) => set({ userDriverId }),
 
       setAvailableDrivers: (availableDrivers) =>
         set((state) => ({
@@ -91,6 +98,7 @@ export const useDriverStore = create<DriverStore>()(
       resetDriverSelection: () =>
         set({
           season: DEFAULT_SEASON,
+          userDriverId: null,
           mode: "custom",
           availableDrivers: [],
           drivers: createEmptyGrid(),

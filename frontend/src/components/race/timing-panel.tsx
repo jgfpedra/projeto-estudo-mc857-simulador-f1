@@ -8,12 +8,14 @@ type Props = {
   classification: FinalEntry[] | null
   selectedDriverId: string | null
   onSelect: (driverId: string | null) => void
+  /** Piloto controlado pelo usuário: fica destacado no ranking. */
+  controlledDriverId?: string | null
 }
 
-const rowClass = (selected: boolean) =>
+const rowClass = (selected: boolean, controlled: boolean) =>
   `grid w-full grid-cols-[2rem_4px_1fr_auto] items-center gap-3 border-b border-border px-4 py-2.5 text-left transition-colors ${
-    selected ? "bg-accent" : "hover:bg-accent/60"
-  }`
+    controlled ? "bg-primary/10 ring-1 ring-inset ring-primary/70" : ""
+  } ${selected ? "bg-accent" : "hover:bg-accent/60"}`
 
 export function TimingPanel({
   race,
@@ -22,6 +24,7 @@ export function TimingPanel({
   classification,
   selectedDriverId,
   onSelect,
+  controlledDriverId = null,
 }: Props) {
   const drivers = new Map(race.drivers.map((d, i) => [d.driverId, { d, i }]))
   const colorOf = (id: string) => {
@@ -50,14 +53,18 @@ export function TimingPanel({
                 type="button"
                 aria-pressed={selected}
                 onClick={() => onSelect(selected ? null : e.driverId)}
-                className={rowClass(selected)}
+                className={rowClass(selected, controlledDriverId === e.driverId)}
               >
                 <span className="text-sm font-black italic tabular-nums">
                   {String(e.position).padStart(2, "0")}
                 </span>
                 <span className="h-8 w-1" style={{ backgroundColor: colorOf(e.driverId) }} />
                 <div className="min-w-0">
-                  <div className="text-sm font-black uppercase">{codeOf(e.driverId)}</div>
+                  <div className="text-sm font-black uppercase">{codeOf(e.driverId)}
+                    {controlledDriverId === e.driverId && (
+                      <span className="ml-2 bg-primary px-1 text-[9px] font-black text-primary-foreground">CTRL</span>
+                    )}
+                  </div>
                   <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     {e.lapsCompleted} voltas · {e.pitStops} parada(s)
                   </div>
@@ -97,7 +104,7 @@ export function TimingPanel({
               type="button"
               aria-pressed={selected}
               onClick={() => onSelect(selected ? null : car.driverId)}
-              className={rowClass(selected)}
+              className={rowClass(selected, controlledDriverId === car.driverId)}
             >
               <span className="text-sm font-black italic tabular-nums">
                 {String(car.position).padStart(2, "0")}
@@ -106,6 +113,9 @@ export function TimingPanel({
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-black uppercase">{codeOf(car.driverId)}</span>
+                  {controlledDriverId === car.driverId && (
+                    <span className="bg-primary px-1 text-[9px] font-black text-primary-foreground">CTRL</span>
+                  )}
                   {tyre && (
                     <span
                       className={`flex h-4 w-4 items-center justify-center text-[9px] font-black ${tyre.className}`}

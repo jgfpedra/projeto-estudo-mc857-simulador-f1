@@ -20,6 +20,8 @@ export type RaceSetup = {
   layoutId: string
   laps: number
   grid: string[]
+  /** Piloto controlado pelo usuário (pit stop manual). Precisa estar no grid. */
+  userDriverId: string | null
   weather: WeatherConfig
   tires: TireConfig
 }
@@ -36,6 +38,9 @@ export function validateRaceSetup(setup: RaceSetup): string | null {
   }
   if (new Set(setup.grid).size !== setup.grid.length) {
     return "O grid contém pilotos repetidos."
+  }
+  if (setup.userDriverId !== null && !setup.grid.includes(setup.userDriverId)) {
+    return "O seu piloto precisa estar no grid."
   }
   if (!Number.isInteger(setup.laps) || setup.laps < MIN_RACE_LAPS || setup.laps > MAX_RACE_LAPS) {
     return `O número de voltas precisa estar entre ${MIN_RACE_LAPS} e ${MAX_RACE_LAPS}.`
@@ -61,6 +66,10 @@ export function buildRaceRequest(setup: RaceSetup): ApiRaceRequest {
     weather: setup.weather.weather,
     // O 1º stint é o pneu inicial: o backend exige que os dois batam, e a UI já mantém isso.
     initial_tyre: TYRE[setup.tires.initialCompound],
+  }
+
+  if (setup.userDriverId !== null) {
+    request.user_driver_id = setup.userDriverId
   }
 
   const { transition } = setup.weather
