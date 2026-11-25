@@ -46,7 +46,7 @@ async function readErrorMessage(response: Response): Promise<string> {
 
 async function request<T>(
   path: string,
-  init: { method?: "GET" | "POST"; body?: unknown } = {},
+  init: { method?: "GET" | "POST" | "DELETE"; body?: unknown } = {},
 ): Promise<T> {
   const { method = "GET", body } = init
 
@@ -108,6 +108,26 @@ function mapDriver(d: ApiDriver): Driver {
 }
 
 export const api = {
+  /** Pede a troca na próxima entrada dos boxes. O motor aplica no próximo tick. */
+  async requestPitStop(
+    raceId: string,
+    driverId: string,
+    tyre: "soft" | "medium" | "hard" | "intermediate" | "wet",
+  ): Promise<void> {
+    await request<unknown>(
+      `/races/${encodeURIComponent(raceId)}/drivers/${encodeURIComponent(driverId)}/pit-stop`,
+      { method: "POST", body: { tyre_compound: tyre } },
+    )
+  },
+
+  /** Cancela um pedido de box pendente. Recusado se o carro já entrou na via dos boxes. */
+  async cancelPitStop(raceId: string, driverId: string): Promise<void> {
+    await request<unknown>(
+      `/races/${encodeURIComponent(raceId)}/drivers/${encodeURIComponent(driverId)}/pit-stop`,
+      { method: "DELETE" },
+    )
+  },
+
   async getRace(raceId: string): Promise<RaceInfo> {
     const race = parseRaceInfo(await request<unknown>(`/races/${encodeURIComponent(raceId)}`))
     if (!race) throw new Error("Resposta inválida ao carregar a corrida.")

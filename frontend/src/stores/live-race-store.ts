@@ -20,6 +20,8 @@ const MAX_RECONNECTS = 5
 /** Tempo de simulação em que a mesma ultrapassagem não é contada de novo. */
 const PASS_DEDUP_S = 5
 
+export type PitTyre = "soft" | "medium" | "hard" | "intermediate" | "wet"
+
 export type LiveStatus = "idle" | "loading" | "live" | "reconnecting" | "finished" | "error"
 
 type LiveRaceState = {
@@ -38,6 +40,10 @@ type LiveRaceState = {
   classification: FinalEntry[] | null
   selectedDriverId: string | null
   viewMode: ViewMode
+  pitBusy: boolean
+  pitError: string | null
+  requestPit: (driverId: string, tyre: PitTyre) => Promise<void>
+  cancelPit: (driverId: string) => Promise<void>
   load: (raceId: string) => Promise<void>
   disconnect: () => void
   selectDriver: (driverId: string | null) => void
@@ -185,6 +191,39 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
         })
         return
 
+      case "pit_requested":
+        pushFeed({
+          simTs: msg.simTs,
+          lap: msg.lap,
+          kind: "pit_request",
+          tone: "info",
+          driverIds: [msg.driverId],
+          message: `${nameOf(msg.driverId)} pede ${msg.tyreCompound.toLowerCase()} na próxima entrada dos boxes`,
+        })
+        return
+
+      case "pit_cancelled":
+        pushFeed({
+          simTs: msg.simTs,
+          lap: msg.lap,
+          kind: "pit_request",
+          tone: "info",
+          driverIds: [msg.driverId],
+          message: `${nameOf(msg.driverId)} cancelou o pedido de box`,
+        })
+        return
+
+      case "pit_cancel_rejected":
+        pushFeed({
+          simTs: msg.simTs,
+          lap: msg.lap,
+          kind: "pit_request",
+          tone: "warn",
+          driverIds: [msg.driverId],
+          message: `${nameOf(msg.driverId)}: cancelamento recusado, o carro já está na via dos boxes`,
+        })
+        return
+
       case "race_end":
         set({ status: "finished", classification: msg.classification })
         pushFeed({
@@ -245,6 +284,8 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
     raceId: null,
     selectedDriverId: null,
     viewMode: "2d",
+    pitBusy: false,
+    pitError: null,
 
     load: async (raceId) => {
       get().disconnect()
@@ -291,5 +332,31 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
     selectDriver: (driverId) => set({ selectedDriverId: driverId }),
 
     setViewMode: (mode) => set({ viewMode: mode }),
+
+    requestPit: async (driverId, tyre) => {
+      const raceId = get().raceId
+      if (!raceId || get().pitBusy) return
+      set({ pitBusy: true, pitError: null })
+      try {
+        await api.requestPitStop(raceId, driverId, tyre)
+      } catch (error) {
+        set({ pitError: error instanceof Error ? error.message : "Não foi possível pedir o box." })
+      } finally {
+        set({ pitBusy: false })
+      }
+    },
+
+    cancelPit: async (driverId) => {
+      const raceId = get().raceId
+      if (!raceId || get().pitBusy) return
+      set({ pitBusy: true, pitError: null })
+      try {
+        await api.cancelPitStop(raceId, driverId)
+      } catch (error) {
+        set({ pitError: error instanceof Error ? error.message : "Não foi possível cancelar o pedido." })
+      } finally {
+        set({ pitBusy: false })
+      }
+    },
   }
 })

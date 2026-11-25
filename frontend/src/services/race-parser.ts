@@ -1,5 +1,6 @@
 import type {
   CarFrame,
+  PitRequest,
   CarGeometry,
   FinalEntry,
   Frame,
@@ -43,6 +44,17 @@ function parseWeather(raw: unknown): Weather | null {
   return { kind, trackTemp, rainfall: num(raw.rainfall) ?? 0 }
 }
 
+function parsePitRequest(raw: unknown): PitRequest | null {
+  if (!isObj(raw)) return null
+  const tyreCompound = str(raw.tyre_compound)
+  if (!tyreCompound) return null
+  return {
+    tyreCompound,
+    source: str(raw.source) ?? "automatic",
+    status: str(raw.status) ?? "scheduled",
+  }
+}
+
 function parseCar(raw: unknown): CarFrame | null {
   if (!isObj(raw)) return null
   const driverId = str(raw.driver_id)
@@ -67,6 +79,7 @@ function parseCar(raw: unknown): CarFrame | null {
     progressM: num(raw.progress_m) ?? null,
     sM: num(raw.s_m) ?? null,
     dM: num(raw.d_m) ?? null,
+    pitRequest: parsePitRequest(raw.pit_request),
   }
 }
 
@@ -149,6 +162,7 @@ export function parseRaceInfo(raw: unknown): RaceInfo | null {
     numLaps,
     track,
     carGeometry: parseCarGeometry(raw.car_geometry),
+    userDriverId: str(raw.user_driver_id) ?? null,
     drivers: Array.isArray(raw.drivers) ? raw.drivers.map(parseDriver).filter(isDriver) : [],
   }
 }
@@ -248,6 +262,24 @@ export function parseLiveMessage(raw: unknown): LiveMessage | null {
         simTs,
         classification: raw.final_classification.map(parseFinal).filter(isFinal),
       }
+    }
+
+    case "pit_requested": {
+      const driverId = str(raw.driver_id)
+      if (!driverId) return null
+      return { kind: "pit_requested", simTs, lap, driverId, tyreCompound: str(raw.tyre_compound) ?? "UNKNOWN" }
+    }
+
+    case "pit_cancelled": {
+      const driverId = str(raw.driver_id)
+      if (!driverId) return null
+      return { kind: "pit_cancelled", simTs, lap, driverId }
+    }
+
+    case "pit_cancel_rejected": {
+      const driverId = str(raw.driver_id)
+      if (!driverId) return null
+      return { kind: "pit_cancel_rejected", simTs, lap, driverId, reason: str(raw.reason) ?? "" }
     }
 
     default:
