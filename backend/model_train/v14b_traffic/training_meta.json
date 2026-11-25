@@ -1,0 +1,641 @@
+{
+ "iters": [
+  {
+   "iter": 1,
+   "stage": 0,
+   "n_traffic": 0,
+   "beta": 1.0,
+   "dataset": 27069,
+   "val_loss": 0.0204684529453516,
+   "eval": {
+    "interlagos": {
+     "laps": 2,
+     "prog": 4171.678042460837
+    },
+    "Monza": {
+     "laps": 1,
+     "prog": 5291.570228107896
+    },
+    "Hungaroring": {
+     "laps": 2,
+     "prog": 4187.457912889004
+    },
+    "Silverstone": {
+     "laps": 2,
+     "prog": 5724.93647529018
+    },
+    "Montreal": {
+     "laps": 2,
+     "prog": 4235.900428880797
+    },
+    "Bahrain": {
+     "laps": 2,
+     "prog": 5281.744079430333
+    },
+    "Mexico": {
+     "laps": 2,
+     "prog": 4224.547420664114
+    },
+    "procedural:101": {
+     "laps": 2,
+     "prog": 3650.772459200025
+    },
+    "procedural:103": {
+     "laps": 2,
+     "prog": 3931.0779375833663
+    },
+    "procedural:107": {
+     "laps": 2,
+     "prog": 3470.802619723403
+    },
+    "procedural:201": {
+     "laps": 2,
+     "prog": 3268.9651394773236
+    },
+    "procedural:203": {
+     "laps": 2,
+     "prog": 3495.110585801587
+    },
+    "procedural:301": {
+     "laps": 2,
+     "prog": 3634.3936362504655
+    },
+    "Zandvoort": {
+     "laps": 1,
+     "prog": 2018.1545368366405,
+     "time_med": 120.7
+    }
+   },
+   "elapsed_s": 380.7290120124817
+  },
+  {
+   "iter": 2,
+   "stage": 0,
+   "n_traffic": 0,
+   "beta": 0.9222222222222223,
+   "dataset": 54222,
+   "val_loss": 0.021407555788755417,
+   "eval": {
+    "interlagos": {
+     "laps": 2,
+     "prog": 4170.149020520992
+    },
+    "Monza": {
+     "laps": 2,
+     "prog": 5650.230877314658
+    },
+    "Hungaroring": {
+     "laps": 2,
+     "prog": 4185.400691526847
+    },
+    "Silverstone": {
+     "laps": 2,
+     "prog": 5726.560670533556
+    },
+    "Montreal": {
+     "laps": 2,
+     "prog": 4236.984769818362
+    },
+    "Bahrain": {
+     "laps": 2,
+     "prog": 5283.964406741746
+    },
+    "Mexico": {
+     "laps": 2,
+     "prog": 4228.10361315109
+    },
+    "procedural:101": {
+     "laps": 2,
+     "prog": 3650.2681464002826
+    },
+    "procedural:103": {
+     "laps": 2,
+     "prog": 3933.61993932107
+    },
+    "procedural:107": {
+     "laps": 2,
+     "prog": 3468.15768114052
+    },
+    "procedural:201": {
+     "laps": 2,
+     "prog": 3271.299671986715
+    },
+    "procedural:203": {
+     "laps": 2,
+     "prog": 3496.078571733396
+    },
+    "procedural:301": {
+     "laps": 2,
+     "prog": 3632.700892129824
+    },
+    "Zandvoort": {
+     "laps": 3,
+     "prog": 4068.459180940361,
+     "time_med": 116.80000000000001
+    }
+   },
+   "elapsed_s": 429.06030321121216
+  },
+  {
+   "iter": 3,
+   "stage": 1,
+   "n_traffic": 4,
+   "beta": 0.8444444444444444,
+   "dataset": 82786,
+   "val_loss": 0.028180239722132683,
+   "eval": {
+    "interlagos": {
+     "laps": 2,
+     "prog": 4162.907463375849
+    },
+    "Monza": {
+     "laps": 1,
+     "prog": 5296.618913810147
+    },
+    "Hungaroring": {
+     "laps": 1,
+     "prog": 3781.9975003002705
+    },
+    "Silverstone": {
+     "laps": 0,
+     "prog": 4586.150430053928
+    },
+    "Montreal": {
+     "laps": 2,
+     "prog": 4227.256866024016
+    },
+    "Bahrain": {
+     "laps": 2,
+     "prog": 5272.615895556988
+    },
+    "Mexico": {
+     "laps": 2,
+     "prog": 4210.404354165309
+    },
+    "procedural:101": {
+     "laps": 2,
+     "prog": 3650.459715739368
+    },
+    "procedural:103": {
+     "laps": 1,
+     "prog": 3540.9258961507253
+    },
+    "procedural:107": {
+     "laps": 1,
+     "prog": 2791.2745913930744
+    },
+    "procedural:201": {
+     "laps": 2,
+     "prog": 3273.111629456206
+    },
+    "procedural:203": {
+     "laps": 2,
+     "prog": 3498.9922666270504
+    },
+    "procedural:301": {
+     "laps": 2,
+     "prog": 3629.4752740984322
+    },
+    "Zandvoort": {
+     "laps": 3,
+     "prog": 4053.436372983257,
+     "time_med": 134.8
+    }
+   },
+   "elapsed_s": 1106.7285208702087
+  },
+  {
+   "iter": 4,
+   "stage": 1,
+   "n_traffic": 4,
+   "beta": 0.7666666666666667,
+   "dataset": 111538,
+   "val_loss": 0.028691135346889496,
+   "eval": {
+    "interlagos": {
+     "laps": 2,
+     "prog": 4161.974308042329
+    },
+    "Monza": {
+     "laps": 2,
+     "prog": 5645.0911203024825
+    },
+    "Hungaroring": {
+     "laps": 2,
+     "prog": 4181.019370443762
+    },
+    "Silverstone": {
+     "laps": 0,
+     "prog": 5489.942665123552
+    },
+    "Montreal": {
+     "laps": 2,
+     "prog": 4227.411267698877
+    },
+    "Bahrain": {
+     "laps": 2,
+     "prog": 5275.705716857672
+    },
+    "Mexico": {
+     "laps": 2,
+     "prog": 4217.724089980255
+    },
+    "procedural:101": {
+     "laps": 2,
+     "prog": 3636.7355737274165
+    },
+    "procedural:103": {
+     "laps": 2,
+     "prog": 3930.0805339714275
+    },
+    "procedural:107": {
+     "laps": 2,
+     "prog": 3462.2869438382722
+    },
+    "procedural:201": {
+     "laps": 2,
+     "prog": 3270.1126603606917
+    },
+    "procedural:203": {
+     "laps": 2,
+     "prog": 3498.8058109357717
+    },
+    "procedural:301": {
+     "laps": 2,
+     "prog": 3628.009437980196
+    },
+    "Zandvoort": {
+     "laps": 3,
+     "prog": 4052.9518834560345,
+     "time_med": 136.8
+    }
+   },
+   "elapsed_s": 1223.067854642868
+  },
+  {
+   "iter": 5,
+   "stage": 1,
+   "n_traffic": 4,
+   "beta": 0.6888888888888889,
+   "dataset": 138887,
+   "val_loss": 0.02997734397649765,
+   "eval": {
+    "interlagos": {
+     "laps": 2,
+     "prog": 4161.791405163149
+    },
+    "Monza": {
+     "laps": 2,
+     "prog": 5651.654064341721
+    },
+    "Hungaroring": {
+     "laps": 2,
+     "prog": 4179.571361731232
+    },
+    "Silverstone": {
+     "laps": 0,
+     "prog": 5498.544918857884
+    },
+    "Montreal": {
+     "laps": 2,
+     "prog": 4226.068455720091
+    },
+    "Bahrain": {
+     "laps": 2,
+     "prog": 5273.776524811158
+    },
+    "Mexico": {
+     "laps": 2,
+     "prog": 4216.117180558271
+    },
+    "procedural:101": {
+     "laps": 1,
+     "prog": 3558.3011963258123
+    },
+    "procedural:103": {
+     "laps": 2,
+     "prog": 3930.7761134218854
+    },
+    "procedural:107": {
+     "laps": 2,
+     "prog": 3469.7822645260258
+    },
+    "procedural:201": {
+     "laps": 2,
+     "prog": 3271.8555770081744
+    },
+    "procedural:203": {
+     "laps": 2,
+     "prog": 3494.9412499966957
+    },
+    "procedural:301": {
+     "laps": 2,
+     "prog": 3630.032796117223
+    },
+    "Zandvoort": {
+     "laps": 1,
+     "prog": 1953.6223275655086,
+     "time_med": 136.4
+    }
+   },
+   "elapsed_s": 1178.964019060135
+  },
+  {
+   "iter": 6,
+   "stage": 1,
+   "n_traffic": 4,
+   "beta": 0.6111111111111112,
+   "dataset": 166553,
+   "val_loss": 0.0266659464687109,
+   "eval": {
+    "interlagos": {
+     "laps": 2,
+     "prog": 4155.854324804073
+    },
+    "Monza": {
+     "laps": 1,
+     "prog": 5297.439072557034
+    },
+    "Hungaroring": {
+     "laps": 2,
+     "prog": 4177.140590295905
+    },
+    "Silverstone": {
+     "laps": 0,
+     "prog": 5509.335061793217
+    },
+    "Montreal": {
+     "laps": 2,
+     "prog": 4233.834340193876
+    },
+    "Bahrain": {
+     "laps": 2,
+     "prog": 5264.1500828519065
+    },
+    "Mexico": {
+     "laps": 2,
+     "prog": 4206.777893296998
+    },
+    "procedural:101": {
+     "laps": 0,
+     "prog": 1076.5524773800398
+    },
+    "procedural:103": {
+     "laps": 2,
+     "prog": 3928.512317028997
+    },
+    "procedural:107": {
+     "laps": 1,
+     "prog": 2371.2186462824884
+    },
+    "procedural:201": {
+     "laps": 2,
+     "prog": 3269.2893565462755
+    },
+    "procedural:203": {
+     "laps": 2,
+     "prog": 3493.295651167705
+    },
+    "procedural:301": {
+     "laps": 0,
+     "prog": 3448.4636288321726
+    },
+    "Zandvoort": {
+     "laps": 0,
+     "prog": 1836.5476982075054,
+     "time_med": null
+    }
+   },
+   "elapsed_s": 1115.7334380149841
+  },
+  {
+   "iter": 7,
+   "stage": 1,
+   "n_traffic": 4,
+   "beta": 0.5333333333333334,
+   "dataset": 195501,
+   "val_loss": 0.02768056094646454,
+   "eval": {
+    "interlagos": {
+     "laps": 2,
+     "prog": 4158.63492915455
+    },
+    "Monza": {
+     "laps": 2,
+     "prog": 5643.1989221074455
+    },
+    "Hungaroring": {
+     "laps": 2,
+     "prog": 4176.932759535714
+    },
+    "Silverstone": {
+     "laps": 0,
+     "prog": 5491.121205488749
+    },
+    "Montreal": {
+     "laps": 2,
+     "prog": 4227.9145437702955
+    },
+    "Bahrain": {
+     "laps": 2,
+     "prog": 5269.844599748643
+    },
+    "Mexico": {
+     "laps": 2,
+     "prog": 4214.971292158362
+    },
+    "procedural:101": {
+     "laps": 2,
+     "prog": 3645.200788472988
+    },
+    "procedural:103": {
+     "laps": 2,
+     "prog": 3927.8275500195273
+    },
+    "procedural:107": {
+     "laps": 1,
+     "prog": 3253.783079447261
+    },
+    "procedural:201": {
+     "laps": 2,
+     "prog": 3273.228753218648
+    },
+    "procedural:203": {
+     "laps": 2,
+     "prog": 3495.440598682576
+    },
+    "procedural:301": {
+     "laps": 1,
+     "prog": 2939.805868527044
+    },
+    "Zandvoort": {
+     "laps": 0,
+     "prog": 1013.6120117858687,
+     "time_med": null
+    }
+   },
+   "elapsed_s": 1386.8147449493408
+  }
+ ],
+ "obs_mode": "traffic",
+ "sf": 0.8,
+ "tracks": [
+  "interlagos",
+  "Monza",
+  "Hungaroring",
+  "Silverstone",
+  "Montreal",
+  "Bahrain",
+  "Mexico",
+  "procedural:101",
+  "procedural:103",
+  "procedural:107",
+  "procedural:201",
+  "procedural:203",
+  "procedural:301"
+ ],
+ "val_track": "Zandvoort",
+ "stages": [
+  {
+   "n_traffic": 0,
+   "iters": 2
+  },
+  {
+   "n_traffic": 4,
+   "iters": 5
+  },
+  {
+   "n_traffic": 8,
+   "iters": 3
+  }
+ ],
+ "gates": [
+  {
+   "stage": 0,
+   "n_traffic": 0,
+   "best": "model_train/v14b_traffic/dagger_actor_best_s0_n0.keras",
+   "no_traffic_interlagos": {
+    "track": "interlagos",
+    "n_traffic": 0,
+    "laps": 3,
+    "episodes": 3,
+    "time_med": 110.80000000000001,
+    "contacts": 0,
+    "contacts_per_lap": 0.0
+   },
+   "no_traffic_Suzuka": {
+    "track": "Suzuka",
+    "n_traffic": 0,
+    "laps": 3,
+    "episodes": 3,
+    "time_med": 133.0,
+    "contacts": 0,
+    "contacts_per_lap": 0.0
+   },
+   "no_traffic_Silverstone": {
+    "track": "Silverstone",
+    "n_traffic": 0,
+    "laps": 3,
+    "episodes": 3,
+    "time_med": 141.70000000000002,
+    "contacts": 0,
+    "contacts_per_lap": 0.0
+   },
+   "no_traffic_Montreal": {
+    "track": "Montreal",
+    "n_traffic": 0,
+    "laps": 3,
+    "episodes": 3,
+    "time_med": 110.30000000000001,
+    "contacts": 0,
+    "contacts_per_lap": 0.0
+   },
+   "no_traffic_procedural:107": {
+    "track": "procedural:107",
+    "n_traffic": 0,
+    "laps": 3,
+    "episodes": 3,
+    "time_med": 93.2,
+    "contacts": 0,
+    "contacts_per_lap": 0.0
+   },
+   "passed": true
+  },
+  {
+   "stage": 1,
+   "n_traffic": 4,
+   "best": "model_train/v14b_traffic/dagger_actor_best_s1_n4.keras",
+   "no_traffic_interlagos": {
+    "track": "interlagos",
+    "n_traffic": 0,
+    "laps": 3,
+    "episodes": 3,
+    "time_med": 111.4,
+    "contacts": 0,
+    "contacts_per_lap": 0.0
+   },
+   "no_traffic_Suzuka": {
+    "track": "Suzuka",
+    "n_traffic": 0,
+    "laps": 2,
+    "episodes": 3,
+    "time_med": 131.8,
+    "contacts": 0,
+    "contacts_per_lap": 0.0
+   },
+   "no_traffic_Silverstone": {
+    "track": "Silverstone",
+    "n_traffic": 0,
+    "laps": 3,
+    "episodes": 3,
+    "time_med": 144.1,
+    "contacts": 0,
+    "contacts_per_lap": 0.0
+   },
+   "no_traffic_Montreal": {
+    "track": "Montreal",
+    "n_traffic": 0,
+    "laps": 3,
+    "episodes": 3,
+    "time_med": 110.30000000000001,
+    "contacts": 0,
+    "contacts_per_lap": 0.0
+   },
+   "no_traffic_procedural:107": {
+    "track": "procedural:107",
+    "n_traffic": 0,
+    "laps": 3,
+    "episodes": 3,
+    "time_med": 93.2,
+    "contacts": 0,
+    "contacts_per_lap": 0.0
+   },
+   "teacher_baseline": {
+    "track": "interlagos",
+    "n_traffic": 4,
+    "laps": 3,
+    "episodes": 3,
+    "time_med": 123.9,
+    "contacts": 0,
+    "contacts_per_lap": 0.0
+   },
+   "with_traffic": {
+    "track": "interlagos",
+    "n_traffic": 4,
+    "laps": 3,
+    "episodes": 3,
+    "time_med": 119.60000000000001,
+    "contacts": 30,
+    "contacts_per_lap": 10.0
+   },
+   "passed": false
+  }
+ ],
+ "init_actor": "model_train/v14_traffic/init_from_v10.keras",
+ "last_good": {
+  "stage": 1,
+  "n_traffic": 4,
+  "path": "model_train/v14b_traffic/dagger_actor_best_s1_n4.keras",
+  "iter": 3
+ }
+}

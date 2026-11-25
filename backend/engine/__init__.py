@@ -1,0 +1,100 @@
+"""Engine layer.
+
+PyBullet physics + orchestration. Consumes :mod:`racing_sim.domain` and
+publishes state/events.
+"""
+
+from .collisions import CarContact, CollisionTracker, car_contacts_from_raw
+from .events import (
+    AiCommandEvent,
+    CollisionEvent,
+    Event,
+    LapCompletedEvent,
+    OffTrackEvent,
+    OnTrackEvent,
+    PitStopEvent,
+    PositionUpdateEvent,
+    RaceEndEvent,
+    RaceStartEvent,
+    TickEvent,
+    TyreWornEvent,
+    WeatherChangedEvent,
+)
+from .publisher import (
+    JSONLPublisher,
+    NullPublisher,
+    Publisher,
+    RedisPublisher,
+)
+from .physics import PhysicsCarHandle, PyBulletPhysics
+from .simulation import SimulationConfig, SimulationEngine
+from .controllers import (
+    CarController,
+    CarInput,
+    EnvironmentState,
+    ExternalController,
+    InputSourceController,
+    ManualController,
+)
+from .rule_based_race_controller import RuleBasedRaceController
+from .coach_controller import CoachCommand, CoachController, CommandBus
+from .input_source import (
+    FileInputSource,
+    InputEntry,
+    InputSource,
+    InMemoryInputSource,
+    RedisInputSource,
+)
+from .keyboard_pilot import KeyboardPilot, KeyboardPilotConfig
+
+__all__ = [
+    # Events
+    "Event",
+    "RaceStartEvent",
+    "RaceEndEvent",
+    "LapCompletedEvent",
+    "WeatherChangedEvent",
+    "TyreWornEvent",
+    "PitStopEvent",
+    "PositionUpdateEvent",
+    "TickEvent",
+    "CollisionEvent",
+    "OffTrackEvent",
+    "OnTrackEvent",
+    "AiCommandEvent",
+    # Collision detection
+    "CarContact",
+    "CollisionTracker",
+    "car_contacts_from_raw",
+    # Publishers
+    "Publisher",
+    "JSONLPublisher",
+    "RedisPublisher",
+    "NullPublisher",
+    # Physics
+    "PyBulletPhysics",
+    "PhysicsCarHandle",
+    # Simulation
+    "SimulationEngine",
+    "SimulationConfig",
+    # Controllers
+    "CarInput",
+    "EnvironmentState",
+    "CarController",
+    "ManualController",
+    "ExternalController",
+    "InputSourceController",
+    "RuleBasedRaceController",
+    "CoachController",
+    "CoachCommand",
+    "CommandBus",
+    # Input sources
+    "InputEntry",
+    "InputSource",
+    "InMemoryInputSource",
+    "FileInputSource",
+    "RedisInputSource",
+    # Keyboard control (GUI)
+    "KeyboardPilot",
+    "KeyboardPilotConfig",
+]

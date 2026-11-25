@@ -1,0 +1,9 @@
+# Offline track-extraction toolchain. Not needed to run the viewer -
+# public/tracks/*.json is committed. See CLAUDE.md.
+# fastf1 follows the backend's pin (backend/requirements.txt): 3.8.3 wrote the
+# group's cache, F1 live timing now needs a login, and extract_track.py always
+# runs FastF1 in offline mode against an existing cache.
+fastf1==3.8.3
+numpy==1.26.4
+scipy==1.14.1
+matplotlib==3.9.2

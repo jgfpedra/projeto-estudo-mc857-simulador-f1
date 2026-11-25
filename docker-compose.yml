@@ -1,0 +1,53 @@
+services:
+  llama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: >
+      /bin/sh -c "
+      ollama serve &
+      sleep 3 &&
+      ollama pull llama3.2 &&
+      wait"
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./data:/app/data:ro
+    depends_on:
+      - redis
+
+  ai:
+    build: ./ai
+    volumes:
+      - ./data:/app/data:ro
+    depends_on:
+      - llama
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  viz3d:
+    build: ./viz3d
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  ollama_data:
