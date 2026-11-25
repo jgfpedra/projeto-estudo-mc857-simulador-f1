@@ -141,6 +141,8 @@ class RaceSetupRequest(BaseModel):
     year: Optional[int] = Field(None, description="Temporada dos pilotos; com grid e layout explícitos, a pista pode usar outro ano de referência do mesmo layout.")
     season: Optional[int] = Field(None, description="Alias de year para a temporada dos pilotos.")
     user_driver_id: Optional[str] = Field(None, description="Piloto cujo pit stop é solicitado manualmente.")
+    random_seed: Optional[int] = Field(None, ge=0, le=4294967295,
+                                       description="Semente dos bots e suas estratégias; omitida, é sorteada por corrida.")
     weather: Optional[WeatherName] = Field(None, description="Clima inicial. Omitido = dry.")
     weather_change: Optional[WeatherChange] = Field(
         None, description="Omitido = o clima não muda durante a corrida."

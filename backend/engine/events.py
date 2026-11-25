@@ -86,7 +86,7 @@ class PitStopEvent(Event):
 
 @dataclass
 class PitRequestedEvent(Event):
-    """Confirma que a engine registrou o pedido feito pelo usuário."""
+    """Confirma que a engine registrou um pedido manual ou automático."""
     type: str = "pit_requested"
     driver_id: str = ""
     driver_name: str = ""

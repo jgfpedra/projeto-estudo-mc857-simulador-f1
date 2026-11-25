@@ -66,6 +66,7 @@ from .controllers import (
 )
 from domain.pit_lane import ensure_pit_lane
 from .pit_controller import PitController
+from .pit_strategy import decide_pit
 from .input_source import InputEntry, InputSource, InMemoryInputSource
 from .keyboard_pilot import KeyboardPilot
 
@@ -177,6 +178,11 @@ class SimulationEngine:
         self.current_lap: int = 0
         self.race_started: bool = False
         self.race_finished: bool = False
+        # After the leader takes the flag, each other car is classified when
+        # it next crosses the timing line, including cars a lap or more down.
+        self.checkered_sim_ts: Optional[float] = None
+        self.finished_drivers: Dict[str, Tuple[int, float]] = {}
+        self._weather_evaluated_lap = 0
         self.prev_waypoint_idx: Dict[str, int] = {}
         self.max_wp_visited: Dict[str, int] = {}
         self.lap_start_ts: Dict[str, float] = {}
@@ -274,7 +280,8 @@ class SimulationEngine:
             if not self._accepting_pit_commands or self.race_finished:
                 raise RuntimeError('Corrida não está ativa')
             state = self.states.get(driver_id)
-            if (driver_id in self._manual_pit_active or driver_id in self._pit_cancel_commands
+            if (driver_id in self.finished_drivers or driver_id in self._manual_pit_active
+                    or driver_id in self._pit_cancel_commands
                     or (state is not None and state.pitting)):
                 raise RuntimeError('Piloto já possui solicitação manual ou está nos boxes')
             self._pit_commands[driver_id] = compound
@@ -465,6 +472,7 @@ class SimulationEngine:
 
         # Etapa: dar start imediato em weather (avalia no início da volta 1)
         self.weather_model.step(lap=1)
+        self._weather_evaluated_lap = 1
         self._publish_weather_changed(prev_kind=self.last_weather_kind, new_kind=self.weather_model.current.kind, new_lap=1)
 
         # Cap de segurança: 3x o tempo esperado para a corrida
@@ -540,6 +548,7 @@ class SimulationEngine:
             # simultâneos da API. A física continua exclusivamente na thread da corrida.
             with self._pit_command_lock:
                 self._apply_pit_command(drv, state)
+                self._maybe_schedule_auto_pit(drv, state)
                 pit = self._pit_requests.get(drv.driver_id)
                 if pit and (state.pitting or self.pit_controller.should_enter(
                         self.race_s_m.get(drv.driver_id), state.velocity_mps)):
@@ -614,6 +623,9 @@ class SimulationEngine:
             self.race_s_m[driver_id] = (s - start_s) % length
             self.race_lateral_m[driver_id] = float(distance if cross <= 0.0 else -distance)
             previous = self._race_last_s.get(driver_id)
+            if driver_id in self.finished_drivers:
+                self._race_last_s[driver_id] = s
+                continue
             if previous is None:
                 self.race_progress_m[driver_id] = (s - start_s + length * 0.5) % length - length * 0.5
             else:
@@ -625,11 +637,19 @@ class SimulationEngine:
 
     def ranked_drivers(self) -> List[Driver]:
         """Return drivers in circuit order, retaining grid order for ties."""
-        return sorted(
-            self.drivers,
-            key=lambda driver: self.race_progress_m.get(driver.driver_id, float("-inf")),
-            reverse=True,
-        )
+        # Dict insertion order records the crossing order even when two cars
+        # cross in the same logical tick and receive the same timestamp.
+        finish_order = {driver_id: index for index, driver_id in enumerate(self.finished_drivers)}
+        def position_key(driver):
+            entry = self.finished_drivers.get(driver.driver_id)
+            if entry is not None:
+                finish_lap, finish_ts = entry
+                lap_length = self._race_track_length if self.config.track_progress_laps else self.track.length_m
+                return (finish_lap * lap_length, 1, -finish_ts, -finish_order[driver.driver_id])
+            progress = (self.race_progress_m.get(driver.driver_id, float('-inf'))
+                        if self.config.track_progress_laps else self.cum_dist_m.get(driver.driver_id, float('-inf')))
+            return (progress, 0, 0.0, 0)
+        return sorted(self.drivers, key=position_key, reverse=True)
 
     def _compute_aero_drag_multipliers(self) -> Dict[str, float]:
         """Estimate a bounded slipstream from nearby cars ahead in the same lane."""
@@ -878,7 +898,11 @@ class SimulationEngine:
         conta uma excursão pela grama como avanço de volta. O modo legado
         mantém a distância percorrida para ambientes que dependem dela.
         """
-        for drv in self.drivers:
+        # Leader first ensures the checkered flag is registered before another
+        # car that crosses the line during the same simulation tick.
+        for drv in self.ranked_drivers():
+            if drv.driver_id in self.finished_drivers:
+                continue
             state = self.states[drv.driver_id]
             handle = self.handles[drv.driver_id]
             phys = self.physics.get_state(handle)
@@ -906,6 +930,8 @@ class SimulationEngine:
                 self._complete_lap(drv)
 
     def _complete_lap(self, driver: Driver) -> None:
+        if driver.driver_id in self.finished_drivers:
+            return
         state = self.states[driver.driver_id]
         lap_time = self.sim_ts - self.lap_start_ts.get(driver.driver_id, 0.0)
         # O tempo perdido é consequência da passagem física, sem penalidade extra.
@@ -962,35 +988,78 @@ class SimulationEngine:
             ))
             self.last_tyre_warn_pct[driver.driver_id] = state.tyre.tyre_life
 
-        # Avalia transição de clima (no início da nova volta)
-        prev_kind = self.weather_model.current.kind
-        new_weather = self.weather_model.step(lap=state.lap + 1)
-        if new_weather.kind != prev_kind:
-            self._publish_weather_changed(prev_kind=prev_kind, new_kind=new_weather.kind, new_lap=state.lap + 1)
-            self.last_weather_kind = new_weather.kind
+        # The checkered flag is shown to the leader at the planned distance;
+        # every other active driver finishes at their next line crossing.
+        if self.checkered_sim_ts is None and state.lap >= self.config.num_laps:
+            self.checkered_sim_ts = self.sim_ts
+        if self.checkered_sim_ts is not None:
+            self.finished_drivers[driver.driver_id] = (state.lap, self.sim_ts)
+            competitors = {d.driver_id for d in self.drivers} - self._no_lap_drivers
+            self.race_finished = competitors.issubset(self.finished_drivers)
+            if state.lap % self.config.position_update_every_lap == 0:
+                self._publish_position_update(state.lap)
+            return
+
+        # Weather is a single track state, evaluated once per race lap when
+        # the first car reaches it, rather than once for every driver.
+        new_lap = state.lap + 1
+        new_weather = self.weather_model.current
+        if new_lap > self._weather_evaluated_lap:
+            prev_kind = new_weather.kind
+            new_weather = self.weather_model.step(lap=new_lap)
+            self._weather_evaluated_lap = new_lap
+            if new_weather.kind != prev_kind:
+                self._publish_weather_changed(prev_kind=prev_kind, new_kind=new_weather.kind, new_lap=new_lap)
+                self.last_weather_kind = new_weather.kind
 
         # Não reagendar automaticamente na primeira avaliação após cancelamento.
         with self._pit_command_lock:
             if driver.driver_id in self._pit_skip_auto_once:
                 self._pit_skip_auto_once.remove(driver.driver_id)
-            elif (driver.driver_id != self.user_driver_id
-                    and driver.driver_id not in self._pit_requests
-                    and driver.driver_id not in self._pit_commands
-                    and state.needs_pit(self.config.fuel_threshold_kg, self.config.tyre_life_threshold)):
-                new_compound = self._pick_compound_for_weather(new_weather.kind)
-                fuel_to_add = max(0.0, state.car.specs.fuel_capacity_kg * 0.7 - state.car.fuel_kg)
-                self._pit_requests[driver.driver_id] = {
-                    'compound': new_compound, 'fuel': fuel_to_add, 'serviced': False}
+            else:
+                self._maybe_schedule_auto_pit(driver, state)
 
         # Snapshot de posições a cada volta
         if state.lap % self.config.position_update_every_lap == 0:
             self._publish_position_update(state.lap)
 
-        # Verifica término da corrida: termina quando o PRIMEIRO piloto
-        # atinge num_laps (líder da corrida). Os demais param onde estão.
-        leader_laps = max(self.states[d.driver_id].lap for d in self.drivers)
-        if leader_laps >= self.config.num_laps:
-            self.race_finished = True
+    def _maybe_schedule_auto_pit(self, driver: Driver, state: DriverState) -> None:
+        """Called under the pit-command lock; manual requests always win."""
+        driver_id = driver.driver_id
+        if (driver_id == self.user_driver_id or driver_id in self._no_lap_drivers
+                or driver_id in self.finished_drivers or self.checkered_sim_ts is not None
+                or driver_id in self._pit_skip_auto_once or driver_id in self._pit_commands
+                or driver_id in self._pit_cancel_commands or state.pitting):
+            return
+        current = self._pit_requests.get(driver_id)
+        if current and current.get('source') == 'user':
+            return
+        lap_length = self._race_track_length if self.config.track_progress_laps else self.track.length_m
+        distance = (self.race_progress_m.get(driver_id, state.lap * lap_length)
+                    if self.config.track_progress_laps else self.cum_dist_m.get(driver_id, state.lap * lap_length))
+        completed = max(float(state.lap), max(0.0, distance / lap_length)) if lap_length > 0 else float(state.lap)
+        remaining = max(0.0, self.config.num_laps - completed)
+        decision = decide_pit(state, driver, self.weather_model.current, self.track.length_km,
+                              remaining, self.config.fuel_threshold_kg, self.config.tyre_life_threshold,
+                              strategy_seed=self.config.random_seed, race_laps=self.config.num_laps)
+        if current:
+            if decision is None and current.get('reason') == 'weather':
+                del self._pit_requests[driver_id]
+                self.publisher.publish(PitCancelledEvent(sim_ts=self.sim_ts, driver_id=driver_id,
+                                       driver_name=driver.name, lap=state.lap, source='automatic'))
+            elif decision and (decision.compound != current['compound']
+                               or (current.get('reason') == 'weather' and decision.reason != 'weather')):
+                current.update(compound=decision.compound, fuel=decision.fuel_kg, reason=decision.reason, source='automatic')
+                self.publisher.publish(PitRequestedEvent(sim_ts=self.sim_ts, driver_id=driver_id,
+                                       driver_name=driver.name, lap=state.lap,
+                                       tyre_compound=decision.compound.value, source='automatic'))
+            return
+        if decision:
+            self._pit_requests[driver_id] = {'compound': decision.compound, 'fuel': decision.fuel_kg,
+                                             'serviced': False, 'source': 'automatic', 'reason': decision.reason}
+            self.publisher.publish(PitRequestedEvent(sim_ts=self.sim_ts, driver_id=driver_id,
+                                   driver_name=driver.name, lap=state.lap,
+                                   tyre_compound=decision.compound.value, source='automatic'))
 
     def _pick_compound_for_weather(self, weather_kind: WeatherKind) -> TyreCompound:
         if weather_kind == WeatherKind.WET:
@@ -1057,6 +1126,8 @@ class SimulationEngine:
                 "driver_id": d.driver_id,
                 "driver_name": d.name,
                 "laps_completed": s.lap,
+                "finished": d.driver_id in self.finished_drivers,
+                "finish_time_s": self.finished_drivers[d.driver_id][1] if d.driver_id in self.finished_drivers else None,
                 "total_time_s": round(s.total_time_s, 3),
                 "best_lap_time_s": round(s.best_lap_time_s, 3) if s.best_lap_time_s != float("inf") else None,
                 "pit_stops": s.pit_stop_done,
@@ -1146,6 +1217,9 @@ class SimulationEngine:
         return {
             "driver_id": driver.driver_id,
             "driver_name": driver.name,
+            "finished": driver.driver_id in self.finished_drivers,
+            "finish_time_s": (self.finished_drivers[driver.driver_id][1]
+                              if driver.driver_id in self.finished_drivers else None),
             "pit_request": ({"tyre_compound": pit_request["compound"].value,
                              "source": pit_request.get("source", "automatic"),
                              "status": ("in_pit_lane" if self.pit_controller.has_entered(s)

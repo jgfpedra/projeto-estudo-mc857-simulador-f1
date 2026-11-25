@@ -30,7 +30,7 @@ import { Band, PROP_KINDS, propMatrix } from "./layout"
 import type { Layout, PropKind } from "./layout"
 import { QUALITY } from "./quality"
 import type { Quality } from "./quality"
-import { LAYERS, bandGeometry, groundGeometry, openBandGeometry, openLaterals } from "./surfaces"
+import { LAYERS, bandGeometry, groundGeometry, kerbBands, openBandGeometry, openLaterals } from "./surfaces"
 import { PALETTE, kerbTexture, noiseTexture } from "./textures"
 import {
   DRY_LOOK,
@@ -376,6 +376,7 @@ function Surfaces({
 }: Props & { weatherRef: { current: WeatherState } }) {
   const assets = useMemo<SurfaceAssets>(() => {
     const h = widthM / 2
+    const kerbs = kerbBands(widthM)
     const lap: [number, number][] = [[0, frame.lengthM]]
     const seed = layout.seed
     const g: Record<string, BufferGeometry> = {
@@ -384,11 +385,11 @@ function Surfaces({
       asphalt: bandGeometry(frame, -h, h, lap, { y: LAYERS.asphalt.y, alongM: 8, acrossM: 8 }),
       lineL: bandGeometry(frame, -h + 0.25, -h + 0.55, lap, { y: LAYERS.lines.y }),
       lineR: bandGeometry(frame, h - 0.55, h - 0.25, lap, { y: LAYERS.lines.y }),
-      kerbL: bandGeometry(frame, -h - 1.3, -h, layout.kerbs, { y: LAYERS.kerb.y, alongM: 4 }),
-      kerbR: bandGeometry(frame, h, h + 1.3, layout.kerbs, { y: LAYERS.kerb.y, alongM: 4 }),
+      kerbL: bandGeometry(frame, ...kerbs.left, layout.kerbs, { y: LAYERS.kerb.y, alongM: 4 }),
+      kerbR: bandGeometry(frame, ...kerbs.right, layout.kerbs, { y: LAYERS.kerb.y, alongM: 4 }),
       // Brita só por fora: curva à direita (curvatura > 0) tem o lado de fora à esquerda.
-      sandL: bandGeometry(frame, -h - 16, -h - 1.3, layout.sandLeft, { y: LAYERS.sand.y, alongM: 12, acrossM: 12 }),
-      sandR: bandGeometry(frame, h + 1.3, h + 16, layout.sandRight, { y: LAYERS.sand.y, alongM: 12, acrossM: 12 }),
+      sandL: bandGeometry(frame, -h - 16, -h, layout.sandLeft, { y: LAYERS.sand.y, alongM: 12, acrossM: 12 }),
+      sandR: bandGeometry(frame, h, h + 16, layout.sandRight, { y: LAYERS.sand.y, alongM: 12, acrossM: 12 }),
     }
     if (pitLane) {
       const pw = pitLane.widthM / 2

@@ -156,8 +156,9 @@ def test_metadata_uses_exact_engine_geometry_and_unique_drivers(monkeypatch):
     monkeypatch.setattr(module,'RuleBasedRaceController',lambda *a, **k: object())
     monkeypatch.setattr(module.threading,'Thread',Thread)
     store=Store()
-    race_id, track, _=module.RaceManager(store, provider=FallbackProvider()).create_race(3,'interlagos',2023,10)
+    race_id, track, config=module.RaceManager(store, provider=FallbackProvider()).create_race(3,'interlagos',2023,10)
     meta=json.loads(store.values[f'race:{race_id}:meta'])
+    assert meta['random_seed'] == config.random_seed == int(race_id[5:13], 16)
     assert engines[0].track is track
     assert meta['track']['waypoints'] == [list(p) for p in track.waypoints]
     assert meta['track']['width_m'] == track.width_m
@@ -268,11 +269,12 @@ def test_2d_setup_passes_selected_grid_and_options(monkeypatch):
         return 'race-2d', SimpleNamespace(name='Interlagos'), SimpleNamespace(num_laps=args[0])
     monkeypatch.setattr(main.race_manager, 'create_race', create)
     req = RaceSetupRequest.model_validate({'laps': 4, 'circuit': {'id': 'interlagos', 'layout_id': 'interlagos-2'},
-        'year': 2023, 'grid': ['driver-a', 'driver-b'], 'user_driver_id': 'driver-b', 'weather': 'rain', 'initial_tyre': 'wet',
+        'year': 2023, 'grid': ['driver-a', 'driver-b'], 'user_driver_id': 'driver-b', 'weather': 'rain', 'initial_tyre': 'wet', 'random_seed': 0,
         'stints': [{'compound': 'wet', 'laps': 4}]})
     result = main.create_race(req)
     assert calls[0][0] == (4, 'interlagos', 2023)
     assert [d['driver_id'] for d in calls[0][1]['selected_roster']] == ['driver-a', 'driver-b']
+    assert calls[0][1]['random_seed'] == 0
     assert calls[0][1]['user_driver_id'] == 'driver-b'
     assert calls[0][1]['weather'] == 'rain' and calls[0][1]['initial_tyre'] == 'wet'
     assert result.ws_path == '/ws/races/race-2d' and result.warnings
@@ -303,7 +305,8 @@ def test_2d_options_reach_engine_and_metadata(monkeypatch):
     store = Store()
     race_id, _, _ = module.RaceManager(store, provider=FallbackProvider()).create_race(
         1, 'interlagos', 2023, num_drivers=1, selected_roster=roster,
-        weather='rain', initial_tyre='wet', user_driver_id='test-driver')
+        weather='rain', initial_tyre='wet', user_driver_id='test-driver', random_seed=123)
+    assert engines[0].kwargs['config'].random_seed == 123
     assert engines[0].user_driver_id == 'test-driver'
     assert engines[0].kwargs['drivers'][0].starting_tyre_compound == TyreCompound.WET
     assert engines[0].kwargs['weather_model'].current.kind == WeatherKind.WET
@@ -311,3 +314,18 @@ def test_2d_options_reach_engine_and_metadata(monkeypatch):
     meta = json.loads(store.values[f'race:{race_id}:meta'])
     assert meta['drivers'][0]['driver_id'] == 'test-driver'
     assert meta['user_driver_id'] == 'test-driver'
+    assert meta['random_seed'] == 123
+
+
+def test_finished_gaps_do_not_increase_while_other_drivers_continue():
+    tracker = TimingTracker()
+    positions = [
+        {'driver_id': 'A', 'progress_m': 3000, 'lap': 3, 'finished': True, 'finish_time_s': 100.0},
+        {'driver_id': 'B', 'progress_m': 3004, 'lap': 3, 'finished': True, 'finish_time_s': 103.5},
+        {'driver_id': 'C', 'progress_m': 2004, 'lap': 2, 'finished': True, 'finish_time_s': 101.0},
+    ]
+    tracker.update(positions, 120, 1000)
+    assert positions[1]['gap_to_leader_s'] == 3.5
+    assert positions[2]['laps_behind'] == 1 and positions[2]['gap_to_leader_s'] is None
+    tracker.update(positions, 125, 1000)
+    assert positions[1]['gap_to_leader_s'] == 3.5
