@@ -10,6 +10,7 @@ import { RaceView3D } from "@/components/race/view-3d/race-view-3d"
 import { View3DToolbarSlot } from "@/components/race/view-3d/toolbar-slot"
 import { ViewToggle } from "@/components/race/view-toggle"
 import { TimingPanel } from "@/components/race/timing-panel"
+import { UserPitPanel } from "@/components/race/user-pit-panel"
 import { Track2D } from "@/components/race/track-2d"
 import { TRACK_STATUS_LABEL, currentLap, formatClock, weatherLabel } from "@/helpers/race-live"
 import type { RaceStartResponse } from "@/services/api"
@@ -45,6 +46,10 @@ export function RaceSimulation() {
   const disconnect = useLiveRaceStore((s) => s.disconnect)
   const selectDriver = useLiveRaceStore((s) => s.selectDriver)
   const setViewMode = useLiveRaceStore((s) => s.setViewMode)
+  const pitBusy = useLiveRaceStore((s) => s.pitBusy)
+  const pitError = useLiveRaceStore((s) => s.pitError)
+  const requestPit = useLiveRaceStore((s) => s.requestPit)
+  const cancelPit = useLiveRaceStore((s) => s.cancelPit)
   // Onde o 3D põe o seletor de cenário, ao lado da chave 2D/3D.
   const [toolbarSlot, setToolbarSlot] = useState<HTMLDivElement | null>(null)
 
@@ -236,8 +241,8 @@ export function RaceSimulation() {
             </div>
           </section>
 
-          <aside className="flex min-h-0 flex-col gap-6">
-            <section className="flex min-h-[320px] flex-1 flex-col overflow-hidden border border-border bg-card/40">
+          <aside className="flex min-h-0 flex-col gap-4">
+            <section className="flex min-h-0 flex-1 flex-col overflow-hidden border border-border bg-card/40">
               <h2 className="shrink-0 border-b border-border px-4 py-3 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {classification ? "Resultado final" : "Classificação ao vivo"}
               </h2>
@@ -248,10 +253,23 @@ export function RaceSimulation() {
                 classification={classification}
                 selectedDriverId={selectedDriverId}
                 onSelect={selectDriver}
+                controlledDriverId={race.userDriverId}
               />
             </section>
 
-            <section className="flex h-[260px] shrink-0 flex-col overflow-hidden border border-border bg-card/40">
+            {race.userDriverId && (
+              <UserPitPanel
+                race={race}
+                frame={frame}
+                active={status === "live"}
+                busy={pitBusy}
+                error={pitError}
+                onRequest={(tyre) => void requestPit(race.userDriverId ?? "", tyre)}
+                onCancel={() => void cancelPit(race.userDriverId ?? "")}
+              />
+            )}
+
+            <section className="flex h-44 shrink-0 flex-col overflow-hidden border border-border bg-card/40">
               <h2 className="shrink-0 border-b border-border px-4 py-3 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Eventos
               </h2>

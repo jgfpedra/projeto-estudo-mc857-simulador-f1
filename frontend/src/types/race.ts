@@ -14,6 +14,7 @@ export type FeedKind =
   | "collision"
   | "race_control"
   | "finish"
+  | "pit_request"
 
 export type FeedItem = {
   id: number
@@ -74,6 +75,8 @@ export type RaceInfo = {
   track: RaceTrack
   /** Nulo em corridas antigas que não enviam `car_geometry`. */
   carGeometry: CarGeometry | null
+  /** Piloto controlado pelo usuário: recebe pit stop manual. */
+  userDriverId: string | null
   drivers: RaceDriver[]
 }
 
@@ -81,6 +84,14 @@ export type Weather = {
   kind: string
   trackTemp: number
   rainfall: number
+}
+
+/** Pedido de box pendente de um carro (vem no tick). */
+export type PitRequest = {
+  tyreCompound: string
+  source: string
+  /** scheduled | approaching | in_pit_lane */
+  status: string
 }
 
 export type CarFrame = {
@@ -102,6 +113,7 @@ export type CarFrame = {
   sM: number | null
   /** Deslocamento lateral assinado, positivo à direita (`d_m`). */
   dM: number | null
+  pitRequest: PitRequest | null
 }
 
 export type Frame = {
@@ -128,6 +140,9 @@ export type LiveMessage =
   | { kind: "weather_changed"; simTs: number; lap: number; weather: Weather }
   | { kind: "collision"; simTs: number; lap: number; driverAId: string; driverBId: string; impactForceN: number }
   | { kind: "race_end"; simTs: number; classification: FinalEntry[] }
+  | { kind: "pit_requested"; simTs: number; lap: number; driverId: string; tyreCompound: string }
+  | { kind: "pit_cancelled"; simTs: number; lap: number; driverId: string }
+  | { kind: "pit_cancel_rejected"; simTs: number; lap: number; driverId: string; reason: string }
 
 /** GET /races/{race_id}/snapshot. */
 export type RaceSnapshot = {
