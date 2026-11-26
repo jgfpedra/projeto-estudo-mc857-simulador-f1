@@ -15,8 +15,12 @@ DEFAULT_PATH = Path(__file__).resolve().parents[1] / 'config' / 'historical_trac
 
 @lru_cache(maxsize=4)
 def load_f1results_catalog(path=None):
-    selected = Path(path or os.environ.get('F1_RESULTS_ROSTERS_PATH') or DEFAULT_PATH)
-    data = json.loads(selected.read_text(encoding='utf-8'))
+    from storage import postgres
+    if path is None and not os.environ.get('F1_RESULTS_ROSTERS_PATH') and postgres.configured():
+        data = postgres.catalog('f1results_rosters')
+    else:
+        selected = Path(path or os.environ.get('F1_RESULTS_ROSTERS_PATH') or DEFAULT_PATH)
+        data = json.loads(selected.read_text(encoding='utf-8'))
     if not isinstance(data.get('drivers'), dict) or not isinstance(data.get('events'), list):
         raise ValueError('Catálogo F1 Results de pilotos inválido')
     return data
@@ -35,6 +39,8 @@ def _abbreviation(name):
 class F1ResultsDriverDatabase(DriverDatabase):
     """Metadados locais versionados; cores e siglas não constam na fonte."""
     def __init__(self, data=None, default_year=2024):
+        from storage import postgres
+        self._postgres = data is None and not os.environ.get('F1_RESULTS_ROSTERS_PATH') and postgres.configured()
         self.data = data if data is not None else load_f1results_catalog()
         self.default_year = default_year
         self._seasons = {}
@@ -80,6 +86,9 @@ class F1ResultsDriverDatabase(DriverDatabase):
         return event, [self._record(entry, event) for entry in starters]
 
     def load_season_drivers(self, year):
+        if year not in self._seasons and self._postgres:
+            from storage import postgres
+            self._seasons[year] = postgres.season_drivers(year)
         if year not in self._seasons:
             # Um piloto pode mudar de equipe durante a temporada: devolvemos a última
             # inscrição registrada e informamos o GP de origem daquele registro.

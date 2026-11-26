@@ -1,10 +1,47 @@
 """Escolha auditável de um ano de referência para um layout F1DB explícito."""
 from __future__ import annotations
 
-from .historical_f1results import load_historical_snapshot
+from functools import lru_cache
+
+from config.live_tracks import load_live_track
+from .historical_f1results import HistoricalResultsProvider, load_historical_snapshot
 
 # Pistas locais derivadas de telemetria e validadas para a corrida ao vivo.
 _FROZEN_REFERENCE_YEARS = {'interlagos': 2023, 'monza': 2024}
+
+
+@lru_cache(maxsize=4)
+def verified_layout_ids(catalog):
+    """Layouts carregáveis a partir das fontes locais, sem consultas à rede."""
+    snapshot = load_historical_snapshot()
+    provider = HistoricalResultsProvider(snapshot=snapshot, catalog=catalog)
+    circuits = {circuit['id']: circuit for circuit in catalog.circuits}
+    verified = set()
+    for key in snapshot['races']:
+        circuit_id, year_text = key.rsplit(':', 1)
+        circuit = circuits.get(circuit_id)
+        if circuit is None or not year_text.isdigit():
+            continue
+        year = int(year_text)
+        layout = catalog.find_layout(circuit, year)
+        if layout is None or layout['id'] in verified:
+            continue
+        try:
+            provider.load(circuit_id, year)
+        except (OSError, ValueError):
+            continue
+        verified.add(layout['id'])
+    for circuit_id, year in _FROZEN_REFERENCE_YEARS.items():
+        circuit = circuits.get(circuit_id)
+        layout = catalog.find_layout(circuit, year) if circuit else None
+        if layout is None or layout['id'] in verified:
+            continue
+        try:
+            load_live_track(circuit_id, year)
+        except (OSError, ValueError):
+            continue
+        verified.add(layout['id'])
+    return frozenset(verified)
 
 
 def candidate_reference_years(catalog, circuit, layout, excluded=()):

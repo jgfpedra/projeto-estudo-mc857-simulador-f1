@@ -55,9 +55,13 @@ class LayoutCatalog:
 
 @lru_cache(maxsize=4)
 def load_layout_catalog(path=None):
-    path = Path(path or os.environ.get('F1DB_LAYOUTS_PATH') or DEFAULT_PATH)
-    with path.open(encoding='utf-8') as stream:
-        data = json.load(stream)
+    from storage import postgres
+    if path is None and not os.environ.get('F1DB_LAYOUTS_PATH') and postgres.configured():
+        data = postgres.catalog('f1db_layouts')
+    else:
+        path = Path(path or os.environ.get('F1DB_LAYOUTS_PATH') or DEFAULT_PATH)
+        with path.open(encoding='utf-8') as stream:
+            data = json.load(stream)
     if not isinstance(data.get('circuits'), list):
         raise ValueError('Catálogo F1DB inválido: circuits ausente')
     return LayoutCatalog(data)

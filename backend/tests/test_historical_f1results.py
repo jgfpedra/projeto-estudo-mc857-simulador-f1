@@ -9,7 +9,7 @@ import pytest
 import pybullet as pb
 
 from api.providers.historical_f1results import HistoricalResultsProvider, load_historical_snapshot
-from api.providers.race_data import ProviderChain
+from api.providers.race_data import OpenF1Provider, ProviderChain, default_provider
 from config import DEFAULT_DRIVERS, DEFAULT_INTERLAGOS_CONFIG
 from engine import RuleBasedRaceController, SimulationEngine
 
@@ -59,6 +59,54 @@ def test_historical_provider_chain_exposes_provenance():
     assert source['track_provenance']['reference_length_m'] == 7960
     assert source['track_provenance']['source_layout_id'] == 50
     assert track.source == 'f1results_svg'
+
+
+@pytest.mark.parametrize('circuit,year,length_m,source_layout_id', [
+    ('interlagos', 2023, 4309.0, 51),
+    ('monza', 2024, 5793.0, 107),
+])
+def test_default_provider_prefers_the_local_svg_snapshot(monkeypatch, circuit, year, length_m, source_layout_id):
+    monkeypatch.setattr(OpenF1Provider, 'load', lambda *_: pytest.fail('SVG disponível deve evitar a consulta OpenF1'))
+
+    track, drivers, sources = default_provider().load(circuit, year)
+
+    assert track.source == sources['track_source'] == 'f1results_svg'
+    assert track.length_m == pytest.approx(length_m)
+    assert sources['track_provenance']['source_layout_id'] == source_layout_id
+    assert sources['driver_source'] == 'f1results_database'
+    assert len(drivers) == 20
+
+
+def test_default_provider_uses_openf1_if_catalog_has_no_svg(monkeypatch):
+    monkeypatch.setattr(
+        'api.providers.historical_f1results.load_historical_snapshot',
+        lambda: {'geometries': {}, 'races': {}},
+    )
+    track = SimpleNamespace(source='openf1')
+    drivers = [{'driver_id': 'test-driver'}]
+    monkeypatch.setattr(OpenF1Provider, 'load', lambda *_: (
+        track, drivers, {'track_source': 'openf1', 'driver_source': 'openf1'},
+    ))
+
+    assert default_provider().load('interlagos', 2023) == (
+        track, drivers, {'track_source': 'openf1', 'driver_source': 'openf1'},
+    )
+
+
+def test_race_catalog_excludes_circuits_and_layouts_without_local_geometry():
+    from api.main import list_circuits
+
+    available = {c['id']: c for c in list_circuits()['circuits']}
+    full = {c['id']: c for c in list_circuits(include_unavailable=True)['circuits']}
+    for circuit_id in ('caesars-palace', 'brands-hatch', 'avus'):
+        assert circuit_id not in available
+        assert not full[circuit_id]['simulable']
+    assert all(c['simulable'] and c['layouts'] and all(l['simulable'] for l in c['layouts'])
+               for c in available.values())
+    assert 'monza-2' not in {layout['id'] for layout in available['monza']['layouts']}
+    # Having a recent season is not enough to claim the geometry is available.
+    assert 'las-vegas' not in available and not full['las-vegas']['simulable']
+    assert 'ain-diab' in available
 
 
 def test_historical_grid_pose_and_first_ten_seconds():

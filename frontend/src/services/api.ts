@@ -67,6 +67,7 @@ const pickSvg = (svg: Record<string, string | null> | null | undefined): string 
   svg?.["white-outline"] ?? svg?.["white"] ?? svg?.["black-outline"] ?? svg?.["black"] ?? null
 
 function mapLayout(l: ApiLayout): CircuitLayout {
+  const svg = pickSvg(l.svg)
   return {
     id: l.id,
     periods: l.years,
@@ -74,7 +75,7 @@ function mapLayout(l: ApiLayout): CircuitLayout {
     lastYear: l.last_year,
     lengthKm: l.length_km,
     turns: l.turns,
-    svgUrl: pickSvg(l.svg),
+    svgUrl: svg?.startsWith("/") ? `${API_BASE_URL}${svg}` : svg,
     isCurrent: l.is_current,
     simulable: l.simulable,
   }

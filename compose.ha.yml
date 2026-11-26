@@ -1,0 +1,119 @@
+services:
+  backend:
+    restart: unless-stopped
+    build: ./backend
+    environment:
+      REDIS_SENTINELS: sentinel-1:26379,sentinel-2:26379,sentinel-3:26379
+      REDIS_SENTINEL_MASTER: mymaster
+      F1_DISTRIBUTED_COMMANDS: "1"
+      F1_CHECKPOINT_SECRET: ${F1_CHECKPOINT_SECRET:-f1-development-checkpoint}
+      DATABASE_URL: postgresql://f1:${POSTGRES_PASSWORD:-f1dev}@postgres:5432/f1sim
+    deploy:
+      replicas: 2
+    depends_on:
+      sentinel-1:
+        condition: service_started
+      sentinel-2:
+        condition: service_started
+      sentinel-3:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: f1
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-f1dev}
+      POSTGRES_DB: f1sim
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U f1 -d f1sim"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  gateway:
+    restart: unless-stopped
+    image: nginx:alpine
+    ports: ["${F1_API_PORT:-8000}:8000"]
+    volumes:
+      - ./deploy/ha/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/ha/nginx-main.conf:/etc/nginx/nginx.conf:ro
+    depends_on: [backend]
+  gateway-alt:
+    restart: unless-stopped
+    image: nginx:alpine
+    ports: ["${F1_ALT_API_PORT:-8001}:8000"]
+    volumes:
+      - ./deploy/ha/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/ha/nginx-main.conf:/etc/nginx/nginx.conf:ro
+    depends_on: [backend]
+  redis-1:
+    restart: unless-stopped
+    image: redis:7-alpine
+    entrypoint: ["sh", "/redis-ha.sh"]
+    volumes: ["redis1:/data", "./deploy/ha/redis.sh:/redis-ha.sh:ro"]
+    networks: { default: { ipv4_address: 172.29.163.11 } }
+  redis-2:
+    restart: unless-stopped
+    image: redis:7-alpine
+    entrypoint: ["sh", "/redis-ha.sh"]
+    environment: { INITIAL_REPLICA_OF: "172.29.163.11" }
+    volumes: ["redis2:/data", "./deploy/ha/redis.sh:/redis-ha.sh:ro"]
+    networks: { default: { ipv4_address: 172.29.163.12 } }
+  redis-3:
+    restart: unless-stopped
+    image: redis:7-alpine
+    entrypoint: ["sh", "/redis-ha.sh"]
+    environment: { INITIAL_REPLICA_OF: "172.29.163.11" }
+    volumes: ["redis3:/data", "./deploy/ha/redis.sh:/redis-ha.sh:ro"]
+    networks: { default: { ipv4_address: 172.29.163.13 } }
+  sentinel-1:
+    restart: unless-stopped
+    image: redis:7-alpine
+    entrypoint: ["sh", "/sentinel.sh"]
+    environment: { SENTINEL_HOSTNAME: sentinel-1 }
+    volumes: ["./deploy/ha/sentinel.sh:/sentinel.sh:ro", "sentinel1:/data"]
+    depends_on: [redis-1, redis-2, redis-3]
+  sentinel-2:
+    restart: unless-stopped
+    image: redis:7-alpine
+    entrypoint: ["sh", "/sentinel.sh"]
+    environment: { SENTINEL_HOSTNAME: sentinel-2 }
+    volumes: ["./deploy/ha/sentinel.sh:/sentinel.sh:ro", "sentinel2:/data"]
+    depends_on: [redis-1, redis-2, redis-3]
+  sentinel-3:
+    restart: unless-stopped
+    image: redis:7-alpine
+    entrypoint: ["sh", "/sentinel.sh"]
+    environment: { SENTINEL_HOSTNAME: sentinel-3 }
+    volumes: ["./deploy/ha/sentinel.sh:/sentinel.sh:ro", "sentinel3:/data"]
+    depends_on: [redis-1, redis-2, redis-3]
+  frontend:
+    restart: unless-stopped
+    build: ./frontend
+    ports: ["${F1_FRONTEND_PORT:-3000}:80"]
+    volumes: ["./deploy/ha/frontend-nginx.conf:/etc/nginx/conf.d/default.conf:ro"]
+    depends_on: [gateway, gateway-alt]
+  viz3d:
+    restart: unless-stopped
+    build:
+      context: ./viz3d
+      args: { VITE_USE_API_PROXY: "1" }
+    ports: ["${F1_VIZ3D_PORT:-3001}:80"]
+    volumes: ["./deploy/ha/viz3d-nginx.conf:/etc/nginx/conf.d/default.conf:ro"]
+    depends_on: [gateway, gateway-alt]
+volumes:
+  postgres_data:
+  redis1:
+  redis2:
+  redis3:
+  sentinel1:
+  sentinel2:
+  sentinel3:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.29.163.0/24

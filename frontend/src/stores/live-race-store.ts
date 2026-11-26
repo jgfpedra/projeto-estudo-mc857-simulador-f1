@@ -17,6 +17,7 @@ import type {
 
 const FEED_LIMIT = 200
 const MAX_RECONNECTS = 5
+const RACE_CANCELLED_MESSAGE = "Corrida encerrada por falta de espectadores."
 /** Tempo de simulação em que a mesma ultrapassagem não é contada de novo. */
 const PASS_DEDUP_S = 5
 
@@ -100,6 +101,8 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
       if (snap.lastFrame) set({ frame: snap.lastFrame, prevFrame: null, frameAt: performance.now() })
       if (snap.status === "finished") {
         set({ status: "finished", classification: snap.classification })
+      } else if (snap.status === "cancelled") {
+        set({ status: "error", error: RACE_CANCELLED_MESSAGE })
       }
     } catch {
       // Se falhar, a próxima reconexão ressincroniza de novo.
@@ -115,7 +118,9 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
         const interval =
           measured > 0 && measured < 1000 ? 0.8 * tickIntervalMs + 0.2 * measured : tickIntervalMs
 
-        for (const o of detectOvertakes(prev, msg.frame)) {
+        const rewound = prev !== null && msg.frame.simTs < prev.simTs
+        if (rewound) lastPass.clear()
+        for (const o of detectOvertakes(rewound ? null : prev, msg.frame)) {
           const key = `${o.passerId}>${o.passedId}`
           const last = lastPass.get(key)
           if (last !== undefined && msg.frame.simTs - last < PASS_DEDUP_S) continue
@@ -130,7 +135,7 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
           })
         }
 
-        set({ prevFrame: prev, frame: msg.frame, frameAt: now, tickIntervalMs: interval })
+        set({ prevFrame: rewound ? null : prev, frame: msg.frame, frameAt: now, tickIntervalMs: interval })
         return
       }
 
@@ -262,6 +267,10 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
           set({ status: "error", error: "Corrida não encontrada no simulador." })
           return
         }
+        if (code === 4410) {
+          set({ status: "error", error: RACE_CANCELLED_MESSAGE })
+          return
+        }
 
         if (attempts >= MAX_RECONNECTS) {
           set({ status: "error", error: "Conexão com o simulador perdida." })
@@ -305,7 +314,8 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
           frame: snap.lastFrame,
           frameAt: performance.now(),
           classification: snap.classification,
-          status: snap.status === "finished" ? "finished" : "loading",
+          status: snap.status === "finished" ? "finished" : snap.status === "cancelled" ? "error" : "loading",
+          error: snap.status === "cancelled" ? RACE_CANCELLED_MESSAGE : null,
         })
 
         if (snap.status === "running") openFeed(raceId, current)

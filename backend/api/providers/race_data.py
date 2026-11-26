@@ -218,4 +218,9 @@ class ProviderChain:
 
 def default_provider():
     from .historical_f1results import HistoricalResultsProvider
-    return ProviderChain([OpenF1Provider(), HistoricalRosterProvider(), FallbackProvider(), HistoricalResultsProvider()])
+    return ProviderChain([
+        HistoricalResultsProvider(),
+        OpenF1Provider(),
+        HistoricalRosterProvider(),
+        FallbackProvider(),
+    ])

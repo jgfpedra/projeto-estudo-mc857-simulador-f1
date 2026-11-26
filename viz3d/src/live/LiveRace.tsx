@@ -18,7 +18,7 @@ import type { LiveTrack } from './track'
 import { StartFinishLine } from './StartFinishLine'
 
 type Meta = { race_id: string; num_laps: number; car_geometry?: { length_m: number; width_m: number; height_m: number }; track: LiveTrack; drivers: { driver_id: string; name: string; grid_position: number }[] }
-const api = (import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8000`).replace(/\/$/, '')
+const api = (import.meta.env.VITE_API_URL || (import.meta.env.VITE_USE_API_PROXY === '1' ? window.location.origin : `${window.location.protocol}//${window.location.hostname}:8000`)).replace(/\/$/, '')
 
 export function LiveRace() {
   const [raceId, setRaceId] = useState(() => new URLSearchParams(location.search).get('race') || '')
@@ -63,10 +63,15 @@ export function LiveRace() {
             if (buffer.current.revision !== previousRevision) setCutKey((key) => key + 1)
             for (const p of next.positions) initial.current[p.driver_id] ??= p.progress_m
             setTick((current) => current ?? next)
-          } else if (event.type === 'race_end' || event.type === 'race_error') {
+          } else if (event.type === 'race_recovered') {
+            buffer.current.resetForRecovery()
+            setCutKey((key) => key + 1)
+            setStatus('Corrida retomada')
+          } else if (event.type === 'race_end' || event.type === 'race_error' || event.type === 'race_cancelled') {
             finished = true
             buffer.current.finish()
-            setStatus(event.type === 'race_end' ? 'Corrida encerrada' : `Erro: ${event.message}`)
+            setStatus(event.type === 'race_end' ? 'Corrida encerrada' :
+              event.type === 'race_cancelled' ? event.message : `Erro: ${event.message}`)
           }
         }
         socket.onclose = () => {

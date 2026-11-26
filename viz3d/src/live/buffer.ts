@@ -30,6 +30,16 @@ export class LiveBuffer {
 
   constructor(private readonly delayS = 0.15) {}
 
+  resetForRecovery(): void {
+    this.frames = []
+    this.cursor = 0
+    this.lastWallMs = null
+    this.buffering = true
+    this.resetOnNextTick = false
+    this.finished = false
+    this.revision++
+  }
+
   push(tick: LiveTick): boolean {
     const previous = this.frames[this.frames.length - 1]
     if (previous && tick.sim_ts <= previous.sim_ts) return false
