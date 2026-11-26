@@ -43,13 +43,10 @@ services:
 
   ai:
     build: ./ai
-    environment:
-      REDIS_URL: redis://redis:6379/0
-      OLLAMA_URL: http://llama:11434
-      AI_INTERVAL_SECONDS: ${AI_INTERVAL_SECONDS:-10}
+    volumes:
+      - ./data:/app/data:ro
     depends_on:
       - llama
-      - redis
 
   frontend:
     build: ./frontend

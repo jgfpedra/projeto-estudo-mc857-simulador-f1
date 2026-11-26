@@ -1,6 +1,11 @@
-FROM python:3.12-slim
-WORKDIR /app
-RUN pip install --no-cache-dir 'redis>=5,<7' 'requests>=2.32,<3'
-COPY app/ /app/
-ENV PYTHONUNBUFFERED=1
-CMD ["python", "consumer.py"]
+FROM ollama/ollama:latest
+
+# Porta padrão da API do Ollama
+EXPOSE 11434
+
+# Sobe o servidor e, na primeira execução, baixa o modelo
+ENTRYPOINT ["/bin/sh", "-c", "\
+  ollama serve & \
+  sleep 3 && \
+  ollama pull llama3.2 && \
+  wait"]
