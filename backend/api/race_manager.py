@@ -24,6 +24,7 @@ from config.live_tracks import load_live_track
 from engine.physics import CHASSIS_LENGTH_M, CHASSIS_WIDTH_M, CHASSIS_HEIGHT_M
 from domain.pit_lane import ensure_pit_lane
 from domain import TyreCompound, WeatherKind, WeatherModel, WeatherTransitionConfig, BASE_CONDITIONS
+from .catalog import get_catalog
 from engine import (
     CoachController,
     CommandBus,
@@ -198,6 +199,7 @@ class RaceManager:
     def __init__(self, client=None, provider=None, catalog=None):
         # provider e catalog são mantidos para compatibilidade com testes,
         # mas não são usados na versão live_tracks.
+        self.catalog = catalog
         self.redis = client or redis.Redis.from_url(REDIS_URL, decode_responses=True, socket_connect_timeout=2)
         self._threads = {}
         self._buses = {}
@@ -210,6 +212,25 @@ class RaceManager:
         if not 1 <= num_drivers <= 24:
             raise ValueError('A quantidade de corredores deve estar entre 1 e 24.')
         self.redis.ping()
+        
+        # Valida se o circuito existe no catálogo para o ano solicitado
+        if self.catalog:
+            circuit = self.catalog.circuit(track)
+            if circuit is None:
+                raise ValueError(f"Circuito '{track}' não encontrado no catálogo")
+            # Verifica se há layout para o ano
+            layout = self.catalog.find_layout(circuit, year)
+            if layout is None:
+                available_years = []
+                for l in circuit.get("layouts", []):
+                    fy = l.get("first_year") or (l.get("years", [0])[0] if l.get("years") else 0)
+                    ly = l.get("last_year") or (l.get("years", [-1])[-1] if l.get("years") else 0)
+                    available_years.append(f"{fy}-{ly}")
+                raise ValueError(
+                    f"Circuito '{track}' não tem layout para o ano {year}. "
+                    f"Anos disponíveis: {', '.join(available_years)}"
+                )
+        
         track_obj = load_live_track(track_name=track, year=year)
         race_id = f'race_{uuid.uuid4().hex}'
         gui = os.environ.get('F1_PYBULLET_GUI', '').lower() in ('1', 'true', 'yes', 'on')
@@ -335,4 +356,4 @@ class RaceManager:
         return json.loads(value) if value else None
 
 
-race_manager = RaceManager()
+race_manager = RaceManager(catalog=get_catalog())

@@ -8,7 +8,7 @@ SESSION="f1-all"
 LAPS="${F1_LAPS:-3}"
 DRIVERS="${F1_DRIVERS:-10}"
 FOLLOWED="${F1_FOLLOWED:-drv_02}"
-PY="${F1_PY:-}"
+PY="${F1_PY:-.venv/bin/python}"
 
 if [ -z "$PY" ] || [ ! -x "$PY" ]; then
   echo "ERRO: defina F1_PY (ex.: export F1_PY=\$HOME/venvs/f1/bin/python)"; exit 1

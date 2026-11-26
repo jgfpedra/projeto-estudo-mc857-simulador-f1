@@ -298,25 +298,40 @@ class FastF1TrackLoader:
         need_telemetry = load_session and grid_from_telemetry
 
         if load_session and hasattr(ff1_session, "load"):
+            # Tenta carregamento completo primeiro
             try:
                 ff1_session.load(
-                    #llaps=True if need_telemetry else False,
-                    #telemetry=need_telemetry,
                     laps=True,
                     telemetry=True,
-                    weather=False,
+                    weather=True,
                     messages=False,
                 )
             except TypeError:
-                ff1_session.load(laps=need_telemetry, telemetry=need_telemetry, weather=False)
+                # Fallback para API antiga
+                try:
+                    ff1_session.load(laps=True, telemetry=True, weather=True, messages=False)
+                except TypeError:
+                    ff1_session.load(laps=need_telemetry, telemetry=need_telemetry, weather=False)
             except Exception as exc:
                 raise CircuitLoadError(
                     f"FastF1 failed to load session year={year!r} event={event!r} "
                     f"session={session!r}"
                 ) from exc
 
+        # Garante que circuit_info esteja disponível - força load se necessário
         try:
             raw_info = ff1_session.get_circuit_info()
+        except Exception as exc:
+            # Último recurso: força load completo sem parâmetros
+            try:
+                if hasattr(ff1_session, "load"):
+                    ff1_session.load()
+                raw_info = ff1_session.get_circuit_info()
+            except Exception as exc2:
+                raise CircuitLoadError(
+                    f"FastF1 could not load circuit info for year={year!r} "
+                    f"event={event!r} session={session!r}: {exc2}"
+                ) from exc2
         except Exception as exc:
             raise CircuitLoadError(
                 f"FastF1 could not load circuit info for year={year!r} "
