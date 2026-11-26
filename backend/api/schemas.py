@@ -218,3 +218,44 @@ class PitStopCancelResponse(BaseModel):
     race_id: str
     driver_id: str
     status: str = 'cancellation_queued'
+
+
+# ---------------------------------------------------------------------------
+# Coach commands (POST /races/{race_id}/drivers/{driver_id}/command)
+# ---------------------------------------------------------------------------
+
+class CoachCommandName(str, Enum):
+    """Comandos de alto nível que o engenheiro entende."""
+    neutral = "neutral"
+    push = "push"
+    attack = "attack"
+    atacar = "atacar"
+    conserve = "conserve"
+    economizar = "economizar"
+    careful = "careful"
+    cuidado = "cuidado"
+    defend = "defend"
+    defender = "defender"
+    overtake = "overtake"
+    ultrapassar = "ultrapassar"
+    pace = "pace"
+
+
+class CoachCommandRequest(BaseModel):
+    """Envia comando de alto nível para o engenheiro de um piloto."""
+    model_config = ConfigDict(extra="forbid")
+
+    command: CoachCommandName
+    value: float = Field(0.0, ge=0.0, le=2.0, description="Usado apenas para 'pace' (multiplicador 0.5-1.15).")
+    reason: str = Field("", description="Motivo do comando (exibido no HUD).")
+    issued_by: str = Field("user", description="Origem: 'user', 'llm', 'ai', etc.")
+
+
+class CoachCommandResponse(BaseModel):
+    race_id: str
+    driver_id: str
+    command: str
+    value: float
+    reason: str
+    issued_by: str
+    status: str = "queued"

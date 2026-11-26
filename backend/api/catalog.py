@@ -40,6 +40,21 @@ class Catalog:
             for d in self.seasons[year]:
                 self._driver_by_id[d["id"]] = d
 
+    @property
+    def data(self) -> Dict[str, Any]:
+        """Compatibilidade com código que espera atributo 'data' (ex: LayoutCatalog)."""
+        return self.raw
+
+    @property
+    def provenance(self) -> Dict[str, Any]:
+        """Metadados de origem do catálogo."""
+        return {
+            "version": self.raw.get("version"),
+            "source": self.raw.get("source"),
+            "generated_at": self.raw.get("generated_at"),
+            "fastf1_min_year": self.raw.get("fastf1_min_year"),
+        }
+
     # -- temporadas / pilotos ------------------------------------------------
 
     def season_years(self) -> List[int]:
@@ -55,6 +70,9 @@ class Catalog:
 
     def circuit(self, circuit_id: str) -> Optional[Dict[str, Any]]:
         return self._circuit_by_id.get(circuit_id)
+
+    # Alias para compatibilidade
+    find_circuit = circuit
 
     def resolve_layout(
         self, circuit_id: str, layout_id: Optional[str] = None
@@ -74,6 +92,15 @@ class Catalog:
         raise CatalogLookupError(
             f"traçado '{layout_id}' não existe no circuito '{circuit_id}' (válidos: {valid})"
         )
+
+    def find_layout(self, circuit: Dict[str, Any], year: int) -> Optional[Dict[str, Any]]:
+        """Encontra o traçado do circuito para um dado ano."""
+        for layout in circuit.get("layouts", []):
+            first = layout.get("first_year") or (layout.get("years", [0])[0] if layout.get("years") else 0)
+            last = layout.get("last_year") or (layout.get("years", [-1])[-1] if layout.get("years") else 0)
+            if first <= year <= last:
+                return layout
+        return None
 
 
 def load_catalog(path: Optional[Path] = None) -> Catalog:

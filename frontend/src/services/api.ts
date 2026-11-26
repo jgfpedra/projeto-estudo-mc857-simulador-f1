@@ -129,6 +129,22 @@ export const api = {
     )
   },
 
+  /** Envia comando de alto nível para o engenheiro de pista do piloto. */
+  async sendCoachCommand(
+    raceId: string,
+    driverId: string,
+    command: "neutral" | "push" | "attack" | "atacar" | "conserve" | "economizar" |
+             "careful" | "cuidado" | "defend" | "defender" | "overtake" | "ultrapassar" | "pace",
+    value: number = 0,
+    reason: string = "",
+    issuedBy: string = "user",
+  ): Promise<void> {
+    await request<unknown>(
+      `/races/${encodeURIComponent(raceId)}/drivers/${encodeURIComponent(driverId)}/command`,
+      { method: "POST", body: { command, value, reason, issued_by: issuedBy } },
+    )
+  },
+
   async getRace(raceId: string): Promise<RaceInfo> {
     const race = parseRaceInfo(await request<unknown>(`/races/${encodeURIComponent(raceId)}`))
     if (!race) throw new Error("Resposta inválida ao carregar a corrida.")

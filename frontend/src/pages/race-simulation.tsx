@@ -12,6 +12,7 @@ import { ViewToggle } from "@/components/race/view-toggle"
 import { TimingPanel } from "@/components/race/timing-panel"
 import { UserPitPanel } from "@/components/race/user-pit-panel"
 import { Track2D } from "@/components/race/track-2d"
+import { AiFloatingPanel } from "@/components/race/ai/ai-floating-panel"
 import { TRACK_STATUS_LABEL, currentLap, formatClock, weatherLabel } from "@/helpers/race-live"
 import type { RaceStartResponse } from "@/services/api"
 import { useLiveRaceStore, type LiveStatus } from "@/stores/live-race-store"
@@ -42,6 +43,11 @@ export function RaceSimulation() {
   const classification = useLiveRaceStore((s) => s.classification)
   const selectedDriverId = useLiveRaceStore((s) => s.selectedDriverId)
   const viewMode = useLiveRaceStore((s) => s.viewMode)
+  const aiSuggestions = useLiveRaceStore((s) => s.aiSuggestions)
+  const aiCommands = useLiveRaceStore((s) => s.aiCommands)
+  const aiEngineerStatus = useLiveRaceStore((s) => s.aiEngineerStatus)
+  const aiEngineerStats = useLiveRaceStore((s) => s.aiEngineerStats)
+  const aiEngineerError = useLiveRaceStore((s) => s.aiEngineerError)
   const load = useLiveRaceStore((s) => s.load)
   const disconnect = useLiveRaceStore((s) => s.disconnect)
   const selectDriver = useLiveRaceStore((s) => s.selectDriver)
@@ -166,6 +172,21 @@ export function RaceSimulation() {
                 <RaceBanner items={feed} simTs={frame?.simTs ?? 0} />
               </div>
 
+              {/* Painel flutuante do engenheiro de IA (2D e 3D) - fora do canvas, posição fixa */}
+              <AiFloatingPanel
+                engineerStatus={aiEngineerStatus}
+                engineerStats={aiEngineerStats}
+                engineerError={aiEngineerError}
+                raceId={race.raceId}
+                raceName={race.track.name}
+                followedDriverId={race.userDriverId ?? selectedDriverId}
+                followedDriverName={race.drivers.find(d => d.driverId === (race.userDriverId ?? selectedDriverId))?.name ?? (race.userDriverId ?? selectedDriverId ?? "—")}
+                suggestions={aiSuggestions}
+                commands={aiCommands}
+                position="top-right"
+                initiallyCollapsed={false}
+              />
+
               <div className="absolute inset-0 p-6 pt-16">
                 {viewMode === "2d" ? (
                   mapReady ? (
@@ -182,6 +203,8 @@ export function RaceSimulation() {
                       frame={frame}
                       selectedDriverId={selectedDriverId}
                       onSelectDriver={selectDriver}
+                      aiSuggestions={aiSuggestions}
+                      aiCommands={aiCommands}
                     />
                   </View3DToolbarSlot.Provider>
                 )}

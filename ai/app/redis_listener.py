@@ -10,9 +10,32 @@ from live_context import (
 )
 from client import call_model, warm_up
 from schemas import validate_agent_output, fallback_output
+from fallback_tactical import get_fallback_tactical, build_race_context_from_state
+from metrics import record_ollama_call, record_duplicate_suppressed, start_periodic_flush
 
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
+
+
+def _should_stay_silent(is_real_event: bool, new_command: str, new_text: str,
+                        last_command: str | None, last_text: str | None) -> bool:
+    """
+    Decide se o engenheiro deve ficar em silêncio (não publicar sugestão).
+
+    Regras anti-repetição:
+    - Evento real: fala se comando OU texto mudou (não engole mudança de plano).
+    - Gatilho periódico: só fala se comando E texto são novos (não repete nem um nem outro).
+    - Primeira mensagem: sempre fala.
+    """
+    if last_command is None or last_text is None:
+        return False  # primeira mensagem sempre fala
+
+    if is_real_event:
+        # Evento real (ex.: rádio da equipe, saída de pista): não engole mudança de plano
+        return new_command == last_command and new_text == last_text
+
+    # Gatilho periódico (timer): silenciar se só comando OU só texto repete
+    return new_command == last_command or new_text == last_text
 
 
 def build_live_prompt(context_text: str) -> str:
@@ -48,20 +71,82 @@ Se nada exige ação, diga que está tudo sob controle e use urgência baixa.
 """
 
 
-def run_listener(race_id: str, followed_driver_id: str, periodic_s: float = 10.0):
+def _race_id_from_channel(channel) -> str | None:
+    """Extrai o ``race_id`` de um canal ``race:<id>:events``."""
+    if isinstance(channel, bytes):
+        channel = channel.decode("utf-8", "ignore")
+    parts = str(channel).split(":")
+    if len(parts) >= 3 and parts[0] == "race" and parts[2] == "events":
+        return parts[1]
+    return None
+
+
+def _resolve_followed_driver(r, race_id: str, default: str) -> str:
+    """Piloto que o engenheiro acompanha naquela corrida.
+
+    A API grava o piloto escolhido pelo jogador em ``race:<id>:meta``. Usar o
+    valor da corrida é o que liga o seletor "Piloto Controlado / Focado" da UI
+    ao engenheiro; o valor de ``F1_FOLLOWED_DRIVER`` fica só como fallback para
+    corridas antigas ou criadas sem ``user_driver_id``.
+    """
+    raw = r.get(f"race:{race_id}:meta")
+    if not raw:
+        return default
+    try:
+        meta = json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        return default
+    return meta.get("followed_driver_id") or meta.get("user_driver_id") or default
+
+
+def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float = 10.0):
     r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
     pubsub = r.pubsub()
-    events_channel = f"race:{race_id}:events"
-    pubsub.subscribe(events_channel)
+    if race_id:
+        events_channel = f"race:{race_id}:events"
+        pubsub.subscribe(events_channel)
+        print(f"[ai_listener] assinando {events_channel}...")
+    else:
+        # Sem corrida explícita: acompanha qualquer corrida criada pela API.
+        pattern = "race:*:events"
+        pubsub.psubscribe(pattern)
+        print(f"[ai_listener] assinando padrão {pattern} (todas as corridas)...")
 
-    print(f"[ai_listener] assinando {events_channel}...")
     warm_up()
 
-    state = LiveRaceState(race_id=race_id)
-    last_periodic_sim_ts = 0.0
+    # Inicia flush periódico de métricas no MLflow
+    start_periodic_flush(interval_seconds=60)
+
+    states: dict[str, LiveRaceState] = {}
+    followed_by_race: dict[str, str] = {}
+    last_periodic_sim_ts: dict[str, float] = {}
+    # Estado anti-repetição por corrida
+    last_command_by_race: dict[str, str | None] = {}
+    last_text_by_race: dict[str, str | None] = {}
+
     for message in pubsub.listen():
-        if message["type"] != "message":
+        if message["type"] not in ("message", "pmessage"):
             continue
+
+        current_race = _race_id_from_channel(message.get("channel"))
+        if current_race is None:
+            continue
+        if race_id and current_race != race_id:
+            continue
+
+        state = states.get(current_race)
+        if state is None:
+            state = LiveRaceState(race_id=current_race)
+            states[current_race] = state
+            last_periodic_sim_ts[current_race] = 0.0
+            last_command_by_race[current_race] = None
+            last_text_by_race[current_race] = None
+            followed_by_race[current_race] = _resolve_followed_driver(
+                r, current_race, followed_driver_id)
+            print(f"[ai_listener] nova corrida detectada: {current_race} "
+                  f"(seguindo {followed_by_race[current_race]})")
+
+        followed = followed_by_race[current_race]
 
         try:
             event = json.loads(message["data"])
@@ -75,12 +160,12 @@ def run_listener(race_id: str, followed_driver_id: str, periodic_s: float = 10.0
                 print(f"[ai_listener] tick recebido: lap={event.get('lap')} "
                       f"sim_ts={sim_ts:.1f}s")
 
-        eventos = apply_event(state, event, followed_driver_id)
+        eventos = apply_event(state, event, followed)
 
         if event.get("type") == "tick":
             sim_ts = event.get("sim_ts", 0.0)
-            if sim_ts - last_periodic_sim_ts >= periodic_s:
-                last_periodic_sim_ts = sim_ts
+            if sim_ts - last_periodic_sim_ts[current_race] >= periodic_s:
+                last_periodic_sim_ts[current_race] = sim_ts
                 eventos.append(
                     f"Atualização periódica (t={sim_ts:.0f}s de simulação)")
                 print(f"[ai_listener] gatilho periódico em t={sim_ts:.1f}s")
@@ -88,31 +173,61 @@ def run_listener(race_id: str, followed_driver_id: str, periodic_s: float = 10.0
         if not should_trigger_live(eventos):
             continue
 
-        print(f"[ai_listener] volta {
-              state.lap}: eventos detectados, acionando agente...")
-        context_text = format_live_context(state, followed_driver_id, eventos)
+        print(f"[ai_listener] volta {state.lap}: eventos detectados, acionando agente...")
+        context_text = format_live_context(state, followed, eventos)
         prompt = build_live_prompt(context_text)
         print(f"[DEBUG] contexto enviado ao modelo:\n{context_text}\n")
 
         model_result = call_model(prompt)
+
+        # Constrói contexto tático para fallback inteligente
+        tactical_ctx = build_race_context_from_state(state, followed)
+
         if not model_result["ok"]:
-            output = fallback_output(model_result["error"])
+            # Fallback tático baseado na situação real da corrida
+            output = get_fallback_tactical(tactical_ctx)
+            output["fallback_motivo"] = model_result["error"]
         else:
             validated = validate_agent_output(model_result["response"])
-            output = validated if validated else fallback_output(
-                "resposta em formato inválido")
+            if validated:
+                output = validated
+            else:
+                # JSON inválido → fallback tático
+                output = get_fallback_tactical(tactical_ctx)
+                output["fallback_motivo"] = "resposta em formato inválido"
 
         output["type"] = "ai_suggestion"
         output["volta"] = state.lap
 
-        # publica de volta no mesmo canal, para o #42 (WebSocket Gateway) repassar
-        r.publish(events_channel, json.dumps(output, ensure_ascii=False))
-        print(f"[ai_listener] sugestão publicada: {output['aviso']}")
+        # Anti-repetição: decide se deve ficar em silêncio
+        new_command = output.get("comando", {}).get("tipo", "neutral")
+        new_text = output.get("aviso", "")
+        last_cmd = last_command_by_race.get(current_race)
+        last_txt = last_text_by_race.get(current_race)
+
+        # Determina se o gatilho foi evento real ou periódico
+        is_real_event = any(e for e in eventos if not e.startswith("Atualização periódica"))
+
+        if _should_stay_silent(is_real_event, new_command, new_text, last_cmd, last_txt):
+            record_duplicate_suppressed()
+            print(f"[ai_listener] sugestão suprimida (repetição): comando={new_command}, texto={new_text[:40]}...")
+        else:
+            # Atualiza estado anti-repetição
+            last_command_by_race[current_race] = new_command
+            last_text_by_race[current_race] = new_text
+
+            # publica de volta no mesmo canal, para o #42 (WebSocket Gateway) repassar
+            events_channel = f"race:{current_race}:events"
+            r.publish(events_channel, json.dumps(output, ensure_ascii=False))
+            fallback_tag = " [FALLBACK]" if output.get("fallback") else ""
+            print(f"[ai_listener] sugestão publicada{fallback_tag}: {output['aviso']}")
 
 
 if __name__ == "__main__":
     import sys
-    race_id = sys.argv[1] if len(sys.argv) > 1 else "race_001"
-    driver_id = sys.argv[2] if len(sys.argv) > 2 else "drv_01"
+    raw_race_id = sys.argv[1] if len(sys.argv) > 1 else ""
+    # Sem argumento (ou "all"/"*") acompanha todas as corridas via psubscribe.
+    race_id = None if raw_race_id in ("", "all", "*") else raw_race_id
+    driver_id = sys.argv[2] if len(sys.argv) > 2 else os.environ.get("F1_FOLLOWED_DRIVER", "drv_02")
     interval = float(sys.argv[3]) if len(sys.argv) > 3 else 10.0
     run_listener(race_id, driver_id, periodic_s=interval)

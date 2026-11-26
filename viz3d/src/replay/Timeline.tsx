@@ -10,6 +10,7 @@ const LABEL: Record<SourceKind, string> = {
   synthetic: 'synthetic',
   replay: 'replay',
   engine: 'engine',
+  live: 'live',
 }
 
 const BLURB: Record<SourceKind, string> = {
@@ -23,6 +24,9 @@ const BLURB: Record<SourceKind, string> = {
   engine:
     "A race recorded from the group's engine: ten cars under the rule-based " +
     "controller, placed at the engine's own position and heading every tick.",
+  live:
+    'Live WebSocket feed from the running race. Cars update in real time ' +
+    'as telemetry arrives from the API.',
 }
 
 const RATES = [0.25, 0.5, 1, 2]

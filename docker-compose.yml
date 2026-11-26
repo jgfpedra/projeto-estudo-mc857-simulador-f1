@@ -9,7 +9,9 @@ services:
       /bin/sh -c "
       ollama serve &
       sleep 3 &&
-      ollama pull llama3.2 &&
+      if ! ollama list | grep -q '^llama3.2'; then
+        ollama pull llama3.2;
+      fi &&
       wait"
 
   backend:
@@ -43,20 +45,33 @@ services:
 
   ai:
     build: ./ai
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OLLAMA_URL: http://llama:11434
+      F1_FOLLOWED_DRIVER: drv_02
     volumes:
       - ./data:/app/data:ro
     depends_on:
+      - redis
       - llama
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: production
+      args:
+        VITE_API_URL: http://localhost:8000
+        VITE_WS_URL: ws://localhost:8000
     ports:
       - "3000:80"
     depends_on:
       - backend
 
   viz3d:
-    build: ./viz3d
+    build:
+      context: ./viz3d
+      target: production
     ports:
       - "3001:80"
     depends_on:

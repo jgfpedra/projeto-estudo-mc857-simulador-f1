@@ -28,7 +28,10 @@ from config import DEFAULT_DRIVERS, DEFAULT_INTERLAGOS_CONFIG
 from engine.physics import CHASSIS_LENGTH_M, CHASSIS_WIDTH_M, CHASSIS_HEIGHT_M
 from domain.pit_lane import ensure_pit_lane
 from domain import TyreCompound, WeatherKind, WeatherModel, WeatherTransitionConfig, BASE_CONDITIONS
+from .catalog import get_catalog
 from engine import InMemoryInputSource, Publisher, RuleBasedRaceController, SimulationEngine
+from engine.coach_controller import CoachController, CommandBus
+from engine.ai_engineer import AiEngineer
 from .redis_client import sync_client
 from .providers.race_data import default_provider, driver_record
 from .providers.f1db_layouts import load_layout_catalog, normalize
@@ -254,6 +257,7 @@ class RaceViewers:
 
 class RaceManager:
     def __init__(self, client=None, provider=None, catalog=None, viewer_grace_s=RACE_VIEWER_GRACE_S):
+        self.catalog = catalog
         self.redis = client or sync_client(REDIS_URL)
         self.provider = provider or default_provider()
         try:
@@ -264,6 +268,7 @@ class RaceManager:
         self._threads = {}
         self._engines = {}
         self._viewers = {}
+        self._ai_engineers = {}  # race_id -> AiEngineer
         self._viewer_grace_s = viewer_grace_s
         self._engines_lock = threading.RLock()
         self._distributed = os.environ.get('F1_DISTRIBUTED_COMMANDS') == '1'
@@ -273,14 +278,37 @@ class RaceManager:
 
     def create_race(self, laps, track, year, num_drivers=2, layout_id=None, selected_roster=None,
                     weather=None, weather_change=None, initial_tyre=None, user_driver_id=None, random_seed=None):
+        print(f"=== create_race DIRECT PRINT: laps={laps}, track={track}, year={year}, num_drivers={num_drivers} ===", flush=True)
+        logger.info('=== create_race INICIADO: laps=%s, track=%s, year=%s, num_drivers=%s ===', 
+                    laps, track, year, num_drivers)
         if not 1 <= num_drivers <= 24:
             raise ValueError('A quantidade de corredores deve estar entre 1 e 24.')
         self.redis.ping()
+        print(f"=== After redis.ping ===", flush=True)
         circuit = (track or 'interlagos').strip().lower() or 'interlagos'
-        catalog_circuit = self.catalog.find_circuit(circuit) if self.catalog else None
-        circuit_id = catalog_circuit['id'] if catalog_circuit else normalize(circuit).replace(' ', '-')
-        season = year or (2024 if circuit_id == 'monza' else 2023)
-        season_layout = self.catalog.find_layout(catalog_circuit, season) if catalog_circuit else None
+        
+        # Validação do catálogo: circuito deve existir
+        if self.catalog:
+            catalog_circuit = self.catalog.find_circuit(circuit)
+            if catalog_circuit is None:
+                raise ValueError(f"Circuito '{track}' não encontrado no catálogo")
+            circuit_id = catalog_circuit['id']
+            season = year or (2024 if circuit_id == 'monza' else 2023)
+            season_layout = self.catalog.find_layout(catalog_circuit, season)
+            if season_layout is None:
+                available = []
+                for l in catalog_circuit.get("layouts", []):
+                    fy = l.get("first_year") or (l.get("years", [0])[0] if l.get("years") else 0)
+                    ly = l.get("last_year") or (l.get("years", [-1])[-1] if l.get("years") else 0)
+                    available.append(f"{fy}-{ly}")
+                raise ValueError(
+                    f"Circuito '{track}' não tem layout para o ano {year}. "
+                    f"Anos disponíveis: {', '.join(available)}"
+                )
+        else:
+            circuit_id = normalize(circuit).replace(' ', '-')
+            season = year or (2024 if circuit_id == 'monza' else 2023)
+            season_layout = None
         layout = season_layout
         if layout_id is not None:
             layout = next((item for item in (catalog_circuit or {}).get('layouts', [])
@@ -298,7 +326,9 @@ class RaceManager:
         original_error = None
         if same_season_layout:
             try:
+                print(f"=== Calling provider.load for circuit={circuit}, season={season} ===", flush=True)
                 track_obj, roster, sources = self.provider.load(circuit, season)
+                print(f"=== provider.load returned ===", flush=True)
             except ValueError as exc:
                 if layout_id is None or selected_roster is None:
                     raise
@@ -369,6 +399,10 @@ class RaceManager:
                                     'track_year':track_year,
                                     'catalog_generated_at':self.catalog.data.get('generated_at')} if layout else None,
                 'num_laps':laps, 'num_drivers':num_drivers, 'user_driver_id':user_driver_id,
+                # No fluxo atual o piloto controlado pelo jogador é também o
+                # piloto que o engenheiro de IA acompanha. Exposto explicitamente
+                # para o viz3d/HUD e para o listener da IA.
+                'followed_driver_id':user_driver_id,
                 'random_seed':bot_seed, 'sources':sources,
                 'car_geometry':{'length_m':CHASSIS_LENGTH_M,'width_m':CHASSIS_WIDTH_M,'height_m':CHASSIS_HEIGHT_M},
                 'track':{'name':track_obj.name, 'source':track_obj.source, 'geometry_sha256':digest,
@@ -400,14 +434,25 @@ class RaceManager:
                              input_source=InMemoryInputSource(fallback_race_id=race_id))
         if weather_model is not None:
             engine_kwargs['weather_model'] = weather_model
+        print(f"=== Creating SimulationEngine ===", flush=True)
         engine = SimulationEngine(**engine_kwargs)
+        print(f"=== SimulationEngine created ===", flush=True)
         engine.user_driver_id = user_driver_id
         publisher.engine = engine
         engine.physics.contact_collector = []
         engine.physics.contact_collector_include_penetration = True
-        controller = RuleBasedRaceController(track_obj, seed=config.random_seed)
+
+        # Bus de comandos do engenheiro (IA/usuário) — Redis para persistência e HA
+        command_bus = CommandBus(self.redis, race_id, ttl=RACE_TTL)
+        base_controller = RuleBasedRaceController(track_obj, seed=config.random_seed)
         for driver in drivers:
-            engine.set_controller(driver.driver_id, controller)
+            coach = CoachController(
+                base_controller,
+                driver.driver_id,
+                publisher=publisher,
+                bus=command_bus,
+            )
+            engine.set_controller(driver.driver_id, coach)
         if self._distributed:
             from engine.checkpoint import capture
             engine.setup()
@@ -429,17 +474,44 @@ class RaceManager:
         else:
             self.redis.set(f'race:{race_id}:meta', json.dumps(meta, ensure_ascii=False), ex=RACE_TTL)
             self.redis.set(f'race:{race_id}:snapshot', json.dumps(publisher.snapshot), ex=RACE_TTL)
+        print(f"=== Calling _start_engine_thread ===", flush=True)
         self._start_engine_thread(engine, publisher)
+        print(f"=== _start_engine_thread returned ===", flush=True)
+
+        # Inicia Engenheiro de IA autônomo
+        driver_meta = [
+            {"driver_id": d.driver_id, "name": d.name, "team": getattr(d, "team", None)}
+            for d in drivers
+        ]
+        ai_engineer = AiEngineer(
+            race_id=race_id,
+            redis_client=self.redis,
+            command_bus=command_bus,
+            publisher=publisher,
+            engine=engine,
+            total_laps=config.num_laps,
+            drivers_meta=driver_meta,
+            user_driver_id=user_driver_id,
+        )
+        ai_engineer.start()
+        with self._engines_lock:
+            self._ai_engineers[race_id] = ai_engineer
+
+        logger.info('create_race: corrida %s criada com engine e AI engineer', race_id)
         return race_id, track_obj, config
 
     def _start_engine_thread(self, engine, publisher):
         race_id = publisher.race_id
+        print(f"=== _start_engine_thread: iniciando thread para corrida {race_id} ===", flush=True)
+        logger.info('_start_engine_thread: iniciando thread para corrida %s', race_id)
         thread = threading.Thread(target=self._run_engine, args=(engine, publisher), daemon=True)
         with self._engines_lock:
             self._threads[race_id] = thread
             self._engines[race_id] = engine
             self._viewers[race_id] = RaceViewers(idle_since=time.monotonic())
         thread.start()
+        logger.info('_start_engine_thread: thread iniciada para %s (threads=%d, engines=%d)', 
+                    race_id, len(self._threads), len(self._engines))
 
     def start_recovery(self):
         if not self._distributed or self._recovery_thread:
@@ -503,6 +575,31 @@ class RaceManager:
             pipe.publish(f'race:{race_id}:events', json.dumps({'type': 'race_recovered', 'race_id': race_id, 'sim_ts': engine.sim_ts}))
             pipe.execute()
             self._start_engine_thread(engine, publisher)
+
+            # Inicia Engenheiro de IA para corrida recuperada
+            try:
+                meta = self.metadata(race_id)
+                if meta:
+                    command_bus = CommandBus(self.redis, race_id, ttl=RACE_TTL)
+                    driver_meta = meta.get('drivers', [])
+                    total_laps = meta.get('num_laps', 10)
+                    user_driver_id = meta.get('user_driver_id')
+                    ai_engineer = AiEngineer(
+                        race_id=race_id,
+                        redis_client=self.redis,
+                        command_bus=command_bus,
+                        publisher=publisher,
+                        engine=engine,
+                        total_laps=total_laps,
+                        drivers_meta=driver_meta,
+                        user_driver_id=user_driver_id,
+                    )
+                    ai_engineer.start()
+                    with self._engines_lock:
+                        self._ai_engineers[race_id] = ai_engineer
+            except Exception as e:
+                logger.warning('Não foi possível iniciar AiEngineer para corrida recuperada %s: %s', race_id, e)
+
             logger.info('Corrida %s retomada em %.1fs', race_id, engine.sim_ts)
         except Exception:
             if engine is not None:
@@ -536,6 +633,12 @@ class RaceManager:
                 try:
                     engine.teardown()
                 finally:
+                    # Para o Engenheiro de IA
+                    ai_engineer = None
+                    with self._engines_lock:
+                        ai_engineer = self._ai_engineers.pop(race_id, None)
+                    if ai_engineer:
+                        ai_engineer.stop()
                     with self._engines_lock:
                         self._threads.pop(race_id, None)
                         self._engines.pop(race_id, None)
@@ -672,4 +775,4 @@ class RaceManager:
         return json.loads(value) if value else None
 
 
-race_manager = RaceManager()
+race_manager = RaceManager(catalog=get_catalog(), viewer_grace_s=3600.0)  # 1h para testes

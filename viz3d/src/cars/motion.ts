@@ -67,14 +67,14 @@ export interface MotionState {
   yawRad: number
 }
 
-export type SourceKind = 'synthetic' | 'replay' | 'engine'
+export type SourceKind = 'synthetic' | 'replay' | 'engine' | 'live'
 
 /**
  * In the order the panel and the `m` key present them. A track offers
  * `synthetic` plus at most one of `replay` (our Monza) or `engine` (a
  * recording), never both: each was made against exactly one centreline.
  */
-export const SOURCE_KINDS: readonly SourceKind[] = ['synthetic', 'replay', 'engine']
+export const SOURCE_KINDS: readonly SourceKind[] = ['synthetic', 'replay', 'engine', 'live']
 
 export interface MotionSource {
   readonly kind: SourceKind

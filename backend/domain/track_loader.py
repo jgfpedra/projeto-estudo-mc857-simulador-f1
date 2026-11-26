@@ -27,6 +27,36 @@ class CircuitLoadError(RuntimeError):
     """Falha ao obter ou converter um circuito do FastF1."""
 
 
+_HTTP_TIMEOUT_INSTALLED = False
+
+
+def _install_http_timeout(connect: float = 10.0, read: float = 45.0) -> None:
+    """Impõe timeout nas requisições HTTP do FastF1.
+
+    Sem isso, ``requests`` (usado pelo FastF1) espera indefinidamente quando o
+    servidor de timing da F1 não responde — o carregamento do circuito ficava
+    "rodando para sempre". Instalamos um timeout padrão (sem sobrescrever um
+    timeout já informado) em todas as requisições da biblioteca.
+    """
+    global _HTTP_TIMEOUT_INSTALLED
+    if _HTTP_TIMEOUT_INSTALLED:
+        return
+    try:
+        import requests.adapters
+
+        original_send = requests.adapters.HTTPAdapter.send
+
+        def _send_with_timeout(self, request, **kwargs):  # type: ignore[no-untyped-def]
+            if kwargs.get("timeout") is None:
+                kwargs["timeout"] = (connect, read)
+            return original_send(self, request, **kwargs)
+
+        requests.adapters.HTTPAdapter.send = _send_with_timeout
+        _HTTP_TIMEOUT_INSTALLED = True
+    except Exception:  # pragma: no cover - best effort
+        pass
+
+
 def _as_mapping(value: Any) -> Mapping[str, Any]:
     """Normaliza dicts, Series e objetos simples retornados por bibliotecas externas."""
     if isinstance(value, Mapping):
@@ -207,6 +237,7 @@ class FastF1TrackLoader:
                 "FastF1 não está instalado. Instale as dependências do backend "
                 "com: pip install -r backend/requirements.txt"
             ) from exc
+        _install_http_timeout()
         return fastf1
 
     def _enable_cache(self, fastf1: Any) -> None:
@@ -299,11 +330,14 @@ class FastF1TrackLoader:
 
         if load_session and hasattr(ff1_session, "load"):
             try:
+                # Só a geometria é necessária: carregar telemetria da sessão
+                # inteira é o que tornava o primeiro load de um circuito
+                # extremamente lento (dezenas de MB por GP). ``get_circuit_info``
+                # funciona só com as voltas; a telemetria só alimenta as
+                # distâncias dos marcadores (opcional).
                 ff1_session.load(
-                    #llaps=True if need_telemetry else False,
-                    #telemetry=need_telemetry,
                     laps=True,
-                    telemetry=True,
+                    telemetry=need_telemetry,
                     weather=False,
                     messages=False,
                 )
@@ -315,13 +349,43 @@ class FastF1TrackLoader:
                     f"session={session!r}"
                 ) from exc
 
+        # Garante que circuit_info esteja disponível.
         try:
             raw_info = ff1_session.get_circuit_info()
         except Exception as exc:
-            raise CircuitLoadError(
-                f"FastF1 could not load circuit info for year={year!r} "
-                f"event={event!r} session={session!r}: {exc}"
-            ) from exc
+            # ``get_circuit_info`` depende dos metadados do evento
+            # (``session_info['Meeting']``). Se eles nem foram baixados, o
+            # problema é de rede/servidor e recarregar a sessão inteira só
+            # aumenta a espera — falhamos rápido com uma mensagem clara.
+            try:
+                session_info = ff1_session.session_info
+            except Exception:
+                session_info = None
+            has_meeting = isinstance(session_info, Mapping) and bool(
+                session_info.get("Meeting")
+            )
+            if not has_meeting:
+                raise CircuitLoadError(
+                    "Não foi possível baixar os dados do GP "
+                    f"year={year!r} event={event!r} (servidor de timing da F1 "
+                    "indisponível ou sem conexão). Verifique a internet e tente "
+                    "novamente."
+                ) from exc
+            # Recurso intermediário: recarrega só o essencial e tenta de novo.
+            try:
+                if hasattr(ff1_session, "load"):
+                    ff1_session.load(
+                        laps=True,
+                        telemetry=need_telemetry,
+                        weather=False,
+                        messages=False,
+                    )
+                raw_info = ff1_session.get_circuit_info()
+            except Exception as exc2:
+                raise CircuitLoadError(
+                    f"FastF1 could not load circuit info for year={year!r} "
+                    f"event={event!r} session={session!r}: {exc2}"
+                ) from exc2
 
         if raw_info is None:
             raise CircuitLoadError(

@@ -6,9 +6,13 @@ publishes state/events.
 
 from .collisions import CarContact, CollisionTracker, car_contacts_from_raw
 from .events import (
+    AiCommandEvent,
+    AiSuggestionEvent,
     CollisionEvent,
     Event,
     LapCompletedEvent,
+    OffTrackEvent,
+    OnTrackEvent,
     PitStopEvent,
     PositionUpdateEvent,
     RaceEndEvent,
@@ -17,6 +21,7 @@ from .events import (
     TyreWornEvent,
     WeatherChangedEvent,
 )
+from .ai_engineer import AiEngineer
 from .publisher import (
     JSONLPublisher,
     NullPublisher,
@@ -55,6 +60,12 @@ __all__ = [
     "PositionUpdateEvent",
     "TickEvent",
     "CollisionEvent",
+    "AiCommandEvent",
+    "AiSuggestionEvent",
+    "OffTrackEvent",
+    "OnTrackEvent",
+    # AI
+    "AiEngineer",
     # Collision detection
     "CarContact",
     "CollisionTracker",
