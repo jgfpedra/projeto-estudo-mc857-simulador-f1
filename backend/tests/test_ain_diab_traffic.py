@@ -1,6 +1,8 @@
 """Ain-Diab's dense historic grid must not collapse at the first bend."""
 from dataclasses import replace
 
+import pytest
+
 from api.providers.historical_f1results import HistoricalResultsProvider
 from config import DEFAULT_DRIVERS, DEFAULT_INTERLAGOS_CONFIG
 from domain import BASE_CONDITIONS, WeatherKind, WeatherModel, WeatherTransitionConfig
@@ -146,11 +148,15 @@ def test_displaced_car_moves_around_stationary_queue_in_physics():
         pb.resetBaseVelocity(body, (0, 0, 0), (0, 0, 0), physicsClientId=client_id)
     try:
         authorities = set()
+        fastest_escape = 0.0
         for _ in range(22):
             engine._step_tick(0.1, 24)
-            authorities.add(controller.last_authority[drivers[0].driver_id])
+            authority = controller.last_authority[drivers[0].driver_id]
+            authorities.add(authority)
+            if authority == 'traffic-escape':
+                fastest_escape = max(fastest_escape, engine.states[drivers[0].driver_id].velocity_mps)
         assert 'traffic-escape' in authorities
-        assert engine.states[drivers[0].driver_id].velocity_mps > 1.0
+        assert fastest_escape > 1.0
         for _ in range(160):
             engine._step_tick(0.1, 24)
         assert abs(engine.race_lateral_m[drivers[0].driver_id]) < track.width_m / 2
@@ -169,7 +175,7 @@ def test_aligned_car_chooses_free_side_and_brakes_if_it_becomes_occupied():
         state.position_x, state.position_y = controller._point_at(650.0 + (10 if i == 1 else -100 if i == 2 else 0), centerline=True)
         state.heading_rad = float(controller._heading[controller._segment_at(650.0)])
         state.velocity_mps = 0.0
-    for step in range(12):
+    for step in range(18):
         env = EnvironmentState(30.0 + step * 0.1, 0, BASE_CONDITIONS[WeatherKind.DRY], track, states)
         controller.compute_input(env, states['route-0'])
     assert controller.last_authority['route-0'] == 'traffic-avoid'
@@ -177,7 +183,7 @@ def test_aligned_car_chooses_free_side_and_brakes_if_it_becomes_occupied():
     assert abs(lane) >= 3.4
     obstacle = states['route-2']
     obstacle.position_x, obstacle.position_y = controller._point_at(654.0, lane, centerline=True)
-    env = EnvironmentState(31.2, 0, BASE_CONDITIONS[WeatherKind.DRY], track, states)
+    env = EnvironmentState(31.8, 0, BASE_CONDITIONS[WeatherKind.DRY], track, states)
     command = controller.compute_input(env, states['route-0'])
     assert controller.last_authority['route-0'] != 'traffic-avoid'
     assert command.throttle == 0.0 and command.brake >= 0.8
@@ -193,13 +199,14 @@ def test_aligned_car_waits_when_both_sides_are_occupied():
         state.position_x, state.position_y = controller._point_at(650.0 + distance, lane, centerline=True)
         state.heading_rad = float(controller._heading[controller._segment_at(650.0)])
         state.velocity_mps = 0.0
-    for step in range(15):
+    for step in range(20):
         env = EnvironmentState(30.0 + step * 0.1, 0, BASE_CONDITIONS[WeatherKind.DRY], track, states)
         controller.compute_input(env, states['full-0'])
         assert controller.last_authority['full-0'] != 'traffic-avoid'
 
 
-def test_aligned_car_physically_passes_stationary_obstacle():
+@pytest.mark.parametrize("gap", (6.0, 10.0, 13.0))
+def test_aligned_car_physically_passes_stationary_obstacle(gap):
     import pybullet as pb
     from engine.controllers import ManualController
 
@@ -209,6 +216,7 @@ def test_aligned_car_physically_passes_stationary_obstacle():
     weather = WeatherModel(BASE_CONDITIONS[WeatherKind.DRY], WeatherTransitionConfig.default(0.0))
     engine = SimulationEngine(config, track, drivers, weather_model=weather)
     engine.setup()
+    engine.sim_ts = 30.0
     controller = RuleBasedRaceController(track, seed=42)
     engine.set_controller(drivers[0].driver_id, controller)
     engine.set_controller(drivers[1].driver_id, ManualController(brake=1.0))
@@ -216,21 +224,93 @@ def test_aligned_car_physically_passes_stationary_obstacle():
     heading = float(controller._heading[controller._segment_at(s)])
     client_id = engine.physics._client_id
     for i, driver in enumerate(drivers):
-        x, y = controller._point_at(s + i * 10.0, centerline=True)
+        x, y = controller._point_at(s + i * gap, centerline=True)
         body = engine.handles[driver.driver_id].chassis_id
         pb.resetBasePositionAndOrientation(body, (x, y, 0.5), pb.getQuaternionFromEuler((0, 0, heading)), physicsClientId=client_id)
         pb.resetBaseVelocity(body, (0, 0, 0), (0, 0, 0), physicsClientId=client_id)
     try:
         authorities = set()
-        for _ in range(150):
+        fastest_alongside = 0.0
+        pull_out_speeds = []
+        for _ in range(220 if gap == 6.0 else 150):
             engine._step_tick(0.1, 24)
-            authorities.add(controller.last_authority[drivers[0].driver_id])
+            authority = controller.last_authority[drivers[0].driver_id]
+            authorities.add(authority)
+            if authority == 'traffic-avoid':
+                speed = engine.states[drivers[0].driver_id].velocity_mps
+                fastest_alongside = max(fastest_alongside, speed)
+                if abs(engine.race_lateral_m[drivers[0].driver_id]) < 2.6:
+                    pull_out_speeds.append(speed)
             assert not pb.getContactPoints(engine.handles[drivers[0].driver_id].chassis_id,
                                            engine.handles[drivers[1].driver_id].chassis_id,
                                            physicsClientId=client_id)
         assert 'traffic-avoid' in authorities
+        assert ('traffic-reverse' in authorities) == (gap == 6.0)
+        assert fastest_alongside > 5.0  # release the crawl speed before leaving the bypass
+        if gap == 13.0:
+            assert max(pull_out_speeds) > 2.5
+            assert min(pull_out_speeds) > 1.0
         assert engine.race_progress_m[drivers[0].driver_id] > engine.race_progress_m[drivers[1].driver_id] + 8.0
         assert abs(engine.race_lateral_m[drivers[0].driver_id]) <= track.width_m / 2
+    finally:
+        engine.teardown()
+
+
+def test_queue_recovery_does_not_reverse_with_a_car_behind():
+    track = make_track()
+    controller = RuleBasedRaceController(track, seed=42)
+    drivers = [replace(DEFAULT_DRIVERS[i % 2], driver_id=f'tight-{i}') for i in range(3)]
+    states = {driver.driver_id: driver.initial_state() for driver in drivers}
+    for driver, distance in zip(drivers, (0.0, 5.2, -5.2)):
+        state = states[driver.driver_id]
+        s = 650.0 + distance
+        state.position_x, state.position_y = controller._point_at(s, centerline=True)
+        state.heading_rad = float(controller._heading[controller._segment_at(s)])
+        state.velocity_mps = 0.0
+    for step in range(20):
+        env = EnvironmentState(30.0 + step * 0.1, 0, BASE_CONDITIONS[WeatherKind.DRY], track, states)
+        command = controller.compute_input(env, states['tight-0'])
+        assert command.reverse_speed_mps == 0.0
+    assert controller.last_authority['tight-0'] == 'traffic-avoid'
+    assert command.brake > 0.0
+
+
+def test_three_bots_clear_a_mutual_blockage_in_the_rain():
+    import math
+    import pybullet as pb
+
+    track = make_track()
+    drivers = [replace(DEFAULT_DRIVERS[i % 2], driver_id=name)
+               for i, name in enumerate(('lawson', 'bearman', 'third'))]
+    config = replace(DEFAULT_INTERLAGOS_CONFIG, gui=False, realtime=False, track_progress_laps=True)
+    weather = WeatherModel(BASE_CONDITIONS[WeatherKind.WET], WeatherTransitionConfig.default(0.0))
+    engine = SimulationEngine(config, track, drivers, weather_model=weather)
+    engine.setup()
+    controller = RuleBasedRaceController(track, seed=42)
+    try:
+        engine.sim_ts = 30.0
+        client_id = engine.physics._client_id
+        # Two noses touch across the track with a third car approaching
+        # the side of the obstruction. All three use the live controller.
+        poses = ((650.0, -2.5, 90), (650.0, 2.5, -90), (644.0, 0.0, 0))
+        for driver, (s, lateral, turn_deg) in zip(drivers, poses):
+            engine.set_controller(driver.driver_id, controller)
+            x, y = controller._point_at(s, lateral, centerline=True)
+            heading = float(controller._heading[controller._segment_at(s)]) + math.radians(turn_deg)
+            body = engine.handles[driver.driver_id].chassis_id
+            pb.resetBasePositionAndOrientation(
+                body, (x, y, 0.5), pb.getQuaternionFromEuler((0, 0, heading)), physicsClientId=client_id,
+            )
+            pb.resetBaseVelocity(body, (0, 0, 0), (0, 0, 0), physicsClientId=client_id)
+
+        coordinated = False
+        for _ in range(500):
+            engine._step_tick(0.1, 24)
+            modes = set(controller.last_authority.values())
+            coordinated |= {'traffic-unblock', 'traffic-yield'} <= modes
+        assert coordinated
+        assert min(engine.race_progress_m.values()) > 695.0
+        assert max(map(abs, engine.race_lateral_m.values())) < track.width_m / 2
     finally:
         engine.teardown()
 
@@ -245,7 +325,7 @@ def test_aligned_car_chooses_the_unoccupied_side():
         state.position_x, state.position_y = controller._point_at(650.0 + distance, lane, centerline=True)
         state.heading_rad = float(controller._heading[controller._segment_at(650.0)])
         state.velocity_mps = 0.0
-    for step in range(12):
+    for step in range(18):
         env = EnvironmentState(30.0 + step * 0.1, 0, BASE_CONDITIONS[WeatherKind.DRY], track, states)
         controller.compute_input(env, states['side-0'])
     assert controller.last_authority['side-0'] == 'traffic-avoid'
@@ -262,12 +342,56 @@ def test_avoidance_stops_if_obstacle_moves_into_chosen_lane():
         state.position_x, state.position_y = controller._point_at(650.0 + i * 10, centerline=True)
         state.heading_rad = float(controller._heading[controller._segment_at(650.0)])
         state.velocity_mps = 0.0
-    for step in range(12):
+    for step in range(18):
         env = EnvironmentState(30.0 + step * 0.1, 0, BASE_CONDITIONS[WeatherKind.DRY], track, states)
         controller.compute_input(env, states['moving-0'])
     assert controller.last_authority['moving-0'] == 'traffic-avoid'
     lane = controller._style_for('moving-0').queue_avoid_lane_m
     states['moving-1'].position_x, states['moving-1'].position_y = controller._point_at(660.0, lane, centerline=True)
-    env = EnvironmentState(31.2, 0, BASE_CONDITIONS[WeatherKind.DRY], track, states)
+    env = EnvironmentState(31.8, 0, BASE_CONDITIONS[WeatherKind.DRY], track, states)
     command = controller.compute_input(env, states['moving-0'])
     assert command.throttle == 0 and command.brake >= 0.8
+
+
+@pytest.mark.parametrize(("start", "spacing"), ((150.0, 10.0), (630.0, 8.0)), ids=("straight", "bend"))
+def test_four_bots_pass_a_stationary_leader_without_contact(start, spacing):
+    import pybullet as pb
+    from engine.controllers import ManualController
+
+    track = make_track()
+    drivers = [replace(DEFAULT_DRIVERS[i % 2], driver_id=f'q{i}') for i in range(5)]
+    config = replace(DEFAULT_INTERLAGOS_CONFIG, gui=False, realtime=False, track_progress_laps=True)
+    weather = WeatherModel(BASE_CONDITIONS[WeatherKind.DRY], WeatherTransitionConfig.default(0.0))
+    engine = SimulationEngine(config, track, drivers, weather_model=weather)
+    engine.setup()
+    controller = RuleBasedRaceController(track, seed=42)
+    try:
+        engine.sim_ts = 30.0
+        engine.physics.contact_collector = []
+        engine.physics.contact_collector_include_penetration = True
+        client_id = engine.physics._client_id
+        for i, driver in enumerate(drivers):
+            s = start + i * spacing
+            x, y = controller._point_at(s, centerline=True)
+            heading = float(controller._heading[controller._segment_at(s)])
+            body = engine.handles[driver.driver_id].chassis_id
+            pb.resetBasePositionAndOrientation(
+                body, (x, y, 0.5), pb.getQuaternionFromEuler((0, 0, heading)), physicsClientId=client_id,
+            )
+            pb.resetBaseVelocity(body, (0, 0, 0), (0, 0, 0), physicsClientId=client_id)
+            engine.set_controller(driver.driver_id, controller if i < 4 else ManualController(brake=1.0))
+        leader_id = drivers[-1].driver_id
+        saw_full_queue = False
+        for _ in range(300):
+            engine._step_tick(0.1, 24)
+            assert not engine.physics.contact_collector
+            saw_full_queue |= controller._style_for(drivers[0].driver_id).queue_end_id == leader_id
+            if all(engine.race_progress_m[d.driver_id] > engine.race_progress_m[leader_id] + 8.0
+                   for d in drivers[:-1]):
+                break
+        else:
+            pytest.fail("The line did not clear the stationary leader in 30 simulated seconds")
+        assert saw_full_queue
+        assert engine.race_progress_m[leader_id] == pytest.approx(start + 4 * spacing, abs=0.1)
+    finally:
+        engine.teardown()

@@ -582,6 +582,7 @@ class SimulationEngine:
                 car_input.brake,
                 car_input.throttle,
                 aero_drag_multipliers.get(drv.driver_id, 1.0),
+                car_input.reverse_speed_mps,
             ))
 
         # 4 — avança física reaplicando os controles a cada sub-step
@@ -755,6 +756,7 @@ class SimulationEngine:
         state.position_y  = phys["y"]
         state.heading_rad = phys["heading_rad"]
         state.velocity_mps = phys["speed_mps"]
+        state.cornering_drag_n = phys.get("cornering_drag_n", 0.0)
 
     def _resolve_car_input(self, driver_id: str, env, state) -> "CarInput":
         """Obtém o :class:`CarInput` para o driver: controller → fallback → cache.

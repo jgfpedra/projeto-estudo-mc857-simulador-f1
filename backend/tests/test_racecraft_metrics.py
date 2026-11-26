@@ -35,14 +35,14 @@ def test_attack_bonus_is_only_applied_when_chasing_on_a_clear_straight():
     from engine.controllers import EnvironmentState
 
     track = load_live_track('interlagos', 2023)
-    def target_speed(with_opponent, planned_fraction=0.95):
+    def target_speed(with_opponent, planned_fraction=0.95, speed=90.0):
         controller = RuleBasedRaceController(track, seed=42)
         follower = DEFAULT_DRIVERS[0].initial_state()
         opponent = DEFAULT_DRIVERS[1].initial_state()
-        for state, s in ((follower, 500.0), (opponent, 520.0)):
+        for state, s in ((follower, 500.0), (opponent, 537.0)):
             state.position_x, state.position_y = controller._point_at(s, centerline=True)
             state.heading_rad = float(controller._heading[controller._segment_at(s)])
-            state.velocity_mps = 60.0
+            state.velocity_mps = speed
         states = {follower.driver_id: follower}
         if with_opponent:
             states[opponent.driver_id] = opponent
@@ -54,6 +54,7 @@ def test_attack_bonus_is_only_applied_when_chasing_on_a_clear_straight():
     assert target_speed(True) / target_speed(False) == pytest.approx(1.006 * 1.045)
     # Braking/curvature speed below the threshold keeps the original envelope.
     assert target_speed(True, 0.7) / target_speed(False, 0.7) == pytest.approx(1.006)
+    assert target_speed(True, speed=60.0) < target_speed(False, speed=60.0)
 
 
 def test_attack_bonus_requires_validated_geometry_and_width():
