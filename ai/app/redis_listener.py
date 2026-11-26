@@ -48,20 +48,50 @@ Se nada exige ação, diga que está tudo sob controle e use urgência baixa.
 """
 
 
-def run_listener(race_id: str, followed_driver_id: str, periodic_s: float = 10.0):
+def _race_id_from_channel(channel) -> str | None:
+    """Extrai o ``race_id`` de um canal ``race:<id>:events``."""
+    if isinstance(channel, bytes):
+        channel = channel.decode("utf-8", "ignore")
+    parts = str(channel).split(":")
+    if len(parts) >= 3 and parts[0] == "race" and parts[2] == "events":
+        return parts[1]
+    return None
+
+
+def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float = 10.0):
     r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
     pubsub = r.pubsub()
-    events_channel = f"race:{race_id}:events"
-    pubsub.subscribe(events_channel)
+    if race_id:
+        events_channel = f"race:{race_id}:events"
+        pubsub.subscribe(events_channel)
+        print(f"[ai_listener] assinando {events_channel}...")
+    else:
+        # Sem corrida explícita: acompanha qualquer corrida criada pela API.
+        pattern = "race:*:events"
+        pubsub.psubscribe(pattern)
+        print(f"[ai_listener] assinando padrão {pattern} (todas as corridas)...")
 
-    print(f"[ai_listener] assinando {events_channel}...")
     warm_up()
 
-    state = LiveRaceState(race_id=race_id)
-    last_periodic_sim_ts = 0.0
+    states: dict[str, LiveRaceState] = {}
+    last_periodic_sim_ts: dict[str, float] = {}
+
     for message in pubsub.listen():
-        if message["type"] != "message":
+        if message["type"] not in ("message", "pmessage"):
             continue
+
+        current_race = _race_id_from_channel(message.get("channel"))
+        if current_race is None:
+            continue
+        if race_id and current_race != race_id:
+            continue
+
+        state = states.get(current_race)
+        if state is None:
+            state = LiveRaceState(race_id=current_race)
+            states[current_race] = state
+            last_periodic_sim_ts[current_race] = 0.0
+            print(f"[ai_listener] nova corrida detectada: {current_race}")
 
         try:
             event = json.loads(message["data"])
@@ -79,8 +109,8 @@ def run_listener(race_id: str, followed_driver_id: str, periodic_s: float = 10.0
 
         if event.get("type") == "tick":
             sim_ts = event.get("sim_ts", 0.0)
-            if sim_ts - last_periodic_sim_ts >= periodic_s:
-                last_periodic_sim_ts = sim_ts
+            if sim_ts - last_periodic_sim_ts[current_race] >= periodic_s:
+                last_periodic_sim_ts[current_race] = sim_ts
                 eventos.append(
                     f"Atualização periódica (t={sim_ts:.0f}s de simulação)")
                 print(f"[ai_listener] gatilho periódico em t={sim_ts:.1f}s")
@@ -106,13 +136,16 @@ def run_listener(race_id: str, followed_driver_id: str, periodic_s: float = 10.0
         output["volta"] = state.lap
 
         # publica de volta no mesmo canal, para o #42 (WebSocket Gateway) repassar
+        events_channel = f"race:{current_race}:events"
         r.publish(events_channel, json.dumps(output, ensure_ascii=False))
         print(f"[ai_listener] sugestão publicada: {output['aviso']}")
 
 
 if __name__ == "__main__":
     import sys
-    race_id = sys.argv[1] if len(sys.argv) > 1 else "race_001"
-    driver_id = sys.argv[2] if len(sys.argv) > 2 else "drv_01"
+    raw_race_id = sys.argv[1] if len(sys.argv) > 1 else ""
+    # Sem argumento (ou "all"/"*") acompanha todas as corridas via psubscribe.
+    race_id = None if raw_race_id in ("", "all", "*") else raw_race_id
+    driver_id = sys.argv[2] if len(sys.argv) > 2 else os.environ.get("F1_FOLLOWED_DRIVER", "drv_02")
     interval = float(sys.argv[3]) if len(sys.argv) > 3 else 10.0
     run_listener(race_id, driver_id, periodic_s=interval)

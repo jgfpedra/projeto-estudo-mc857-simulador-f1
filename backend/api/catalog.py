@@ -41,6 +41,11 @@ class Catalog:
                 self._driver_by_id[d["id"]] = d
 
     @property
+    def data(self) -> Dict[str, Any]:
+        """Compatibilidade com código que espera atributo 'data' (ex: LayoutCatalog)."""
+        return self.raw
+
+    @property
     def provenance(self) -> Dict[str, Any]:
         """Metadados de origem do catálogo."""
         return {

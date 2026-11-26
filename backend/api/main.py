@@ -7,7 +7,7 @@ import os
 import anyio
 import redis
 import redis.asyncio as aioredis
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from .race_manager import REDIS_URL, race_manager
 from .schemas import (PitStopCancelResponse, PitStopRequest, PitStopResponse,
@@ -74,6 +74,90 @@ def create_race(req: RaceSetupRequest):
     return RaceSetupResponse(race_id=race_id, track_name=track.name, num_laps=config.num_laps,
                              ws_path=f"/ws/races/{race_id}", grid=req.grid or [],
                              initial_weather=req.weather.value if req.weather else 'dry', warnings=warnings)
+
+
+# Task store for async race creation
+_race_tasks: dict[str, dict] = {}
+_task_lock = asyncio.Lock()
+
+
+async def _create_race_task(task_id: str, req: RaceSetupRequest):
+    """Background task to create race and update status."""
+    async with _task_lock:
+        _race_tasks[task_id] = {"status": "loading_circuit", "progress": 10, "message": "Baixando dados do circuito..."}
+
+    try:
+        if req.year is not None and req.season is not None and req.year != req.season:
+            raise ValueError('year e season devem indicar a mesma temporada')
+        season = req.season if req.season is not None else req.year
+        if req.circuit and req.track and req.circuit.id != req.track:
+            raise ValueError('Informe um único circuito.')
+        selected_track = req.circuit.id if req.circuit else req.track
+        selected_layout = req.circuit.layout_id if req.circuit else req.layout_id
+        selected_roster = None
+        if req.grid is not None:
+            if season is None or len(set(req.grid)) != len(req.grid):
+                raise ValueError('Informe a temporada e pilotos diferentes para o grid.')
+            available = {d['id']: d for d in driver_service.list_drivers(year=season, limit=None)}
+            missing = [driver for driver in req.grid if driver not in available]
+            if missing:
+                raise ValueError('Pilotos indisponíveis nesta temporada: ' + ', '.join(missing))
+            selected_roster = []
+            for driver_id in req.grid:
+                d = available[driver_id]
+                record = driver_record(d.get('abbreviation') or '', d.get('name') or driver_id,
+                                       d.get('number', d.get('permanent_number')), d.get('team_name'), d.get('team_color'))
+                record['driver_id'] = driver_id
+                selected_roster.append(record)
+        options = {
+            'selected_roster': selected_roster,
+            'user_driver_id': req.user_driver_id,
+            'random_seed': req.random_seed,
+            'weather': req.weather.value if req.weather else None,
+            'weather_change': req.weather_change.model_dump() if req.weather_change else None,
+            'initial_tyre': (req.initial_tyre or (req.stints[0].compound if req.stints else None)).value
+                            if req.initial_tyre or req.stints else None,
+        }
+
+        async with _task_lock:
+            _race_tasks[task_id] = {"status": "loading_circuit", "progress": 30, "message": "Carregando geometria do circuito (pode demorar na primeira vez)..."}
+
+        # Run the blocking race creation in a thread pool
+        race_id, track, config = await asyncio.to_thread(
+            race_manager.create_race,
+            req.laps, selected_track, season,
+            num_drivers=len(req.grid) if req.grid is not None else req.num_drivers,
+            layout_id=selected_layout, **{k: v for k, v in options.items() if v is not None},
+        )
+
+        async with _task_lock:
+            _race_tasks[task_id] = {"status": "ready", "progress": 100, "message": "Pronto!", "race_id": race_id, "track_name": track.name, "num_laps": config.num_laps}
+
+    except Exception as exc:
+        async with _task_lock:
+            _race_tasks[task_id] = {"status": "error", "progress": 0, "message": str(exc)}
+
+
+@app.post('/races/async', response_model=dict)
+async def create_race_async(req: RaceSetupRequest, background_tasks: BackgroundTasks):
+    """Inicia a criação da corrida em background e retorna um task_id para acompanhar o progresso."""
+    import uuid
+    task_id = str(uuid.uuid4())
+    async with _task_lock:
+        _race_tasks[task_id] = {"status": "starting", "progress": 0, "message": "Iniciando..."}
+    background_tasks.add_task(_create_race_task, task_id, req)
+    return {"task_id": task_id, "status_url": f"/races/status/{task_id}"}
+
+
+@app.get('/races/status/{task_id}')
+async def get_race_status(task_id: str):
+    """Retorna o status da criação da corrida assíncrona."""
+    async with _task_lock:
+        task = _race_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task não encontrada")
+    return task
+
 
 @app.get('/seasons')
 def list_seasons():

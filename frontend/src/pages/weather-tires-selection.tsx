@@ -112,7 +112,7 @@ export function WeatherTiresSelection() {
 
   const season = useDriverStore((state) => state.season)
   const drivers = useDriverStore((state) => state.drivers)
-  const storedUserDriverId = useDriverStore((state) => state.userDriverId)
+  const storedFollowedDriverId = useDriverStore((state) => state.followedDriverId)
 
   const totalLaps = useRaceLapsStore((state) => state.totalLaps)
   const syncWithRaceLaps = useTiresStore((state) => state.syncWithRaceLaps)
@@ -132,7 +132,7 @@ export function WeatherTiresSelection() {
     [drivers],
   )
   const isGridComplete = gridDrivers.length === GRID_SIZE
-  const userDriverId = gridDrivers.some((d) => d.id === storedUserDriverId) ? storedUserDriverId : null
+  const userDriverId = gridDrivers.some((d) => d.id === storedFollowedDriverId) ? storedFollowedDriverId : null
 
   // Sem circuito ou grid completo não há corrida para configurar.
   useEffect(() => {

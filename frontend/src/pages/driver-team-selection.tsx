@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { ArrowLeft, Check, Dices, RotateCcw, Trash2, Users } from "lucide-react"
+import { ArrowLeft, Check, Dices, Radio, RotateCcw, Trash2, Users } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -43,8 +43,8 @@ export function DriverTeamSelection() {
   const setAvailableDrivers = useDriverStore((state) => state.setAvailableDrivers)
   const setDrivers = useDriverStore((state) => state.setDrivers)
   const clearGrid = useDriverStore((state) => state.clearGrid)
-  const storedUserDriverId = useDriverStore((state) => state.userDriverId)
-  const setUserDriverId = useDriverStore((state) => state.setUserDriverId)
+  const storedFollowedDriverId = useDriverStore((state) => state.followedDriverId)
+  const setFollowedDriverId = useDriverStore((state) => state.setFollowedDriverId)
 
     const [seasons, setSeasons] = useState<number[]>([])
     const [isLoadingDrivers, setIsLoadingDrivers] = useState(false)
@@ -90,8 +90,8 @@ export function DriverTeamSelection() {
     }, [season, setAvailableDrivers])
 
   const gridDrivers = grid.filter((driver): driver is Driver => driver !== null)
-  // O piloto salvo só vale se ainda estiver no grid.
-  const userDriverId = gridDrivers.some((d) => d.id === storedUserDriverId) ? storedUserDriverId : null
+  // O piloto focado (controlado pelo jogador + monitorado pelo engenheiro) só vale se estiver no grid.
+  const followedDriverId = gridDrivers.some((d) => d.id === storedFollowedDriverId) ? storedFollowedDriverId : null
 
   const selectedCount = grid.filter((driver) => driver !== null).length
   const isComplete = selectedCount === GRID_SIZE && grid.length === GRID_SIZE
@@ -307,7 +307,37 @@ export function DriverTeamSelection() {
 
             </div>
 
-
+            {/* Focused Driver Section */}
+            <div className="shrink-0 border-b border-border p-4 lg:p-5 bg-background/30">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    <Radio className="h-4 w-4 text-primary" />
+                    <span>Piloto Controlado / Focado</span>
+                  </div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    Este é o piloto que você controla (cockpit) e que o engenheiro de pista monitora para sugestões de rádio.
+                  </div>
+                </div>
+                <Select
+                  value={followedDriverId ?? NO_USER_DRIVER}
+                  onValueChange={(value) => setFollowedDriverId(value === NO_USER_DRIVER ? null : value)}
+                  disabled={gridDrivers.length === 0}
+                >
+                  <SelectTrigger className="h-12 w-full rounded-none border-border bg-background sm:w-64">
+                    <SelectValue placeholder="Selecione um piloto do grid" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-none border-border">
+                    <SelectItem value={NO_USER_DRIVER}>Nenhum (só assiste)</SelectItem>
+                    {gridDrivers.map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        {driver.name} {driver.teamName && `— ${driver.teamName}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
 
@@ -454,28 +484,6 @@ export function DriverTeamSelection() {
 
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-3">
-                  <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Controlar piloto:
-                  </span>
-                  <Select
-                    value={userDriverId ?? NO_USER_DRIVER}
-                    onValueChange={(value) => setUserDriverId(value === NO_USER_DRIVER ? null : value)}
-                  >
-                    <SelectTrigger className="h-12 w-full rounded-none border-border bg-background sm:w-56">
-                      <SelectValue placeholder="Nenhum" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-none border-border">
-                      <SelectItem value={NO_USER_DRIVER}>Nenhum</SelectItem>
-                      {gridDrivers.map((driver) => (
-                        <SelectItem key={driver.id} value={driver.id}>
-                          {driver.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 <Button
 
                 onClick={handleConfirm}
