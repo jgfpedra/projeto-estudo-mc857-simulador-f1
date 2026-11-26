@@ -1,0 +1,296 @@
+{
+  "frontier_effective_pairs_R_min_v": [
+    [
+      10.0,
+      4.0
+    ],
+    [
+      16.0,
+      6.0
+    ],
+    [
+      20.0,
+      8.0
+    ],
+    [
+      25.0,
+      10.0
+    ],
+    [
+      40.0,
+      13.0
+    ]
+  ],
+  "frontier_file": "experiments/prof-curva-1/physics_frontier_current.json",
+  "frontier_sha256": "d0ad9cc6f6d9add39b7cc90aac11d776df448f2ab3ffecbb9622e4226d283cd6",
+  "guarda_interlagos_ceiling_s": 123.05,
+  "metodo": "OFFLINE: perfis baseline×teto (parâmetros do wiring) + overlay dos eventos do estágio 0; zero corridas, zero rede",
+  "schema_version": "prof-curva-1/task5-mapa-viabilidade-v1",
+  "tracks": [
+    {
+      "bind_segments": [
+        {
+          "len_m": 264.0,
+          "n_points": 66,
+          "radius_min_m": 15.52,
+          "s_hi_m": 4156.4,
+          "s_lo_m": 0.0,
+          "v_base_min_mps": 15.08,
+          "v_cap_min_mps": 5.84
+        },
+        {
+          "len_m": 1544.2,
+          "n_points": 386,
+          "radius_min_m": 22.91,
+          "s_hi_m": 1732.2,
+          "s_lo_m": 192.0,
+          "v_base_min_mps": 18.52,
+          "v_cap_min_mps": 9.16
+        },
+        {
+          "len_m": 1292.1,
+          "n_points": 323,
+          "radius_min_m": 7.13,
+          "s_hi_m": 3140.3,
+          "s_lo_m": 1852.2,
+          "v_base_min_mps": 11.44,
+          "v_cap_min_mps": 3.38
+        }
+      ],
+      "events": {
+        "by_corner": {
+          "C01": {
+            "cap_at_onset_range_mps": [
+              18.07,
+              19.45
+            ],
+            "n_binds": 0,
+            "n_events": 22,
+            "radius_at_onset_range_m": [
+              107.5,
+              140.2
+            ],
+            "v_obs_max_mps": 17.61
+          },
+          "C06": {
+            "cap_at_onset_range_mps": [
+              12.31,
+              14.2
+            ],
+            "n_binds": 4,
+            "n_events": 20,
+            "radius_at_onset_range_m": [
+              36.6,
+              57.9
+            ],
+            "v_obs_max_mps": 13.95
+          },
+          "C07": {
+            "cap_at_onset_range_mps": [
+              8.18,
+              8.79
+            ],
+            "n_binds": 20,
+            "n_events": 20,
+            "radius_at_onset_range_m": [
+              20.4,
+              22.0
+            ],
+            "v_obs_max_mps": 13.01
+          },
+          "C08": {
+            "cap_at_onset_range_mps": [
+              4.79,
+              5.98
+            ],
+            "n_binds": 20,
+            "n_events": 20,
+            "radius_at_onset_range_m": [
+              12.4,
+              15.9
+            ],
+            "v_obs_max_mps": 10.14
+          },
+          "Reta": {
+            "cap_at_onset_range_mps": [
+              35.35,
+              36.23
+            ],
+            "n_binds": 0,
+            "n_events": 20,
+            "radius_at_onset_range_m": [
+              947.0,
+              1753.5
+            ],
+            "v_obs_max_mps": 10.38
+          }
+        },
+        "source": "c0/INT_N0..4_metrics.json",
+        "total_binds": 44,
+        "total_events": 102
+      },
+      "guarda_burst_predicted": true,
+      "guarda_ceiling_s": 123.05,
+      "lap_integral_baseline_s": 96.202,
+      "lap_integral_capped_s": 131.041,
+      "lap_integral_delta_s": 34.839,
+      "n_bind_points": 775,
+      "n_waypoints": 1131,
+      "observed_off_lap_median_s": 130.464,
+      "track": "interlagos",
+      "track_frozen_sha256": "164876196eb12174",
+      "track_length_m": 4160.4
+    },
+    {
+      "bind_segments": [
+        {
+          "len_m": 2154.1,
+          "n_points": 538,
+          "radius_min_m": 7.95,
+          "s_hi_m": 3331.2,
+          "s_lo_m": 0.0,
+          "v_base_min_mps": 8.5,
+          "v_cap_min_mps": 3.57
+        },
+        {
+          "len_m": 816.8,
+          "n_points": 204,
+          "radius_min_m": 6.24,
+          "s_hi_m": 1469.4,
+          "s_lo_m": 656.6,
+          "v_base_min_mps": 6.64,
+          "v_cap_min_mps": 3.16
+        }
+      ],
+      "events": {
+        "by_corner": {
+          "C03": {
+            "cap_at_onset_range_mps": [
+              13.47,
+              13.47
+            ],
+            "n_binds": 15,
+            "n_events": 15,
+            "radius_at_onset_range_m": [
+              81.9,
+              81.9
+            ],
+            "v_obs_max_mps": 14.84
+          },
+          "C04": {
+            "cap_at_onset_range_mps": [
+              7.22,
+              17.15
+            ],
+            "n_binds": 15,
+            "n_events": 30,
+            "radius_at_onset_range_m": [
+              18.4,
+              408.9
+            ],
+            "v_obs_max_mps": 12.86
+          },
+          "C05": {
+            "cap_at_onset_range_mps": [
+              7.76,
+              8.5
+            ],
+            "n_binds": 15,
+            "n_events": 15,
+            "radius_at_onset_range_m": [
+              19.5,
+              21.2
+            ],
+            "v_obs_max_mps": 13.86
+          },
+          "C06": {
+            "cap_at_onset_range_mps": [
+              3.16,
+              14.08
+            ],
+            "n_binds": 14,
+            "n_events": 15,
+            "radius_at_onset_range_m": [
+              6.2,
+              229.6
+            ],
+            "v_obs_max_mps": 9.32
+          },
+          "C07": {
+            "cap_at_onset_range_mps": [
+              11.03,
+              11.03
+            ],
+            "n_binds": 15,
+            "n_events": 15,
+            "radius_at_onset_range_m": [
+              32.7,
+              32.7
+            ],
+            "v_obs_max_mps": 12.64
+          },
+          "C11": {
+            "cap_at_onset_range_mps": [
+              8.09,
+              11.03
+            ],
+            "n_binds": 27,
+            "n_events": 45,
+            "radius_at_onset_range_m": [
+              20.2,
+              40.2
+            ],
+            "v_obs_max_mps": 11.67
+          },
+          "C12": {
+            "cap_at_onset_range_mps": [
+              3.57,
+              22.88
+            ],
+            "n_binds": 20,
+            "n_events": 21,
+            "radius_at_onset_range_m": [
+              8.0,
+              19614.1
+            ],
+            "v_obs_max_mps": 12.5
+          },
+          "Reta": {
+            "cap_at_onset_range_mps": [
+              24.04,
+              75.51
+            ],
+            "n_binds": 0,
+            "n_events": 50,
+            "radius_at_onset_range_m": [
+              282.1,
+              25472.8
+            ],
+            "v_obs_max_mps": 13.65
+          }
+        },
+        "source": "c0/MON_N0..4_metrics.json",
+        "total_binds": 121,
+        "total_events": 206
+      },
+      "guarda_burst_predicted": false,
+      "guarda_ceiling_note": "análogo +15% sobre a mediana OFF observada (report-only; sem referência histórica Task 2 para Monaco) — PIN no prereg",
+      "guarda_ceiling_s": 245.24,
+      "lap_integral_baseline_s": 114.946,
+      "lap_integral_capped_s": 175.719,
+      "lap_integral_delta_s": 60.773,
+      "n_bind_points": 742,
+      "n_waypoints": 834,
+      "observed_off_lap_median_s": 213.255,
+      "track": "Monaco",
+      "track_frozen_sha256": "67ca11dc211c8c78",
+      "track_length_m": 3335.2
+    }
+  ],
+  "wiring_params": {
+    "ds_target": 4.0,
+    "grip_mult": 0.788,
+    "sf": 0.8,
+    "smooth_window_m": 20.0
+  }
+}

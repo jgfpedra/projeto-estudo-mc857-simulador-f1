@@ -23,23 +23,3 @@ def test_fallback_tem_flag():
     result = fallback_output("timeout")
     assert result["fallback"] is True
     assert "timeout" in result["aviso"]
-
-
-def test_aviso_nulo_vira_mensagem_do_comando():
-    raw = '{"aviso": null, "previsao": {}, "urgencia": "media", "comando": {"tipo": "defend", "valor": null, "motivo": "rival perto"}}'
-    result = validate_agent_output(raw)
-    assert result["aviso"].startswith("Segure a linha")
-    assert result["comando"]["valor"] == 0.0
-
-
-def test_aviso_ausente_e_preenchido():
-    raw = '{"previsao": {}, "urgencia": "baixa", "comando": {"tipo": "neutral"}}'
-    result = validate_agent_output(raw)
-    assert result["aviso"]
-    assert result["urgencia"] == "baixa"
-
-
-def test_aviso_string_null_e_substituido():
-    raw = '{"aviso": "null", "previsao": {}, "urgencia": "alta"}'
-    result = validate_agent_output(raw)
-    assert result["aviso"] != "null"

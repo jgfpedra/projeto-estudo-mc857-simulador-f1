@@ -112,6 +112,7 @@ export function WeatherTiresSelection() {
 
   const season = useDriverStore((state) => state.season)
   const drivers = useDriverStore((state) => state.drivers)
+  const storedUserDriverId = useDriverStore((state) => state.userDriverId)
 
   const totalLaps = useRaceLapsStore((state) => state.totalLaps)
   const syncWithRaceLaps = useTiresStore((state) => state.syncWithRaceLaps)
@@ -131,6 +132,7 @@ export function WeatherTiresSelection() {
     [drivers],
   )
   const isGridComplete = gridDrivers.length === GRID_SIZE
+  const userDriverId = gridDrivers.some((d) => d.id === storedUserDriverId) ? storedUserDriverId : null
 
   // Sem circuito ou grid completo não há corrida para configurar.
   useEffect(() => {
@@ -151,6 +153,7 @@ export function WeatherTiresSelection() {
         layoutId: selectedLayout.id,
         laps: totalLaps,
         grid: gridDrivers.map((driver) => driver.id),
+        userDriverId,
         weather: weatherConfig,
         tires: tiresConfig,
       }
@@ -490,6 +493,10 @@ export function WeatherTiresSelection() {
               <SummaryRow
                 label="Grid"
                 value={`${gridDrivers.length}/${GRID_SIZE} pilotos · Temporada ${season}`}
+              />
+              <SummaryRow
+                label="Meu piloto"
+                value={gridDrivers.find((d) => d.id === userDriverId)?.name ?? "Nenhum"}
               />
               <SummaryRow label="Clima inicial" value={WEATHER_LABELS[weatherConfig.weather]} />
               <SummaryRow

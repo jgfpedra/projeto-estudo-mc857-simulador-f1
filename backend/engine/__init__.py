@@ -6,12 +6,9 @@ publishes state/events.
 
 from .collisions import CarContact, CollisionTracker, car_contacts_from_raw
 from .events import (
-    AiCommandEvent,
     CollisionEvent,
     Event,
     LapCompletedEvent,
-    OffTrackEvent,
-    OnTrackEvent,
     PitStopEvent,
     PositionUpdateEvent,
     RaceEndEvent,
@@ -37,7 +34,6 @@ from .controllers import (
     ManualController,
 )
 from .rule_based_race_controller import RuleBasedRaceController
-from .coach_controller import CoachCommand, CoachController, CommandBus
 from .input_source import (
     FileInputSource,
     InputEntry,
@@ -59,9 +55,6 @@ __all__ = [
     "PositionUpdateEvent",
     "TickEvent",
     "CollisionEvent",
-    "OffTrackEvent",
-    "OnTrackEvent",
-    "AiCommandEvent",
     # Collision detection
     "CarContact",
     "CollisionTracker",
@@ -85,9 +78,6 @@ __all__ = [
     "ExternalController",
     "InputSourceController",
     "RuleBasedRaceController",
-    "CoachController",
-    "CoachCommand",
-    "CommandBus",
     # Input sources
     "InputEntry",
     "InputSource",

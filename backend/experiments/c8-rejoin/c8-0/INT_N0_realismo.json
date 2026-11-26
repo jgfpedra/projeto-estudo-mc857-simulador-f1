@@ -1,0 +1,899 @@
+{
+  "arm": "composite",
+  "canonical": {
+    "contacts_5hz_t_le_60s": 232,
+    "contacts_5hz_total": 332,
+    "driver_count": 10,
+    "hesitations": 8,
+    "laps_by_driver": {
+      "ALO": 4,
+      "GAS": 4,
+      "HAM": 4,
+      "LEC": 4,
+      "NOR": 5,
+      "PER": 4,
+      "PIA": 4,
+      "RUS": 4,
+      "SAI": 4,
+      "VER": 5
+    },
+    "laps_total": 42,
+    "metrics_sha256": "0c15d661a8d941f5f3e7b88e4d5ec65913a32589bdb954a8ad1d15e1aa386cde",
+    "offtrack_pct": 24.7,
+    "run_id": "INT_N0",
+    "runner_summary": {
+      "driver_count": 10,
+      "hesitations": 8,
+      "offtrack_pct": 24.7,
+      "offtrack_ticks": 7396,
+      "stuck_car_count": 10
+    },
+    "sample_rows": 30000,
+    "schema_version": "base-metrics-v1.0",
+    "solver_event_contacts_by_pair": {
+      "ALO-GAS": 911,
+      "ALO-LEC": 179,
+      "ALO-PIA": 81,
+      "ALO-SAI": 141,
+      "GAS-HAM": 537,
+      "GAS-PER": 222,
+      "GAS-SAI": 4,
+      "HAM-LEC": 869,
+      "HAM-PER": 18,
+      "HAM-PIA": 52,
+      "HAM-RUS": 1172,
+      "HAM-SAI": 8375,
+      "LEC-NOR": 4,
+      "LEC-PIA": 452,
+      "PER-PIA": 3210,
+      "PER-RUS": 68,
+      "PER-SAI": 456,
+      "PIA-RUS": 211,
+      "PIA-SAI": 87,
+      "RUS-SAI": 491
+    },
+    "solver_event_rows": 17540,
+    "source_sha256": {
+      "events": "155466eee243f3f774247975e9c06fd26fd8749438b1944596ca6afffdca981a",
+      "log": "0dd7c5978d294611afc10ad16d90368d6d8cd8bbbeb335df987c9ef698c53067",
+      "main": "0d79a2db7f437833be463d1821b9a201a2dd8df36d130a51658ea5f676f38a7b"
+    },
+    "stuck_car_count": 10,
+    "stuck_driver_ids": [
+      "ALO",
+      "GAS",
+      "HAM",
+      "LEC",
+      "NOR",
+      "PER",
+      "PIA",
+      "RUS",
+      "SAI",
+      "VER"
+    ]
+  },
+  "cross_checks": {
+    "fora_preso_vs_log": {
+      "computed": 4448,
+      "log": 4448,
+      "match": true
+    },
+    "offtrack_vs_log": {
+      "computed": 7396,
+      "log": 7396,
+      "match": true
+    },
+    "sample_rows_vs_canonical": {
+      "canonical": 30000,
+      "computed": 30000,
+      "match": true
+    }
+  },
+  "events": {
+    "junction": [
+      {
+        "corner_id": "C08",
+        "drv": "VER",
+        "rows": 80,
+        "s": 2317.845,
+        "t_s": 113.4,
+        "tick": 1134
+      },
+      {
+        "corner_id": "C08",
+        "drv": "NOR",
+        "rows": 105,
+        "s": 2312.519,
+        "t_s": 115.4,
+        "tick": 1154
+      },
+      {
+        "corner_id": "C08",
+        "drv": "ALO",
+        "rows": 83,
+        "s": 2318.187,
+        "t_s": 129.2,
+        "tick": 1292
+      },
+      {
+        "corner_id": "C08",
+        "drv": "PIA",
+        "rows": 84,
+        "s": 2319.475,
+        "t_s": 136.0,
+        "tick": 1360
+      },
+      {
+        "corner_id": "C08",
+        "drv": "LEC",
+        "rows": 83,
+        "s": 2319.475,
+        "t_s": 137.4,
+        "tick": 1374
+      },
+      {
+        "corner_id": "C08",
+        "drv": "PER",
+        "rows": 4,
+        "s": 2269.714,
+        "t_s": 137.6,
+        "tick": 1376
+      },
+      {
+        "corner_id": "C08",
+        "drv": "PER",
+        "rows": 87,
+        "s": 2316.342,
+        "t_s": 143.2,
+        "tick": 1432
+      },
+      {
+        "corner_id": "C08",
+        "drv": "GAS",
+        "rows": 91,
+        "s": 2314.123,
+        "t_s": 149.6,
+        "tick": 1496
+      },
+      {
+        "corner_id": "C08",
+        "drv": "HAM",
+        "rows": 96,
+        "s": 2316.021,
+        "t_s": 151.6,
+        "tick": 1516
+      },
+      {
+        "corner_id": "C08",
+        "drv": "RUS",
+        "rows": 1,
+        "s": 2294.787,
+        "t_s": 153.2,
+        "tick": 1532
+      },
+      {
+        "corner_id": "C08",
+        "drv": "SAI",
+        "rows": 3,
+        "s": 2268.165,
+        "t_s": 155.2,
+        "tick": 1552
+      },
+      {
+        "corner_id": "C08",
+        "drv": "RUS",
+        "rows": 101,
+        "s": 2316.654,
+        "t_s": 156.2,
+        "tick": 1562
+      },
+      {
+        "corner_id": "C08",
+        "drv": "SAI",
+        "rows": 78,
+        "s": 2321.827,
+        "t_s": 162.6,
+        "tick": 1626
+      },
+      {
+        "corner_id": "C08",
+        "drv": "VER",
+        "rows": 79,
+        "s": 2317.004,
+        "t_s": 249.8,
+        "tick": 2498
+      },
+      {
+        "corner_id": "C08",
+        "drv": "NOR",
+        "rows": 86,
+        "s": 2318.001,
+        "t_s": 259.0,
+        "tick": 2590
+      },
+      {
+        "corner_id": "C08",
+        "drv": "ALO",
+        "rows": 94,
+        "s": 2312.957,
+        "t_s": 268.8,
+        "tick": 2688
+      },
+      {
+        "corner_id": "C08",
+        "drv": "LEC",
+        "rows": 82,
+        "s": 2317.756,
+        "t_s": 281.0,
+        "tick": 2810
+      },
+      {
+        "corner_id": "C08",
+        "drv": "PIA",
+        "rows": 87,
+        "s": 2318.441,
+        "t_s": 293.2,
+        "tick": 2932
+      },
+      {
+        "corner_id": "C08",
+        "drv": "PER",
+        "rows": 93,
+        "s": 2315.763,
+        "t_s": 297.4,
+        "tick": 2974
+      },
+      {
+        "corner_id": "C08",
+        "drv": "GAS",
+        "rows": 88,
+        "s": 2317.754,
+        "t_s": 305.4,
+        "tick": 3054
+      },
+      {
+        "corner_id": "C08",
+        "drv": "HAM",
+        "rows": 2,
+        "s": 2278.457,
+        "t_s": 307.0,
+        "tick": 3070
+      },
+      {
+        "corner_id": "C08",
+        "drv": "SAI",
+        "rows": 6,
+        "s": 2257.501,
+        "t_s": 309.0,
+        "tick": 3090
+      },
+      {
+        "corner_id": "C08",
+        "drv": "HAM",
+        "rows": 79,
+        "s": 2319.475,
+        "t_s": 313.0,
+        "tick": 3130
+      },
+      {
+        "corner_id": "C08",
+        "drv": "RUS",
+        "rows": 1,
+        "s": 2278.262,
+        "t_s": 317.0,
+        "tick": 3170
+      },
+      {
+        "corner_id": "C08",
+        "drv": "SAI",
+        "rows": 85,
+        "s": 2320.492,
+        "t_s": 317.0,
+        "tick": 3170
+      },
+      {
+        "corner_id": "C08",
+        "drv": "RUS",
+        "rows": 79,
+        "s": 2319.475,
+        "t_s": 321.6,
+        "tick": 3216
+      },
+      {
+        "corner_id": "C08",
+        "drv": "VER",
+        "rows": 83,
+        "s": 2318.223,
+        "t_s": 386.6,
+        "tick": 3866
+      },
+      {
+        "corner_id": "C08",
+        "drv": "NOR",
+        "rows": 90,
+        "s": 2317.401,
+        "t_s": 398.4,
+        "tick": 3984
+      },
+      {
+        "corner_id": "C08",
+        "drv": "ALO",
+        "rows": 89,
+        "s": 2318.419,
+        "t_s": 409.6,
+        "tick": 4096
+      },
+      {
+        "corner_id": "C08",
+        "drv": "LEC",
+        "rows": 91,
+        "s": 2313.161,
+        "t_s": 418.4,
+        "tick": 4184
+      },
+      {
+        "corner_id": "C08",
+        "drv": "PIA",
+        "rows": 88,
+        "s": 2317.146,
+        "t_s": 433.4,
+        "tick": 4334
+      },
+      {
+        "corner_id": "C08",
+        "drv": "PER",
+        "rows": 75,
+        "s": 2319.475,
+        "t_s": 435.8,
+        "tick": 4358
+      },
+      {
+        "corner_id": "C08",
+        "drv": "GAS",
+        "rows": 93,
+        "s": 2317.168,
+        "t_s": 443.8,
+        "tick": 4438
+      },
+      {
+        "corner_id": "C08",
+        "drv": "HAM",
+        "rows": 96,
+        "s": 2314.897,
+        "t_s": 449.8,
+        "tick": 4498
+      },
+      {
+        "corner_id": "C08",
+        "drv": "SAI",
+        "rows": 76,
+        "s": 2319.475,
+        "t_s": 452.6,
+        "tick": 4526
+      },
+      {
+        "corner_id": "C08",
+        "drv": "RUS",
+        "rows": 80,
+        "s": 2317.838,
+        "t_s": 459.0,
+        "tick": 4590
+      },
+      {
+        "corner_id": "C08",
+        "drv": "VER",
+        "rows": 85,
+        "s": 2318.462,
+        "t_s": 520.0,
+        "tick": 5200
+      },
+      {
+        "corner_id": "C08",
+        "drv": "NOR",
+        "rows": 91,
+        "s": 2317.425,
+        "t_s": 539.2,
+        "tick": 5392
+      },
+      {
+        "corner_id": "C08",
+        "drv": "ALO",
+        "rows": 87,
+        "s": 2317.548,
+        "t_s": 551.0,
+        "tick": 5510
+      },
+      {
+        "corner_id": "C08",
+        "drv": "LEC",
+        "rows": 84,
+        "s": 2319.475,
+        "t_s": 555.0,
+        "tick": 5550
+      },
+      {
+        "corner_id": "C08",
+        "drv": "PIA",
+        "rows": 87,
+        "s": 2316.867,
+        "t_s": 574.4,
+        "tick": 5744
+      },
+      {
+        "corner_id": "C08",
+        "drv": "PER",
+        "rows": 114,
+        "s": 2312.519,
+        "t_s": 577.2,
+        "tick": 5772
+      },
+      {
+        "corner_id": "C08",
+        "drv": "GAS",
+        "rows": 85,
+        "s": 2312.519,
+        "t_s": 583.0,
+        "tick": 5830
+      },
+      {
+        "corner_id": "C08",
+        "drv": "SAI",
+        "rows": 41,
+        "s": 2320.443,
+        "t_s": 591.8,
+        "tick": 5918
+      },
+      {
+        "corner_id": "C08",
+        "drv": "HAM",
+        "rows": 12,
+        "s": 2319.475,
+        "t_s": 597.6,
+        "tick": 5976
+      }
+    ],
+    "z_reta": [
+      {
+        "corner_id": "Reta",
+        "drv": "RUS",
+        "rows": 18,
+        "s": 2641.83,
+        "t_s": 2.2,
+        "tick": 22
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "GAS",
+        "rows": 8,
+        "s": 2625.301,
+        "t_s": 2.4,
+        "tick": 24
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "NOR",
+        "rows": 10,
+        "s": 2662.552,
+        "t_s": 2.4,
+        "tick": 24
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "PER",
+        "rows": 14,
+        "s": 2634.417,
+        "t_s": 2.4,
+        "tick": 24
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "HAM",
+        "rows": 16,
+        "s": 2657.931,
+        "t_s": 3.0,
+        "tick": 30
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "PIA",
+        "rows": 7,
+        "s": 2650.644,
+        "t_s": 3.2,
+        "tick": 32
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "SAI",
+        "rows": 3,
+        "s": 2644.014,
+        "t_s": 3.4,
+        "tick": 34
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "LEC",
+        "rows": 7,
+        "s": 2669.858,
+        "t_s": 3.8,
+        "tick": 38
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "GAS",
+        "rows": 4,
+        "s": 2660.763,
+        "t_s": 6.0,
+        "tick": 60
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "PER",
+        "rows": 8,
+        "s": 2678.643,
+        "t_s": 7.0,
+        "tick": 70
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "HAM",
+        "rows": 18,
+        "s": 2697.808,
+        "t_s": 7.4,
+        "tick": 74
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "ALO",
+        "rows": 59,
+        "s": 2709.243,
+        "t_s": 7.6,
+        "tick": 76
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "PIA",
+        "rows": 20,
+        "s": 2706.784,
+        "t_s": 7.6,
+        "tick": 76
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "SAI",
+        "rows": 119,
+        "s": 2709.857,
+        "t_s": 8.0,
+        "tick": 80
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "LEC",
+        "rows": 36,
+        "s": 2715.551,
+        "t_s": 8.2,
+        "tick": 82
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "RUS",
+        "rows": 7,
+        "s": 2703.883,
+        "t_s": 8.2,
+        "tick": 82
+      },
+      {
+        "corner_id": "Reta",
+        "drv": "GAS",
+        "rows": 4,
+        "s": 2695.702,
+        "t_s": 9.4,
+        "tick": 94
+      }
+    ],
+    "z_t1_t_le_60s": [
+      {
+        "corner_id": "C10",
+        "drv": "PER",
+        "rows": 12,
+        "s": 2719.193,
+        "t_s": 10.6,
+        "tick": 106
+      },
+      {
+        "corner_id": "C10",
+        "drv": "GAS",
+        "rows": 15,
+        "s": 2721.798,
+        "t_s": 12.2,
+        "tick": 122
+      },
+      {
+        "corner_id": "C10",
+        "drv": "HAM",
+        "rows": 3,
+        "s": 2749.992,
+        "t_s": 12.8,
+        "tick": 128
+      },
+      {
+        "corner_id": "C10",
+        "drv": "RUS",
+        "rows": 84,
+        "s": 2757.626,
+        "t_s": 12.8,
+        "tick": 128
+      },
+      {
+        "corner_id": "C10",
+        "drv": "PER",
+        "rows": 59,
+        "s": 2762.374,
+        "t_s": 15.8,
+        "tick": 158
+      },
+      {
+        "corner_id": "C10",
+        "drv": "HAM",
+        "rows": 74,
+        "s": 2781.981,
+        "t_s": 16.2,
+        "tick": 162
+      },
+      {
+        "corner_id": "C10",
+        "drv": "PIA",
+        "rows": 41,
+        "s": 2813.323,
+        "t_s": 17.0,
+        "tick": 170
+      },
+      {
+        "corner_id": "C10",
+        "drv": "GAS",
+        "rows": 82,
+        "s": 2778.997,
+        "t_s": 18.2,
+        "tick": 182
+      },
+      {
+        "corner_id": "C10",
+        "drv": "LEC",
+        "rows": 28,
+        "s": 2797.284,
+        "t_s": 18.8,
+        "tick": 188
+      }
+    ]
+  },
+  "instrument": {
+    "base_metrics_sha256": "9107c2d0f6bb3b1c7b317020b09b90a7c615390cdfb4e565acb29c27c362d728",
+    "realismo_metrics_sha256": "e5a7ecb42fd9bfd3297935d974a53174b51eb822a877b33e4ed4a208a590ac7b",
+    "saidas_verdict_sha256": "e1ac9f699e6d1339e67b7d53683f6becd5e3041da52102516cc4529c21496d6c",
+    "sanidade1b_verdict_sha256": "c23f3c6692dfdb5add216e5d021cf1db6ba49b4113f1052d2aef2b54a74d8b16",
+    "track_file_sha256": "c4617650983df9b1141296dac953b0e4be03f0c06c1de006340233c39e308613",
+    "track_sha16": "164876196eb12174"
+  },
+  "integrity": {
+    "arm": "composite",
+    "checks": {
+      "csv_track_sha": {
+        "detail": {
+          "expected": "164876196eb12174",
+          "found": [
+            "164876196eb12174"
+          ]
+        },
+        "pass": true
+      },
+      "events_present": {
+        "detail": "INT_N0_events.csv",
+        "pass": true
+      },
+      "expected_variedade": {
+        "detail": {
+          "expected": 0,
+          "found": 0
+        },
+        "pass": true
+      },
+      "log_track_sha": {
+        "detail": {
+          "expected": "164876196eb12174",
+          "frozen_lines": 1
+        },
+        "pass": true
+      },
+      "main_physical_lines": {
+        "detail": {
+          "expected": 30002,
+          "found": 30002
+        },
+        "pass": true
+      },
+      "no_residual_override": {
+        "detail": {
+          "override_lines": 0
+        },
+        "pass": true
+      },
+      "residual_baseline": {
+        "detail": {
+          "expected": [
+            "6210fff65b19ad0e"
+          ],
+          "found": [
+            "6210fff65b19ad0e"
+          ]
+        },
+        "pass": true
+      },
+      "variedade_frozen": {
+        "detail": {
+          "found": [
+            "0"
+          ]
+        },
+        "pass": true
+      },
+      "variedade_line": {
+        "detail": {
+          "expected": [],
+          "found": []
+        },
+        "pass": true
+      }
+    },
+    "ok": true,
+    "variedade": 0
+  },
+  "metrics": {
+    "cascade_event_frac": 0.4669603524229075,
+    "cascade_events": 106,
+    "cascade_events_int": 107,
+    "cascade_offtime_frac": 0.5901838831800974,
+    "cascade_offtime_rows": 4365,
+    "censored_excursions": 4,
+    "contacts_5hz_t_le_60s": 232,
+    "contacts_5hz_total": 332,
+    "corner_exits": {
+      "C01": 43,
+      "C02": 3,
+      "C03": 4,
+      "C06": 40,
+      "C07": 41,
+      "C08": 45,
+      "C09": 4,
+      "C10": 14,
+      "C11": 2,
+      "Reta": 31
+    },
+    "deadlocks": 1,
+    "excursions_t_le_60s": 38,
+    "excursions_total": 227,
+    "fora_pilotagem_rows": 2948,
+    "fora_preso_rows": 4448,
+    "glued_rows": 179,
+    "glued_s": 35.8,
+    "hesitations": 8,
+    "junction_exits": 45,
+    "laps_total": 42,
+    "new_exit_le_5s": 35,
+    "new_exit_le_5s_per_excursion": 0.15418502202643172,
+    "new_exit_le_5s_per_reentry": 0.15695067264573992,
+    "offtrack_pct": 24.7,
+    "offtrack_rows": 7396,
+    "reentries": 223,
+    "sample_rows": 30000,
+    "wanderer_events": 0,
+    "z_reta_exits": 17,
+    "z_t1_exits_t_le_60s": 9
+  },
+  "metrics_sha256": "366024a30a1791f260c9a9a3114510d2658bad6f8f0f85df17bcfb75184dab27",
+  "run_id": "INT_N0",
+  "schema_version": "realismo-metrics-v1.0",
+  "source_sha256": {
+    "events": "155466eee243f3f774247975e9c06fd26fd8749438b1944596ca6afffdca981a",
+    "log": "0dd7c5978d294611afc10ad16d90368d6d8cd8bbbeb335df987c9ef698c53067",
+    "main": "0d79a2db7f437833be463d1821b9a201a2dd8df36d130a51658ea5f676f38a7b"
+  },
+  "track": "interlagos",
+  "zones": {
+    "corners": [
+      {
+        "id": "C01",
+        "kmax": 0.042024,
+        "name": "Descida do Lago (T4/T5)",
+        "s0": -32.0034,
+        "s1": 128.0134
+      },
+      {
+        "id": "C02",
+        "kmax": 0.036649,
+        "name": "Ferradura (T6/T7)",
+        "s0": 220.0231,
+        "s1": 336.0353
+      },
+      {
+        "id": "C03",
+        "kmax": 0.043644,
+        "name": "Curva do Laranjinha (T8)",
+        "s0": 988.1038,
+        "s1": 1124.1181
+      },
+      {
+        "id": "C04",
+        "kmax": 0.028572,
+        "name": "Pinheirinho Entrada",
+        "s0": 1176.1235,
+        "s1": 1240.1302
+      },
+      {
+        "id": "C05",
+        "kmax": 0.028378,
+        "name": "Pinheirinho (T9)",
+        "s0": 1596.1676,
+        "s1": 1804.1895
+      },
+      {
+        "id": "C06",
+        "kmax": 0.045363,
+        "name": "Bico de Pato (T10)",
+        "s0": 1888.1983,
+        "s1": 1964.2063
+      },
+      {
+        "id": "C07",
+        "kmax": 0.05333,
+        "name": "Mergulho (T11)",
+        "s0": 2012.2113,
+        "s1": 2092.2197
+      },
+      {
+        "id": "C08",
+        "kmax": 0.073887,
+        "name": "Junção (T12)",
+        "s0": 2276.2391,
+        "s1": 2344.2462
+      },
+      {
+        "id": "C09",
+        "kmax": 0.024135,
+        "name": "Subida dos Boxes (T13/T14)",
+        "s0": 2468.2592,
+        "s1": 2564.2693
+      },
+      {
+        "id": "C10",
+        "kmax": 0.031106,
+        "name": "Senna S (T1/T2)",
+        "s0": 2748.2886,
+        "s1": 2852.2996
+      },
+      {
+        "id": "C11",
+        "kmax": 0.00811,
+        "name": "Curva do Sol (T3)",
+        "s0": 3128.3286,
+        "s1": 3156.3315
+      }
+    ],
+    "grid_back": 2613.1627,
+    "grid_front": 2649.1627,
+    "junction_corner_id": "C08",
+    "junction_zone": [
+      2246.2391,
+      2374.2462
+    ],
+    "length_m": 4160.437,
+    "sf_s": 2655.1627,
+    "t1_corner_id": "C10",
+    "z_reta": [
+      2608.1627,
+      2718.2886
+    ],
+    "z_t1": [
+      2718.2886,
+      2882.2996
+    ]
+  }
+}

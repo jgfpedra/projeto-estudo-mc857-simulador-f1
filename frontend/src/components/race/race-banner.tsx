@@ -6,7 +6,8 @@ const BANNER_KINDS: FeedKind[] = ["overtake", "pit_stop", "race_control", "colli
 const BANNER_S = 6
 
 /**
- * Aviso discreto na mesma linha dos controles (à direita do toggle).
+ * Aviso discreto na mesma linha dos controles, depois deles (a página o põe
+ * numa linha flexível com a chave 2D/3D e os controles do 3D).
  * Sem caixa pesada: fundo translúcido e uma linha de texto, para não cobrir a pista no mobile.
  */
 export function RaceBanner({ items, simTs }: { items: FeedItem[]; simTs: number }) {
@@ -21,7 +22,7 @@ export function RaceBanner({ items, simTs }: { items: FeedItem[]; simTs: number 
   return (
     <div
       role="status"
-      className="pointer-events-none absolute left-32 right-4 top-4 z-20 flex min-w-0 items-center gap-2 bg-background/40 px-2 py-1 backdrop-blur-sm"
+      className="pointer-events-none flex min-w-0 flex-1 items-center gap-2 bg-background/40 px-2 py-1 backdrop-blur-sm"
     >
       <span className={`h-2 w-2 shrink-0 rounded-full bg-current ${TONE_TEXT[latest.tone]}`} />
       <span className={`shrink-0 text-[10px] font-black uppercase tracking-wider ${TONE_TEXT[latest.tone]}`}>

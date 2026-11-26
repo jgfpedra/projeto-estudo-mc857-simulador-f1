@@ -1,0 +1,33 @@
+pybullet build time: Sep 11 2026 21:22:29
+[diag] CANÁRIA: campo de 1 carro(s)
+[diag] pista FROZEN: Monaco Grand Prix (mirror 2021) | 834 wp | SF wp 0 | sha256 67ca11dc211c8c78 | clima=seeded (rng semeado por seed) | variance=off | rejoin_gap=0.0 | launch_cap=False | launch_stagger=False | pguard=False | grid=f1 | rejoin=bearing | anti_glue=False | variedade=0
+[Grid] reta antes da SF: 205 m | grid ocupa 42 m
+[Grid] 10 carros no grid estilo F1 (5 fileiras x 2 colunas, NA RETA)
+[Model] Carregando pesos neurais (NumPy Engine) de: dagger_actor_best_weights.npz
+[diag] ator: dagger_actor_best.keras | input_dim=48 | gov=vplan | profile=manual
+[diag] 3000 linhas -> experiments/prof-monaco-1/aluno_s0.csv (instrumento race_diag_v3_contact_solver_v1)
+
+===== ESTADO FINAL POR CARRO =====
+drv  speed       s   lat   th  brk  steer_rad
+VER   3.16 2454.86 13.54 0.35  0.0       0.43
+
+===== CLIMA (transições reais: 0) =====
+  nenhuma transição de kind (grip constante)
+
+===== IMOBILIZACAO (v < 2 m/s) =====
+VER: 70 amostras v<2 | primeiro tick lento=0 (s=3329m) | brake medio apos=0.04
+
+===== EPISODIOS DE PARADA >= 3 s (como terminaram) =====
+  nenhuma parada >= 3 s
+
+===== SAIDA DE PISTA / CORTES =====
+amostras com centro fora do asfalto: 1350 de 3000 (45.0%)
+  VER: 1350 amostras fora | lat max=70.2 m | trechos: [0.0, 200.0, 400.0, 600.0, 800.0, 1000.0, 1200.0, 1600.0, 1800.0, 2000.0, 2200.0, 2400.0, 3000.0]
+
+contatos c/ SOLO (todo tick, esperado): 10200 | contatos CARRO-CARRO: 0 amostras, impulso medio 0 N | dv medio 0.00 m/s
+
+===== R3: FORA-PILOTAGEM vs FORA-PRESO (janelas 30 s) =====
+  VER: pilotagem= 165 ticks | preso=1185 ticks  <== CARRO-PRESO
+  TOTAL fora: 1350 ticks (45.0%) | FORA-PILOTAGEM: 165 (12.2% do fora) | FORA-PRESO: 1185 (87.8% do fora)
+  CARROS-PRESO na sessão: 1 (VER — gate exige 0)
+  HESITAÇÕES (v<0,5 m/s por 0,3-3 s, pós-largada): 1 (gate: <=3)

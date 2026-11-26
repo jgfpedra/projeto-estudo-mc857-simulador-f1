@@ -1,0 +1,13 @@
+=== PROF-MONACO-1 F4: verificação pós-bateria (read-only) ===
+[V1] PROFESSOR s0 vs s1: BIT-IDÊNTICA (dados)
+[V1] PROFESSOR s0 vs s2: BIT-IDÊNTICA (dados)
+[V1] PROFESSOR s0 vs s3: BIT-IDÊNTICA (dados)
+[V1] PROFESSOR s0 vs s4: BIT-IDÊNTICA (dados)
+[V1] ALUNO s0 vs s1: BIT-IDÊNTICA (dados)
+[V1] ALUNO s0 vs s2: BIT-IDÊNTICA (dados)
+[V1] ALUNO s0 vs s3: BIT-IDÊNTICA (dados)
+[V1] ALUNO s0 vs s4: BIT-IDÊNTICA (dados)
+[V2] aluno_s0 (bateria) vs aluno_Monaco_ep1 (ADOÇÃO-H-2): BIT-IDÊNTICA (3001 vs 3001 linhas)
+[V2b] prof_s0 (bateria) vs metaA_mon_1 (ADOÇÃO-H-2): BIT-IDÊNTICA (3001 vs 3001 linhas)
+[V3] preso acumulado (R3 CANÔNICO, janelas fixas 30 s) do aluno_s0 = 237.0 s | log da era: preso=1185 ticks × 0,2 s = 237.0 s — o herdado '118 s' era 1185 ticks divididos por 10 (erro de TAXA: o R3 do runner opera sobre LINHAS do CSV a 5 Hz, não ticks lógicos de 0,1 s)
+     tempo-cascata médio por ep = 254.5 s — o preso vive DENTRO do churn de cascata (237.0 <= 254.5: SIM)

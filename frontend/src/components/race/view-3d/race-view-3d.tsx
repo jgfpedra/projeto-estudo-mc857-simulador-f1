@@ -12,6 +12,11 @@ import type { Frame, RaceInfo } from "@/types/race"
  *   exatamente como o mapa 2D;
  * - `onSelectDriver(null)` é chamado quando o usuário sai do seguimento.
  *
+ * As props não mudaram, mas a cena não desenha mais na borda ao vivo: usa
+ * `interpolateCars` sobre os frames da store guardados por `simTs`, num
+ * instante ~150 ms atrás do mais novo (`scene/playback.ts`), para os ticks
+ * irregulares não fazerem o carro parar e saltar. O 2D segue na borda ao vivo.
+ *
  * Este módulo é pequeno e entra no bundle da página; a cena (three, R3F, drei)
  * fica em `race-scene.tsx`, carregada com `React.lazy` só quando o 3D é aberto.
  * `frame` não é repassado: a cena lê a store dentro do `useFrame`, sem

@@ -1,0 +1,1061 @@
+{
+  "metodo": {
+    "eta_target_tlap": 0.6,
+    "forma_fechada": "v_safe = sqrt(η·(1,8·grip)·9,81/(κ − η·(1,8·grip)·c_m)) se denom > 0; c_m = 0.00368421",
+    "grips_tlap": [
+      0.807,
+      0.842
+    ],
+    "positivo_da_matriz": "SAÍDA (desfecho ruim)",
+    "razao": "v_apex²·κ_inst(s_apex)/a_lat(v_apex, grip_apex); ápice = |κ suav| máx da janela (convenção da calibração)"
+  },
+  "proveniencia": {
+    "calibrado_sobre": [
+      "REF_INTERLAGOS_600S",
+      "CTRL_Interlagos_OFF",
+      "ON_Interlagos_N0"
+    ],
+    "comprimento_m": 4160.437,
+    "limiar_eta_calibrado_em_amostra": 0.615,
+    "oos_sobre": [
+      "ON_Interlagos_N1",
+      "ON_Interlagos_N2",
+      "ON_Interlagos_N3",
+      "ON_Interlagos_N4"
+    ],
+    "pista_sha256_pin": "164876196eb12174"
+  },
+  "schema_version": "prof-grip-1/out-of-sample-validation-v1.0",
+  "t_lap_forma_fechada": {
+    "cenario": [
+      {
+        "delta_vs_base_s": 1.451,
+        "eta": 0.6,
+        "grip": 0.807,
+        "guarda_estoura": false,
+        "t_lap_piso_s": 97.653
+      },
+      {
+        "delta_vs_base_s": 1.255,
+        "eta": 0.6,
+        "grip": 0.842,
+        "guarda_estoura": false,
+        "t_lap_piso_s": 97.457
+      }
+    ],
+    "guarda_s": 123.05,
+    "piso_base_s": 96.202
+  },
+  "teste_cego": {
+    "c01_limpas_N1_N2": {
+      "n_corretamente_classificadas": 1,
+      "n_limpas": 4
+    },
+    "fontes": [
+      {
+        "c01_limpas_e_corretas": {
+          "n_corretamente_classificadas": 1,
+          "n_limpas_c01": 2
+        },
+        "confusao": {
+          "FN_limpa_prev_saida_real": 0,
+          "FP_saida_prev_limpa_real": 1,
+          "TN_limpa_prev_e_real": 1,
+          "TP_saida_prev_e_real": 15,
+          "acuracia": 0.9412
+        },
+        "csv_sha256_prefix": "342da20d292edd78",
+        "fonte": "ON_Interlagos_N1",
+        "n_passes": 17,
+        "passes": [
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "LIMPA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.842,
+            "lat_max_m": 5.9066,
+            "predicao": "LIMPA",
+            "razao_inst_apex": 0.6047,
+            "segmento": 2,
+            "v_apex_kmh": 52.592
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.842,
+            "lat_max_m": 9.0235,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.798,
+            "segmento": 2,
+            "v_apex_kmh": 49.437
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.842,
+            "lat_max_m": 14.1477,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8715,
+            "segmento": 2,
+            "v_apex_kmh": 46.645
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.842,
+            "lat_max_m": 35.5879,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8696,
+            "segmento": 2,
+            "v_apex_kmh": 36.345
+          },
+          {
+            "correto": false,
+            "curva": "C01",
+            "desfecho_real": "LIMPA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.833,
+            "lat_max_m": 5.8997,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6319,
+            "segmento": 3,
+            "v_apex_kmh": 53.583
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.833,
+            "lat_max_m": 8.9148,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8246,
+            "segmento": 3,
+            "v_apex_kmh": 49.294
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.833,
+            "lat_max_m": 14.5166,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8458,
+            "segmento": 3,
+            "v_apex_kmh": 46.481
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.833,
+            "lat_max_m": 35.197,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9156,
+            "segmento": 3,
+            "v_apex_kmh": 36.347
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.825,
+            "lat_max_m": 6.1308,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6248,
+            "segmento": 4,
+            "v_apex_kmh": 52.723
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.825,
+            "lat_max_m": 9.3997,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8656,
+            "segmento": 4,
+            "v_apex_kmh": 49.326
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.825,
+            "lat_max_m": 14.6733,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8994,
+            "segmento": 4,
+            "v_apex_kmh": 46.696
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.825,
+            "lat_max_m": 35.8635,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8877,
+            "segmento": 4,
+            "v_apex_kmh": 36.374
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.816,
+            "lat_max_m": 6.2391,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6257,
+            "segmento": 5,
+            "v_apex_kmh": 52.621
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.816,
+            "lat_max_m": 9.5213,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.825,
+            "segmento": 5,
+            "v_apex_kmh": 49.451
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.816,
+            "lat_max_m": 15.5564,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9227,
+            "segmento": 5,
+            "v_apex_kmh": 46.741
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.807,
+            "lat_max_m": 36.247,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9612,
+            "segmento": 5,
+            "v_apex_kmh": 36.382
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N1",
+            "grip_apex": 0.807,
+            "lat_max_m": 6.3381,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6669,
+            "segmento": 6,
+            "v_apex_kmh": 53.384
+          }
+        ]
+      },
+      {
+        "c01_limpas_e_corretas": {
+          "n_corretamente_classificadas": 0,
+          "n_limpas_c01": 2
+        },
+        "confusao": {
+          "FN_limpa_prev_saida_real": 0,
+          "FP_saida_prev_limpa_real": 2,
+          "TN_limpa_prev_e_real": 0,
+          "TP_saida_prev_e_real": 15,
+          "acuracia": 0.8824
+        },
+        "csv_sha256_prefix": "905b9609d3571fa9",
+        "fonte": "ON_Interlagos_N2",
+        "n_passes": 17,
+        "passes": [
+          {
+            "correto": false,
+            "curva": "C01",
+            "desfecho_real": "LIMPA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.842,
+            "lat_max_m": 5.855,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6583,
+            "segmento": 2,
+            "v_apex_kmh": 53.198
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.842,
+            "lat_max_m": 8.9331,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8453,
+            "segmento": 2,
+            "v_apex_kmh": 49.319
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.842,
+            "lat_max_m": 14.722,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8887,
+            "segmento": 2,
+            "v_apex_kmh": 46.677
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.842,
+            "lat_max_m": 35.1468,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.909,
+            "segmento": 2,
+            "v_apex_kmh": 36.326
+          },
+          {
+            "correto": false,
+            "curva": "C01",
+            "desfecho_real": "LIMPA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.833,
+            "lat_max_m": 5.8324,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.628,
+            "segmento": 3,
+            "v_apex_kmh": 53.624
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.833,
+            "lat_max_m": 8.8539,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.7908,
+            "segmento": 3,
+            "v_apex_kmh": 49.496
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.833,
+            "lat_max_m": 14.1151,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8916,
+            "segmento": 3,
+            "v_apex_kmh": 46.671
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.833,
+            "lat_max_m": 35.6904,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9292,
+            "segmento": 3,
+            "v_apex_kmh": 36.356
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.825,
+            "lat_max_m": 6.0151,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6601,
+            "segmento": 4,
+            "v_apex_kmh": 53.081
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.825,
+            "lat_max_m": 8.9538,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8393,
+            "segmento": 4,
+            "v_apex_kmh": 49.378
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.825,
+            "lat_max_m": 15.1122,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9239,
+            "segmento": 4,
+            "v_apex_kmh": 46.741
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.825,
+            "lat_max_m": 35.9222,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.941,
+            "segmento": 4,
+            "v_apex_kmh": 36.376
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.816,
+            "lat_max_m": 6.0953,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6334,
+            "segmento": 5,
+            "v_apex_kmh": 53.725
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.816,
+            "lat_max_m": 9.0637,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8556,
+            "segmento": 5,
+            "v_apex_kmh": 49.319
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.816,
+            "lat_max_m": 15.2984,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9356,
+            "segmento": 5,
+            "v_apex_kmh": 46.756
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.807,
+            "lat_max_m": 36.3482,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9142,
+            "segmento": 5,
+            "v_apex_kmh": 36.33
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N2",
+            "grip_apex": 0.807,
+            "lat_max_m": 6.27,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6551,
+            "segmento": 6,
+            "v_apex_kmh": 52.879
+          }
+        ]
+      },
+      {
+        "c01_limpas_e_corretas": {
+          "n_corretamente_classificadas": 0,
+          "n_limpas_c01": 1
+        },
+        "confusao": {
+          "FN_limpa_prev_saida_real": 0,
+          "FP_saida_prev_limpa_real": 1,
+          "TN_limpa_prev_e_real": 0,
+          "TP_saida_prev_e_real": 16,
+          "acuracia": 0.9412
+        },
+        "csv_sha256_prefix": "ad75c26cdd5f9ca7",
+        "fonte": "ON_Interlagos_N3",
+        "n_passes": 17,
+        "passes": [
+          {
+            "correto": false,
+            "curva": "C01",
+            "desfecho_real": "LIMPA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.842,
+            "lat_max_m": 5.9586,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6303,
+            "segmento": 2,
+            "v_apex_kmh": 52.929
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.842,
+            "lat_max_m": 8.707,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8202,
+            "segmento": 2,
+            "v_apex_kmh": 49.379
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.842,
+            "lat_max_m": 14.1376,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.847,
+            "segmento": 2,
+            "v_apex_kmh": 46.484
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.842,
+            "lat_max_m": 35.2122,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9077,
+            "segmento": 2,
+            "v_apex_kmh": 36.337
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.833,
+            "lat_max_m": 6.0571,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6312,
+            "segmento": 3,
+            "v_apex_kmh": 52.864
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.833,
+            "lat_max_m": 9.1973,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8045,
+            "segmento": 3,
+            "v_apex_kmh": 49.453
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.833,
+            "lat_max_m": 15.1628,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8592,
+            "segmento": 3,
+            "v_apex_kmh": 46.571
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.833,
+            "lat_max_m": 35.1903,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.898,
+            "segmento": 3,
+            "v_apex_kmh": 36.326
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.825,
+            "lat_max_m": 6.0546,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6331,
+            "segmento": 4,
+            "v_apex_kmh": 53.653
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.825,
+            "lat_max_m": 9.0064,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.85,
+            "segmento": 4,
+            "v_apex_kmh": 49.319
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.825,
+            "lat_max_m": 15.2255,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.7823,
+            "segmento": 4,
+            "v_apex_kmh": 46.443
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.825,
+            "lat_max_m": 35.8883,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9369,
+            "segmento": 4,
+            "v_apex_kmh": 36.383
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.816,
+            "lat_max_m": 6.1746,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6632,
+            "segmento": 5,
+            "v_apex_kmh": 53.048
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.816,
+            "lat_max_m": 9.2086,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8421,
+            "segmento": 5,
+            "v_apex_kmh": 49.412
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.816,
+            "lat_max_m": 15.4532,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8642,
+            "segmento": 5,
+            "v_apex_kmh": 46.504
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.807,
+            "lat_max_m": 36.3855,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9663,
+            "segmento": 5,
+            "v_apex_kmh": 36.398
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N3",
+            "grip_apex": 0.807,
+            "lat_max_m": 6.3575,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6715,
+            "segmento": 6,
+            "v_apex_kmh": 53.337
+          }
+        ]
+      },
+      {
+        "c01_limpas_e_corretas": {
+          "n_corretamente_classificadas": 0,
+          "n_limpas_c01": 1
+        },
+        "confusao": {
+          "FN_limpa_prev_saida_real": 0,
+          "FP_saida_prev_limpa_real": 1,
+          "TN_limpa_prev_e_real": 0,
+          "TP_saida_prev_e_real": 16,
+          "acuracia": 0.9412
+        },
+        "csv_sha256_prefix": "9cc0697c09ed6ea8",
+        "fonte": "ON_Interlagos_N4",
+        "n_passes": 17,
+        "passes": [
+          {
+            "correto": false,
+            "curva": "C01",
+            "desfecho_real": "LIMPA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.842,
+            "lat_max_m": 5.9629,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6178,
+            "segmento": 2,
+            "v_apex_kmh": 52.781
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.842,
+            "lat_max_m": 8.9021,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8118,
+            "segmento": 2,
+            "v_apex_kmh": 49.42
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.842,
+            "lat_max_m": 14.472,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.7884,
+            "segmento": 2,
+            "v_apex_kmh": 46.442
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.842,
+            "lat_max_m": 35.9475,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8733,
+            "segmento": 2,
+            "v_apex_kmh": 36.335
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.833,
+            "lat_max_m": 6.0903,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6378,
+            "segmento": 3,
+            "v_apex_kmh": 52.944
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.833,
+            "lat_max_m": 9.2919,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8125,
+            "segmento": 3,
+            "v_apex_kmh": 49.421
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.833,
+            "lat_max_m": 14.4798,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8579,
+            "segmento": 3,
+            "v_apex_kmh": 46.533
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.833,
+            "lat_max_m": 35.9711,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8814,
+            "segmento": 3,
+            "v_apex_kmh": 36.355
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.825,
+            "lat_max_m": 6.1726,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6458,
+            "segmento": 4,
+            "v_apex_kmh": 52.971
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.825,
+            "lat_max_m": 9.4009,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8152,
+            "segmento": 4,
+            "v_apex_kmh": 49.449
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.825,
+            "lat_max_m": 14.7105,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9098,
+            "segmento": 4,
+            "v_apex_kmh": 46.722
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.825,
+            "lat_max_m": 35.8068,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9352,
+            "segmento": 4,
+            "v_apex_kmh": 36.383
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.816,
+            "lat_max_m": 6.2428,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6696,
+            "segmento": 5,
+            "v_apex_kmh": 53.115
+          },
+          {
+            "correto": true,
+            "curva": "C06",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.816,
+            "lat_max_m": 9.397,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.8564,
+            "segmento": 5,
+            "v_apex_kmh": 49.375
+          },
+          {
+            "correto": true,
+            "curva": "C07",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.816,
+            "lat_max_m": 15.4753,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.861,
+            "segmento": 5,
+            "v_apex_kmh": 46.51
+          },
+          {
+            "correto": true,
+            "curva": "C08",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.807,
+            "lat_max_m": 36.4057,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.9662,
+            "segmento": 5,
+            "v_apex_kmh": 36.395
+          },
+          {
+            "correto": true,
+            "curva": "C01",
+            "desfecho_real": "SAÍDA",
+            "fonte": "ON_Interlagos_N4",
+            "grip_apex": 0.807,
+            "lat_max_m": 6.4174,
+            "predicao": "SAÍDA",
+            "razao_inst_apex": 0.6633,
+            "segmento": 6,
+            "v_apex_kmh": 52.979
+          }
+        ]
+      }
+    ],
+    "global": {
+      "FN_limpa_prev_saida_real": 0,
+      "FP_saida_prev_limpa_real": 5,
+      "TN_limpa_prev_e_real": 1,
+      "TP_saida_prev_e_real": 62,
+      "acuracia": 0.9265
+    },
+    "por_crônica": {
+      "C01": {
+        "FN_limpa_prev_saida_real": 0,
+        "FP_saida_prev_limpa_real": 5,
+        "TN_limpa_prev_e_real": 1,
+        "TP_saida_prev_e_real": 14,
+        "acuracia": 0.75
+      },
+      "C06": {
+        "FN_limpa_prev_saida_real": 0,
+        "FP_saida_prev_limpa_real": 0,
+        "TN_limpa_prev_e_real": 0,
+        "TP_saida_prev_e_real": 16,
+        "acuracia": 1.0
+      },
+      "C07": {
+        "FN_limpa_prev_saida_real": 0,
+        "FP_saida_prev_limpa_real": 0,
+        "TN_limpa_prev_e_real": 0,
+        "TP_saida_prev_e_real": 16,
+        "acuracia": 1.0
+      },
+      "C08": {
+        "FN_limpa_prev_saida_real": 0,
+        "FP_saida_prev_limpa_real": 0,
+        "TN_limpa_prev_e_real": 0,
+        "TP_saida_prev_e_real": 16,
+        "acuracia": 1.0
+      }
+    }
+  },
+  "varredura_outras_curvas": [
+    {
+      "curva": "C02",
+      "janela_m": [
+        220.023,
+        336.035
+      ],
+      "lat_max_m_N1_N4": 1.0444,
+      "n_fontes_com_saida": 0,
+      "razao_inst_max_N1_N4": 1.118,
+      "risco_acima_0615": true
+    },
+    {
+      "curva": "C03",
+      "janela_m": [
+        988.104,
+        1124.118
+      ],
+      "lat_max_m_N1_N4": 1.0852,
+      "n_fontes_com_saida": 0,
+      "razao_inst_max_N1_N4": 1.7168,
+      "risco_acima_0615": true
+    },
+    {
+      "curva": "C04",
+      "janela_m": [
+        1176.124,
+        1240.13
+      ],
+      "lat_max_m_N1_N4": 1.3193,
+      "n_fontes_com_saida": 0,
+      "razao_inst_max_N1_N4": 1.642,
+      "risco_acima_0615": true
+    },
+    {
+      "curva": "C05",
+      "janela_m": [
+        1596.168,
+        1804.189
+      ],
+      "lat_max_m_N1_N4": 1.4078,
+      "n_fontes_com_saida": 0,
+      "razao_inst_max_N1_N4": 0.9494,
+      "risco_acima_0615": true
+    },
+    {
+      "curva": "C09",
+      "janela_m": [
+        2468.259,
+        2564.269
+      ],
+      "lat_max_m_N1_N4": 23.4413,
+      "n_fontes_com_saida": 4,
+      "razao_inst_max_N1_N4": 1.0151,
+      "risco_acima_0615": true
+    },
+    {
+      "curva": "C10",
+      "janela_m": [
+        2748.289,
+        2852.3
+      ],
+      "lat_max_m_N1_N4": 2.7974,
+      "n_fontes_com_saida": 0,
+      "razao_inst_max_N1_N4": 0.956,
+      "risco_acima_0615": true
+    },
+    {
+      "curva": "C11",
+      "janela_m": [
+        3128.329,
+        3156.331
+      ],
+      "lat_max_m_N1_N4": 2.3215,
+      "n_fontes_com_saida": 0,
+      "razao_inst_max_N1_N4": 1.5572,
+      "risco_acima_0615": true
+    }
+  ]
+}

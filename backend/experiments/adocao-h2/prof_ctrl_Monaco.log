@@ -1,0 +1,11 @@
+pybullet build time: Sep 11 2026 21:22:29
+[diag] CANÁRIA: campo de 1 carro(s)
+[diag] pista FROZEN: Monaco Grand Prix | 913 wp | SF wp 331 | sha256 07e7ef4dd6af4517 | clima=seeded (rng semeado por seed) | variance=off | rejoin_gap=0.0 | launch_cap=False | launch_stagger=False
+Traceback (most recent call last):
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/model_train/race_diagnostic.py", line 1018, in <module>
+    main()
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/model_train/race_diagnostic.py", line 501, in main
+    R.place_grid(engine, track, drivers)
+  File "/home/jovitor/unicamp/projeto-estudo-mc857-simulador-f1/backend/scripts/run_race_10_cars.py", line 1239, in place_grid
+    raise RuntimeError(
+RuntimeError: ABORTO: reta antes da SF = 0 m (< 40.0 m). Isto é sinal de PISTA ERRADA (fallback procedural ou SF mal posicionado), não um problema de espaçamento. Verifique a fonte da pista e o start_finish_waypoint.

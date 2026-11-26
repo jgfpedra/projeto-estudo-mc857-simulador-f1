@@ -1,6 +1,5 @@
 import { Vector3 } from 'three'
 import type { Track } from '../track/types'
-import type { RaceMeta } from './types'
 
 export interface LiveTrack {
   name: string
@@ -59,13 +58,4 @@ export function startLineEndpoints(track: Track): [Vector3, Vector3] {
   const tangent = track.points[1].clone().sub(track.points[track.points.length - 1]).normalize()
   const side = new Vector3(-tangent.z, 0, tangent.x).multiplyScalar(track.widthM / 2)
   return [first.clone().add(side), first.clone().sub(side)]
-}
-
-/** Build a visual Track from the race metadata returned by GET /races/{id}. */
-export function trackFromMeta(meta: RaceMeta): Track | null {
-  const t = meta.track
-  if (!Array.isArray(t.waypoints) || typeof t.length_m !== 'number' ||
-      typeof t.width_m !== 'number' || typeof t.start_finish_waypoint !== 'number' ||
-      typeof t.name !== 'string' || typeof t.source !== 'string') return null
-  return trackFromLive(t as unknown as LiveTrack)
 }

@@ -298,20 +298,17 @@ class FastF1TrackLoader:
         need_telemetry = load_session and grid_from_telemetry
 
         if load_session and hasattr(ff1_session, "load"):
-            # Tenta carregamento completo primeiro
             try:
                 ff1_session.load(
+                    #llaps=True if need_telemetry else False,
+                    #telemetry=need_telemetry,
                     laps=True,
                     telemetry=True,
-                    weather=True,
+                    weather=False,
                     messages=False,
                 )
             except TypeError:
-                # Fallback para API antiga
-                try:
-                    ff1_session.load(laps=True, telemetry=True, weather=True, messages=False)
-                except TypeError:
-                    ff1_session.load(laps=need_telemetry, telemetry=need_telemetry, weather=False)
+                ff1_session.load(laps=need_telemetry, telemetry=need_telemetry, weather=False)
             except Exception as exc:
                 raise CircuitLoadError(
                     f"FastF1 failed to load session year={year!r} event={event!r} "
@@ -332,11 +329,6 @@ class FastF1TrackLoader:
                     f"FastF1 could not load circuit info for year={year!r} "
                     f"event={event!r} session={session!r}: {exc2}"
                 ) from exc2
-        except Exception as exc:
-            raise CircuitLoadError(
-                f"FastF1 could not load circuit info for year={year!r} "
-                f"event={event!r} session={session!r}: {exc}"
-            ) from exc
 
         if raw_info is None:
             raise CircuitLoadError(

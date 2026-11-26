@@ -1,0 +1,31 @@
+{
+  "cycle": "LOC-QUAL-1",
+  "instrument": {
+    "path": "backend/scripts/audit_loc_qual_1.py",
+    "version": "LOC-QUAL-1 instrument v1"
+  },
+  "runtime": {
+    "implementation": "CPython",
+    "python_version": "3.12.12"
+  },
+  "dependencies": {
+    "third_party": [],
+    "standard_library_modules": [
+      "argparse",
+      "collections",
+      "datetime",
+      "hashlib",
+      "json",
+      "math",
+      "pathlib",
+      "subprocess",
+      "sys"
+    ]
+  },
+  "execution_constraints": {
+    "network_calls": 0,
+    "simulations": 0,
+    "source_cache_writes": 0,
+    "frozen_path_writes": 0
+  }
+}

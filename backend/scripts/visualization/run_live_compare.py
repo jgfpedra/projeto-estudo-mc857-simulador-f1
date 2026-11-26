@@ -33,27 +33,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--year", type=int, help="ano da sessão FastF1, quando aplicável")
     parser.add_argument("--camera", choices=("follow", "overview"), default="follow")
     parser.add_argument("--no-browser", action="store_true", help="não abrir o navegador automaticamente")
-    parser.add_argument(
-        "--followed-driver",
-        default=None,
-        help="piloto acompanhado pela IA (padrão: o primeiro do grid)",
-    )
-    parser.add_argument(
-        "--attach",
-        action="store_true",
-        help="usa uma API/viz que já estão rodando: apenas cria a corrida e imprime a URL",
-    )
-    parser.add_argument(
-        "--random-events",
-        action="store_true",
-        help="injeta avisos de rádio aleatórios para a IA reagir (demo/teste; não altera a física)",
-    )
-    parser.add_argument("--events-seed", type=int, default=None,
-                        help="semente do rádio aleatório (padrão: aleatória)")
-    parser.add_argument("--events-min-interval", type=float, default=10.0,
-                        help="intervalo mínimo do rádio em segundos (padrão: 10)")
-    parser.add_argument("--events-max-interval", type=float, default=22.0,
-                        help="intervalo máximo do rádio em segundos (padrão: 22)")
     args = parser.parse_args()
     if not 1 <= args.laps <= 200:
         parser.error("--laps deve estar entre 1 e 200")
@@ -61,8 +40,6 @@ def parse_args() -> argparse.Namespace:
         parser.error("--drivers deve estar entre 1 e 24")
     if args.year is not None and not 1000 <= args.year <= 9999:
         parser.error("--year deve ter quatro dígitos")
-    if args.events_min_interval <= 0 or args.events_max_interval < args.events_min_interval:
-        parser.error("intervalos do rádio inválidos: use 0 < min <= max")
     return args
 
 
@@ -154,49 +131,6 @@ def stop_process(process: subprocess.Popen | None) -> None:
         process.wait()
 
 
-def post_race(api_port: int, payload: dict) -> str:
-    """Cria a corrida na API e devolve o `race_id`."""
-    request = urllib.request.Request(
-        f"http://127.0.0.1:{api_port}/races",
-        data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=10) as response:
-            return json.load(response)["race_id"]
-    except urllib.error.HTTPError as exc:
-        raise RuntimeError(
-            f"Falha ao iniciar a corrida: HTTP {exc.code} "
-            f"{exc.read().decode(errors='replace')}"
-        ) from exc
-
-
-def random_events_command(args: argparse.Namespace, race_id: str,
-                          redis_url: str) -> list[str]:
-    """Comando que inicia o injetor de rádio aleatório para a corrida."""
-    command = [
-        sys.executable,
-        str(BACKEND_ROOT / "scripts" / "visualization" / "random_events.py"),
-        "--race-id", race_id,
-        "--redis-url", redis_url,
-        "--min-interval", str(args.events_min_interval),
-        "--max-interval", str(args.events_max_interval),
-    ]
-    if args.events_seed is not None:
-        command += ["--seed", str(args.events_seed)]
-    return command
-
-
-def run_random_events(args: argparse.Namespace, race_id: str,
-                      redis_url: str) -> int:
-    """Roda o rádio em primeiro plano (bom para acompanhar numa janela tmux)."""
-    try:
-        return subprocess.call(random_events_command(args, race_id, redis_url))
-    except KeyboardInterrupt:
-        return 130
-
-
 def redis_state(python: str, redis_url: str, race_id: str) -> tuple[bool, str | None]:
     code = (
         "import json,redis,sys; c=redis.Redis.from_url(sys.argv[1],decode_responses=True); "
@@ -226,38 +160,9 @@ def redis_state(python: str, redis_url: str, race_id: str) -> tuple[bool, str | 
 def run() -> int:
     args = parse_args()
     api_port = int(os.environ.get("F1_API_PORT", "8000"))
-    default_viz_port = "5173" if args.attach else "5174"
-    viz_port = int(os.environ.get("F1_VIZ_PORT", default_viz_port))
+    viz_port = int(os.environ.get("F1_VIZ_PORT", "5174"))
     if not 1 <= api_port <= 65535 or not 1 <= viz_port <= 65535:
         raise RuntimeError("F1_API_PORT e F1_VIZ_PORT devem estar entre 1 e 65535.")
-
-    payload = {
-        "laps": args.laps,
-        "num_drivers": args.drivers,
-        "track": args.track or None,
-        "year": args.year,
-    }
-    if args.followed_driver:
-        payload["followed_driver_id"] = args.followed_driver
-
-    if args.attach:
-        # Nada de subir API/viz/Redis: usa o que já está nas outras janelas e só
-        # anuncia a corrida. A engine roda dentro do processo da API, então este
-        # comando pode sair depois de imprimir a URL.
-        race_id = post_race(api_port, payload)
-        viewer_url = f"http://127.0.0.1:{viz_port}/?race={race_id}"
-        print(f"\nCorrida: {race_id}\nVisualização 3D: {viewer_url}\n")
-        print("Os carros estão parados no grid: a largada acontece quando o "
-              "visualizador conectar.\n")
-        if not args.no_browser:
-            webbrowser.open(viewer_url)
-        if args.random_events:
-            # Em primeiro plano de propósito: a janela mostra o rádio chegando
-            # e o comando termina sozinho quando a corrida acaba.
-            redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-            return run_random_events(args, race_id, redis_url)
-        return 0
-
     check_port(api_port)
     check_port(viz_port)
 
@@ -290,7 +195,7 @@ def run() -> int:
         mapped = mapped_lines[0]
         redis_url = f"redis://{mapped}/0"
 
-    api_process = viz_process = events_process = None
+    api_process = viz_process = None
     environment = os.environ.copy()
     environment.update(
         REDIS_URL=redis_url,
@@ -336,7 +241,18 @@ def run() -> int:
         else:
             raise RuntimeError("API ou visualizador não ficou pronto.")
 
-        race_id = post_race(api_port, payload)
+        payload = {"laps": args.laps, "num_drivers": args.drivers, "track": args.track or None, "year": args.year}
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{api_port}/races",
+            data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                race_id = json.load(response)["race_id"]
+        except urllib.error.HTTPError as exc:
+            raise RuntimeError(f"Falha ao iniciar a corrida: HTTP {exc.code} {exc.read().decode(errors='replace')}") from exc
 
         print("Aguardando o primeiro estado da engine e a janela do PyBullet…")
         for _ in range(120):
@@ -357,17 +273,6 @@ def run() -> int:
         if not args.no_browser:
             webbrowser.open(viewer_url)
 
-        if args.random_events:
-            # A engine roda na API; este processo já fica vivo no loop abaixo.
-            # O rádio é um processo separado para poder ser encerrado junto.
-            events_process = subprocess.Popen(
-                random_events_command(args, race_id, redis_url),
-                cwd=PROJECT_ROOT,
-                env=environment,
-                **process_options(),
-            )
-            print("Rádio aleatório ativo (eventos de demo para a IA).\n")
-
         while True:
             for process in (api_process, viz_process):
                 status = process.poll()
@@ -377,7 +282,6 @@ def run() -> int:
     except KeyboardInterrupt:
         return 130
     finally:
-        stop_process(events_process)
         stop_process(viz_process)
         stop_process(api_process)
         if redis_container:

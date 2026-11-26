@@ -1,0 +1,12 @@
+g0 manifest identity check (disk sha256sum; git show 75666b3 | sha256sum):
+5715be7b663394e29cc9b2a21a2baf554ccdb9281cc6d25439651d38e0b641ee  backend/experiments/proj-fix-1/14_freeze_manifest_v4.log
+5715be7b663394e29cc9b2a21a2baf554ccdb9281cc6d25439651d38e0b641ee  -
+{
+  "g1": "PASS",
+  "g1_replay_projection_sha256": "a2c96670e1c84198365468740929559a55f26e2c0f89b84ea7060dbc41044092",
+  "g1_anchor_projection_sha256": "a2c96670e1c84198365468740929559a55f26e2c0f89b84ea7060dbc41044092",
+  "g2": "PASS",
+  "fields_per_row": 71,
+  "data_rows": 30000
+}
+G2 supplemental range/finite audit: rows=30000; body_x_finite=30000/30000; body_y_finite=30000/30000; ns_raw_integer=30000/30000; ns_raw_min=0; ns_raw_max=833

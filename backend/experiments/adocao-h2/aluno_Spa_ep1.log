@@ -1,0 +1,33 @@
+pybullet build time: Sep 11 2026 21:22:29
+[diag] CANÁRIA: campo de 1 carro(s)
+[diag] pista FROZEN: Spa-Francorchamps (mirror 2007-2026) | 1751 wp | SF wp 0 | sha256 4b05f2c3bbc625fc | clima=seeded (rng semeado por seed) | variance=off | rejoin_gap=0.0 | launch_cap=False | launch_stagger=False
+[Grid] reta antes da SF: 295 m | grid ocupa 42 m
+[Grid] 10 carros no grid estilo F1 (5 fileiras x 2 colunas, NA RETA)
+[Model] Carregando pesos neurais (NumPy Engine) de: dagger_actor_best_weights.npz
+[diag] ator: dagger_actor_best.keras | input_dim=48 | gov=vplan | profile=manual
+[diag] 3000 linhas -> experiments/adocao-h2/aluno_Spa_ep1.csv (instrumento race_diag_v3_contact_solver_v1)
+
+===== ESTADO FINAL POR CARRO =====
+drv  speed     s  lat   th  brk  steer_rad
+VER  11.41 19.49 0.28 0.06  0.0       0.32
+
+===== CLIMA (transições reais: 0) =====
+  nenhuma transição de kind (grip constante)
+
+===== IMOBILIZACAO (v < 2 m/s) =====
+VER: 1 amostras v<2 | primeiro tick lento=0 (s=6997m) | brake medio apos=0.05
+
+===== EPISODIOS DE PARADA >= 3 s (como terminaram) =====
+  nenhuma parada >= 3 s
+
+===== SAIDA DE PISTA / CORTES =====
+amostras com centro fora do asfalto: 624 de 3000 (20.8%)
+  VER: 624 amostras fora | lat max=50.6 m | trechos: [0.0, 5400.0, 5600.0, 6200.0, 6400.0]
+
+contatos c/ SOLO (todo tick, esperado): 8532 | contatos CARRO-CARRO: 0 amostras, impulso medio 0 N | dv medio 0.00 m/s
+
+===== R3: FORA-PILOTAGEM vs FORA-PRESO (janelas 30 s) =====
+  VER: pilotagem=  53 ticks | preso= 571 ticks  <== CARRO-PRESO
+  TOTAL fora: 624 ticks (20.8%) | FORA-PILOTAGEM: 53 (8.5% do fora) | FORA-PRESO: 571 (91.5% do fora)
+  CARROS-PRESO na sessão: 1 (VER — gate exige 0)
+  HESITAÇÕES (v<0,5 m/s por 0,3-3 s, pós-largada): 0 (gate: <=3)

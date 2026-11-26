@@ -86,7 +86,7 @@ class PitStopEvent(Event):
 
 @dataclass
 class PitRequestedEvent(Event):
-    """Confirma que a engine registrou o pedido feito pelo usuário."""
+    """Confirma que a engine registrou um pedido manual ou automático."""
     type: str = "pit_requested"
     driver_id: str = ""
     driver_name: str = ""
@@ -158,47 +158,3 @@ class CollisionEvent(Event):
     position_xy: List[float] = field(default_factory=list)
     impact_force_n: float = 0.0
     penetration_m: float = 0.0
-
-
-@dataclass
-class OffTrackEvent(Event):
-    """Um piloto saiu da pista (transição on-track -> off-track)."""
-
-    type: str = "off_track"
-    driver_id: str = ""
-    driver_name: str = ""
-    lap: int = 0
-    side: str = ""              # "esquerda" | "direita"
-    distance_m: float = 0.0     # metros além da borda
-    speed_mps: float = 0.0
-    severity: str = "leve"      # "leve" | "grave"
-
-
-@dataclass
-class OnTrackEvent(Event):
-    """Um piloto voltou à pista depois de uma saída."""
-
-    type: str = "on_track"
-    driver_id: str = ""
-    driver_name: str = ""
-    lap: int = 0
-    duration_s: float = 0.0
-
-
-@dataclass
-class AiCommandEvent(Event):
-    """Comando de alto nível aplicado ao carro pelo engenheiro de pista (IA).
-
-    ``command`` é um verbo curto (``push``, ``conserve``, ``careful``,
-    ``defend``, ``overtake``, ``neutral``). O efeito real já está no input do
-    carro naquele tick; este evento explica o porquê para HUD/telemetria.
-    """
-
-    type: str = "ai_command"
-    driver_id: str = ""
-    driver_name: str = ""
-    lap: int = 0
-    command: str = "neutral"
-    value: float = 0.0
-    reason: str = ""
-    issued_by: str = "ai"       # "llm" | "rules" | "human"

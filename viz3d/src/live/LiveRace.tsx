@@ -20,18 +20,6 @@ import { StartFinishLine } from './StartFinishLine'
 type Meta = { race_id: string; num_laps: number; car_geometry?: { length_m: number; width_m: number; height_m: number }; track: LiveTrack; drivers: { driver_id: string; name: string; grid_position: number }[] }
 const api = (import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8000`).replace(/\/$/, '')
 
-type AiSuggestion = {
-  type: 'ai_suggestion'
-  aviso: string
-  previsao: { pit_stop_recomendado: boolean; volta_estimada: number | null; composto_sugerido: string | null }
-  urgencia: 'baixa' | 'media' | 'alta'
-  comando: { tipo: string; valor: number; motivo: string }
-  sim_ts: number
-  volta: number
-  driver_id: string
-  resposta_piloto?: string | null
-}
-
 export function LiveRace() {
   const [raceId, setRaceId] = useState(() => new URLSearchParams(location.search).get('race') || '')
   const [trackName, setTrackName] = useState('interlagos')
@@ -39,7 +27,6 @@ export function LiveRace() {
   const [meta, setMeta] = useState<Meta | null>(null)
   const [tick, setTick] = useState<LiveTick | null>(null)
   const [status, setStatus] = useState('')
-  const [suggestions, setSuggestions] = useState<AiSuggestion[]>([])
   const buffer = useRef(new LiveBuffer())
   const initial = useRef<Record<string, number>>({})
   const clock = useRef(newClock())
@@ -76,9 +63,6 @@ export function LiveRace() {
             if (buffer.current.revision !== previousRevision) setCutKey((key) => key + 1)
             for (const p of next.positions) initial.current[p.driver_id] ??= p.progress_m
             setTick((current) => current ?? next)
-          } else if (event.type === 'ai_suggestion') {
-            const suggestion = event as AiSuggestion
-            setSuggestions((prev) => [suggestion, ...prev.slice(0, 19)]) // keep last 20
           } else if (event.type === 'race_end' || event.type === 'race_error') {
             finished = true
             buffer.current.finish()
@@ -145,8 +129,6 @@ export function LiveRace() {
     <button onClick={start}>Iniciar corrida</button><p>{status}</p><a href="/">Visualização de gravações</a>
   </div>
   if (!scene || !tick) return <div style={{ padding: 30, color: 'white', background: '#15151e', minHeight: '100vh' }}>{status || 'Aguardando primeiro estado da corrida…'}</div>
-  const urgencyColor = (u: string) => u === 'alta' ? '#ff4444' : u === 'media' ? '#ffaa00' : '#44ff44'
-
   return <div style={{ position: 'fixed', inset: 0, background: '#15151e' }}>
     <Canvas camera={{ position: [scene.center.x, scene.distance, scene.center.z + scene.distance * 0.3], fov: 45, near: 1, far: scene.distance * 8 }}>
       <hemisphereLight args={['#ffffff', '#30303c', 1.1]} /><directionalLight position={[600, 1200, 400]} intensity={1.2} />
@@ -158,54 +140,17 @@ export function LiveRace() {
         <CameraRig frame={scene.frame} mode={cameraMode} readout={readout} fitted={scene.fitted} orbitFovDeg={45} clock={clock} cutKey={cutKey} />
       </Suspense>
     </Canvas>
-    <div style={{ position: 'absolute', top: 12, left: 12, color: 'white', background: '#15151ee8', padding: 12, font: '14px sans-serif', maxWidth: 380 }}>
+    <div style={{ position: 'absolute', top: 12, left: 12, color: 'white', background: '#15151ee8', padding: 12, font: '14px sans-serif' }}>
       <strong>{scene.track.name} · {status}</strong>
       {scene.pitLane && <div style={{ color: '#c4c4cd' }}>Via dos boxes{scene.pitLane.source === 'estimated' ? ' (estimada)' : ''}</div>}
-      <div style={{ marginTop: 8 }}>
+      <div>
         <button onClick={() => setCameraMode('chase')}>Seguir</button>{' '}
         <button onClick={() => setCameraMode('onboard')}>A bordo</button>{' '}
         <button onClick={() => setCameraMode('orbit')}>Pista</button>{' '}
         <button onClick={() => setWheelMarkers((enabled) => !enabled)}>{wheelMarkers ? 'Ocultar marcas' : 'Marcar rodas'}</button>
-      </div>
-      <div style={{ marginTop: 8 }}>Tempo: {tick.sim_ts.toFixed(1)} s</div>
-      {tick.positions.map((p) => <div key={p.driver_id} style={{ marginTop: 4 }}><button onClick={() => { setSelected(scene.cars.findIndex((c) => c.label === p.driver_id)); setCutKey((key) => key + 1) }} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', textAlign: 'left', padding: 0 }}>{p.position}. {p.driver_id}</button> · {Math.round(p.velocity_mps * 3.6)} km/h · volta {p.lap + 1}</div>)}
-      {tick.collisions?.length > 0 && <div style={{ marginTop: 4, color: '#ffaa00' }}>Contato: {tick.collisions[0].drv_a} / {tick.collisions[0].drv_b}</div>}
-    </div>
-
-    {/* Engenheiro / AI suggestions panel */}
-    <div style={{ position: 'absolute', top: 12, right: 12, width: 360, maxHeight: '60vh', color: 'white', background: '#15151ee8', padding: 12, font: '13px monospace', overflow: 'auto', border: '1px solid #333', borderRadius: 4 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, borderBottom: '1px solid #333', paddingBottom: 4 }}>
-        <strong>📻 Engenheiro (IA)</strong>
-        <span style={{ color: '#888', fontSize: '11px' }}>{suggestions.length} mensagens</span>
-      </div>
-      {suggestions.length === 0 ? (
-        <div style={{ color: '#666', textAlign: 'center', padding: '20px 0' }}>Aguardando sugestões do engenheiro…</div>
-      ) : (
-        suggestions.map((s, i) => (
-          <div key={i} style={{ marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid #222' }}>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-              <span style={{ color: urgencyColor(s.urgencia), fontWeight: 'bold', textTransform: 'uppercase', fontSize: '10px' }}>{s.urgencia}</span>
-              <span style={{ color: '#888', fontSize: '10px' }}>T+{s.sim_ts.toFixed(1)}s · Volta {s.volta}</span>
-              <span style={{ color: '#888', fontSize: '10px' }}>{s.driver_id}</span>
-            </div>
-            <div style={{ color: '#ffeb3b', marginBottom: 4 }}>"{s.aviso}"</div>
-            <div style={{ display: 'flex', gap: 12, fontSize: '11px', color: '#aaa', flexWrap: 'wrap' }}>
-              <span>Comando: <span style={{ color: '#fff' }}>{s.comando.tipo}</span> ({s.comando.valor})</span>
-              <span>Motivo: <span style={{ color: '#fff' }}>{s.comando.motivo}</span></span>
-            </div>
-            {s.previsao.pit_stop_recomendado && (
-              <div style={{ marginTop: 4, color: '#ff44ff', fontSize: '11px' }}>
-                🛑 Pit recomendado · Volta ~{s.previsao.volta_estimada ?? '?'} · {s.previsao.composto_sugerido ?? '?'}
-              </div>
-            )}
-            {s.resposta_piloto && (
-              <div style={{ marginTop: 4, color: '#ff6b6b', fontSize: '11px', fontStyle: 'italic', borderLeft: '2px solid #ff6b6b', paddingLeft: 8 }}>
-                🗣️ Piloto: "{s.resposta_piloto}"
-              </div>
-            )}
-          </div>
-        ))
-      )}
+      </div><div>Tempo: {tick.sim_ts.toFixed(1)} s</div>
+      {tick.positions.map((p) => <div key={p.driver_id}><button onClick={() => { setSelected(scene.cars.findIndex((c) => c.label === p.driver_id)); setCutKey((key) => key + 1) }}>{p.position}. {p.driver_id}</button> · {Math.round(p.velocity_mps * 3.6)} km/h · volta {p.lap + 1}</div>)}
+      {tick.collisions?.length > 0 && <div>Contato: {tick.collisions[0].drv_a} / {tick.collisions[0].drv_b}</div>}
     </div>
   </div>
 }

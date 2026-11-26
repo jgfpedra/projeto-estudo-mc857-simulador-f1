@@ -1,0 +1,247 @@
+{
+  "instrument": "prof_curva_audit_v1",
+  "csv_path": "experiments/prof-curva-1/REF_INTERLAGOS_600S.csv",
+  "csv_sha256": "c00391ab21033dae1a03db2cd7f7fd6983baa47d67b0828bec503d93778e9b3a",
+  "log_path": "experiments/prof-curva-1/REF_INTERLAGOS_600S.log",
+  "track": "interlagos",
+  "track_sha256": "c4617650983df9b1141296dac953b0e4be03f0c06c1de006340233c39e308613",
+  "saidas_verdict_sha256": "e1ac9f699e6d1339e67b7d53683f6becd5e3041da52102516cc4529c21496d6c",
+  "total_ticks": 3000,
+  "off_ticks": 737,
+  "off_pct": 24.6,
+  "n_events": 20,
+  "dur_median_s": 7.1,
+  "lat_max_m": 39.6845101780975,
+  "laps_count": 4,
+  "lap_times": [
+    138.7,
+    130.5,
+    127.5,
+    129.8
+  ],
+  "lap_time_median_all_s": 130.15,
+  "lap_time_median_later_s": 129.8,
+  "best_lap_s": 127.5,
+  "baseline_lap_s": 107.0,
+  "rhythm_guard_ceiling_s": 123.05,
+  "degradation_pct": 21.30841121495328,
+  "rhythm_guard_pass": false,
+  "critical_corners": {
+    "C01": {
+      "saidas": 4,
+      "taxa_por_volta": 1.0
+    },
+    "C06": {
+      "saidas": 4,
+      "taxa_por_volta": 1.0
+    },
+    "C07": {
+      "saidas": 4,
+      "taxa_por_volta": 1.0
+    },
+    "C08": {
+      "saidas": 4,
+      "taxa_por_volta": 1.0
+    },
+    "Reta": {
+      "saidas": 4,
+      "taxa_por_volta": 1.0
+    }
+  },
+  "corner_counts": {
+    "C01": 4,
+    "C02": 0,
+    "C03": 0,
+    "C04": 0,
+    "C05": 0,
+    "C06": 4,
+    "C07": 4,
+    "C08": 4,
+    "C09": 0,
+    "C10": 0,
+    "C11": 0,
+    "Reta": 4
+  },
+  "events": [
+    {
+      "tick": 844,
+      "t_s": 84.4,
+      "dur_s": 3.2,
+      "s": 1948.7128932030043,
+      "corner_id": "C06",
+      "corner_name": "Bico de Pato (T10)",
+      "v_1s_kmh": 50.12730722581903
+    },
+    {
+      "tick": 930,
+      "t_s": 93.0,
+      "dur_s": 6.800000000000001,
+      "s": 2058.1038791787582,
+      "corner_id": "C07",
+      "corner_name": "Mergulho (T11)",
+      "v_1s_kmh": 46.701228807967006
+    },
+    {
+      "tick": 1090,
+      "t_s": 109.0,
+      "dur_s": 14.600000000000001,
+      "s": 2318.387223675708,
+      "corner_id": "C08",
+      "corner_name": "Junção (T12)",
+      "v_1s_kmh": 36.31447185112242
+    },
+    {
+      "tick": 1248,
+      "t_s": 124.8,
+      "dur_s": 10.600000000000001,
+      "s": 2410.9592592368303,
+      "corner_id": "Reta",
+      "corner_name": "Reta / Outro",
+      "v_1s_kmh": 36.901953505175555
+    },
+    {
+      "tick": 1724,
+      "t_s": 172.4,
+      "dur_s": 0.4,
+      "s": 32.81905568642332,
+      "corner_id": "C01",
+      "corner_name": "Descida do Lago (T4/T5)",
+      "v_1s_kmh": 60.06862583691414
+    },
+    {
+      "tick": 2236,
+      "t_s": 223.6,
+      "dur_s": 3.4000000000000004,
+      "s": 1948.1211910125792,
+      "corner_id": "C06",
+      "corner_name": "Bico de Pato (T10)",
+      "v_1s_kmh": 49.96367519583589
+    },
+    {
+      "tick": 2322,
+      "t_s": 232.2,
+      "dur_s": 7.0,
+      "s": 2056.65754649738,
+      "corner_id": "C07",
+      "corner_name": "Mergulho (T11)",
+      "v_1s_kmh": 46.81580286059884
+    },
+    {
+      "tick": 2484,
+      "t_s": 248.4,
+      "dur_s": 14.8,
+      "s": 2318.236308622443,
+      "corner_id": "C08",
+      "corner_name": "Junção (T12)",
+      "v_1s_kmh": 36.32668383510203
+    },
+    {
+      "tick": 2646,
+      "t_s": 264.6,
+      "dur_s": 9.8,
+      "s": 2412.03829574179,
+      "corner_id": "Reta",
+      "corner_name": "Reta / Outro",
+      "v_1s_kmh": 37.11185247539461
+    },
+    {
+      "tick": 3114,
+      "t_s": 311.4,
+      "dur_s": 0.4,
+      "s": 33.647171833781314,
+      "corner_id": "C01",
+      "corner_name": "Descida do Lago (T4/T5)",
+      "v_1s_kmh": 60.67390466639911
+    },
+    {
+      "tick": 3622,
+      "t_s": 362.2,
+      "dur_s": 3.4000000000000004,
+      "s": 1946.0459168741356,
+      "corner_id": "C06",
+      "corner_name": "Bico de Pato (T10)",
+      "v_1s_kmh": 49.37742711209302
+    },
+    {
+      "tick": 3710,
+      "t_s": 371.0,
+      "dur_s": 7.2,
+      "s": 2056.7035023317817,
+      "corner_id": "C07",
+      "corner_name": "Mergulho (T11)",
+      "v_1s_kmh": 46.81692074823765
+    },
+    {
+      "tick": 3874,
+      "t_s": 387.4,
+      "dur_s": 15.200000000000001,
+      "s": 2317.4869792810946,
+      "corner_id": "C08",
+      "corner_name": "Junção (T12)",
+      "v_1s_kmh": 36.43127168957418
+    },
+    {
+      "tick": 4038,
+      "t_s": 403.8,
+      "dur_s": 11.4,
+      "s": 2409.9603875998378,
+      "corner_id": "Reta",
+      "corner_name": "Reta / Outro",
+      "v_1s_kmh": 34.75380531643431
+    },
+    {
+      "tick": 4520,
+      "t_s": 452.0,
+      "dur_s": 0.6000000000000001,
+      "s": 31.90742208488031,
+      "corner_id": "C01",
+      "corner_name": "Descida do Lago (T4/T5)",
+      "v_1s_kmh": 59.44506966027225
+    },
+    {
+      "tick": 5038,
+      "t_s": 503.8,
+      "dur_s": 3.6,
+      "s": 1948.1110274098285,
+      "corner_id": "C06",
+      "corner_name": "Bico de Pato (T10)",
+      "v_1s_kmh": 50.009619387337125
+    },
+    {
+      "tick": 5126,
+      "t_s": 512.6,
+      "dur_s": 7.2,
+      "s": 2056.944541641544,
+      "corner_id": "C07",
+      "corner_name": "Mergulho (T11)",
+      "v_1s_kmh": 46.825110845666885
+    },
+    {
+      "tick": 5290,
+      "t_s": 529.0,
+      "dur_s": 15.8,
+      "s": 2317.744298057733,
+      "corner_id": "C08",
+      "corner_name": "Junção (T12)",
+      "v_1s_kmh": 36.40701017016618
+    },
+    {
+      "tick": 5462,
+      "t_s": 546.2,
+      "dur_s": 11.200000000000001,
+      "s": 2410.129816825175,
+      "corner_id": "Reta",
+      "corner_name": "Reta / Outro",
+      "v_1s_kmh": 34.66107940979086
+    },
+    {
+      "tick": 5940,
+      "t_s": 594.0,
+      "dur_s": 0.8,
+      "s": 31.28494428444136,
+      "corner_id": "C01",
+      "corner_name": "Descida do Lago (T4/T5)",
+      "v_1s_kmh": 59.28554924682255
+    }
+  ]
+}

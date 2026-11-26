@@ -1,0 +1,6 @@
+[diag] residual baseline sha256=6210fff65b19ad0e
+[diag] pista FROZEN: São Paulo Grand Prix | 1131 wp | SF wp 729 | sha256 164876196eb12174 | clima=seeded (rng semeado por seed) | variance=off | rejoin_gap=0.0 | rejoin_handoff=off | launch_cap=False | launch_stagger=False | launch_steer_mute=False | pguard=False | grid=f1 | rejoin=bearing | anti_glue=False | variedade=4 | prof_repair=False | pass_decision=False
+[diag] VARIEDADE-1: N=4 (PRNG proprio sha256(seed//variedade//N)) | jitter ±0,5m/±0,3m | mu_nominal ×U[0,98,1,02]
+TOTAL fora: 7556 ticks (25.2%) | FORA-PRESO: 5271
+CARROS-PRESO na sessão: 10 (ALO, GAS, HAM, LEC, NOR, PER, PIA, RUS, SAI, VER — gate exige 0)
+HESITAÇÕES (v<0,5 m/s por 0,3-3 s, pós-largada): 6 (gate: <=3)

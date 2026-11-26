@@ -24,17 +24,7 @@ def call_model(prompt: str) -> dict:
     try:
         response = requests.post(
             OLLAMA_URL,
-            json={
-                "model": MODEL,
-                "prompt": prompt,
-                "stream": False,
-                "format": "json",
-                # Respostas curtas e previsíveis: o HUD não comporta parágrafos,
-                # e JSON instável vira fallback.
-                # Temperature um pouco mais alta para o engenheiro variar o
-                # texto entre chamadas; `format: json` mantém o contrato.
-                "options": {"temperature": 0.65, "top_p": 0.95, "num_predict": 300},
-            },
+            json={"model": MODEL, "prompt": prompt, "stream": False, "format": "json"},
             timeout=TIMEOUT_SECONDS,
         )
         elapsed = time.time() - start

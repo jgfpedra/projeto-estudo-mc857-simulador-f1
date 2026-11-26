@@ -18,13 +18,18 @@ import { carColors } from "../src/components/race/view-3d/scene/car-colors.ts"
 import { overviewPose, pitLaneFromRace, rotateToStart, trackFromRace } from "../src/components/race/view-3d/scene/race-track.ts"
 import { poseMatrix } from "../src/components/race/view-3d/scene/car-model.ts"
 import { CHASE, chasePose, newFollowState, newPose, newRigState, stepRig } from "../src/components/race/view-3d/scene/camera-math.ts"
+import { angleJitter, bearing } from "../src/components/race/view-3d/scene/camera-jitter.ts"
 import { PIN_FADE, pinOpacity } from "../src/components/race/view-3d/scene/pin-fade.ts"
 import { buildFrame, nearestS, sampleAt, toWorld } from "../src/components/race/view-3d/scene/track-frame.ts"
 import { buildRibbonGeometry } from "../src/components/race/view-3d/scene/geometry.ts"
 import { cornerPeaks, kappaAt, robustCurvature } from "../src/components/race/view-3d/scene/environment/curvature.ts"
 import { MODELS, PEAK_SEPARATION_M, PROP_KINDS, buildLayout, propMatrix } from "../src/components/race/view-3d/scene/environment/layout.ts"
-import { LAYERS, bandGeometry } from "../src/components/race/view-3d/scene/environment/surfaces.ts"
+import { LAYERS, bandGeometry, kerbBands } from "../src/components/race/view-3d/scene/environment/surfaces.ts"
 import { QUALITY } from "../src/components/race/view-3d/scene/environment/quality.ts"
+import { PLAYBACK, PlaybackClock } from "../src/components/race/view-3d/scene/playback.ts"
+import { smoothness } from "../src/components/race/view-3d/scene/smoothness.ts"
+import { COMPOUND_COLOR, compoundColor } from "../src/components/race/view-3d/scene/tyre-compound.ts"
+import { WEATHER, WeatherBlend, effectiveWeather, fogRange, forceWeather, rainStreakCount, rainVisibility, weatherLook, weatherParams } from "../src/components/race/view-3d/scene/environment/weather.ts"
 
 const deg = (d) => (d * Math.PI) / 180
 const close = (a, b, eps = 1e-9, msg) => assert.ok(Math.abs(a - b) <= eps, msg ?? `${a} != ${b} (eps ${eps})`)
@@ -424,6 +429,17 @@ const scene = (key, make) => {
 const interlagos = () => scene("interlagos", () => fileTrack("interlagos_2023_v1.json"))
 const monza = () => scene("monza", () => fileTrack("monza_2024_v1.json"))
 const openf1 = () => scene("openf1", openF1Track)
+const ainDiab = () => scene("ain-diab", () => {
+  const snapshot = JSON.parse(readFileSync(new URL("../../backend/config/historical_tracks/f1results_tracks.json", import.meta.url), "utf8"))
+  const race = snapshot.races["ain-diab:1958"]
+  const points = snapshot.geometries[String(race.source_layout_id)].points
+  const perimeter = points.reduce((sum, a, i) => {
+    const b = points[(i + 1) % points.length]
+    return sum + Math.hypot(b[0] - a[0], b[1] - a[1])
+  }, 0)
+  const scale = race.length_m / perimeter
+  return servedTrack("Ain-Diab", points.map(([x, y]) => [x * scale, y * scale]), 0, 12)
+})
 const monzaCoarse = () => scene("monza-coarse", () => coarsen(fileTrack("monza_2024_v1.json")))
 
 // Independent 2D geometry for the overlap test (does not use layout.ts helpers).
@@ -685,30 +701,35 @@ test("layout is seeded by the track: same input, same scene; another track, anot
   assert.notEqual(interlagos().layout.seed, b.seed)
 })
 
-test("kerb and sand bands start exactly at the asphalt edge, also on a coarse track", () => {
-  const { track, frame, layout } = openf1()
-  const h = track.widthM / 2
-  const asphalt = buildRibbonGeometry(frame, track.widthM)
-  const ap = asphalt.getAttribute("position")
-  const n = frame.points.length
-  // Right edge of the asphalt as segments (vertex 2i + 1).
-  const edge = []
-  for (let i = 0; i < n; i++) {
-    const a = 2 * i + 1
-    const b = 2 * ((i + 1) % n) + 1
-    edge.push([
-      [ap.getX(a), ap.getZ(a)],
-      [ap.getX(b), ap.getZ(b)],
-    ])
+test("kerbs stay inside the engine asphalt width at Ain-Diab and on a coarse track", () => {
+  for (const { track, frame, layout } of [openf1(), ainDiab()]) {
+    const h = track.widthM / 2
+    const asphalt = buildRibbonGeometry(frame, track.widthM)
+    const ap = asphalt.getAttribute("position")
+    const bands = kerbBands(track.widthM)
+    close(bands.left[0], -h, 1e-9)
+    close(bands.left[1], -h + 1.3, 1e-9)
+    close(bands.right[0], h - 1.3, 1e-9)
+    close(bands.right[1], h, 1e-9)
+    for (const [offsets, side] of [[bands.left, 0], [bands.right, 1]]) {
+      const edge = []
+      for (let i = 0; i < frame.points.length; i++) {
+        const a = 2 * i + side
+        const b = 2 * ((i + 1) % frame.points.length) + side
+        edge.push([[ap.getX(a), ap.getZ(a)], [ap.getX(b), ap.getZ(b)]])
+      }
+      const kerb = bandGeometry(frame, ...offsets, layout.kerbs, { y: LAYERS.kerb.y })
+      const kp = kerb.getAttribute("position")
+      assert.ok(kp.count > 20, "kerbs exist on the track")
+      // Outer edge coincides with the asphalt boundary; stripe extends inward.
+      for (let v = side; v < kp.count; v += 2) {
+        const d = Math.min(...edge.map(([a, b]) => ptSeg([kp.getX(v), kp.getZ(v)], a, b)))
+        assert.ok(d < 1e-3, `kerb outer edge ${d.toFixed(4)} m off the asphalt edge`)
+        close(kp.getY(v), LAYERS.kerb.y, 1e-6)
+      }
+    }
   }
-  const kerb = bandGeometry(frame, h, h + 1.3, layout.kerbs, { y: LAYERS.kerb.y })
-  const kp = kerb.getAttribute("position")
-  assert.ok(kp.count > 20, "kerbs exist on the OpenF1 track")
-  for (let v = 0; v < kp.count; v += 2) {
-    const d = Math.min(...edge.map(([a, b]) => ptSeg([kp.getX(v), kp.getZ(v)], a, b)))
-    assert.ok(d < 1e-3, `kerb inner edge ${d.toFixed(4)} m off the asphalt edge`)
-    close(kp.getY(v), LAYERS.kerb.y, 1e-6)
-  }
+  assert.deepEqual(kerbBands(2), { left: [-1, 0], right: [0, 1] })
 })
 
 test("surface layers are stacked: distinct heights in order, nothing coplanar", () => {
@@ -738,7 +759,7 @@ test("low quality: no shadows and a third of the trees; off: no environment", ()
 
 // --- chase camera off-axis cap and marker fade -----------------------------------
 
-test("chase camera keeps a settled, stopped car within 8 degrees of the view axis, even in a 25 m hairpin", () => {
+test("chase camera without a pose (track fallback) keeps a settled, stopped car within 8 degrees of the view axis, even in a 25 m hairpin", () => {
   const R = 25
   const pts = []
   for (let k = 0; k < 40; k++) {
@@ -750,7 +771,7 @@ test("chase camera keeps a settled, stopped car within 8 degrees of the view axi
     const follow = newFollowState()
     const s = 40
     const at = toWorld(frame, s)
-    Object.assign(follow, { sUnwrapped: s, speedMps: 0, carIndex: 0, posed: true, x: at.x, z: at.z })
+    Object.assign(follow, { sUnwrapped: s, speedMps: 0, carIndex: 0, posed: false, x: at.x, z: at.z })
     const rig = newRigState()
     for (let i = 0; i < 200; i++) stepRig(rig, frame, follow, 1 / 60, cfg)
     const p = chasePose(frame, rig, follow, cfg, newPose())
@@ -765,6 +786,147 @@ test("chase camera keeps a settled, stopped car within 8 degrees of the view axi
   assert.ok(capped.gap <= CHASE.maxOffAxisRad + 1e-9, `capped: ${(capped.gap * 180) / Math.PI} deg`)
   // Speed 0 (a frozen clock): the rig settles exactly trailM behind the car.
   assert.ok(capped.behind < 1e-6, `rig ${capped.behind} m off the trail`)
+})
+
+// --- chase camera behind the car, on a coarse (OpenF1-style) track --------------
+
+/**
+ * A smooth closed course in three (x, z): long bends, an S and two tight ends
+ * (minimum radius ~20 m). The car drives the analytic curve; the served track
+ * is the same curve sampled every 14-42 m with 0.4 m of lateral noise, like
+ * the OpenF1 tracks, so its chords bend every 14-42 m.
+ */
+function coarseCourse() {
+  const curve = (t) => [500 * Math.cos(t) + 90 * Math.cos(3 * t), 300 * Math.sin(t) - 70 * Math.sin(2 * t)]
+  const N = 40000
+  const P = []
+  const S = [0]
+  for (let i = 0; i <= N; i++) P.push(curve((i / N) * 2 * Math.PI))
+  for (let i = 1; i <= N; i++) S.push(S[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]))
+  const L = S[N]
+  /** Position and model yaw (forward = (-sin yaw, -cos yaw)) at arc length s of the smooth curve. */
+  const at = (s) => {
+    s = ((s % L) + L) % L
+    let lo = 0
+    let hi = N
+    while (hi - lo > 1) {
+      const m = (lo + hi) >> 1
+      if (S[m] <= s) lo = m
+      else hi = m
+    }
+    const a = (s - S[lo]) / (S[hi] - S[lo])
+    const fx = P[hi][0] - P[lo][0]
+    const fz = P[hi][1] - P[lo][1]
+    return { x: P[lo][0] + a * fx, z: P[lo][1] + a * fz, yaw: Math.atan2(-fx, -fz) }
+  }
+  let seed = 7
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+  const pts = []
+  for (let s = 0; s < L - 14; s += 14 + 28 * rand()) {
+    const p = at(s)
+    const n = (rand() - 0.5) * 0.8
+    pts.push(new Vector3(p.x + Math.cos(p.yaw) * n, 0, p.z - Math.sin(p.yaw) * n))
+  }
+  return { L, at, frame: buildFrame(pts), points: pts.length }
+}
+
+/**
+ * The car at 45 m/s, posed from 10 Hz ticks interpolated like the playback
+ * (position lerp, heading by the short arc), rendered at 60 Hz for 40 s.
+ * Returns the camera yaw and the car's angle off the view axis per frame
+ * (after a 2 s warm-up) and every pose.
+ */
+function driveChase(course, { rig = "heading", progressNoiseM = 0, cutAtS = null } = {}) {
+  const { L, at, frame } = course
+  const v = 45
+  const tick = 0.1
+  const dt = 1 / 60
+  let seed = 99
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+  const follow = newFollowState()
+  const state = newRigState()
+  const pose = newPose()
+  const yaw = []
+  const off = []
+  const poses = []
+  for (let f = 0; f < 60 * 40; f++) {
+    const t = f * dt
+    const i = Math.floor(t / tick)
+    const a = t / tick - i
+    const p0 = at(v * tick * i)
+    const p1 = at(v * tick * (i + 1))
+    if (cutAtS !== null && Math.abs(t - cutAtS) < dt / 2) follow.cut++
+    Object.assign(follow, {
+      sUnwrapped: v * t * (frame.lengthM / L) + progressNoiseM * (rand() - 0.5) * 2,
+      speedMps: v,
+      carIndex: 0,
+      posed: true,
+      x: p0.x + a * (p1.x - p0.x),
+      z: p0.z + a * (p1.z - p0.z),
+      yawRad: lerpAngle(p0.yaw, p1.yaw, a),
+    })
+    stepRig(state, frame, follow, dt)
+    const c = chasePose(frame, state, follow, CHASE, pose, rig)
+    poses.push({ position: c.position.clone(), target: c.target.clone(), rigYaw: state.yaw, carYaw: follow.yawRad })
+    if (f < 120) continue
+    const y = bearing(c.position.x, c.position.z, c.target.x, c.target.z)
+    const toCar = bearing(c.position.x, c.position.z, c.anchor.x, c.anchor.z)
+    yaw.push({ wallMs: t * 1000, rad: y, key: follow.cut })
+    off.push({ wallMs: t * 1000, rad: Math.atan2(Math.sin(toCar - y), Math.cos(toCar - y)), key: follow.cut })
+  }
+  return { camera: angleJitter(yaw), carOnScreen: angleJitter(off), maxOffDeg: (Math.max(...off.map((o) => Math.abs(o.rad))) * 180) / Math.PI, poses }
+}
+
+test("chase camera on a coarse 14-42 m track: yaw-rate jitter < 1 deg/s and the car centred (old track-frame rig as the baseline)", () => {
+  const course = coarseCourse()
+  assert.ok(course.points > 60 && course.points < 210, `${course.points} points`)
+  const old = driveChase(course, { rig: "track" })
+  const now = driveChase(course)
+  // The baseline must show the problem, or the test proves nothing.
+  assert.ok(old.camera.jitterDegS > 2, `old rig camera jitter ${old.camera.jitterDegS} deg/s`)
+  assert.ok(old.maxOffDeg > 7.9, `old rig pins the car at the 8 deg cap (${old.maxOffDeg})`)
+  assert.ok(now.camera.jitterDegS < 1, `camera yaw-rate jitter ${now.camera.jitterDegS} deg/s`)
+  // It still turns with the car (rms yaw rate of the same order as the old rig's).
+  assert.ok(now.camera.rateRmsDegS > 5, `camera turns ${now.camera.rateRmsDegS} deg/s rms`)
+  assert.ok(now.carOnScreen.jitterDegS < 0.01, `car-on-screen jitter ${now.carOnScreen.jitterDegS} deg/s`)
+  assert.ok(now.maxOffDeg < 1e-6, `car ${now.maxOffDeg} deg off the view axis`)
+})
+
+test("chase camera ignores progressM: +-3 m of noise on it does not move the camera", () => {
+  const course = coarseCourse()
+  const clean = driveChase(course)
+  const noisy = driveChase(course, { progressNoiseM: 3 })
+  let worst = 0
+  clean.poses.forEach((p, i) => {
+    worst = Math.max(worst, p.position.distanceTo(noisy.poses[i].position), p.target.distanceTo(noisy.poses[i].target))
+  })
+  assert.equal(worst, 0, `camera moved ${worst} m`)
+})
+
+test("chase camera yaw is a frame-rate independent damp of the car heading, and cuts on a new selection", () => {
+  const course = coarseCourse()
+  const { frame } = course
+  // Same 0.5 s of a 90 deg/s turn at 30 Hz and at 240 Hz: same yaw at the end.
+  const settle = (hz) => {
+    const follow = newFollowState()
+    Object.assign(follow, { carIndex: 0, posed: true, yawRad: 0 })
+    const state = newRigState()
+    stepRig(state, frame, follow, 0)
+    for (let k = 1; k <= hz / 2; k++) {
+      follow.yawRad = deg(90) * (k / hz)
+      stepRig(state, frame, follow, 1 / hz)
+    }
+    return state.yaw
+  }
+  close(settle(30), settle(240), deg(1.5))
+  // Lags the turn by about rate * tau (90 deg/s * 0.25 s), not more.
+  const lag = deg(45) - settle(240)
+  assert.ok(lag > deg(15) && lag < deg(25), `lag ${(lag * 180) / Math.PI} deg`)
+  // A cut (new selection, resync) snaps the yaw to the car instead of damping.
+  const run = driveChase(course, { cutAtS: 20 })
+  const k = Math.round(20 * 60)
+  close(run.poses[k].rigYaw, run.poses[k].carYaw, 1e-12)
+  assert.ok(run.camera.jitterDegS < 1)
 })
 
 test("car markers fade in only far from the cars: opaque at overview distance, gone in close views", () => {
@@ -782,4 +944,431 @@ test("car markers fade in only far from the cars: opaque at overview distance, g
     assert.ok(v >= prev)
     prev = v
   }
+})
+
+// --- buffered playback ------------------------------------------------------------
+
+/**
+ * A car lapping a 150 m circle at 45-75 m/s (speed changing like braking and
+ * accelerating), ticks every 0.1 s of sim time. `arrivals(k)` gives the wall
+ * time (ms) at which tick k reaches the page; the render loop runs at 60 Hz
+ * (`renderAt` can drop frames for a stalled main thread). Each rendered
+ * frame pushes the ticks that arrived, samples the clock (or, for the old
+ * path, the live-edge alpha) and records the followed car's drawn pose.
+ */
+function simulatePlayback({ arrivals, seconds = 60, mode = "buffered", renderAt = () => true, simRate = 1, skipS = 2 }) {
+  const R = 150
+  const speed = (s) => 60 + 15 * Math.sin(s * 0.7)
+  const angleAt = (s) => (60 * s - (15 / 0.7) * (Math.cos(s * 0.7) - 1)) / R
+  const tick = (k) => {
+    const s = Math.round(k) / 10
+    const th = angleAt(s)
+    return frame(s, [
+      car("ver", R * Math.cos(th), R * Math.sin(th), { headingDeg: ((th + Math.PI / 2) * 180) / Math.PI, speedKmh: speed(s) * 3.6 }),
+    ])
+  }
+  const nTicks = Math.ceil((seconds * 10) * simRate) + 20
+  const arr = Array.from({ length: nTicks }, (_, k) => arrivals(k))
+  const clock = new PlaybackClock()
+  const store = { frame: null, prevFrame: null, frameAt: 0, tickIntervalMs: 100 }
+  const trace = []
+  const drawn = []
+  let next = 0
+  for (let w = 0; w < seconds * 1000; w += 1000 / 60) {
+    if (!renderAt(w)) continue
+    while (next < nTicks && arr[next] <= w) {
+      const at = arr[next]
+      const f = tick(next)
+      // The store's tick handler, as in live-race-store.ts.
+      const measured = store.frameAt > 0 ? at - store.frameAt : 0
+      if (measured > 0 && measured < 1000) store.tickIntervalMs = 0.8 * store.tickIntervalMs + 0.2 * measured
+      store.prevFrame = store.frame
+      store.frame = f
+      store.frameAt = at
+      clock.push(f, at)
+      next++
+    }
+    if (!store.frame) continue
+    let prev, cur, alpha, resyncs, s
+    if (mode === "buffered") {
+      s = clock.sample(w)
+      ;({ prev, cur, alpha, resyncs } = s)
+    } else {
+      prev = store.prevFrame
+      cur = store.frame
+      alpha = frameAlpha(w, store.frameAt, store.tickIntervalMs)
+      resyncs = 0
+    }
+    const pose = interpolatePoses(prev, cur, alpha).get("ver")
+    trace.push({ wallMs: w, x: pose.x, y: pose.y, headingRad: pose.headingRad, resyncs })
+    drawn.push({ w, s, newestTs: store.frame.simTs })
+  }
+  return { stats: smoothness(trace.filter((t) => t.wallMs >= skipS * 1000)), trace, drawn, clock }
+}
+
+/** Seeded uniform in [-1, 1). */
+function rng(seed) {
+  let x = seed
+  return () => ((x = (x * 16807) % 2147483647) / 2147483647) * 2 - 1
+}
+
+/** +-30 ms jitter around a 100 ms tick; every 20 ticks the server flushes 3 ticks at once. */
+function jitterWithBursts(seed) {
+  const r = rng(seed)
+  const jitter = Array.from({ length: 2000 }, () => 30 * r())
+  return (k) => {
+    // Burst: ticks 20m+1 and 20m+2 arrive 1 ms and 2 ms after tick 20m.
+    const pos = k % 20
+    if (k >= 20 && (pos === 1 || pos === 2)) return 100 * (k - pos) + jitter[k - pos] + pos
+    return 100 * k + jitter[k]
+  }
+}
+
+test("live-edge baseline: +-30 ms tick jitter makes the followed car stall and jump", () => {
+  const { stats } = simulatePlayback({ arrivals: jitterWithBursts(11), mode: "live" })
+  assert.ok(stats.spread > 0.1, `baseline spread ${stats.spread}`)
+  assert.ok(stats.stalls + stats.jumps > 0, JSON.stringify(stats))
+})
+
+test("buffered playback: +-30 ms jitter plus 3-tick bursts -> spread < 0.05, no stalls, jumps or backwards steps", () => {
+  for (const seed of [11, 12, 13]) {
+    const { stats, drawn } = simulatePlayback({ arrivals: jitterWithBursts(seed) })
+    assert.ok(stats.frames > 3000, JSON.stringify(stats))
+    assert.ok(stats.spread < 0.05, `seed ${seed}: ${JSON.stringify(stats)}`)
+    assert.equal(stats.stalls, 0, JSON.stringify(stats))
+    assert.equal(stats.jumps, 0, JSON.stringify(stats))
+    assert.equal(stats.backwards, 0, JSON.stringify(stats))
+    // Sim time only moves forward, never past the newest tick, and settles ~150 ms behind it.
+    for (let i = 1; i < drawn.length; i++) {
+      assert.ok(drawn[i].s.simTs >= drawn[i - 1].s.simTs, "sim time went backwards")
+      assert.ok(drawn[i].s.simTs <= drawn[i].newestTs + 1e-12, "extrapolated past the newest tick")
+    }
+    const tail = drawn.slice(600)
+    assert.equal(tail.filter((d) => d.s.held).length, 0, "held at the newest tick")
+    const meanLag = tail.reduce((a, d) => a + d.s.lagMs, 0) / tail.length
+    assert.ok(Math.abs(meanLag - PLAYBACK.delayMs) < 10, `mean lag ${meanLag} ms`)
+    assert.ok(tail.every((d) => Math.abs(d.s.rate - 1) <= PLAYBACK.maxNudge + 0.01), "rate nudge outside +-5%")
+  }
+})
+
+test("buffered playback: a 250 ms main-thread stall (render loop paused, 3 ticks queued) is absorbed", () => {
+  const r = rng(5)
+  const jitter = Array.from({ length: 2000 }, () => 30 * r())
+  // Every 4 s the page renders nothing for 250 ms; the ticks that arrive meanwhile are handled together.
+  const { stats } = simulatePlayback({ arrivals: (k) => 100 * k + jitter[k], renderAt: (w) => w % 4000 < 3750 })
+  assert.ok(stats.spread < 0.05, JSON.stringify(stats))
+  assert.equal(stats.stalls + stats.jumps + stats.backwards, 0, JSON.stringify(stats))
+})
+
+test("buffered playback: ticks queued behind a 1.5 s busy page (e.g. mounting the 3D) do not speed it up", () => {
+  const r = rng(21)
+  const jitter = Array.from({ length: 2000 }, () => 30 * r())
+  // 6 s in: the page renders nothing for 1.5 s and the ticks of that time are handled together at the end.
+  const busy = (w) => w >= 6000 && w < 7500
+  const arrivals = (k) => (busy(100 * k + jitter[k]) ? 7500 : 100 * k + jitter[k])
+  const { drawn, clock } = simulatePlayback({ arrivals, renderAt: (w) => !busy(w), seconds: 20 })
+  close(clock.rate, 1, 0.01)
+  const after = drawn.filter((d) => d.w >= 9000)
+  assert.equal(after.filter((d) => d.s.held).length, 0, "held at the newest tick after the stall")
+  const meanLag = after.reduce((a, d) => a + d.s.lagMs, 0) / after.length
+  assert.ok(Math.abs(meanLag - PLAYBACK.delayMs) < 15, `mean lag ${meanLag} ms`)
+})
+
+test("buffered playback: a tick later than the buffer can absorb holds at the newest tick, never extrapolates or goes back", () => {
+  const r = rng(9)
+  const jitter = Array.from({ length: 2000 }, () => 10 * r())
+  // Every 3 s, tick k is 200 ms late and tick k+1 100 ms late: both arrive with k+2.
+  const arrivals = (k) => (k % 30 === 10 ? 100 * (k + 2) : k % 30 === 11 ? 100 * (k + 1) : 100 * k + jitter[k])
+  const { stats, drawn } = simulatePlayback({ arrivals })
+  assert.equal(stats.backwards, 0)
+  assert.ok(drawn.some((d) => d.s.held), "expected the clock to hold")
+  for (let i = 1; i < drawn.length; i++) {
+    assert.ok(drawn[i].s.simTs >= drawn[i - 1].s.simTs)
+    assert.ok(drawn[i].s.simTs <= drawn[i].newestTs + 1e-12)
+  }
+  // No resync for a short hold: the clock slows down by at most 5% and rebuilds the delay.
+  assert.equal(drawn.at(-1).s.resyncs, drawn[0].s.resyncs)
+})
+
+test("buffered playback follows a simulation slower than real time (0.9x)", () => {
+  const r = rng(3)
+  const jitter = Array.from({ length: 2000 }, () => 30 * r())
+  // The rate starts at 1 (the engine runs in real time) and is learned from 2 s of ticks: measured from 4 s on.
+  const { stats, drawn, clock } = simulatePlayback({ arrivals: (k) => (100 * k) / 0.9 + jitter[k], simRate: 0.9, skipS: 4 })
+  close(clock.rate, 0.9, 0.02)
+  assert.ok(stats.spread < 0.05, JSON.stringify(stats))
+  assert.equal(stats.stalls + stats.jumps + stats.backwards, 0, JSON.stringify(stats))
+  const tail = drawn.slice(1200)
+  const meanLag = tail.reduce((a, d) => a + d.s.lagMs, 0) / tail.length
+  assert.ok(Math.abs(meanLag - PLAYBACK.delayMs) < 20, `mean lag ${meanLag} ms`)
+})
+
+test("buffered playback starts the target delay behind the newest tick on its first frame, however long the scene took to load", () => {
+  const f = (ts) => frame(ts, [car("ver", ts * 50, 0)])
+  const clock = new PlaybackClock()
+  // Ticks from the mount on; the first rendered frame comes 0.8 s later (models, shaders).
+  for (let k = 0; k <= 8; k++) clock.push(f(k / 10), k * 100)
+  const s = clock.sample(816)
+  close(s.lagMs, PLAYBACK.delayMs, 1e-6)
+  assert.equal(s.held, false)
+})
+
+test("buffered playback resyncs on a snapshot, a sim-time gap, time going back, or a lag over 1 s", () => {
+  const f = (ts) => frame(ts, [car("ver", ts * 50, 0)])
+  const clock = new PlaybackClock()
+  assert.equal(clock.sample(0), null)
+  let s
+  for (let k = 0; k <= 20; k++) {
+    clock.push(f(k / 10), k * 100)
+    s = clock.sample(k * 100 + 16)
+  }
+  assert.equal(s.resyncs, 2)
+  // Same simTs replaces the frame (e.g. a weather change), no resync.
+  clock.push(f(2), 2010)
+  assert.equal(clock.sample(2016).resyncs, 2)
+  // Snapshot (the store clears prevFrame).
+  clock.push(f(2.1), 2100, true)
+  s = clock.sample(2116)
+  assert.equal(s.resyncs, 3)
+  assert.equal(s.prev, null, "nothing older than the snapshot is kept")
+  // Gap of more than 1 s of sim time.
+  clock.push(f(5), 2200)
+  assert.equal(clock.sample(2216).resyncs, 4)
+  // Time going back (another race on the same socket).
+  clock.push(f(1), 2300)
+  assert.equal(clock.sample(2316).resyncs, 5)
+  // No frames for 2 s: the clock holds at the newest...
+  for (let k = 1; k <= 10; k++) {
+    clock.push(f(Math.round(10 + k) / 10), 2300 + k * 100)
+    clock.sample(2316 + k * 100)
+  }
+  s = clock.sample(5400)
+  assert.ok(s.held)
+  close(s.simTs, 2, 1e-9)
+  // ...and when ticks resume more than 1 s ahead of it, it jumps instead of crawling at +5%.
+  for (let k = 1; k <= 9; k++) clock.push(f(Math.round(20 + k) / 10), 5400 + k * 10)
+  assert.equal(clock.sample(5500).resyncs, 5, "0.9 s behind: still within the 1 s budget")
+  for (let k = 0; k <= 4; k++) clock.push(f(Math.round(30 + k) / 10), 5600 + k * 10)
+  s = clock.sample(5716)
+  assert.equal(s.resyncs, 6, `${3.4 - s.simTs} s behind`)
+  close(s.simTs, 3.4 - PLAYBACK.delayMs / 1000, 1e-9)
+})
+
+test("smoothness metric: uniform motion is 0 spread; a 3-frame stall counts 3 stalls and its catch-up jump", () => {
+  const line = (n, stall = -1) => {
+    const out = []
+    let x = 0
+    for (let i = 0; i < n; i++) {
+      if (!(i >= stall && i < stall + 3)) x += 1
+      if (i === stall + 3) x += 3
+      out.push({ wallMs: i * 16, x, y: 0, headingRad: 0, resyncs: 0 })
+    }
+    return out
+  }
+  const smooth = smoothness(line(200))
+  close(smooth.spread, 0, 1e-12)
+  assert.equal(smooth.stalls + smooth.jumps + smooth.backwards, 0)
+  const bumpy = smoothness(line(200, 100))
+  assert.equal(bumpy.stalls, 3)
+  assert.equal(bumpy.jumps, 1)
+  const back = line(100)
+  back[50].x -= 2
+  assert.equal(smoothness(back).backwards, 1)
+})
+
+// --- tyre compound bands ------------------------------------------------------
+
+test("compound band colour: the five compounds, any case; unknown or missing -> no band", () => {
+  const want = { SOFT: "#E10600", MEDIUM: "#FFD12E", HARD: "#F0F0F0", INTERMEDIATE: "#43B02A", WET: "#0067AD" }
+  assert.deepEqual(COMPOUND_COLOR, want)
+  for (const [k, hex] of Object.entries(want)) {
+    assert.equal(compoundColor(k), hex)
+    assert.equal(compoundColor(k.toLowerCase()), hex)
+  }
+  assert.equal(compoundColor("Medium"), want.MEDIUM)
+  assert.equal(compoundColor(" hard "), want.HARD)
+  assert.equal(compoundColor("Intermediate"), want.INTERMEDIATE)
+  assert.equal(compoundColor("wEt"), want.WET)
+  // "UNKNOWN" is what the parser keeps without tyre_compound.
+  for (const raw of ["UNKNOWN", "", "SUPERSOFT", "INTER", "toString", "__proto__", null, undefined, 3])
+    assert.equal(compoundColor(raw), null, String(raw))
+})
+
+// --- weather ------------------------------------------------------------------
+
+const W = (kind, rainfall = 0, trackTemp = 30) => ({ kind, rainfall, trackTemp })
+const OD = 1500
+
+test("dry weather (and no weather, or an unknown kind) gives exactly the scene from before", () => {
+  for (const w of [W("DRY", 0, 42), W("dry"), null, undefined, W("FOG")]) {
+    const look = weatherLook(w)
+    assert.deepEqual(look, { cloud: 0, wet: 0, rain: 0 }, JSON.stringify(w))
+    const p = weatherParams(look)
+    assert.equal(p.sunIntensity, 2.4)
+    assert.equal(p.hemiIntensity, 0.9)
+    assert.equal(p.overcast, 0)
+    assert.equal(p.turbidity, 3)
+    assert.equal(p.rayleigh, 1.2)
+    assert.equal(p.mie, 0.004)
+    assert.deepEqual(p.fogColor.map((v) => Math.round(v * 255)), [0xb9, 0xcf, 0xe0])
+    assert.deepEqual(p.sunColor.map((v) => Math.round(v * 255)), [0xff, 0xf3, 0xe0])
+    assert.deepEqual(p.hemiSky.map((v) => Math.round(v * 255)), [0xcf, 0xe3, 0xff])
+    assert.equal(p.asphaltShade, 1)
+    assert.equal(p.asphaltRoughness, 0.92)
+    assert.equal(p.asphaltSheen, 0)
+    assert.equal(rainStreakCount("high", p.rain), 0)
+    // Fog as before in every camera: overviewDistance .. 3x.
+    for (const cam of [9.6, 120, OD]) assert.deepEqual(fogRange(look, OD, cam), { near: OD, far: 3 * OD })
+  }
+})
+
+test("cloudy: greyer sky, dimmer sun, nearer fog, cooler light; no rain, dry asphalt", () => {
+  const look = weatherLook(W("CLOUDY", 0, 35))
+  const p = weatherParams(look)
+  const dry = weatherParams(weatherLook(null))
+  assert.ok(p.overcast >= 0.8, `overcast ${p.overcast}`)
+  const sat = (c) => Math.max(...c) - Math.min(...c)
+  assert.ok(sat(p.fogColor) < sat(dry.fogColor), "fog greyer")
+  assert.ok(p.sunIntensity < 0.5 * dry.sunIntensity, `sun ${p.sunIntensity}`)
+  const f = fogRange(look, OD, OD)
+  assert.ok(f.near < OD && f.far < 3 * OD, JSON.stringify(f))
+  // Cooler: the sun loses its warm tint; the ambient sky light turns grey-blue.
+  assert.ok(p.sunColor[2] / p.sunColor[0] > dry.sunColor[2] / dry.sunColor[0], "sun less warm")
+  assert.ok(sat(p.hemiSky) < sat(dry.hemiSky) && p.hemiSky[2] > p.hemiSky[0], "ambient grey-blue")
+  assert.equal(p.rain, 0)
+  assert.equal(p.asphaltShade, 1)
+  assert.equal(rainStreakCount("high", p.rain), 0)
+})
+
+test("rain: light (DAMP 0.5 mm/h) and heavy (WET 8 mm/h) look different; wet asphalt darker and glossier", () => {
+  const cloudy = weatherParams(weatherLook(W("CLOUDY")))
+  const light = weatherLook(W("DAMP", 0.5, 24))
+  const heavy = weatherLook(W("wet", 8, 19))
+  const lp = weatherParams(light)
+  const hp = weatherParams(heavy)
+  // Cloudy plus rain.
+  for (const p of [lp, hp]) {
+    assert.ok(p.overcast >= cloudy.overcast)
+    assert.ok(p.sunIntensity <= cloudy.sunIntensity)
+    assert.ok(p.asphaltShade < 1 && p.asphaltRoughness < 0.92, JSON.stringify(p))
+  }
+  close(light.rain, 1 - Math.exp(-0.5 / 3), 1e-12)
+  close(heavy.rain, 1 - Math.exp(-8 / 3), 1e-12)
+  // Streaks scale with rainfall: heavy has several times the light rain's.
+  const nl = rainStreakCount("high", lp.rain)
+  const nh = rainStreakCount("high", hp.rain)
+  assert.ok(nl > 0 && nh > 4 * nl, `light ${nl}, heavy ${nh}`)
+  // Denser fog with rainfall, closer in the chase camera than in the overview.
+  const chaseL = fogRange(light, OD, 9.6)
+  const chaseH = fogRange(heavy, OD, 9.6)
+  const overH = fogRange(heavy, OD, OD)
+  assert.ok(chaseH.near < chaseL.near && chaseH.far < chaseL.far, JSON.stringify({ chaseL, chaseH }))
+  assert.ok(chaseH.far < 1000, `heavy rain closes the chase view: far ${chaseH.far}`)
+  assert.ok(overH.far > 1.5 * OD, `overview still readable: far ${overH.far}`)
+  // Heavy rain: darker sky than light rain, fully wet track.
+  assert.ok(hp.overcastColor[0] < lp.overcastColor[0])
+  assert.ok(hp.asphaltShade <= lp.asphaltShade)
+  // WET without rainfall uses the backend's default rain.
+  close(weatherLook(W("WET", 0)).rain, 1 - Math.exp(-WEATHER.wetDefaultMmH / 3), 1e-12)
+  // DAMP without rainfall: wet track, no streaks.
+  assert.equal(rainStreakCount("high", weatherLook(W("DAMP", 0)).rain), 0)
+})
+
+test("weather blend: the first weather applies at once, a change is continuous and finishes in 5 s", () => {
+  const dry = weatherLook(W("DRY"))
+  const heavy = weatherLook(W("WET", 8))
+  const b = new WeatherBlend()
+  // Opening the 3D in heavy rain shows heavy rain right away.
+  assert.deepEqual(b.update(heavy, 0), heavy)
+  assert.equal(b.progress(0), 1, "nothing to blend after the first weather")
+  assert.deepEqual(new WeatherBlend().update(dry, 0), dry)
+
+  const t0 = 10_000
+  b.update(heavy, t0 - 16)
+  let prev = b.update(dry, t0)
+  assert.deepEqual(prev, heavy, "no jump on the change itself")
+  let prevSun = weatherParams(prev).sunIntensity
+  let maxStep = 0
+  let maxSunStep = 0
+  let doneAt = null
+  for (let t = t0 + 16; t <= t0 + 7000; t += 16) {
+    const cur = b.update(dry, t)
+    maxStep = Math.max(maxStep, Math.abs(cur.cloud - prev.cloud), Math.abs(cur.wet - prev.wet), Math.abs(cur.rain - prev.rain))
+    const sun = weatherParams(cur).sunIntensity
+    maxSunStep = Math.max(maxSunStep, Math.abs(sun - prevSun))
+    if (doneAt === null && cur.cloud === 0 && cur.wet === 0 && cur.rain === 0) doneAt = t - t0
+    prev = cur
+    prevSun = sun
+  }
+  // smoothstep: steepest slope 1.5 / 5 s -> at most ~0.005 per 16 ms frame.
+  assert.ok(maxStep < 0.006, `max step ${maxStep}`)
+  assert.ok(maxSunStep < 0.01, `max sun step ${maxSunStep}`)
+  assert.ok(doneAt !== null && doneAt >= 4900 && doneAt <= 5016, `finished after ${doneAt} ms`)
+  assert.equal(WEATHER.blendS, 5)
+
+  // Halfway there, a new target restarts from the current value (no jump).
+  const c = new WeatherBlend()
+  c.update(dry, 0)
+  c.update(heavy, 1000)
+  const mid = c.update(heavy, 3500)
+  assert.ok(mid.rain > 0.2 && mid.rain < heavy.rain - 0.2, JSON.stringify(mid))
+  const cloudy = weatherLook(W("CLOUDY"))
+  const after = c.update(cloudy, 3516)
+  assert.ok(Math.abs(after.rain - mid.rain) < 0.01, "retarget is continuous")
+  assert.equal(c.update(cloudy, 3516 + 5000).rain, 0)
+  // Frozen clock (same now): the blend holds.
+  assert.deepEqual(c.update(cloudy, 3516 + 5000), cloudy)
+})
+
+test("rain streak count per quality: high full, low far fewer, 'Sem cenário' none", () => {
+  const heavy = weatherLook(W("WET", 8)).rain
+  const light = weatherLook(W("DAMP", 0.5)).rain
+  const high = rainStreakCount("high", heavy)
+  const low = rainStreakCount("low", heavy)
+  assert.equal(high, Math.round(WEATHER.streaks.high * heavy))
+  assert.ok(low > 0 && low * 5 <= high, `high ${high}, low ${low}`)
+  assert.equal(rainStreakCount("off", heavy), 0)
+  assert.equal(rainStreakCount("off", 1), 0)
+  assert.ok(rainStreakCount("low", light) < low)
+  assert.equal(rainStreakCount("high", 0), 0)
+  assert.equal(rainStreakCount("high", 1), WEATHER.streaks.high)
+  // "Sem cenário" mounts no environment at all, so no weather visuals there.
+  assert.equal(QUALITY.off.environment, false)
+})
+
+test("rain streaks fade out with camera distance: full in chase/onboard, none at overview distance", () => {
+  for (const cam of [0.5, 9.6, 50, 0.25 * OD]) assert.equal(rainVisibility(cam, OD), 1, `cam ${cam}`)
+  for (const cam of [0.4 * OD, 0.63 * OD, OD, 2 * OD]) assert.equal(rainVisibility(cam, OD), 0, `cam ${cam}`)
+  let prev = 1
+  for (let cam = 0.25 * OD; cam <= 0.4 * OD; cam += 1) {
+    const v = rainVisibility(cam, OD)
+    assert.ok(v <= prev + 1e-12 && prev - v < 0.02, `continuous, monotone at ${cam}`)
+    prev = v
+  }
+  // The overview keeps the grey sky and the fog: those do not depend on the camera.
+  const heavy = weatherParams(weatherLook(W("WET", 8)))
+  assert.ok(heavy.overcast > 0.9)
+  assert.ok(fogRange(weatherLook(W("WET", 8)), OD, OD).near < OD)
+})
+
+test("wet asphalt: lighter than near-black, with a faint sky sheen; dry has none", () => {
+  const wet = weatherParams(weatherLook(W("WET", 8)))
+  assert.ok(wet.asphaltShade >= 0.7 && wet.asphaltShade < 1, `shade ${wet.asphaltShade}`)
+  assert.ok(wet.asphaltSheen > 0 && wet.asphaltSheen < 0.15, `sheen ${wet.asphaltSheen}`)
+  assert.ok(weatherParams(weatherLook(W("DAMP", 0, 40))).asphaltSheen < wet.asphaltSheen)
+})
+
+test("forced weather (dev hook) overrides the frame's until cleared", () => {
+  const frameW = W("DRY", 0, 42)
+  assert.equal(effectiveWeather(frameW), frameW)
+  assert.equal(effectiveWeather(null), null)
+  const rain = W("WET", 8, 19)
+  forceWeather(rain)
+  try {
+    assert.equal(effectiveWeather(frameW), rain)
+    assert.equal(effectiveWeather(undefined), rain)
+  } finally {
+    forceWeather(null)
+  }
+  assert.equal(effectiveWeather(frameW), frameW)
 })

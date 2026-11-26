@@ -37,8 +37,6 @@ interface Props {
    * the engine is bookkeeping at the lap line, not a place: the line says so.
    */
   pitAt?: (carIndex: number) => PitReadout
-  /** Active high-level AI command for a car, live race only. */
-  commandAt?: (carIndex: number) => string | null
   /** What is driving the cars, for the one line of prose at the bottom. */
   sourceKind: string
   /** Debug toggle: a stripe on every wheel, so spin can be seen. */
@@ -67,7 +65,6 @@ export function CarPanel({
   lapAt,
   rankAt,
   pitAt,
-  commandAt,
   sourceKind,
   wheelMarkers,
   onWheelMarkers,
@@ -78,7 +75,6 @@ export function CarPanel({
   const posRef = useRef<HTMLSpanElement>(null)
   const tyreRef = useRef<HTMLDivElement>(null)
   const pitRef = useRef<HTMLDivElement>(null)
-  const commandRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const tick = () => {
@@ -93,11 +89,6 @@ export function CarPanel({
         pitRef.current.textContent = text
         pitRef.current.style.display = text ? 'block' : 'none'
       }
-      if (commandRef.current) {
-        const text = commandAt?.(selected) ?? ''
-        commandRef.current.textContent = text
-        commandRef.current.style.display = text ? 'block' : 'none'
-      }
       if (lapRef.current) {
         // Live speed and a real lap count. The old line here estimated a lap time
         // as `lengthM / speedMps`, which assumed a constant speed — true of the
@@ -111,7 +102,7 @@ export function CarPanel({
     tick()
     const id = setInterval(tick, 1000 / READOUT_HZ)
     return () => clearInterval(id)
-  }, [readout, lengthM, selected, lapAt, rankAt, pitAt, commandAt])
+  }, [readout, lengthM, selected, lapAt, rankAt, pitAt])
 
   const car = cars[selected]
 
@@ -188,21 +179,6 @@ export function CarPanel({
           }}
         />
       )}
-      {commandAt && (
-        <div
-          ref={commandRef}
-          data-testid="car-command"
-          style={{
-            display: 'none',
-            marginTop: 4,
-            padding: '2px 6px',
-            background: '#102a18',
-            border: '1px solid #3ecf5a',
-            borderRadius: 3,
-            color: '#9ef0b0',
-          }}
-        />
-      )}
       <p style={{ margin: '6px 0 0', opacity: 0.6 }}>
         positive d = right of the direction of travel. Ribbon is {widthM.toFixed(1)} m wide.{' '}
         {sourceKind === 'replay'
@@ -214,13 +190,8 @@ export function CarPanel({
               "d_m, our refined projection of that position; s and P come from the " +
               "engine's race progress. A pit stop is done at the lap line in one " +
               'tick: the car keeps running and the pit time is added to its next lap.'
-            : sourceKind === 'live'
-              ? 'Live race: cars sit at the engine\'s own position and heading, ' +
-                'fed by the API WebSocket. The green line is the AI engineer\'s ' +
-                'active high-level command for this car; the speed readout above ' +
-                'shows the effect.'
-              : 'Cars hold a fixed d and a fixed speed, so the order changes only ' +
-                'because the speeds differ — there is no overtaking logic.'}
+            : 'Cars hold a fixed d and a fixed speed, so the order changes only ' +
+              'because the speeds differ — there is no overtaking logic.'}
       </p>
       {/* Debug. The tyres are uniform grey, so without this a wheel spinning
           the wrong way, or not at all, looks exactly like a correct one. Watch

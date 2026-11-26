@@ -32,6 +32,13 @@ export const LAYERS = {
   pitLines: { y: 0.04, offset: -3 },
 } as const
 
+/** Zebras ficam dentro da largura dirigível informada pela engine. */
+export function kerbBands(widthM: number): { left: [number, number]; right: [number, number] } {
+  const half = Math.max(0, widthM / 2)
+  const width = Math.min(1.3, half)
+  return { left: [-half, -half + width], right: [half - width, half] }
+}
+
 const wrapI = (i: number, n: number) => ((i % n) + n) % n
 
 /** Posição e vetor lateral (não normalizado) em `s`, interpolados entre os pontos. */

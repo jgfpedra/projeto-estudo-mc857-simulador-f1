@@ -130,8 +130,6 @@ def test_gui_is_enabled_only_when_requested(monkeypatch, enabled, camera, expect
             return True
         def set(self, *args, **kwargs):
             return True
-        def publish(self, *args, **kwargs):
-            return 0
 
     class EngineStub:
         def __init__(self, **kwargs):
@@ -155,8 +153,7 @@ def test_gui_is_enabled_only_when_requested(monkeypatch, enabled, camera, expect
     monkeypatch.setenv('F1_PYBULLET_GUI', enabled)
     monkeypatch.setenv('F1_GUI_CAMERA', camera)
     monkeypatch.setattr(module, 'SimulationEngine', make_engine)
-    monkeypatch.setattr(module, 'RuleBasedRaceController',
-                        lambda *_args, **_kwargs: SimpleNamespace(_project=lambda *a, **k: None))
+    monkeypatch.setattr(module, 'RuleBasedRaceController', lambda *_args, **_kwargs: object())
     monkeypatch.setattr(module.threading, 'Thread', ThreadStub)
     from api.providers.race_data import FallbackProvider
     manager = module.RaceManager(RedisStub(), provider=FallbackProvider())

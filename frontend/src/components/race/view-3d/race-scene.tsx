@@ -5,7 +5,8 @@
  * Portada da página ao vivo do viz3d (`viz3d/src/live/LiveRace.tsx`), sem a
  * conexão própria: a corrida, os ticks e a seleção vêm do frontend.
  */
-import { Suspense, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { Suspense, memo, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { Canvas, useThree } from "@react-three/fiber"
 import { Sphere } from "three"
 
@@ -16,7 +17,7 @@ import type { CameraMode, FollowState } from "./scene/camera-math"
 import { carColors } from "./scene/car-colors"
 import { Cars } from "./scene/cars"
 import { createProbe } from "./scene/dev-probe"
-import { unfreezeLive } from "./scene/live-clock"
+import { acquirePlayback } from "./scene/live-clock"
 import { Environment } from "./scene/environment/environment"
 import { buildLayout } from "./scene/environment/layout"
 import type { Layout } from "./scene/environment/layout"
@@ -28,6 +29,7 @@ import type { ScenePitLane, SceneTrack } from "./scene/race-track"
 import { buildFrame } from "./scene/track-frame"
 import type { TrackFrame } from "./scene/track-frame"
 import { PitLaneRibbon, StartFinishLine, TrackRibbon } from "./scene/track-meshes"
+import { View3DToolbarSlot } from "./toolbar-slot"
 
 type FollowMode = Exclude<CameraMode, "orbit">
 
@@ -38,9 +40,12 @@ export type RaceSceneProps = {
 }
 
 const FOLLOW_LABEL: Record<FollowMode, string> = { chase: "Perseguição", onboard: "A bordo" }
+/** Arrastar mais que isto (px) com um carro seguido volta à visão geral. */
+const DRAG_EXIT_PX = 6
+
 /**
- * Sair do seguimento pelo canvas: qualquer interação de ponteiro (down/move),
- * roda do mouse ou Esc chamam `onSelectDriver(null)`, como o botão "Visão geral".
+ * Sair do seguimento pelo canvas: arrastar, rolar ou Esc chamam
+ * `onSelectDriver(null)`, como o botão "Visão geral" da página.
  */
 function FollowExit({ following, onExit }: { following: boolean; onExit: () => void }) {
   const gl = useThree((s) => s.gl)
@@ -51,24 +56,35 @@ function FollowExit({ following, onExit }: { following: boolean; onExit: () => v
 
   useEffect(() => {
     const el = gl.domElement
+    let start: { x: number; y: number } | null = null
     const exit = () => {
       if (latest.current.following) latest.current.onExit()
     }
-    const down = () => exit()
+    const down = (e: PointerEvent) => {
+      start = { x: e.clientX, y: e.clientY }
+    }
     const move = (e: PointerEvent) => {
-      // Sai no primeiro movimento com botão pressionado
-      if (e.buttons !== 0) exit()
+      if (!start || e.buttons === 0) return
+      if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > DRAG_EXIT_PX) {
+        start = null
+        exit()
+      }
+    }
+    const up = () => {
+      start = null
     }
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") exit()
     }
     el.addEventListener("pointerdown", down)
     el.addEventListener("pointermove", move)
+    el.addEventListener("pointerup", up)
     el.addEventListener("wheel", exit, { passive: true })
     window.addEventListener("keydown", key)
     return () => {
       el.removeEventListener("pointerdown", down)
       el.removeEventListener("pointermove", move)
+      el.removeEventListener("pointerup", up)
       el.removeEventListener("wheel", exit)
       window.removeEventListener("keydown", key)
     }
@@ -139,7 +155,13 @@ function Content({ race, scene, layout, quality, followRef, mode, selectedDriver
         onPick={(id) => onSelectDriver(id)}
         probe={probe?.sink ?? null}
       />
-      <CameraRig frame={frame} mode={selectedIndex >= 0 ? mode : "orbit"} followRef={followRef} overview={overview} />
+      <CameraRig
+        frame={frame}
+        mode={selectedIndex >= 0 ? mode : "orbit"}
+        followRef={followRef}
+        overview={overview}
+        probeCamera={probe?.sink.camera ?? null}
+      />
     </>
   )
 }
@@ -187,8 +209,9 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
   const [followMode, setFollowMode] = useState<FollowMode>("chase")
   const mode: CameraMode = selectedDriverId ? followMode : "orbit"
   const [quality, setQuality] = useState<Quality>(loadQuality)
-  // Um congelamento do gancho de desenvolvimento não sobrevive ao 3D.
-  useEffect(() => () => unfreezeLive(), [])
+  const toolbarSlot = useContext(View3DToolbarSlot)
+  // Buffer de frames enquanto o 3D está montado; ao sair, ele (e um congelamento do gancho) se vai.
+  useEffect(() => acquirePlayback(), [])
   const chooseQuality = (q: Quality) => {
     setQuality(q)
     saveQuality(q)
@@ -221,8 +244,31 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
 
   const start = overviewPose(scene.center.center, scene.center.radius, 45, 16 / 9)
 
+  // Seletor de cenário: na barra de cima, ao lado da chave 2D/3D (pelo portal da página; a faixa
+  // de eventos vem depois dele). Embaixo do canvas o cartão do piloto selecionado o cobria. Fica
+  // fora do canvas (ver abaixo), e um <select> nativo abre a lista fora do documento.
+  const qualityControl = (
+    <label className="flex h-[38px] items-center border border-border bg-background/90 text-[10px] font-bold uppercase tracking-wider">
+      <span className="pl-2.5 text-muted-foreground">Cenário</span>
+      <select
+        value={quality}
+        onChange={(e) => chooseQuality(e.target.value as Quality)}
+        aria-label="Qualidade do cenário 3D"
+        className="h-full cursor-pointer bg-transparent pl-1.5 pr-1 text-xs font-black uppercase text-foreground outline-none"
+      >
+        {QUALITIES.map((q) => (
+          <option key={q} value={q} className="bg-background text-foreground">
+            {QUALITY_LABEL[q]}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+
   return (
-    <div className="flex h-full w-full flex-col" data-testid="race-view-3d">
+    <div className="relative flex h-full w-full flex-col" data-testid="race-view-3d">
+      {toolbarSlot ? createPortal(qualityControl, toolbarSlot) : <div className="absolute -top-12 right-[-8px] z-30">{qualityControl}</div>}
+
       {/* O canvas fica sozinho na sua área: um elemento HTML sempre por cima dele mudava a
           composição do Chrome e, com WebGL por software, às vezes gerava um aviso
           "Blit feedback loop" ao montar/desmontar o 3D. */}
@@ -263,25 +309,6 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
             ))}
           </div>
         )}
-      </div>
-
-      <div
-        className="flex shrink-0 items-center justify-end border-t border-border text-[10px] font-bold uppercase tracking-wider"
-        role="group"
-        aria-label="Qualidade do cenário 3D"
-      >
-        <span className="px-2 text-muted-foreground">Cenário</span>
-        {QUALITIES.map((q) => (
-          <button
-            key={q}
-            type="button"
-            onClick={() => chooseQuality(q)}
-            aria-pressed={quality === q}
-            className={`px-2.5 py-1.5 ${quality === q ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
-          >
-            {QUALITY_LABEL[q]}
-          </button>
-        ))}
       </div>
     </div>
   )

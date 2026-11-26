@@ -20,29 +20,18 @@ if _BACKEND_ROOT not in sys.path:
 
 import redis
 from config import DEFAULT_DRIVERS, DEFAULT_INTERLAGOS_CONFIG
-from config.live_tracks import load_live_track
 from engine.physics import CHASSIS_LENGTH_M, CHASSIS_WIDTH_M, CHASSIS_HEIGHT_M
 from domain.pit_lane import ensure_pit_lane
 from domain import TyreCompound, WeatherKind, WeatherModel, WeatherTransitionConfig, BASE_CONDITIONS
 from .catalog import get_catalog
-from engine import (
-    CoachController,
-    CommandBus,
-    InMemoryInputSource,
-    Publisher,
-    RuleBasedRaceController,
-    SimulationEngine,
-)
+from engine import InMemoryInputSource, Publisher, RuleBasedRaceController, SimulationEngine
+from .providers.race_data import default_provider, driver_record
+from .providers.f1db_layouts import load_layout_catalog, normalize
+from .providers.track_reference import candidate_reference_years
 
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 RACE_TTL = 24 * 60 * 60
-CONTROL_CHANNEL = 'race:control'
 SCHEMA_VERSION = 1
-# A corrida nasce parada no grid e só larga quando o primeiro visualizador
-# conecta no WebSocket. Assim quem abre o viz sempre vê a largada de verdade,
-# em vez de entrar no meio da primeira volta. Se ninguém conectar, a corrida
-# começa sozinha depois deste prazo para não ficar presa.
-START_GATE_TIMEOUT_S = float(os.environ.get('F1_START_GATE_TIMEOUT_S', '120'))
 logger = logging.getLogger(__name__)
 
 
@@ -76,6 +65,15 @@ class TimingTracker:
         leader['gap_to_leader_s'] = 0.0
         leader['laps_behind'] = 0
         for pos in positions[1:]:
+            if leader.get('finished') and pos.get('finished'):
+                pos['laps_behind'] = max(0, leader['lap'] - pos['lap'])
+                leader_time, finish_time = leader.get('finish_time_s'), pos.get('finish_time_s')
+                pos['gap_to_leader_s'] = (
+                    round(max(0.0, finish_time - leader_time), 3)
+                    if not pos['laps_behind'] and leader_time is not None and finish_time is not None
+                    else None
+                )
+                continue
             distance = pos['progress_m']
             behind = max(0.0, lead - distance)
             pos['laps_behind'] = int(behind // length) if length > 0 else 0
@@ -119,7 +117,8 @@ class CollisionAggregator:
                     per_substep[c.get('sub', 0)] += float(c.get('f_n', 0.0))
                 strongest = max(contacts, key=lambda c: float(c.get('f_n', 0.0)))
                 a, b = pair
-                events.append({'type': 'collision', 'sim_ts': sim_ts, 'driver_a_id': a, 'driver_b_id': b,
+                events.append({'type': 'collision', 'schema_version': SCHEMA_VERSION,
+                               'sim_ts': sim_ts, 'driver_a_id': a, 'driver_b_id': b,
                                'driver_a_name': names.get(a, a), 'driver_b_name': names.get(b, b),
                                'position_xy': [strongest.get('cx', 0.0), strongest.get('cy', 0.0)],
                                'impact_force_n': max(per_substep.values(), default=0.0),
@@ -145,8 +144,8 @@ class LivePublisher(Publisher):
 
     def publish(self, event):
         payload = event.to_dict()
-        payload['race_id'] = self.race_id
         payload['schema_version'] = SCHEMA_VERSION
+        payload['race_id'] = self.race_id
         collision_events = []
         if event.type == 'race_start':
             self.snapshot['status'] = 'running'
@@ -172,7 +171,6 @@ class LivePublisher(Publisher):
                 item['lap'] = max(engine.states[item['driver_a_id']].lap, engine.states[item['driver_b_id']].lap)
                 item['ts'] = event.ts
                 item['race_id'] = self.race_id
-                item['schema_version'] = SCHEMA_VERSION
             payload['collisions'] = collision_events
             if raw is not None:
                 raw.clear()
@@ -197,162 +195,236 @@ class LivePublisher(Publisher):
 
 class RaceManager:
     def __init__(self, client=None, provider=None, catalog=None):
-        # provider e catalog são mantidos para compatibilidade com testes,
-        # mas não são usados na versão live_tracks.
         self.catalog = catalog
         self.redis = client or redis.Redis.from_url(REDIS_URL, decode_responses=True, socket_connect_timeout=2)
+        self.provider = provider or default_provider()
+        try:
+            self.catalog = catalog if catalog is not None else load_layout_catalog()
+        except (OSError, ValueError) as exc:
+            logger.warning('Catálogo F1DB indisponível: %s', exc)
+            self.catalog = None
         self._threads = {}
-        self._buses = {}
-        # race_id -> Event liberado quando o primeiro viz conecta.
-        self._start_gates = {}
+        self._engines = {}
+        self._engines_lock = threading.RLock()
 
     def create_race(self, laps, track, year, num_drivers=2, layout_id=None, selected_roster=None,
-                    weather=None, weather_change=None, initial_tyre=None, user_driver_id=None,
-                    followed_driver_id=None):
+                    weather=None, weather_change=None, initial_tyre=None, user_driver_id=None, random_seed=None):
         if not 1 <= num_drivers <= 24:
             raise ValueError('A quantidade de corredores deve estar entre 1 e 24.')
         self.redis.ping()
+        circuit = (track or 'interlagos').strip().lower() or 'interlagos'
         
-        # Valida se o circuito existe no catálogo para o ano solicitado
+        # Validação do catálogo: circuito deve existir
         if self.catalog:
-            circuit = self.catalog.circuit(track)
-            if circuit is None:
+            catalog_circuit = self.catalog.find_circuit(circuit)
+            if catalog_circuit is None:
                 raise ValueError(f"Circuito '{track}' não encontrado no catálogo")
-            # Verifica se há layout para o ano
-            layout = self.catalog.find_layout(circuit, year)
-            if layout is None:
-                available_years = []
-                for l in circuit.get("layouts", []):
+            circuit_id = catalog_circuit['id']
+            season = year or (2024 if circuit_id == 'monza' else 2023)
+            season_layout = self.catalog.find_layout(catalog_circuit, season)
+            if season_layout is None:
+                available = []
+                for l in catalog_circuit.get("layouts", []):
                     fy = l.get("first_year") or (l.get("years", [0])[0] if l.get("years") else 0)
                     ly = l.get("last_year") or (l.get("years", [-1])[-1] if l.get("years") else 0)
-                    available_years.append(f"{fy}-{ly}")
+                    available.append(f"{fy}-{ly}")
                 raise ValueError(
                     f"Circuito '{track}' não tem layout para o ano {year}. "
-                    f"Anos disponíveis: {', '.join(available_years)}"
+                    f"Anos disponíveis: {', '.join(available)}"
                 )
-        
-        track_obj = load_live_track(track_name=track, year=year)
+        else:
+            circuit_id = normalize(circuit).replace(' ', '-')
+            season = year or (2024 if circuit_id == 'monza' else 2023)
+            season_layout = None
+        layout = season_layout
+        if layout_id is not None:
+            layout = next((item for item in (catalog_circuit or {}).get('layouts', [])
+                           if item['id'] == layout_id), None)
+            if layout is None:
+                raise ValueError(f"O layout '{layout_id}' não pertence ao circuito '{circuit_id}'.")
+        same_season_layout = layout is None or (season_layout is not None and layout['id'] == season_layout['id'])
+        if layout_id is not None and not same_season_layout and selected_roster is None:
+            raise ValueError(f"O layout '{layout_id}' não é confirmado para '{circuit_id}' em {season} pelo catálogo F1DB; informe o grid para usar pilotos de outra temporada.")
+
+        # Com grid explícito a temporada identifica os pilotos, e o layout
+        # selecionado identifica a pista. A referência nunca troca de layout.
+        track_year = season
+        track_obj = roster = sources = None
+        original_error = None
+        if same_season_layout:
+            try:
+                track_obj, roster, sources = self.provider.load(circuit, season)
+            except ValueError as exc:
+                if layout_id is None or selected_roster is None:
+                    raise
+                original_error = exc
+        if track_obj is None:
+            candidates = candidate_reference_years(self.catalog, catalog_circuit, layout, excluded=(season,))
+            errors = []
+            for reference_year in candidates:
+                try:
+                    track_obj, roster, sources = self.provider.load(circuit, reference_year)
+                except ValueError as exc:
+                    # O snapshot identifica um GP específico mesmo quando há
+                    # múltiplas sessões no mesmo circuito e ano.
+                    try:
+                        from .providers.historical_f1results import HistoricalResultsProvider
+                        track_obj, roster, sources = HistoricalResultsProvider().load(circuit, reference_year)
+                    except ValueError as fallback_exc:
+                        errors.append(f'{reference_year}: {exc}; {fallback_exc}')
+                        continue
+                track_year = reference_year
+                break
+            if track_obj is None:
+                detail = '; '.join(errors) or str(original_error or 'nenhum ano de referência disponível')
+                raise ValueError(f"Geometria indisponível para o layout '{layout_id}' em qualquer referência conhecida: {detail}")
+        reference = {'driver_season': season, 'track_year': track_year,
+                     'basis': 'season' if track_year == season else 'selected_layout_reference'}
+        if track_year != season:
+            sources['track_reference'] = reference
+            track_obj.metadata = {**track_obj.metadata, 'track_reference': reference}
+        safe_grid = track_obj.metadata.get('max_safe_grid_cars')
+        if safe_grid is not None and num_drivers > safe_grid:
+            raise ValueError(f'A geometria histórica aproximada comporta apenas {safe_grid} carros no grid; solicite menos carros.')
+        if not roster:
+            raise ValueError('Fonte não forneceu pilotos')
+        if selected_roster is not None:
+            roster = selected_roster
+            sources['driver_source'] = 'season_selection'
+            sources.pop('driver_provenance', None)
+        elif sources.get('driver_source') == 'f1results_database' and num_drivers > len(roster):
+            raise ValueError(f'O GP histórico possui apenas {len(roster)} carros no grid; solicite menos carros.')
+        roster = list(roster[:num_drivers])
+        while len(roster) < num_drivers:
+            i = len(roster)+1
+            roster.append(driver_record(f'P{i:02d}', f'Piloto {i:02d}', None, None, '808080'))
+        if user_driver_id is not None and user_driver_id not in {entry['driver_id'] for entry in roster}:
+            raise ValueError('O piloto do usuário deve pertencer ao grid da corrida.')
+        drivers = [replace(DEFAULT_DRIVERS[i % len(DEFAULT_DRIVERS)], driver_id=entry['driver_id'], name=entry['name'],
+                           **({'starting_tyre_compound': TyreCompound(initial_tyre.upper())} if initial_tyre else {}))
+                   for i, entry in enumerate(roster)]
         race_id = f'race_{uuid.uuid4().hex}'
-        gui = os.environ.get('F1_PYBULLET_GUI', '').lower() in ('1', 'true', 'yes', 'on')
-        camera_mode = os.environ.get('F1_GUI_CAMERA', 'follow') if gui else 'none'
-        if camera_mode not in ('follow', 'overview', 'none'):
-            raise ValueError(f'Modo de câmera inválido: {camera_mode}')
-        config = replace(DEFAULT_INTERLAGOS_CONFIG, race_id=race_id, num_laps=laps,
-                         gui=gui, camera_mode=camera_mode, draw_track=gui, draw_track_details=False,
-                         realtime=True, track_progress_laps=True)
-        drivers = [
-            replace(
-                DEFAULT_DRIVERS[index % len(DEFAULT_DRIVERS)],
-                driver_id=f'drv_{index + 1:02d}',
-                name=(DEFAULT_DRIVERS[index].name if index < len(DEFAULT_DRIVERS)
-                      else f'Piloto {index + 1:02d}'),
-            )
-            for index in range(num_drivers)
-        ]
-        geometry_bytes = b''.join(struct.pack('<dd', float(x), float(y)) for x, y in track_obj.waypoints)
-        geometry_sha256 = hashlib.sha256(geometry_bytes).hexdigest()[:16]
-        followed_driver_id = followed_driver_id or drivers[0].driver_id
-        if followed_driver_id not in {d.driver_id for d in drivers}:
-            followed_driver_id = drivers[0].driver_id
-        meta = {
-            'race_id': race_id, 'num_laps': laps, 'num_drivers': num_drivers,
-            'followed_driver_id': followed_driver_id,
-            'dt_s': 1.0 / max(1.0, config.logic_step_hz),
-            'car_geometry': {'length_m': CHASSIS_LENGTH_M, 'width_m': CHASSIS_WIDTH_M,
-                             'height_m': CHASSIS_HEIGHT_M},
-            'track': {'name': track_obj.name, 'source': track_obj.source,
-                      'geometry_sha256': geometry_sha256,
-                      'length_m': track_obj.length_m, 'width_m': track_obj.width_m,
-                      'start_finish_waypoint': track_obj.start_finish_waypoint,
-                      'waypoints': [[float(x), float(y)] for x, y in track_obj.waypoints]},
-            'drivers': [{'driver_id': d.driver_id, 'name': d.name, 'grid_position': i + 1}
-                        for i, d in enumerate(drivers)],
-        }
-        publisher = LivePublisher(self.redis, race_id)
-        engine = SimulationEngine(config=config, track=track_obj, drivers=drivers,
-                                  publisher=publisher, input_source=InMemoryInputSource(fallback_race_id=race_id))
+        # A separate seed per race avoids replaying the exact same bot rhythm
+        # while preserving deterministic experiments when a seed is supplied.
+        bot_seed = int(race_id[5:13], 16) if random_seed is None else int(random_seed)
+        gui = os.environ.get('F1_PYBULLET_GUI', '').lower() in ('1','true','yes','on')
+        camera = os.environ.get('F1_GUI_CAMERA', 'follow') if gui else 'none'
+        if camera not in ('follow', 'overview', 'none'):
+            raise ValueError(f'Modo de câmera inválido: {camera}')
+        config = replace(DEFAULT_INTERLAGOS_CONFIG, race_id=race_id, num_laps=laps, gui=gui,
+                         camera_mode=camera, draw_track=gui, draw_track_details=False,
+                         realtime=True, track_progress_laps=True, random_seed=bot_seed)
+        pit = ensure_pit_lane(track_obj)
+        geometry = b''.join(struct.pack('<dd', float(x), float(y)) for x,y in track_obj.waypoints)
+        digest = hashlib.sha256(geometry).hexdigest()[:16]
+        driver_meta = [{**d, 'grid_position': i+1} for i,d in enumerate(roster)]
+        meta = {'race_id':race_id, 'schema_version':SCHEMA_VERSION, 'season':season,
+                'circuit_id':circuit_id, 'layout_id':layout['id'] if layout else None,
+                'layout_reference':{'source':'F1DB','basis':reference['basis'], 'years':layout['years'],
+                                    'track_year':track_year,
+                                    'catalog_generated_at':self.catalog.data.get('generated_at')} if layout else None,
+                'num_laps':laps, 'num_drivers':num_drivers, 'user_driver_id':user_driver_id,
+                'random_seed':bot_seed, 'sources':sources,
+                'car_geometry':{'length_m':CHASSIS_LENGTH_M,'width_m':CHASSIS_WIDTH_M,'height_m':CHASSIS_HEIGHT_M},
+                'track':{'name':track_obj.name, 'source':track_obj.source, 'geometry_sha256':digest,
+                         'length_m':track_obj.length_m, 'width_m':track_obj.width_m,
+                         'start_finish_waypoint':track_obj.start_finish_waypoint,
+                         'waypoints':[[float(x),float(y)] for x,y in track_obj.waypoints],
+                         'pit_lane': {'waypoints': [[float(x), float(y)] for x, y in pit.waypoints],
+                                      'width_m': pit.width_m, 'speed_limit_kmh': pit.speed_limit_kmh,
+                                      'source': pit.source}},
+                'drivers':driver_meta}
+        publisher = LivePublisher(self.redis, race_id, driver_meta)
+        weather_model = None
+        if weather is not None:
+            weather_map = {'dry': WeatherKind.DRY, 'cloudy': WeatherKind.CLOUDY,
+                           'light_rain': WeatherKind.WET, 'rain': WeatherKind.WET,
+                           'heavy_rain': WeatherKind.WET}
+            initial = BASE_CONDITIONS[weather_map[weather]]
+            if weather in ('light_rain', 'heavy_rain'):
+                initial = replace(initial, rainfall=0.5 if weather == 'light_rain' else 7.0)
+            transition = WeatherTransitionConfig.default(transition_prob_per_lap=0.0)
+            if weather_change:
+                kinds = list(dict.fromkeys(weather_map[x.value if hasattr(x, 'value') else x]
+                                           for x in weather_change['possible']))
+                transition = WeatherTransitionConfig(
+                    transition_matrix={kind: {target: 1.0 / len(kinds) for target in kinds} for kind in WeatherKind},
+                    transition_prob_per_lap=weather_change['probability_per_lap'])
+            weather_model = WeatherModel(initial=initial, config=transition)
+        engine_kwargs = dict(config=config, track=track_obj, drivers=drivers, publisher=publisher,
+                             input_source=InMemoryInputSource(fallback_race_id=race_id))
+        if weather_model is not None:
+            engine_kwargs['weather_model'] = weather_model
+        engine = SimulationEngine(**engine_kwargs)
+        engine.user_driver_id = user_driver_id
         publisher.engine = engine
         engine.physics.contact_collector = []
-        base_controller = RuleBasedRaceController(track_obj, seed=config.random_seed)
-        publisher.projector = base_controller._project
-        bus = CommandBus()
+        engine.physics.contact_collector_include_penetration = True
+        controller = RuleBasedRaceController(track_obj, seed=config.random_seed)
         for driver in drivers:
-            engine.set_controller(
-                driver.driver_id,
-                CoachController(
-                    base=base_controller,
-                    driver_id=driver.driver_id,
-                    publisher=publisher,
-                    bus=bus,
-                ),
-            )
-        self._buses[race_id] = bus
-        self._start_gates[race_id] = threading.Event()
-        self.redis.set(f'race:{race_id}:meta', json.dumps(meta), ex=RACE_TTL)
-        # O serviço de IA (separado) escuta este canal para descobrir a corrida
-        # que acabou de nascer e o piloto que deve acompanhar.
-        try:
-            self.redis.publish(CONTROL_CHANNEL, json.dumps({
-                'type': 'race_created',
-                'race_id': race_id,
-                'followed_driver_id': followed_driver_id,
-                'num_laps': laps,
-            }))
-        except redis.RedisError:
-            logger.warning('Não foi possível publicar race_created em %s', CONTROL_CHANNEL)
-        thread = threading.Thread(
-            target=self._run_engine,
-            args=(engine, publisher, self._start_gates[race_id]),
-            daemon=True,
-        )
-        self._threads[race_id] = thread
+            engine.set_controller(driver.driver_id, controller)
+        self.redis.set(f'race:{race_id}:meta', json.dumps(meta, ensure_ascii=False), ex=RACE_TTL)
+        self.redis.set(f'race:{race_id}:snapshot', json.dumps(publisher.snapshot), ex=RACE_TTL)
+        thread = threading.Thread(target=self._run_engine, args=(engine,publisher), daemon=True)
+        with self._engines_lock:
+            self._threads[race_id] = thread
+            self._engines[race_id] = engine
         thread.start()
         return race_id, track_obj, config
 
-    def signal_viewer_connected(self, race_id):
-        """Libera a largada quando o visualizador conecta no WebSocket."""
-        gate = self._start_gates.get(race_id)
-        if gate is None:
-            return False
-        gate.set()
-        return True
-
-    def push_command(self, race_id, driver_id, command, value=0.0, reason='', issued_by='ai'):
-        """Enfileira um comando de alto nível para o coach da corrida."""
-        bus = self._buses.get(race_id)
-        if bus is None:
-            raise KeyError(f'race not found: {race_id!r}')
-        return bus.push(driver_id, command, value=value, reason=reason, issued_by=issued_by)
-
-    def followed_driver(self, race_id):
-        meta = self.metadata(race_id)
-        return meta.get('followed_driver_id') if meta else None
-
-    def _run_engine(self, engine, publisher, start_gate=None):
+    def _run_engine(self, engine, publisher):
         try:
-            if start_gate is not None:
-                # Espera o viz abrir. O timeout é só uma rede de segurança,
-                # para uma corrida criada por script não ficar parada.
-                if not start_gate.wait(timeout=START_GATE_TIMEOUT_S):
-                    logger.info('Corrida %s largou sem visualizador (timeout de %.0fs)',
-                                engine.config.race_id, START_GATE_TIMEOUT_S)
             engine.run()
         except Exception as exc:
             logger.exception('Falha na corrida %s', engine.config.race_id)
-            data = json.dumps({'type': 'race_error', 'message': str(exc)})
+            data = json.dumps({'type':'race_error','schema_version':SCHEMA_VERSION,'message':str(exc)})
             try:
-                self.redis.set(f'race:{engine.config.race_id}:result', data, ex=RACE_TTL)
-                self.redis.publish(f'race:{engine.config.race_id}:events', data)
+                publisher.snapshot.update(status='failed', sim_ts=engine.sim_ts)
+                pipe = self.redis.pipeline(transaction=True)
+                pipe.set(f'race:{engine.config.race_id}:snapshot', json.dumps(publisher.snapshot), ex=RACE_TTL)
+                pipe.set(f'race:{engine.config.race_id}:result', data, ex=RACE_TTL)
+                pipe.publish(f'race:{engine.config.race_id}:events', data)
+                pipe.execute()
             except redis.RedisError:
                 pass
         finally:
+            engine.close_pit_requests()
             engine.teardown()
-            self._threads.pop(engine.config.race_id, None)
-            self._buses.pop(engine.config.race_id, None)
-            self._start_gates.pop(engine.config.race_id, None)
+            with self._engines_lock:
+                self._threads.pop(engine.config.race_id, None)
+                self._engines.pop(engine.config.race_id, None)
+
+    def request_pit_stop(self, race_id, driver_id, compound):
+        """Valida a corrida e encaminha o comando à thread proprietária da engine."""
+        meta = self.metadata(race_id)
+        if meta is None:
+            raise LookupError('Corrida não encontrada')
+        if driver_id not in {driver['driver_id'] for driver in meta.get('drivers', [])}:
+            raise LookupError('Piloto não encontrado nessa corrida')
+        with self._engines_lock:
+            engine = self._engines.get(race_id)
+            if engine is None:
+                raise RuntimeError('Corrida não está ativa neste processo')
+            engine.request_pit_stop(driver_id, compound)
+
+    def cancel_pit_stop(self, race_id, driver_id):
+        meta = self.metadata(race_id)
+        if meta is None:
+            raise LookupError('Corrida não encontrada')
+        if driver_id not in {driver['driver_id'] for driver in meta.get('drivers', [])}:
+            raise LookupError('Piloto não encontrado nessa corrida')
+        with self._engines_lock:
+            engine = self._engines.get(race_id)
+            if engine is None:
+                raise RuntimeError('Corrida não está ativa neste processo')
+            engine.cancel_pit_stop(driver_id)
 
     def metadata(self, race_id):
         value = self.redis.get(f'race:{race_id}:meta')
+        return json.loads(value) if value else None
+
+    def snapshot(self, race_id):
+        value = self.redis.get(f'race:{race_id}:snapshot')
         return json.loads(value) if value else None
 
 

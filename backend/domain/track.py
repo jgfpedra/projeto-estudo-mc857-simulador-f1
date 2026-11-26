@@ -21,6 +21,10 @@ import numpy as np
 
 Point2D = Tuple[float, float]
 
+# Multiplicador de superfície na grama, antes dos efeitos de pneu e clima.
+# O valor mais permissivo reduz o tempo perdido em uma saída acidental.
+GRASS_MIN_SURFACE_GRIP = 0.60
+
 
 @dataclass
 class Sector:
@@ -336,9 +340,9 @@ class Track:
         if dist <= half_width:
             return 1.0
         over = dist - half_width
-        # Cai de 1.0 até 0.35 (grip residual na grama) ao longo de grass_falloff_m
-        factor = 1.0 - min(1.0, over / grass_falloff_m) * 0.65
-        return max(0.35, factor)
+        # Transição gradual do asfalto até o grip residual na grama.
+        factor = 1.0 - min(1.0, over / grass_falloff_m) * (1.0 - GRASS_MIN_SURFACE_GRIP)
+        return max(GRASS_MIN_SURFACE_GRIP, factor)
 
     def surface_grip_factor(
         self,

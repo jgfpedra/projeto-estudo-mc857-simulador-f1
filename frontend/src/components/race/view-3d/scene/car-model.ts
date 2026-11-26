@@ -206,6 +206,35 @@ export function wheelMatrix(car: Matrix4, wheel: CarWheel, angleRad: number, out
   return out.premultiply(car)
 }
 
+/** Faixa do composto: raio do anel e do tubo, em frações do raio da roda. */
+export const TYRE_BAND = { ring: 0.86, tube: 0.14 }
+
+const Z_AXIS = new Vector3(0, 0, 1)
+
+/**
+ * Matriz, no espaço da roda (centro na origem, como as partes dela), que leva
+ * um toro de raio 1 no plano XY (eixo +Z) ao flanco externo do pneu: eixo do
+ * toro no eixo da roda, apontando para fora do carro, encostado na face
+ * externa (centro do tubo na face: metade para fora). Anel até o raio da
+ * roda (0,86 + 0,14), no ombro do pneu: de trás e de cima ele aparece como
+ * uma faixa na borda externa do pneu. O anel é simétrico no giro, então
+ * ele acompanha a roda pela mesma `wheelMatrix`.
+ */
+export function tyreBandLocal(wheel: CarWheel, out: Matrix4): Matrix4 {
+  const box = new Box3()
+  for (const p of wheel.parts) {
+    p.geometry.computeBoundingBox()
+    if (p.geometry.boundingBox) box.union(p.geometry.boundingBox)
+  }
+  // Fora do carro: o lado do eixo em que a roda está (o carro é centrado em x = 0).
+  const side = Math.sign(wheel.centre.dot(wheel.axle)) || 1
+  const outward = wheel.axle.clone().multiplyScalar(side)
+  const face = box.isEmpty() ? 0 : side > 0 ? box.max.dot(wheel.axle) : -box.min.dot(wheel.axle)
+  const scale = wheel.radiusM * TYRE_BAND.ring
+  const position = outward.clone().multiplyScalar(face)
+  return out.compose(position, new Quaternion().setFromUnitVectors(Z_AXIS, outward), new Vector3(scale, scale, scale))
+}
+
 /** Ângulo da roda após percorrer `distanceM`, rolando sem deslizar. Negativo porque a frente é -Z. */
 export function wheelAngle(distanceM: number, radiusM: number): number {
   return -distanceM / radiusM

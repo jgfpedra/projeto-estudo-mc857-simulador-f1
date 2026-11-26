@@ -71,3 +71,33 @@ Os anos em `layouts[].years` indicam os períodos com GPs registrados no catálo
 A simulação ao vivo mantém passos físicos de 1/240 s e usa prazos baseados em relógio monotônico para compensar atrasos pontuais sem pular passos. Se o processamento permanecer mais lento que o tempo real, a corrida também ficará mais lenta; reduzir a quantidade de carros diminui a carga.
 
 O controlador possui ajustes de ritmo para as duas geometrias de Monza 2024 testadas: a pista congelada e o snapshot OpenF1 da sessão 9590, piloto 1, volta 43. O ajuste exige hash e largura correspondentes; outras amostras OpenF1, variantes e geometrias continuam com os parâmetros gerais. A calibração é uma aproximação do simulador e não garante os tempos de pilotos reais. A geometria OpenF1 usada no teste offline está em `tests/fixtures/monza_openf1_2024.json`.
+
+
+### Bandeirada e estratégia automática
+
+O primeiro piloto a completar a distância programada recebe a bandeirada; os demais continuam até cruzar a linha, inclusive quem está uma ou mais voltas atrás. A classificação preserva a ordem de chegada na mesma volta. O tick inclui `finished` por piloto; a classificação final inclui `finished` e `finish_time_s`. O limite de segurança da simulação ainda pode encerrar a corrida com pilotos não finalizados, identificados por `finished: false`.
+
+Para os bots, a engine avalia continuamente se as condições exigem mudança de composto e projeta desgaste e combustível para decidir se pede boxes. As solicitações automáticas enviam o evento `pit_requested` com `source: automatic`; se uma mudança de clima invalidar o pedido antes da entrada, ele pode ser atualizado ou cancelado. O piloto escolhido pelo usuário continua dependendo do comando manual, que também tem prioridade sobre um pedido automático. Em corridas secas de sete voltas ou mais, cada bot planeja uma troca de composto em uma janela própria, reproduzível pela semente; combustível, pneus gastos ou mudança de clima podem antecipar a parada. Se as projeções permitirem, os bots podem escolher macios, médios ou duros. O piloto do usuário permanece no controle manual dos boxes. A estratégia é uma aproximação e não implementa todas as regras esportivas da F1.
+
+A medição offline de ritmo e saídas pode ser reproduzida no diretório `backend` com `python -m scripts.benchmarks.measure_bot_pace --track monza-open --cars 10 --seed 42 --seconds 200`. O indicador de saída conta ticks de 0,1 s em que o centro do carro está além da metade da largura da pista; ele não é uma contagem de incidentes e não inclui a largura do carro.
+
+
+### Disputas na pista
+
+Na geometria congelada de Interlagos 2023 e na largura de 12 m usadas no benchmark, um bot que se aproxima ou segue lado a lado recebe um incentivo limitado de velocidade nas retas. A regra exige que o planejamento já esteja próximo da velocidade máxima, para não aumentar a velocidade planejada de curvas. Outras geometrias mantêm o comportamento anterior. A métrica `estimated_passes_after_20s` do benchmark conta inversões sustentadas entre carros próximos na pista, excluindo boxes e saídas; é uma aproximação, não uma contagem oficial. `collision_events` usa o detector por tick e pode não incluir contatos transitórios entre subpassos.
+
+Cada corrida criada pela API recebe uma semente própria para o ritmo e as decisões dos bots. Para reproduzir essas escolhas, envie `random_seed` (0 a 4294967295) em `POST /races`; o valor efetivamente usado também aparece em `GET /races/{id}`. A semente não garante reprodução integral quando o clima ou entradas externas variam.
+
+Na geometria histórica aproximada de Ain-Diab validada com grids de 20 carros, o controlador preserva a faixa inicial por 14 s e prevê a frenagem de carros à frente com maior antecedência. O ajuste é aplicado apenas ao hash e à largura medidos, em grids de pelo menos dez carros. Para reproduzir o diagnóstico offline, use `python -m scripts.benchmarks.measure_bot_pace --track ain-diab --cars 20 --seed 42 --seconds 100`; `--driver-ids` aceita os IDs do grid, separados por vírgulas. A coluna `longest_below_1_4_mps_s` mede a maior permanência contínua abaixo de aproximadamente 5 km/h após os dez primeiros segundos.
+
+### Aderência na grama
+
+O multiplicador mínimo da superfície fora do asfalto é 0,60, com transição gradual nos três metros após a borda. O valor substitui o antigo mínimo de 0,35 e vale para todos os carros; ele ainda é multiplicado pela aderência dos pneus e pelas condições meteorológicas. O controlador de reentrada mantém os limites de velocidade anteriores, pois aumentá-los provocou mais contatos em alguns testes com tráfego. A constante `GRASS_MIN_SURFACE_GRIP` fica em `domain/track.py`.
+
+### Erros na saída de curva
+
+Cada bot identifica curvas pela curvatura da trajetória e, quando volta a acelerar após sair de uma delas, pode hesitar por 1,0–1,8 s, aplicando 40%–70% do acelerador planejado. A chance por saída elegível é de aproximadamente 12,4% a 17,6%, conforme a consistência sorteada do piloto. Há uma janela curta para a tentativa e um intervalo mínimo entre avaliações; não ocorre durante frenagem nem recuperação fora da pista. A decisão vale para qualquer posição e usa um gerador próprio baseado na semente da corrida e no ID do piloto. Ela não adiciona comandos aleatórios de direção. O benchmark apresenta `corner_exit_errors` por piloto.
+
+### Zebra e limite da pista
+
+As zebras geradas no 3D ocupam a faixa interna da largura enviada pela engine. Elas são uma representação visual: o modelo atual usa a posição central do carro para decidir a superfície e não simula relevo ou aderência por roda. Fora da largura da pista, a grama e a brita visual usam a mesma regra de aderência de superfície externa. O controlador não ativa recuperação em um carro alinhado apenas por alcançar a faixa interna da zebra; ele ainda recupera carros que ultrapassam a borda ou estão na contramão perto dela.

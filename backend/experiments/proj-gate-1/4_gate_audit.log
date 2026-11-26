@@ -1,0 +1,54 @@
+AUDIT_SCHEMA_CSV_REQUIRED=tick,t_s,drv,speed,s,lat,offtrack,authority,cum_dist,contacts,car_car,body_x,body_y,ns_raw
+AUDIT_SCHEMA_EVENTS_REQUIRED=sub,drv_a,drv_b,j_n,dv_a,dv_b
+AUDIT_SCHEMA_TRACK_REQUIRED=waypoints[x,y]
+AUDIT_SCHEMA_SUMMARY_REQUIRED=HESITAÇÕES:<integer>
+{
+  "audit_version": "1.0",
+  "gates": {
+    "g2_proxy": false,
+    "g3_reacquisition": true,
+    "g4_nonworsening": false
+  },
+  "inputs": {
+    "csv": "experiments/proj-gate-1/2_on_monaco_s0.csv",
+    "csv_sha256": "b9ea18f28a26f2035fe61c9370eec7a70eb2bcaa342897d08a71baaf686a4edc",
+    "events_csv": "experiments/proj-gate-1/2_on_monaco_s0_events.csv",
+    "events_sha256": "88fa98130b73b881750dab5f54a1fae02d07ce2a2162e1586332afec0660ac6a",
+    "summary_log": "experiments/proj-gate-1/2_on_monaco_s0.log",
+    "summary_sha256": "a421ae8b7fa3b6f13a9ce0d39f1f54ee29ce263728cc685d1d97f5d48a0d38e7",
+    "track_json": "model_train/tracks_frozen/Monaco_v2.json",
+    "track_sha256": "af3125959ade1f82062d9c9fe0dfa8020d31e431d919408ae4d293f0fac20bf2"
+  },
+  "nonworsening": {
+    "cars": 10,
+    "complete_by_car": true,
+    "contacts_lines_minus_one_header": 22084,
+    "events_csv_data_rows": 22083,
+    "events_file_lines": 22085,
+    "hesitations_summary": 28,
+    "offtrack_episodes": 397,
+    "outside_pct": 60.150000000000006,
+    "rows": 30000,
+    "stuck_windows_30s": 144,
+    "ticks": 3000
+  },
+  "overall": "PARE",
+  "proxy": {
+    "ge10_m": 173,
+    "ge20_m": 132,
+    "ge30_m": 108,
+    "offtrack_pairs": 18045
+  },
+  "reacquisition": {
+    "mismatches": [],
+    "nearest_global_matches": 392,
+    "non_nearest": 0,
+    "reentries": 392
+  },
+  "schema": {
+    "csv_columns": 71,
+    "events_columns": 17,
+    "required_csv_present": true,
+    "required_events_present": true
+  }
+}

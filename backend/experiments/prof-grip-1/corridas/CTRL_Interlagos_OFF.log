@@ -1,0 +1,42 @@
+pybullet build time: Sep 11 2026 21:22:29
+[diag] CANÁRIA: campo de 1 carro(s)
+[diag] pista FROZEN: São Paulo Grand Prix | 1131 wp | SF wp 729 | sha256 164876196eb12174 | clima=seeded (rng semeado por seed) | variance=off | rejoin_gap=0.0 | rejoin_handoff=off | launch_cap=False | launch_stagger=False | launch_steer_mute=False | pguard=False | grid=f1 | rejoin=bearing | anti_glue=False | variedade=0 | prof_repair=False | pass_decision=False | prof_curva=False | prof_control=False | prof_grip=False
+[Grid] reta antes da SF: 45 m | grid ocupa 42 m
+[Grid] 10 carros no grid estilo F1 (5 fileiras x 2 colunas, NA RETA)
+[diag] controller: PROFESSOR x1 (gate all-professor) | sf_range=homog 0.80 | machine_only=False | track=São Paulo Grand Prix | seed=0
+[diag] 3000 linhas -> experiments/prof-grip-1/corridas/CTRL_Interlagos_OFF.csv (instrumento race_diag_v3_contact_solver_v1)
+
+===== ESTADO FINAL POR CARRO =====
+drv  speed      s  lat   th  brk  steer_rad
+VER  36.43 158.81 0.35 0.38  0.0        0.0
+
+===== CLIMA (transições reais: 0) =====
+  nenhuma transição de kind (grip constante)
+
+===== IMOBILIZACAO (v < 2 m/s) =====
+VER: 2 amostras v<2 | primeiro tick lento=0 (s=2649m) | brake medio apos=0.05
+
+===== EPISODIOS DE PARADA >= 3 s (como terminaram) =====
+  nenhuma parada >= 3 s
+
+===== SAIDA DE PISTA / CORTES =====
+amostras com centro fora do asfalto: 737 de 3000 (24.6%)
+  VER: 737 amostras fora | lat max=39.7 m | trechos: [0.0, 1800.0, 2000.0, 2200.0, 2400.0]
+
+contatos c/ SOLO (todo tick, esperado): 8721 | contatos CARRO-CARRO: 0 amostras, impulso medio 0 N | dv medio 0.00 m/s
+
+===== R3: FORA-PILOTAGEM vs FORA-PRESO (janelas 30 s) =====
+  VER: pilotagem=  97 ticks | preso= 640 ticks  <== CARRO-PRESO
+  TOTAL fora: 737 ticks (24.6%) | FORA-PILOTAGEM: 97 (13.2% do fora) | FORA-PRESO: 640 (86.8% do fora)
+  CARROS-PRESO na sessão: 1 (VER — gate exige 0)
+  HESITAÇÕES (v<0,5 m/s por 0,3-3 s, pós-largada): 0 (gate: <=3)
+
+===== GATE ALL-PROFESSOR (v14) =====
+carros com >=1 volta: 1/1 (meta >=9/10 FALHOU)
+  VER: 4 voltas | tempos=[138.7, 130.5, 127.5, 129.8]
+contatos carro-carro (amostras 5 Hz): 0 (meta < 400 OK) | baseline aluno-cego: 1333
+paradas >= 3 s: 0 (meta 0 OK)
+ultrapassagens liquidas (trocas com histerese 10 m): 0 | pós-largada=0 -> FILA (sem ultrapassagem; teto v14 = evita colisoes)
+% de tempo em modo follow por carro (cap+close / total):
+  VER: follow 0.0% (colado 0.0%)
+tempo mediano de volta COM trafego: 130.2s (todas; n=4) | 129.8s (excl. volta 1, largada rolando) | solo professor: ~107s, aluno: ~112s

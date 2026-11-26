@@ -1,0 +1,277 @@
+{
+  "definition": "adjacent emitted samples per driver; current sample offtrack; |wrap(Δs,L)-Δcum_dist|",
+  "track_length_m": 3335.2,
+  "runs": {
+    "R1": {
+      "offtrack_samples": 12945,
+      "offtrack_pairs": 12945,
+      "counts": {
+        "ge10_m": 112,
+        "ge30_m": 45
+      },
+      "decomposition_ge10": {
+        "event_pairs": 112,
+        "per_offtrack_sample": 0.008651989185013519,
+        "per_1000_offtrack_samples": 8.65198918501352,
+        "classes": {
+          "C1": {
+            "count": 0,
+            "p95_dxy_m": null,
+            "p95_abs_d_ns_raw": null,
+            "per_offtrack_sample": 0.0,
+            "per_1000_offtrack_samples": 0.0
+          },
+          "C2": {
+            "count": 0,
+            "p95_dxy_m": null,
+            "p95_abs_d_ns_raw": null,
+            "per_offtrack_sample": 0.0,
+            "per_1000_offtrack_samples": 0.0
+          },
+          "C3": {
+            "count": 46,
+            "p95_dxy_m": 1.8704425708164663,
+            "p95_abs_d_ns_raw": 416.25,
+            "per_offtrack_sample": 0.0035534955581305525,
+            "per_1000_offtrack_samples": 3.5534955581305523
+          },
+          "C5": {
+            "count": 66,
+            "p95_dxy_m": 3.307436586085905,
+            "p95_abs_d_ns_raw": 6.75,
+            "per_offtrack_sample": 0.0050984936268829665,
+            "per_1000_offtrack_samples": 5.098493626882966
+          }
+        }
+      },
+      "decomposition_ge30": {
+        "event_pairs": 45,
+        "per_offtrack_sample": 0.0034762456546929316,
+        "per_1000_offtrack_samples": 3.4762456546929315,
+        "classes": {
+          "C1": {
+            "count": 0,
+            "p95_dxy_m": null,
+            "p95_abs_d_ns_raw": null,
+            "per_offtrack_sample": 0.0,
+            "per_1000_offtrack_samples": 0.0
+          },
+          "C2": {
+            "count": 0,
+            "p95_dxy_m": null,
+            "p95_abs_d_ns_raw": null,
+            "per_offtrack_sample": 0.0,
+            "per_1000_offtrack_samples": 0.0
+          },
+          "C3": {
+            "count": 45,
+            "p95_dxy_m": 1.8713291979009652,
+            "p95_abs_d_ns_raw": 418.59999999999985,
+            "per_offtrack_sample": 0.0034762456546929316,
+            "per_1000_offtrack_samples": 3.4762456546929315
+          },
+          "C5": {
+            "count": 0,
+            "p95_dxy_m": null,
+            "p95_abs_d_ns_raw": null,
+            "per_offtrack_sample": 0.0,
+            "per_1000_offtrack_samples": 0.0
+          }
+        }
+      }
+    },
+    "R2": {
+      "offtrack_samples": 18045,
+      "offtrack_pairs": 18045,
+      "counts": {
+        "ge10_m": 173,
+        "ge30_m": 108
+      },
+      "decomposition_ge10": {
+        "event_pairs": 173,
+        "per_offtrack_sample": 0.009587143252978665,
+        "per_1000_offtrack_samples": 9.587143252978665,
+        "classes": {
+          "C1": {
+            "count": 0,
+            "p95_dxy_m": null,
+            "p95_abs_d_ns_raw": null,
+            "per_offtrack_sample": 0.0,
+            "per_1000_offtrack_samples": 0.0
+          },
+          "C2": {
+            "count": 0,
+            "p95_dxy_m": null,
+            "p95_abs_d_ns_raw": null,
+            "per_offtrack_sample": 0.0,
+            "per_1000_offtrack_samples": 0.0
+          },
+          "C3": {
+            "count": 110,
+            "p95_dxy_m": 1.8719973641963352,
+            "p95_abs_d_ns_raw": 433.6999999999997,
+            "per_offtrack_sample": 0.006095871432529786,
+            "per_1000_offtrack_samples": 6.095871432529787
+          },
+          "C5": {
+            "count": 63,
+            "p95_dxy_m": 7.140475873375,
+            "p95_abs_d_ns_raw": 7.0,
+            "per_offtrack_sample": 0.003491271820448878,
+            "per_1000_offtrack_samples": 3.491271820448878
+          }
+        }
+      },
+      "decomposition_ge30": {
+        "event_pairs": 108,
+        "per_offtrack_sample": 0.0059850374064837905,
+        "per_1000_offtrack_samples": 5.985037406483791,
+        "classes": {
+          "C1": {
+            "count": 0,
+            "p95_dxy_m": null,
+            "p95_abs_d_ns_raw": null,
+            "per_offtrack_sample": 0.0,
+            "per_1000_offtrack_samples": 0.0
+          },
+          "C2": {
+            "count": 0,
+            "p95_dxy_m": null,
+            "p95_abs_d_ns_raw": null,
+            "per_offtrack_sample": 0.0,
+            "per_1000_offtrack_samples": 0.0
+          },
+          "C3": {
+            "count": 107,
+            "p95_dxy_m": 1.8696826761377625,
+            "p95_abs_d_ns_raw": 447.8000000000003,
+            "per_offtrack_sample": 0.005929620393460793,
+            "per_1000_offtrack_samples": 5.929620393460793
+          },
+          "C5": {
+            "count": 1,
+            "p95_dxy_m": 1.618571712145485,
+            "p95_abs_d_ns_raw": 7,
+            "per_offtrack_sample": 5.541701302299806e-05,
+            "per_1000_offtrack_samples": 0.05541701302299806
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0",
+  "classifier": {
+    "version": "1.2",
+    "path": "backend/scripts/proj_fix_3_classify.py",
+    "sha256": "bc0a7ba9a5a9e4194d6195f3bc830a7626133939b465829f8ee1225e30414bdd",
+    "implementation": "imported unmodified; _parse_sample, _classify_samples, _linear_percentile"
+  },
+  "provenance": {
+    "R1_csv": {
+      "path": "backend/experiments/proj-gate-1/1_repro_off_monaco_s0.csv",
+      "revision": "5c4bf9c",
+      "sha256_disk": "6698b55bad9cba1a167c952eab4381ee696a4191545cdecdd3db873e739b2ce7",
+      "sha256_git_show": "6698b55bad9cba1a167c952eab4381ee696a4191545cdecdd3db873e739b2ce7",
+      "status": "PASS"
+    },
+    "R1_events": {
+      "path": "backend/experiments/proj-gate-1/1_repro_off_monaco_s0_events.csv",
+      "revision": "5c4bf9c",
+      "sha256_disk": "b99007d0673b2b11727f50287451ffd1fe5439db1997065f4884f60b33252ce4",
+      "sha256_git_show": "b99007d0673b2b11727f50287451ffd1fe5439db1997065f4884f60b33252ce4",
+      "status": "PASS"
+    },
+    "R2_csv": {
+      "path": "backend/experiments/proj-gate-1/2_on_monaco_s0.csv",
+      "revision": "5c4bf9c",
+      "sha256_disk": "b9ea18f28a26f2035fe61c9370eec7a70eb2bcaa342897d08a71baaf686a4edc",
+      "sha256_git_show": "b9ea18f28a26f2035fe61c9370eec7a70eb2bcaa342897d08a71baaf686a4edc",
+      "status": "PASS"
+    },
+    "R2_events": {
+      "path": "backend/experiments/proj-gate-1/2_on_monaco_s0_events.csv",
+      "revision": "5c4bf9c",
+      "sha256_disk": "88fa98130b73b881750dab5f54a1fae02d07ce2a2162e1586332afec0660ac6a",
+      "sha256_git_show": "88fa98130b73b881750dab5f54a1fae02d07ce2a2162e1586332afec0660ac6a",
+      "status": "PASS"
+    },
+    "Monaco_frozen": {
+      "path": "backend/model_train/tracks_frozen/Monaco_v2.json",
+      "revision": "f2bd199",
+      "sha256_disk": "af3125959ade1f82062d9c9fe0dfa8020d31e431d919408ae4d293f0fac20bf2",
+      "sha256_git_show": "af3125959ade1f82062d9c9fe0dfa8020d31e431d919408ae4d293f0fac20bf2",
+      "status": "PASS"
+    },
+    "runner_frozen": {
+      "path": "backend/scripts/run_race_10_cars.py",
+      "revision": "f2bd199",
+      "sha256_disk": "6f13b59cfb7e709081483be85e2ad14d7295f65981dc8705ca8bcc9a9b8b03b3",
+      "sha256_git_show": "6f13b59cfb7e709081483be85e2ad14d7295f65981dc8705ca8bcc9a9b8b03b3",
+      "status": "PASS"
+    },
+    "diagnostic_writer_frozen": {
+      "path": "backend/model_train/race_diagnostic.py",
+      "revision": "f2bd199",
+      "sha256_disk": "69f87d163a56fe310212158ff527f58bd891828ffd0e8c5f91c3f5d7d41a0491",
+      "sha256_git_show": "69f87d163a56fe310212158ff527f58bd891828ffd0e8c5f91c3f5d7d41a0491",
+      "status": "PASS"
+    },
+    "classifier_v1_2": {
+      "path": "backend/scripts/proj_fix_3_classify.py",
+      "revision": "f2bd199",
+      "sha256_disk": "bc0a7ba9a5a9e4194d6195f3bc830a7626133939b465829f8ee1225e30414bdd",
+      "sha256_git_show": "bc0a7ba9a5a9e4194d6195f3bc830a7626133939b465829f8ee1225e30414bdd",
+      "status": "PASS"
+    },
+    "g1_audit_source": {
+      "path": "backend/scripts/proj_gate_1_audit.py",
+      "revision": "f2bd199",
+      "sha256_disk": "000537b11b16914d96907f15e80a50de6ab208bd5538fa8a0fe93fabe3cae4e7",
+      "sha256_git_show": "000537b11b16914d96907f15e80a50de6ab208bd5538fa8a0fe93fabe3cae4e7",
+      "status": "PASS"
+    },
+    "PARE_PROJ_GATE_1": {
+      "path": "backend/experiments/proj-gate-1/PARE_PROJ_GATE_1.md",
+      "revision": "a278cbe",
+      "sha256_disk": "6b89f7b03b2313b76c73117e795d0b9089da309fb4cccc6527edb3396673acb9",
+      "sha256_git_show": "6b89f7b03b2313b76c73117e795d0b9089da309fb4cccc6527edb3396673acb9",
+      "status": "PASS"
+    },
+    "DOSSIER_PROJ_FIX_1": {
+      "path": "backend/experiments/proj-fix-1/DOSSIÊ_PROJ_GATE.md",
+      "revision": "f2bd199",
+      "sha256_disk": "663d4ad9ff561080d4c2e1fe8d981dd00da01a10a919bb21e1b418a44c80185f",
+      "sha256_git_show": "663d4ad9ff561080d4c2e1fe8d981dd00da01a10a919bb21e1b418a44c80185f",
+      "status": "PASS"
+    },
+    "PROJ_GATE_2_autopsy_v1_0": {
+      "path": "backend/scripts/proj_gate_2_autopsy.py",
+      "revision": "HEAD",
+      "sha256_disk": "4f86cd9996041cddc0fd742c603ae1e89f381513bb54264d8b66c5bd39278ea7",
+      "sha256_git_show": "4f86cd9996041cddc0fd742c603ae1e89f381513bb54264d8b66c5bd39278ea7",
+      "status": "PASS"
+    }
+  },
+  "schema_preflight": {
+    "R1_csv": {
+      "columns": 71,
+      "header_sha256": "95bca0bdffe8a26697bd9b8ff74d19757bc2cceede1cf83f33d25b3114477f93",
+      "status": "PASS"
+    },
+    "R2_csv": {
+      "columns": 71,
+      "header_sha256": "95bca0bdffe8a26697bd9b8ff74d19757bc2cceede1cf83f33d25b3114477f93",
+      "status": "PASS"
+    },
+    "R1_events": {
+      "columns": 17,
+      "header_sha256": "2d865161fc9fb5a55bbdc806f636fe47f1d05c20c1da39a01c7d2bfbe1723b83",
+      "status": "PASS"
+    },
+    "R2_events": {
+      "columns": 17,
+      "header_sha256": "2d865161fc9fb5a55bbdc806f636fe47f1d05c20c1da39a01c7d2bfbe1723b83",
+      "status": "PASS"
+    }
+  }
+}

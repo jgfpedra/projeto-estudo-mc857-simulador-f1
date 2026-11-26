@@ -27,11 +27,6 @@ import { TRACKS, recordingUrlFor, selectedTrack, urlForTrack } from './track/reg
 import { loadRecording, trackFromRecording } from './engine/load'
 import { engineSource, lapAtTime, pitStateAt, positionAt } from './engine/source'
 import type { Recording } from './engine/types'
-import { fetchRaceMeta, openRaceSocket } from './live/api'
-import { LiveStore } from './live/store'
-import { liveSource } from './live/source'
-import { trackFromMeta } from './live/track'
-import { AiPanel } from './ai/AiPanel'
 import { PROBE_ENABLED, Probe } from './probe'
 
 /**
@@ -44,24 +39,13 @@ import { PROBE_ENABLED, Probe } from './probe'
 const { entry: TRACK, unknown: UNKNOWN_TRACK } = selectedTrack(window.location.search)
 /** Set for a track that comes from an engine recording rather than a track JSON. */
 const RECORDING_URL = recordingUrlFor(TRACK, window.location.search)
-/**
- * `?race=<id>` joins an existing live race through the API's WebSocket.
- * Creating that race is the backend's own interface; this viewer only consumes
- * it, so there is one place that starts a race and one place that renders it.
- */
-const RACE_ID = new URLSearchParams(window.location.search).get('race')
 /** What the loading and error overlays name. */
-const TRACK_SOURCE_URL = RACE_ID
-  ? `live race ${RACE_ID}`
-  : RECORDING_URL ?? TRACK.url ?? '(no url)'
+const TRACK_SOURCE_URL = RECORDING_URL ?? TRACK.url ?? '(no url)'
 /**
  * The sources this track offers. Synthetic everywhere; the replay only on our
- * Monza, the engine recording only on the track built from it. A live race has
- * its own track (`GET /races/{id}`) and offers only `live`.
+ * Monza, the engine recording only on the track built from it.
  */
-const KINDS: SourceKind[] = RACE_ID
-  ? ['live']
-  : ['synthetic', RECORDING_URL ? 'engine' : 'replay']
+const KINDS: SourceKind[] = ['synthetic', RECORDING_URL ? 'engine' : 'replay']
 
 const FOV_DEG = 45
 /**
@@ -106,15 +90,11 @@ export default function App() {
    * replaced: it is the only thing on screen that spreads `d` across the ribbon,
    * because real telemetry against a median centreline barely varies laterally.
    */
-  const [sourceKind, setSourceKind] = useState<SourceKind>(
-    RACE_ID ? 'live' : RECORDING_URL ? 'engine' : 'synthetic',
-  )
+  const [sourceKind, setSourceKind] = useState<SourceKind>(RECORDING_URL ? 'engine' : 'synthetic')
   const [replay, setReplay] = useState<Replay | null>(null)
   const [replayError, setReplayError] = useState<string | null>(null)
   /** The engine recording, when this track came from one. Loaded before the track. */
   const [recording, setRecording] = useState<Recording | null>(null)
-  /** The live race buffer, when `?race=<id>` is present. */
-  const [live, setLive] = useState<LiveStore | null>(null)
   /** Debug: a stripe on every wheel so spin is visible. Off by default. */
   const [wheelMarkers, setWheelMarkers] = useState(false)
   /**
@@ -162,36 +142,7 @@ export default function App() {
     [replay],
   )
 
-  // A live race joins an existing `?race=<id>`: fetch its race block, build the
-  // track from the engine's own waypoints, and open the WebSocket. Starting the
-  // race stays with the backend's own interface.
   useEffect(() => {
-    if (!RACE_ID) return
-    let cancelled = false
-    let socket: WebSocket | null = null
-    fetchRaceMeta(RACE_ID).then(
-      (meta) => {
-        if (cancelled) return
-        const store = new LiveStore(meta)
-        setLive(store)
-        // The AI only commands the followed car, so start the viewer on it.
-        const followed = meta.followed_driver_id
-          ? store.indexOfDriver(meta.followed_driver_id)
-          : undefined
-        if (followed !== undefined) setSelected(followed)
-        setTrack(trackFromMeta(meta))
-        socket = openRaceSocket(RACE_ID, (event) => store.ingest(event))
-      },
-      (e: Error) => setError(e.message),
-    )
-    return () => {
-      cancelled = true
-      socket?.close()
-    }
-  }, [])
-
-  useEffect(() => {
-    if (RACE_ID) return
     if (RECORDING_URL) {
       // The track comes from the recording's own race block, never from a local
       // track JSON: the cars were driven on exactly those waypoints.
@@ -238,7 +189,7 @@ export default function App() {
   // beside it. Failure is not fatal: the synthetic field still works, and the
   // timeline shows why the replay button is disabled.
   useEffect(() => {
-    if (!scene || RECORDING_URL || RACE_ID) return
+    if (!scene || RECORDING_URL) return
     if (!TRACK.replayUrl) {
       setReplayError(
         'none for this track - the 2024 replay was projected onto our Monza centreline',
@@ -258,14 +209,6 @@ export default function App() {
    */
   const motion = useMemo(() => {
     if (!scene) return null
-    if (sourceKind === 'live' && live) {
-      return {
-        source: liveSource(live),
-        lapOf: (car: number) => live.lapOf(car),
-        rankOf: (car: number) => live.positionOf(car),
-        pitOf: (car: number) => live.pitOf(car),
-      }
-    }
     if (sourceKind === 'engine' && recording) {
       return {
         source: engineSource(recording),
@@ -293,7 +236,7 @@ export default function App() {
       source: syntheticSource(scene.field),
       lapOf: (_car: number, s: number) => 1 + Math.floor(s / lengthM),
     }
-  }, [scene, sourceKind, replay, recording, live])
+  }, [scene, sourceKind, replay, recording])
 
   useEffect(() => {
     clock.current.tS = 0
@@ -331,8 +274,6 @@ export default function App() {
           return
         case 'ArrowLeft':
         case 'ArrowRight': {
-          // A live race has no seek: the buffer only grows forwards.
-          if (sourceKind === 'live') return
           const tick = sourceKind === 'engine' ? recording?.dtS : replay?.dtS
           const step = (tick ?? 0.2) * (e.key === 'ArrowRight' ? 1 : -1)
           seekClock(clock.current, clock.current.tS + step, duration)
@@ -436,12 +377,10 @@ export default function App() {
         lapAt={lapOf}
         rankAt={rankOf}
         pitAt={pitOf}
-        commandAt={live ? (index) => live.activeCommandText(index) : undefined}
         sourceKind={source.kind}
         wheelMarkers={wheelMarkers}
         onWheelMarkers={setWheelMarkers}
       />
-      {live && <AiPanel store={live} selected={selected} />}
       <Timeline
         kind={sourceKind}
         kinds={KINDS}
@@ -450,7 +389,6 @@ export default function App() {
         replay={replay}
         replayError={replayError}
         recording={recording}
-        live={live}
         durationS={source.durationS}
         selected={selected}
         onCut={cut}

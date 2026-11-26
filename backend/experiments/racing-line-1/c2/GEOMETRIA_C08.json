@@ -1,0 +1,100 @@
+{
+  "constantes": {
+    "R_arco_m": 18.0,
+    "ds_target": 4.0,
+    "kappa_thresh": 0.006,
+    "merge_gap_m": 40.0,
+    "residual_tol_m": 0.001,
+    "smooth_window_m": 30.0
+  },
+  "gates": {
+    "nota_evidencia": "varredura report-only com limites livres dentro da janela C08; NÃO é candidato — o prereg exige tangência nos limites congelados",
+    "raizes_bi_tangentes_limites_livres": [
+      {
+        "net_turn_deg": -139.89,
+        "residual_m": 8.125257032308878e-10,
+        "s_a_m": 2282.417,
+        "s_b_m": 2342.863
+      },
+      {
+        "net_turn_deg": 0.0,
+        "residual_m": 1.4210854715202004e-14,
+        "s_a_m": 2288.912,
+        "s_b_m": 2288.912
+      },
+      {
+        "net_turn_deg": -32.08,
+        "residual_m": 2.1155992337757297e-13,
+        "s_a_m": 2299.814,
+        "s_b_m": 2309.929
+      },
+      {
+        "net_turn_deg": 0.0,
+        "residual_m": 7.106294666405892e-15,
+        "s_a_m": 2302.308,
+        "s_b_m": 2302.308
+      },
+      {
+        "net_turn_deg": 20.08,
+        "residual_m": 4.764512247124769e-13,
+        "s_a_m": 2304.039,
+        "s_b_m": 2310.193
+      },
+      {
+        "net_turn_deg": 0.0,
+        "residual_m": 1.5987211554602254e-14,
+        "s_a_m": 2315.298,
+        "s_b_m": 2315.298
+      },
+      {
+        "net_turn_deg": 0.0,
+        "residual_m": 1.5987211554602254e-14,
+        "s_a_m": 2322.9,
+        "s_b_m": 2322.9
+      },
+      {
+        "net_turn_deg": 0.0,
+        "residual_m": 2.7533531010703882e-14,
+        "s_a_m": 2329.751,
+        "s_b_m": 2329.751
+      }
+    ]
+  },
+  "half_width_m": 6.0,
+  "janela_canonica": {
+    "id": "C08",
+    "kmax": 0.073887,
+    "name": "Junção (T12)",
+    "s0_m": 2276.239,
+    "s1_m": 2344.246
+  },
+  "janela_efetiva_vertices": {
+    "i_a": 624,
+    "i_b": 643,
+    "n_vertices_internos": 18,
+    "s_a_m": 2278.664,
+    "s_b_m": 2343.919
+  },
+  "modo_literal_limites_congelados": {
+    "corda_m": 35.584,
+    "giro_liquido_linha_deg": -140.63,
+    "residuo_centros_m": 3.189856,
+    "residuos_outras_combinacoes_m": {
+      "sigma_-1_ambos": 3.189856,
+      "sigma_1_ambos": 69.427039
+    },
+    "solucao_exata": false,
+    "sweep_pela_corda_deg": 162.57
+  },
+  "n_waypoints": 1131,
+  "prereg": "experiments/racing-line-1/PREREG_RACING_LINE_1.md",
+  "saidas_verdict_sha256": "e1ac9f699e6d1339e67b7d53683f6becd5e3041da52102516cc4529c21496d6c",
+  "schema_version": "racing-line-1/task2-geometria-v1.0",
+  "sentido_curva": "direita",
+  "sigma": -1.0,
+  "track_file": "model_train/tracks_frozen/interlagos_v2.json",
+  "track_sha256_pin": "164876196eb12174",
+  "verdict": "PARE",
+  "vertices_virtual": null,
+  "width_m": 12.0
+}

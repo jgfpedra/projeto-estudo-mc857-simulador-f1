@@ -5,13 +5,11 @@ import { lapAtTime, pitStateAt, positionAt } from '../engine/source'
 import { seekClock, setRate, togglePlay } from './clock'
 import type { ClockState } from './clock'
 import type { Replay } from './types'
-import type { LiveStore } from '../live/store'
 
 const LABEL: Record<SourceKind, string> = {
   synthetic: 'synthetic',
   replay: 'replay',
   engine: 'engine',
-  live: 'live',
 }
 
 const BLURB: Record<SourceKind, string> = {
@@ -25,10 +23,6 @@ const BLURB: Record<SourceKind, string> = {
   engine:
     "A race recorded from the group's engine: ten cars under the rule-based " +
     "controller, placed at the engine's own position and heading every tick.",
-  live:
-    'Corrida ao vivo pela API: os carros vêm dos ticks do motor em tempo real, ' +
-    'e a IA comenta e altera o carro acompanhado. Sem seek: o buffer cresce ' +
-    'conforme a corrida acontece.',
 }
 
 const RATES = [0.25, 0.5, 1, 2]
@@ -56,8 +50,6 @@ interface Props {
   replayError: string | null
   /** The engine recording, on the track built from one. */
   recording: Recording | null
-  /** The live race, for the lap/position line only. */
-  live?: LiveStore | null
   /** Seconds of content for the current source; `Infinity` for synthetic. */
   durationS: number
   /** The followed car, so the lap readout can name a driver. */
@@ -73,7 +65,6 @@ export function Timeline({
   replay,
   replayError,
   recording,
-  live,
   durationS,
   selected,
   onCut,
@@ -96,13 +87,7 @@ export function Timeline({
           : `${c.tS.toFixed(1)} s`
       }
       if (play.current) play.current.textContent = c.playing ? '⏸' : '▶'
-      if (lap.current && kind === 'live' && live) {
-        const row = live.latestRow(selected)
-        lap.current.textContent = row
-          ? `lap ${row.lap + 1} · ${live.meta.drivers[selected]?.driver_id ?? ''}` +
-            ` P${row.position ?? '—'}`
-          : 'aguardando ticks…'
-      } else if (lap.current && kind === 'engine' && recording?.cars[selected]) {
+      if (lap.current && kind === 'engine' && recording?.cars[selected]) {
         // The engine counts completed laps; shown here as the lap being driven,
         // for the followed car and for the leader.
         const n = recording.cars.length
@@ -135,7 +120,7 @@ export function Timeline({
     tick()
     const id = setInterval(tick, 1000 / TICK_HZ)
     return () => clearInterval(id)
-  }, [clock, durationS, finite, replay, recording, live, selected, kind])
+  }, [clock, durationS, finite, replay, recording, selected, kind])
 
   return (
     <div
@@ -218,29 +203,25 @@ export function Timeline({
         <span ref={time} style={{ color: '#fff' }} />
         <span ref={lap} data-testid="timeline-lap" style={{ opacity: 0.75 }} />
         <span style={{ flex: 1 }} />
-        {kind !== 'live' &&
-          RATES.map((r) => (
-            <button
-              key={r}
-              onClick={() => setRate(clock.current, r)}
-              title={`playback rate ${r}x`}
-              style={{
-                all: 'unset',
-                cursor: 'pointer',
-                opacity: 0.7,
-                color: '#b8b8c4',
-              }}
-            >
-              {r}x
-            </button>
-          ))}
+        {RATES.map((r) => (
+          <button
+            key={r}
+            onClick={() => setRate(clock.current, r)}
+            title={`playback rate ${r}x`}
+            style={{
+              all: 'unset',
+              cursor: 'pointer',
+              opacity: 0.7,
+              color: '#b8b8c4',
+            }}
+          >
+            {r}x
+          </button>
+        ))}
       </div>
 
       <p style={{ margin: '6px 0 0', opacity: 0.6 }}>
-        {kind === 'live' && live
-          ? `${live.meta.track.name}, ${live.carCount} cars, ${live.ticksList.length} ticks ` +
-            `recebidos. ${BLURB.live}`
-          : kind === 'replay' && replay
+        {kind === 'replay' && replay
           ? `${replay.name} ${replay.year}, laps ${replay.fromLap}-${replay.toLap}, ` +
             `${replay.cars.length} cars at ${replay.hz} Hz. ` +
             BLURB.replay.slice(BLURB.replay.indexOf('Cars run'))

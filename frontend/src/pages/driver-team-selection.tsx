@@ -13,6 +13,9 @@ import {
 import { GridSlot } from "@/components/grid-slot"
 import { useDriverStore } from "@/stores/driver-store"
 import { api } from "@/services/api"
+import type { Driver } from "@/types/driver"
+
+const NO_USER_DRIVER = "__none__"
 
 const GRID_SIZE = 20
 
@@ -40,6 +43,8 @@ export function DriverTeamSelection() {
   const setAvailableDrivers = useDriverStore((state) => state.setAvailableDrivers)
   const setDrivers = useDriverStore((state) => state.setDrivers)
   const clearGrid = useDriverStore((state) => state.clearGrid)
+  const storedUserDriverId = useDriverStore((state) => state.userDriverId)
+  const setUserDriverId = useDriverStore((state) => state.setUserDriverId)
 
     const [seasons, setSeasons] = useState<number[]>([])
     const [isLoadingDrivers, setIsLoadingDrivers] = useState(false)
@@ -83,6 +88,10 @@ export function DriverTeamSelection() {
         active = false
       }
     }, [season, setAvailableDrivers])
+
+  const gridDrivers = grid.filter((driver): driver is Driver => driver !== null)
+  // O piloto salvo só vale se ainda estiver no grid.
+  const userDriverId = gridDrivers.some((d) => d.id === storedUserDriverId) ? storedUserDriverId : null
 
   const selectedCount = grid.filter((driver) => driver !== null).length
   const isComplete = selectedCount === GRID_SIZE && grid.length === GRID_SIZE
@@ -444,7 +453,30 @@ export function DriverTeamSelection() {
 
 
 
-              <Button
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-3">
+                  <span className="shrink-0 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Controlar piloto:
+                  </span>
+                  <Select
+                    value={userDriverId ?? NO_USER_DRIVER}
+                    onValueChange={(value) => setUserDriverId(value === NO_USER_DRIVER ? null : value)}
+                  >
+                    <SelectTrigger className="h-12 w-full rounded-none border-border bg-background sm:w-56">
+                      <SelectValue placeholder="Nenhum" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-none border-border">
+                      <SelectItem value={NO_USER_DRIVER}>Nenhum</SelectItem>
+                      {gridDrivers.map((driver) => (
+                        <SelectItem key={driver.id} value={driver.id}>
+                          {driver.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
 
                 onClick={handleConfirm}
 
@@ -461,6 +493,7 @@ export function DriverTeamSelection() {
                 <span className="ml-3 text-lg">→</span>
 
               </Button>
+              </div>
 
             </div>
 

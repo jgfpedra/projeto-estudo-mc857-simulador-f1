@@ -1,0 +1,7 @@
+PASS-DIAG-2 — censo mascarado de formas de linha
+Valores de log, pilotos, horários, outcomes e quantidades de tentativas omitidos.
+R1 line-form fingerprint SHA-256: 044d3f0eeb00044073e1f63b27a6f3623c529c6f997a2a167b712e698ad34eff
+R1 pinned source SHA-256 verified: PASS
+R2 line-form fingerprint SHA-256: 1096d9c823bdc9668844fa828aaf91226400ac38b375fc5b4050534a3627833f
+R2 pinned source SHA-256 verified: PASS
+Dictionary shape was checked without publishing values or record counts.

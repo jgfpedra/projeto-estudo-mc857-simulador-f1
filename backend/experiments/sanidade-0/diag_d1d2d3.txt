@@ -1,0 +1,142 @@
+FATOS ESTÁTICOS da lei de rejoin ATIVA no runner (código lido): bearing R3 — alvo = projeção +10 m na linha central; steer = clip(2,0·berr, ±0,79); teto 8 m/s off-track; throttle 0,35; rejoin_gap (gap-check) DEFAULT OFF.
+
+  [D0] 1_controle.csv: hw derivado do grid = 6.00 m (esperado ~6,0 = width/2 do frozen)
+    [D0] slot 0 ALO : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 1 HAM : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+    [D0] slot 2 SAI : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 3 RUS : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+    [D0] slot 4 PIA : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 5 PER : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+    [D0] slot 6 GAS : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 7 LEC : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+    [D0] slot 8 VER : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 9 NOR : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+=== D1 LARGADA (CONTROLE v10-cego; F4v15; lat SINALADO obs4×hw) ===
+pós-largada (t>20s): car_car=2482 (veredito: 2482)
+  t 20-30s: 74 (3.0%)
+  t 30-60s: 358 (14.4%)
+  t 60-999s: 2050 (82.6%)
+  âncora PRIM-1 (contatos 20<t<60s): 432
+  pares distintos em contato pós-largada: 17
+    LEC ×VER : 138 ticks-0,1s em contato (t 251-504s)
+    NOR ×PIA : 124 ticks-0,1s em contato (t 92-153s)
+    PER ×PIA : 123 ticks-0,1s em contato (t 246-292s)
+    PER ×SAI : 118 ticks-0,1s em contato (t 53-466s)
+    NOR ×SAI : 86 ticks-0,1s em contato (t 126-389s)
+    PIA ×SAI : 79 ticks-0,1s em contato (t 418-460s)
+    GAS ×PIA : 56 ticks-0,1s em contato (t 95-125s)
+    ALO ×VER : 51 ticks-0,1s em contato (t 110-118s)
+  top-5 pares detêm 62% dos ticks de contato
+  entrada da T1 (1º s>=2700): carro | t | lat | v | |Δlat| do vizinho <20m
+    ALO  |   4.0s |  -4.0 |  23.3 | 0.8954752066554419
+    GAS  |   4.8s |  +1.6 |  32.5 | 0.2639546487723272
+    HAM  |   3.6s |  +0.3 |  27.5 | 0.4176918345373225
+    LEC  |   4.6s |  -0.4 |  33.3 | 0.36340926410121344
+    NOR  |   5.0s |  -0.7 |  35.9 | 1.655990299860013
+    PER  |   4.4s |  +0.8 |  30.3 | 0.281581459451559
+    PIA  |   4.6s |  +2.6 |  31.5 | 1.3771580277934967
+    RUS  |   4.2s |  -6.8 |  20.0 | 1.1189244288439086
+    SAI  |   4.2s |  +0.7 |  29.5 | 0.11241560017984131
+    VER  |   5.0s |  +1.1 |  34.4 | 0.09638347668006253
+  |Δlat| do vizinho<20m na T1: mediana 0.4 m | min 0.1 | máx 1.7 | n<2m: 10/10
+  saídas de pista (inícios de excursão): 180 | com contato <=5s antes (EMPURRÃO): 49 (27%) | sem contato (PILOTAGEM): 131
+  largada t<=15s por carro (corredor do professor: 3,5 m): lat@0 | range | máx|Δlat|/1s | flips | cc_ev
+    ALO  |  +1.9 |  11.1 |   7.7 |  5 | 916
+    GAS  |  +1.9 |  10.3 |   4.5 |  2 | 4639
+    HAM  |  -1.9 |   3.2 |   2.6 |  6 | 596
+    LEC  |  -1.9 |  18.4 |   3.9 |  2 | 5336
+    NOR  |  -1.9 |   3.4 |   2.4 |  4 | 3648
+    PER  |  -1.9 |  28.1 |   5.4 |  2 | 8140
+    PIA  |  +1.9 |   9.3 |   5.2 |  3 | 2462
+    RUS  |  -1.9 |  12.5 |   8.0 |  3 | 1040
+    SAI  |  +1.9 |  28.1 |   5.7 |  5 | 5509
+    VER  |  +1.9 |   4.1 |   2.3 |  1 | 3004
+
+=== D2 GRAMA (CONTROLE v10-cego) ===
+  excursões: 180 | duração mediana 4.2s | p75 14.1 | máx 23.6 | wanders >60s: 0
+  reentrada: v mediana 9.1 m/s | tempo até 15 m/s: mediana 1.0s (R13 dossiê: ~8 m/s; ~1,2s)
+
+  reentradas do CONTROLE c/ contato <=30s depois: 68/180 (38%) | gap mediana 3.0s (R13: mediana 8,7s; 35% <=5s)
+
+=== D2 GRAMA (ALL-COMPOSITE (sem guard — F4v15)) ===
+  excursões: 219 | duração mediana 4.2s | p75 10.2 | máx 29.0 | wanders >60s: 0
+  reentrada: v mediana 9.2 m/s | tempo até 15 m/s: mediana 1.0s (R13 dossiê: ~8 m/s; ~1,2s)
+
+  [D0] 1_controle.csv: hw derivado do grid = 6.00 m (esperado ~6,0 = width/2 do frozen)
+    [D0] slot 0 ALO : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 1 HAM : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+    [D0] slot 2 SAI : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 3 RUS : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+    [D0] slot 4 PIA : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 5 PER : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+    [D0] slot 6 GAS : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 7 LEC : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+    [D0] slot 8 VER : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 9 NOR : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+=== D3 COLADOS (CONTROLE v10-cego; |Δlat|<2.0m ∧ Δs wrap<5.5m) ===
+  janelas >2.0s: 41 | tempo total colado 247s | na largada (t<20s): 39s (16%) | deadlocks >10.0s: 6
+    GAS ×LEC :   7.0s @t=   1.6 | div=JUNTO/NULO(-0.04) | v 24.4/25.1 | brk 0.04/0.04 | |steer| médio 0.06 | cc_ev 2876
+    GAS ×LEC :   6.2s @t= 281.8 | div=SEPARANDO(+0.03) | v 32.1/32.4 | brk 0.08/0.09 | |steer| médio 0.08 | cc_ev 315
+    NOR ×VER :   6.2s @t=   1.6 | div=JUNTO/NULO(-0.06) | v 26.2/26.5 | brk 0.05/0.06 | |steer| médio 0.03 | cc_ev 2587
+    PER ×PIA :   5.2s @t=   1.6 | div=JUNTO/NULO(-0.06) | v 26.7/26.0 | brk 0.05/0.04 | |steer| médio 0.04 | cc_ev 2126
+    PER ×PIA :   6.8s @t= 260.4 | div=SEPARANDO(+0.05) | v 25.4/25.4 | brk 0.06/0.09 | |steer| médio 0.07 | cc_ev 707
+    PER ×PIA :   9.8s @t= 271.8 | div=JUNTO/NULO(+0.00) | v  7.8/ 7.9 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 0
+    PER ×PIA :   3.8s @t= 288.8 | div=JUNTO/NULO(-0.10) | v 23.2/23.3 | brk 0.08/0.03 | |steer| médio 0.21 | cc_ev 2360
+    GAS ×PIA :   3.0s @t=   2.6 | div=JUNTO/NULO(-0.04) | v 28.0/27.8 | brk 0.00/0.00 | |steer| médio 0.06 | cc_ev 159
+    GAS ×PIA :   5.2s @t=  93.6 | div=JUNTO/NULO(+0.00) | v  8.6/ 8.5 | brk 0.01/0.00 | |steer| médio 0.79 | cc_ev 1417
+    GAS ×PIA :  11.8s @t= 100.8 | div=JUNTO/NULO(-0.00) | v  7.7/ 7.6 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 838
+    GAS ×PIA :  10.6s @t= 128.6 | div=SEPARANDO(+0.01) | v  8.7/ 8.1 | brk 0.00/0.00 | |steer| médio 0.78 | cc_ev 0
+    PER ×SAI :   3.2s @t=   6.0 | div=JUNTO/NULO(-0.05) | v 19.5/19.1 | brk 0.25/0.32 | |steer| médio 0.33 | cc_ev 1281
+    PER ×SAI :   9.0s @t=   9.8 | div=JUNTO/NULO(-0.00) | v  9.1/ 8.7 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 4969
+    PER ×SAI :  13.4s @t=  53.2 | div=JUNTO/NULO(-0.06) | v 25.9/26.7 | brk 0.04/0.05 | |steer| médio 0.06 | cc_ev 4539
+    LEC ×PER :   2.2s @t=   4.4 | div=JUNTO/NULO(-0.02) | v 34.2/34.0 | brk 0.08/0.11 | |steer| médio 0.01 | cc_ev 262
+    GAS ×NOR :   3.2s @t=   6.6 | div=JUNTO/NULO(-0.07) | v 15.9/16.2 | brk 0.03/0.04 | |steer| médio 0.30 | cc_ev 919
+    GAS ×NOR :   3.0s @t=  87.6 | div=JUNTO/NULO(-0.06) | v  9.1/ 8.8 | brk 0.08/0.02 | |steer| médio 0.73 | cc_ev 238
+    GAS ×NOR :   2.6s @t= 101.8 | div=JUNTO/NULO(+0.00) | v  8.0/ 8.2 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 0
+    GAS ×NOR :   3.0s @t= 129.6 | div=JUNTO/NULO(-0.00) | v  8.9/ 8.3 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 0
+    ALO ×GAS :   3.6s @t=  38.4 | div=JUNTO/NULO(-0.03) | v 24.6/24.4 | brk 0.00/0.00 | |steer| médio 0.06 | cc_ev 353
+    GAS ×RUS :  14.2s @t=  21.8 | div=SEPARANDO(+0.01) | v 66.7/66.7 | brk 0.09/0.07 | |steer| médio 0.01 | cc_ev 816
+    ALO ×NOR :   3.2s @t=  31.2 | div=SEPARANDO(+0.02) | v 35.6/35.5 | brk 0.29/0.32 | |steer| médio 0.03 | cc_ev 328
+    ALO ×NOR :   2.2s @t=  38.6 | div=JUNTO/NULO(-0.01) | v 22.7/22.7 | brk 0.00/0.00 | |steer| médio 0.08 | cc_ev 136
+    ALO ×NOR :   2.2s @t=  44.8 | div=SEPARANDO(+0.01) | v 25.6/25.6 | brk 0.09/0.11 | |steer| médio 0.07 | cc_ev 132
+    NOR ×PIA :   2.2s @t= 101.8 | div=JUNTO/NULO(+0.00) | v  8.2/ 8.0 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 0
+    NOR ×PIA :   6.8s @t= 118.0 | div=SEPARANDO(+0.06) | v 24.8/24.8 | brk 0.06/0.08 | |steer| médio 0.07 | cc_ev 906
+    NOR ×PIA :   9.8s @t= 129.6 | div=JUNTO/NULO(+0.00) | v  7.8/ 8.0 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 0
+    NOR ×PIA :   5.8s @t= 146.2 | div=JUNTO/NULO(-0.04) | v 14.9/14.8 | brk 0.05/0.05 | |steer| médio 0.53 | cc_ev 2368
+    ALO ×VER :   2.4s @t= 109.6 | div=SEPARANDO(+0.15) | v 15.2/15.1 | brk 0.09/0.13 | |steer| médio 0.20 | cc_ev 297
+    ALO ×VER :  10.4s @t= 116.6 | div=SEPARANDO(+0.01) | v  7.6/ 7.9 | brk 0.00/0.00 | |steer| médio 0.78 | cc_ev 374
+    NOR ×SAI :   3.4s @t= 257.6 | div=SEPARANDO(+0.10) | v 19.2/19.3 | brk 0.15/0.16 | |steer| médio 0.16 | cc_ev 587
+    NOR ×SAI :   9.8s @t= 265.6 | div=JUNTO/NULO(+0.00) | v  7.6/ 7.9 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 0
+    NOR ×SAI :   4.4s @t= 277.0 | div=JUNTO/NULO(-0.07) | v 11.6/12.4 | brk 0.08/0.03 | |steer| médio 0.24 | cc_ev 764
+    NOR ×SAI :   4.0s @t= 386.2 | div=JUNTO/NULO(-0.08) | v  5.2/ 5.4 | brk 0.00/0.00 | |steer| médio 0.71 | cc_ev 526
+    LEC ×VER :  13.6s @t= 252.8 | div=SEPARANDO(+0.00) | v  7.8/ 7.7 | brk 0.00/0.01 | |steer| médio 0.58 | cc_ev 609
+    LEC ×VER :   2.8s @t= 269.4 | div=JUNTO/NULO(-0.04) | v 18.5/16.3 | brk 0.14/0.15 | |steer| médio 0.41 | cc_ev 1250
+    LEC ×VER :   6.4s @t= 382.0 | div=JUNTO/NULO(-0.05) | v 27.0/27.0 | brk 0.08/0.10 | |steer| médio 0.08 | cc_ev 591
+    LEC ×VER :   9.8s @t= 392.8 | div=JUNTO/NULO(+0.00) | v  8.3/ 8.3 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 0
+    PIA ×SAI :   6.0s @t= 406.8 | div=JUNTO/NULO(+0.00) | v  6.9/ 8.0 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 0
+    PIA ×SAI :   3.2s @t= 419.8 | div=JUNTO/NULO(-0.11) | v 21.3/22.0 | brk 0.18/0.06 | |steer| médio 0.27 | cc_ev 1701
+    PIA ×SAI :   5.4s @t= 430.0 | div=SEPARANDO(+0.03) | v 29.9/30.2 | brk 0.08/0.10 | |steer| médio 0.10 | cc_ev 421
+  leitura: janelas c/ esterço DIVERGENTE (cada um tenta separar — o par não separa => FÍSICA): 12 | convergente/nulo (ninguém cede => DECISÃO): 29
+
+  [D0] 2_allcomposite.csv: hw derivado do grid = 6.00 m (esperado ~6,0 = width/2 do frozen)
+    [D0] slot 0 ALO : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 1 HAM : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+    [D0] slot 2 SAI : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 3 RUS : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+    [D0] slot 4 PIA : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 5 PER : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+    [D0] slot 6 GAS : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 7 LEC : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+    [D0] slot 8 VER : esperado +1.9 | obs4×hw +1.90 | coluna lat +1.90
+    [D0] slot 9 NOR : esperado -1.9 | obs4×hw -1.90 | coluna lat +1.90
+=== D3 COLADOS (ALL-COMPOSITE (sem guard); |Δlat|<2.0m ∧ Δs wrap<5.5m) ===
+  janelas >2.0s: 7 | tempo total colado 33s | na largada (t<20s): 12s (37%) | deadlocks >10.0s: 0
+    PER ×PIA :   2.4s @t=  15.0 | div=JUNTO/NULO(-0.10) | v 12.1/12.2 | brk 0.16/0.00 | |steer| médio 0.41 | cc_ev 201
+    GAS ×NOR :   3.0s @t=  14.4 | div=SEPARANDO(+0.03) | v  8.1/ 7.9 | brk 0.00/0.01 | |steer| médio 0.16 | cc_ev 481
+    ALO ×RUS :   7.0s @t=   8.6 | div=JUNTO/NULO(-0.05) | v  6.9/ 6.9 | brk 0.02/0.08 | |steer| médio 0.62 | cc_ev 3454
+    ALO ×RUS :   9.6s @t= 127.0 | div=JUNTO/NULO(+0.00) | v  7.5/ 7.6 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 153
+    ALO ×LEC :   4.8s @t= 129.6 | div=JUNTO/NULO(-0.00) | v  7.4/ 7.2 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 0
+    PIA ×VER :   3.4s @t=  58.2 | div=JUNTO/NULO(-0.00) | v  8.5/ 8.2 | brk 0.00/0.00 | |steer| médio 0.79 | cc_ev 0
+    GAS ×VER :   3.0s @t= 100.4 | div=SEPARANDO(+0.01) | v 56.4/56.1 | brk 0.16/0.35 | |steer| médio 0.01 | cc_ev 853
+  leitura: janelas c/ esterço DIVERGENTE (cada um tenta separar — o par não separa => FÍSICA): 2 | convergente/nulo (ninguém cede => DECISÃO): 5
+

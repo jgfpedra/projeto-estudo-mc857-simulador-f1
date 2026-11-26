@@ -44,6 +44,7 @@ export type ApiRaceRequest = {
   year: number
   laps: number
   grid: string[]
+  user_driver_id?: string
   weather: ApiWeather
   weather_change?: {
     probability_per_lap: number // CONFIRMAR unidade

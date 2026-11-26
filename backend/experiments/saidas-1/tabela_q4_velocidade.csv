@@ -1,0 +1,18 @@
+perfil,curva_id,curva_nome,n,v_med_mps,v_iqr_mps,v_med_kmh,v_iqr_kmh
+A (v10-cego),C01,Descida do Lago (T4/T5),48,16.7,0.7,60.2,2.4
+A (v10-cego),C06,Bico de Pato (T10),40,13.0,0.2,46.9,0.7
+A (v10-cego),C08,Junção (T12),40,9.8,0.9,35.4,3.2
+A (v10-cego),C07,Mergulho (T11),37,12.3,6.1,44.4,22.0
+A (v10-cego),C09,Subida dos Boxes (T13/T14),7,20.3,2.2,73.1,8.0
+A (v10-cego),C10,Senna S (T1/T2),4,16.5,3.0,59.4,10.7
+A (v10-cego),Reta,Reta / Outro,4,23.3,5.8,83.8,20.9
+B (composite),C01,Descida do Lago (T4/T5),50,16.7,1.0,60.0,3.7
+B (composite),C07,Mergulho (T11),42,11.7,6.6,42.1,23.6
+B (composite),C08,Junção (T12),41,10.2,1.9,36.8,6.7
+B (composite),C06,Bico de Pato (T10),38,13.0,0.4,46.8,1.3
+B (composite),Reta,Reta / Outro,20,18.4,23.5,66.1,84.7
+B (composite),C10,Senna S (T1/T2),10,14.4,15.7,51.9,56.5
+B (composite),C11,Curva do Sol (T3),6,55.6,38.1,200.0,137.3
+B (composite),C09,Subida dos Boxes (T13/T14),5,15.2,6.1,54.8,22.1
+B (composite),C02,Ferradura (T6/T7),4,34.1,8.2,122.9,29.5
+B (composite),C05,Pinheirinho (T9),3,42.6,11.6,153.4,41.7

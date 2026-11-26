@@ -10,8 +10,8 @@ import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from .race_manager import REDIS_URL, race_manager
-from .schemas import (CommandRequest, PitStopCancelResponse, PitStopRequest,
-                      PitStopResponse, RaceSetupRequest, RaceSetupResponse)
+from .schemas import (PitStopCancelResponse, PitStopRequest, PitStopResponse,
+                      RaceSetupRequest, RaceSetupResponse)
 from domain import TyreCompound
 from database.f1results_database import AmbiguousHistoricalEvent, F1ResultsDriverDatabase
 from service.driver_service import DriverService
@@ -52,6 +52,7 @@ def create_race(req: RaceSetupRequest):
         options = {
             'selected_roster': selected_roster,
             'user_driver_id': req.user_driver_id,
+            'random_seed': req.random_seed,
             'weather': req.weather.value if req.weather else None,
             'weather_change': req.weather_change.model_dump() if req.weather_change else None,
             'initial_tyre': (req.initial_tyre or (req.stints[0].compound if req.stints else None)).value
@@ -60,9 +61,7 @@ def create_race(req: RaceSetupRequest):
         race_id, track, config = race_manager.create_race(
             req.laps, selected_track, season,
             num_drivers=len(req.grid) if req.grid is not None else req.num_drivers,
-            layout_id=selected_layout,
-            followed_driver_id=req.followed_driver_id,
-            **{k: v for k, v in options.items() if v is not None},
+            layout_id=selected_layout, **{k: v for k, v in options.items() if v is not None},
         )
     except redis.RedisError as exc:
         raise HTTPException(status_code=503, detail='Redis indisponível') from exc
@@ -72,19 +71,9 @@ def create_race(req: RaceSetupRequest):
     reference = getattr(track, 'metadata', {}).get('track_reference')
     if reference and reference['track_year'] != reference['driver_season']:
         warnings.append(f"Pilotos da temporada {reference['driver_season']}; a geometria do layout selecionado usa a referência de {reference['track_year']}.")
-    meta = race_manager.metadata(race_id)
-    num_drivers = len(meta.get('drivers', [])) if meta else 0
-    return RaceSetupResponse(
-        race_id=race_id,
-        track_name=track.name,
-        num_laps=config.num_laps,
-        ws_path=f"/ws/races/{race_id}",
-        grid=req.grid or [],
-        initial_weather=req.weather.value if req.weather else 'dry',
-        warnings=warnings,
-        num_drivers=num_drivers,
-        followed_driver_id=req.followed_driver_id or "",
-    )
+    return RaceSetupResponse(race_id=race_id, track_name=track.name, num_laps=config.num_laps,
+                             ws_path=f"/ws/races/{race_id}", grid=req.grid or [],
+                             initial_weather=req.weather.value if req.weather else 'dry', warnings=warnings)
 
 @app.get('/seasons')
 def list_seasons():
@@ -211,28 +200,6 @@ def cancel_pit_stop(race_id: str, driver_id: str):
     return PitStopCancelResponse(race_id=race_id, driver_id=driver_id)
 
 
-@app.post('/races/{race_id}/commands')
-def push_command(race_id: str, req: CommandRequest):
-    """Aplica um comando de alto nível ao carro (texto e ação da IA)."""
-    try:
-        cmd = race_manager.push_command(
-            race_id, req.driver_id, req.command,
-            value=req.value, reason=req.reason, issued_by=req.issued_by,
-        )
-    except KeyError as exc:
-        raise HTTPException(status_code=404, detail='Corrida não encontrada') from exc
-    return {
-        'type': 'ai_command_accepted',
-        'race_id': race_id,
-        'driver_id': req.driver_id,
-        'command': cmd.command,
-        'value': cmd.value,
-        'reason': cmd.reason,
-        'issued_by': cmd.issued_by,
-        'seq': cmd.seq,
-    }
-
-
 @app.get('/races/{race_id}')
 def get_race(race_id: str):
     try:
@@ -264,13 +231,6 @@ async def race_websocket(websocket: WebSocket, race_id: str):
         # Inscrever antes de ler o último estado evita perder ticks na conexão.
         await pubsub.subscribe(f'race:{race_id}:events')
         await websocket.accept()
-        # O viz conectou: libera a largada. Até aqui os carros estavam parados
-        # no grid, então quem abre a página vê a largada desde o começo.
-        try:
-            race_manager.signal_viewer_connected(race_id)
-        except Exception:
-            pass
-
         start_event = await client.get(f'race:{race_id}:start')
         start_sent = bool(start_event)
         if start_event:
@@ -286,13 +246,6 @@ async def race_websocket(websocket: WebSocket, race_id: str):
             payload = json.loads(snapshot)
             last_tick = payload['sim_ts']
             await websocket.send_json(payload)
-        # Pub/sub não tem replay: sem isto, quem abre o viz depois da primeira
-        # sugestão (o modelo local pode levar ~1 min) fica em "aguardando".
-        for raw in reversed(await client.lrange(f'race:{race_id}:suggestions', 0, 49)):
-            try:
-                await websocket.send_json(json.loads(raw))
-            except (TypeError, ValueError):
-                continue
         result = await client.get(f'race:{race_id}:result')
         if result:
             final_snapshot = await client.get(f'race:{race_id}:state')

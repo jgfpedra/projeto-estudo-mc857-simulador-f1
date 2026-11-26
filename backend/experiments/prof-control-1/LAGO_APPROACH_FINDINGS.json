@@ -1,0 +1,220 @@
+{
+  "correlacao_tyre_grip_vs_lat_max": {
+    "deltas_lat_max_por_passe_m": [
+      0.1096,
+      0.019,
+      0.1741,
+      0.0187
+    ],
+    "n": 5,
+    "pearson_r": -0.9686040173744409
+  },
+  "metodo": {
+    "capacidade_lateral": "tyre_grip × 9.81 (μ_eff·g)",
+    "kappa": "perfil canônico suavizado 30 m (compute_kappa_profile, ds 4 m), |κ| interpolado em s",
+    "limiar_frenagem_brk": 0.05,
+    "limiar_reaceleracao_th": 0.05,
+    "steer_limit": "F1MultiContextEnv.steer_limit_rad",
+    "zona_aproximacao_s_m": "[track_len-150, track_len]",
+    "zona_contorno_s_m": [
+      0.0,
+      80.0
+    ]
+  },
+  "n_passes": 5,
+  "origem": {
+    "csv": "experiments/prof-curva-1/REF_INTERLAGOS_600S.csv",
+    "csv_sha256": "c00391ab21033dae1a03db2cd7f7fd6983baa47d67b0828bec503d93778e9b3a",
+    "n_linhas_dados": 3000
+  },
+  "passes": [
+    {
+      "aproximacao": {
+        "brake_start_s_m": 4013.292,
+        "brake_start_t_s": 27.6,
+        "dist_frenagem_linha_m": 147.145,
+        "lat_final_m": 0.0054,
+        "presente": true,
+        "v_max_em_s": 4013.292,
+        "v_max_kmh": 284.282,
+        "v_no_inicio_frenagem_kmh": 284.282
+      },
+      "contorno": {
+        "a_lat_capacidade_ms2": 8.26,
+        "a_lat_demanda_max_em_s_m": 77.702,
+        "a_lat_demanda_max_ms2": 10.844,
+        "a_lat_demanda_ms2": 3.254,
+        "apice_em_s_m": 6.826,
+        "apice_em_t_s": 32.2,
+        "demanda_sobre_capacidade": 0.394,
+        "lat_max_em_s_m": 36.446,
+        "lat_max_em_t_s": 34.0,
+        "lat_max_m": 5.9399,
+        "margem_pista_m": 0.0601,
+        "presente": true,
+        "reaceleracao_s_m": 9.631,
+        "reaceleracao_t_s": 32.4,
+        "s_primeiro_tick_m": 0.971,
+        "saiu": false,
+        "steer_ratio_max_janela": 0.726,
+        "tyre_grip_no_latmax": 0.842,
+        "tyre_life_pct_no_latmax": 100.0,
+        "v_em_s0_kmh": 59.203,
+        "v_min_apice_kmh": 52.679
+      },
+      "passe": 1
+    },
+    {
+      "aproximacao": {
+        "brake_start_s_m": 4014.447,
+        "brake_start_t_s": 166.2,
+        "dist_frenagem_linha_m": 145.99,
+        "lat_final_m": 0.0386,
+        "presente": true,
+        "v_max_em_s": 4014.447,
+        "v_max_kmh": 282.795,
+        "v_no_inicio_frenagem_kmh": 282.795
+      },
+      "contorno": {
+        "a_lat_capacidade_ms2": 8.172,
+        "a_lat_demanda_max_em_s_m": 1.21,
+        "a_lat_demanda_max_ms2": 9.562,
+        "a_lat_demanda_ms2": 1.952,
+        "apice_em_s_m": 39.197,
+        "apice_em_t_s": 172.8,
+        "demanda_sobre_capacidade": 0.239,
+        "lat_max_em_s_m": 36.229,
+        "lat_max_em_t_s": 172.6,
+        "lat_max_m": 6.0495,
+        "margem_pista_m": -0.0495,
+        "presente": true,
+        "reaceleracao_s_m": 41.839,
+        "reaceleracao_t_s": 173.0,
+        "s_primeiro_tick_m": 1.21,
+        "saiu": true,
+        "steer_ratio_max_janela": 0.8383,
+        "tyre_grip_no_latmax": 0.833,
+        "tyre_life_pct_no_latmax": 93.07,
+        "v_em_s0_kmh": 59.2,
+        "v_min_apice_kmh": 46.495
+      },
+      "passe": 2
+    },
+    {
+      "aproximacao": {
+        "brake_start_s_m": 4018.048,
+        "brake_start_t_s": 305.2,
+        "dist_frenagem_linha_m": 142.389,
+        "lat_final_m": 0.1398,
+        "presente": true,
+        "v_max_em_s": 4018.048,
+        "v_max_kmh": 277.877,
+        "v_no_inicio_frenagem_kmh": 277.877
+      },
+      "contorno": {
+        "a_lat_capacidade_ms2": 8.093,
+        "a_lat_demanda_max_em_s_m": 78.478,
+        "a_lat_demanda_max_ms2": 10.13,
+        "a_lat_demanda_ms2": 1.855,
+        "apice_em_s_m": 4.818,
+        "apice_em_t_s": 309.6,
+        "demanda_sobre_capacidade": 0.229,
+        "lat_max_em_s_m": 37.1,
+        "lat_max_em_t_s": 311.6,
+        "lat_max_m": 6.0685,
+        "margem_pista_m": -0.0685,
+        "presente": true,
+        "reaceleracao_s_m": 7.548,
+        "reaceleracao_t_s": 309.8,
+        "s_primeiro_tick_m": 1.875,
+        "saiu": true,
+        "steer_ratio_max_janela": 0.8457,
+        "tyre_grip_no_latmax": 0.825,
+        "tyre_life_pct_no_latmax": 86.13,
+        "v_em_s0_kmh": 54.95,
+        "v_min_apice_kmh": 52.462
+      },
+      "passe": 3
+    },
+    {
+      "aproximacao": {
+        "brake_start_s_m": 4011.797,
+        "brake_start_t_s": 445.8,
+        "dist_frenagem_linha_m": 148.64,
+        "lat_final_m": 0.0426,
+        "presente": true,
+        "v_max_em_s": 4011.797,
+        "v_max_kmh": 286.143,
+        "v_no_inicio_frenagem_kmh": 286.143
+      },
+      "contorno": {
+        "a_lat_capacidade_ms2": 8.005,
+        "a_lat_demanda_max_em_s_m": 0.647,
+        "a_lat_demanda_max_ms2": 9.386,
+        "a_lat_demanda_ms2": 2.073,
+        "apice_em_s_m": 40.503,
+        "apice_em_t_s": 452.6,
+        "demanda_sobre_capacidade": 0.259,
+        "lat_max_em_s_m": 35.656,
+        "lat_max_em_t_s": 452.2,
+        "lat_max_m": 6.2426,
+        "margem_pista_m": -0.2426,
+        "presente": true,
+        "reaceleracao_s_m": 42.409,
+        "reaceleracao_t_s": 452.8,
+        "s_primeiro_tick_m": 0.647,
+        "saiu": true,
+        "steer_ratio_max_janela": 0.8684,
+        "tyre_grip_no_latmax": 0.816,
+        "tyre_life_pct_no_latmax": 79.2,
+        "v_em_s0_kmh": 59.2,
+        "v_min_apice_kmh": 33.938
+      },
+      "passe": 4
+    },
+    {
+      "aproximacao": {
+        "brake_start_s_m": 4024.968,
+        "brake_start_t_s": 588.0,
+        "dist_frenagem_linha_m": 135.468,
+        "lat_final_m": 0.0918,
+        "presente": true,
+        "v_max_em_s": 4024.968,
+        "v_max_kmh": 266.647,
+        "v_no_inicio_frenagem_kmh": 266.647
+      },
+      "contorno": {
+        "a_lat_capacidade_ms2": 7.917,
+        "a_lat_demanda_max_em_s_m": 0.194,
+        "a_lat_demanda_max_ms2": 9.237,
+        "a_lat_demanda_ms2": 2.206,
+        "apice_em_s_m": 39.841,
+        "apice_em_t_s": 594.6,
+        "demanda_sobre_capacidade": 0.279,
+        "lat_max_em_s_m": 35.019,
+        "lat_max_em_t_s": 594.2,
+        "lat_max_m": 6.2613,
+        "margem_pista_m": -0.2613,
+        "presente": true,
+        "reaceleracao_s_m": 41.775,
+        "reaceleracao_t_s": 594.8,
+        "s_primeiro_tick_m": 0.194,
+        "saiu": true,
+        "steer_ratio_max_janela": 0.88,
+        "tyre_grip_no_latmax": 0.807,
+        "tyre_life_pct_no_latmax": 72.26,
+        "v_em_s0_kmh": 59.178,
+        "v_min_apice_kmh": 34.014
+      },
+      "passe": 5
+    }
+  ],
+  "passes_com_saida": 4,
+  "passes_total": 5,
+  "pista": {
+    "arquivo": "model_train/tracks_frozen/interlagos_v2.json",
+    "comprimento_m": 4160.437,
+    "sha256_pin": "164876196eb12174"
+  },
+  "schema_version": "prof-control-1/lago-approach-audit-v1.0"
+}

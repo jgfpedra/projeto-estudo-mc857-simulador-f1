@@ -11,6 +11,14 @@
  *   incrementa ao detectar uma descontinuidade (ressincronização), e o rig
  *   corta em vez de amortecer.
  *
+ * A perseguição com pose fica atrás do carro, na direção dele suavizada
+ * (`yaw`, amortecida com constante `yawTauS`), sem olhar a pista nem o
+ * `progress_m`: mirar por pontos da pista (como o viz3d) punha a mira a mais de
+ * 8° do carro nas curvas, e a direção da câmera passava a seguir as cordas da
+ * polilinha servida, que nas pistas do OpenF1 dobra a cada 14-42 m. O caminho
+ * pela pista ficou só para o carro sem pose (e, em desenvolvimento, para
+ * comparar: `chaseRig("track")` no gancho).
+ *
  * Todo comprimento de arco aqui é *desembrulhado* (cresce sem limite, como
  * `progress_m`); só `toWorld` embrulha, então a linha de chegada não é um caso
  * especial.
@@ -27,6 +35,18 @@ export const MAX_DELTA_S = 0.1
 
 export type CameraMode = "orbit" | "chase" | "onboard"
 
+/**
+ * Perseguição atrás do carro, pela direção dele ("heading", o padrão) ou o
+ * rig antigo, pela pista ("track"), só para comparar no gancho de desenvolvimento.
+ */
+export type ChaseRig = "heading" | "track"
+
+let chaseRig: ChaseRig = "heading"
+export const chaseRigMode = (): ChaseRig => chaseRig
+export function setChaseRigMode(next: ChaseRig): void {
+  chaseRig = next
+}
+
 /** Estado do carro seguido, escrito a cada quadro por `Cars`. */
 export interface FollowState {
   /** Comprimento de arco desembrulhado: `progress_m` quando o backend envia. */
@@ -42,13 +62,22 @@ export interface FollowState {
   yawRad: number
   /** Incrementado a cada descontinuidade; o rig corta em vez de amortecer. */
   cut: number
+  /**
+   * Instante de parede do quadro em que a pose foi desenhada, ms (o mesmo
+   * carimbo do relógio da reprodução); NaN sem pose.
+   */
+  wallMs: number
+  /** Vista congelada (gancho de desenvolvimento): `wallMs` parado. */
+  frozen: boolean
 }
 
 export interface RigState {
   /** Comprimento de arco da própria câmera de perseguição; atrasa `trailM`. */
   u: number
   roll: number
-  /** Carro para o qual `u` e `roll` foram calculados; -1 = sem semente. */
+  /** Direção suavizada do carro (mesma convenção de `FollowState.yawRad`). */
+  yaw: number
+  /** Carro para o qual `u`, `roll` e `yaw` foram calculados; -1 = sem semente. */
   carIndex: number
   cut: number
 }
@@ -67,9 +96,12 @@ export interface ChaseConfig {
   lookaheadM: number
   targetHeightM: number
   tauS: number
+  /** Constante de tempo da direção suavizada do carro, s. */
+  yawTauS: number
   fovDeg: number
   /**
-   * Quanto a direção da câmera pode se afastar do carro na horizontal. Num
+   * Só no caminho pela pista (carro sem pose, ou `chaseRig("track")`): quanto
+   * a direção da câmera pode se afastar do carro na horizontal. Num
    * grampo, mirar `lookaheadM` à frente pela pista poria o carro na borda da
    * tela (~29° fora do eixo num raio de 25 m); com o limite ele fica perto do
    * centro e a câmera ainda gira para dentro da curva.
@@ -96,6 +128,7 @@ export const CHASE: ChaseConfig = {
   lookaheadM: 25,
   targetHeightM: 0.8,
   tauS: 0.3,
+  yawTauS: 0.25,
   fovDeg: 45,
   maxOffAxisRad: MathUtils.degToRad(8),
 }
@@ -114,11 +147,11 @@ export const ONBOARD: OnboardConfig = {
 }
 
 export function newFollowState(): FollowState {
-  return { sUnwrapped: 0, d: 0, speedMps: 0, carIndex: -1, posed: false, x: 0, z: 0, yawRad: 0, cut: 0 }
+  return { sUnwrapped: 0, d: 0, speedMps: 0, carIndex: -1, posed: false, x: 0, z: 0, yawRad: 0, cut: 0, wallMs: Number.NaN, frozen: false }
 }
 
 export function newRigState(): RigState {
-  return { u: 0, roll: 0, carIndex: -1, cut: 0 }
+  return { u: 0, roll: 0, yaw: 0, carIndex: -1, cut: 0 }
 }
 
 export function newPose(): CameraPose {
@@ -143,6 +176,12 @@ export function targetRoll(frame: TrackFrame, follow: FollowState, cfg: OnboardC
   return cfg.maxRollRad * MathUtils.clamp(lateral / cfg.refLatAccelMps2, -1, 1)
 }
 
+/** Amortecimento de um ângulo pelo arco mais curto, independente da taxa de quadros. */
+export function dampAngle(current: number, target: number, tauS: number, dtS: number): number {
+  const gap = Math.atan2(Math.sin(target - current), Math.cos(target - current))
+  return current + gap * (1 - Math.exp(-dtS / tauS))
+}
+
 /**
  * Avança o rig em `dtS`. O termo de antecipação (`u += v dt`) evita que o
  * amortecimento fique `v * tau` atrás de um alvo que anda.
@@ -164,6 +203,7 @@ export function stepRig(
     state.cut = follow.cut
     state.u = follow.sUnwrapped - chase.trailM
     state.roll = roll
+    state.yaw = follow.yawRad
     return
   }
 
@@ -171,6 +211,7 @@ export function stepRig(
   state.u += follow.speedMps * dt
   state.u = MathUtils.damp(state.u, follow.sUnwrapped - chase.trailM, 1 / chase.tauS, dt)
   state.roll = MathUtils.damp(state.roll, roll, 1 / onboard.rollTauS, dt)
+  if (follow.posed) state.yaw = dampAngle(state.yaw, follow.yawRad, chase.yawTauS, dt)
 }
 
 const view = new Vector3()
@@ -178,10 +219,39 @@ const shift = new Vector3()
 const forward = new Vector3()
 
 /**
- * Câmera de perseguição. Direção pela pista (`sUnwrapped` + `lookaheadM`),
- * transladada para que a âncora fique sobre a pose do carro.
+ * Câmera de perseguição. Com pose: atrás do carro na direção suavizada
+ * (`state.yaw`), `trailM` atrás e `heightM` acima, mirando `lookaheadM` à
+ * frente na mesma direção; o carro fica sempre no eixo da câmera na
+ * horizontal. Não lê a pista nem `sUnwrapped`. Sem pose (ou `rig = "track"`):
+ * o caminho pela pista, `trackChasePose`.
  */
 export function chasePose(
+  frame: TrackFrame,
+  state: RigState,
+  follow: FollowState,
+  cfg: ChaseConfig,
+  out: CameraPose,
+  rig: ChaseRig = "heading",
+): CameraPose {
+  if (!follow.posed || rig === "track") return trackChasePose(frame, state, follow, cfg, out)
+  // Frente do modelo = -Z local: (-sin yaw, 0, -cos yaw) no three.
+  forward.set(-Math.sin(state.yaw), 0, -Math.cos(state.yaw))
+  out.anchor.set(follow.x, 0, follow.z)
+  out.position.copy(out.anchor).addScaledVector(forward, -cfg.trailM)
+  out.position.y = cfg.heightM
+  out.target.copy(out.anchor).addScaledVector(forward, cfg.lookaheadM)
+  out.target.y = cfg.targetHeightM
+  out.up.copy(WORLD_UP)
+  return out
+}
+
+/**
+ * O rig de perseguição antigo, portado do viz3d. Direção pela pista
+ * (`state.u` atrás, `sUnwrapped` + `lookaheadM` à frente), transladada para
+ * que a âncora fique sobre a pose do carro, e limitada a `maxOffAxisRad` do
+ * carro.
+ */
+export function trackChasePose(
   frame: TrackFrame,
   state: RigState,
   follow: FollowState,

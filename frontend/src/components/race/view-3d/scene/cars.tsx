@@ -2,13 +2,23 @@ import { useEffect, useMemo, useRef } from "react"
 import { useFrame } from "@react-three/fiber"
 import type { ThreeEvent } from "@react-three/fiber"
 import { useGLTF } from "@react-three/drei"
-import { Color, ConeGeometry, DynamicDrawUsage, InstancedMesh, Matrix4, MeshBasicMaterial, Vector3 } from "three"
+import {
+  Color,
+  ConeGeometry,
+  DynamicDrawUsage,
+  InstancedMesh,
+  Matrix4,
+  MeshBasicMaterial,
+  TorusGeometry,
+  Vector3,
+} from "three"
 
-import type { CarGeometry as ChassisBox, RaceDriver } from "@/types/race"
-import { carGeometry, poseMatrix, raceCarSpec, wheelAngle, wheelMatrix } from "./car-model"
+import type { CarFrame, CarGeometry as ChassisBox, Frame, RaceDriver } from "@/types/race"
+import { TYRE_BAND, carGeometry, poseMatrix, raceCarSpec, tyreBandLocal, wheelAngle, wheelMatrix } from "./car-model"
+import { compoundColor } from "./tyre-compound"
 import type { CarPart } from "./car-model"
 import type { FollowState } from "./camera-math"
-import { LapUnwrapper, WheelOdometer, engineYaw, frameAlpha, interpolatePoses, toThreeX, toThreeZ } from "./live-pose"
+import { LapUnwrapper, WheelOdometer, engineYaw, interpolatePoses, toThreeX, toThreeZ } from "./live-pose"
 import type { CarPose } from "./live-pose"
 import { nearestS, wrapS } from "./track-frame"
 import type { TrackFrame } from "./track-frame"
@@ -61,6 +71,11 @@ function publish(meshes: InstancedMesh[], pickable: boolean): void {
   }
 }
 
+/** Envia as cores por instância alteradas neste quadro. */
+function coloursChanged(mesh: InstancedMesh): void {
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+}
+
 function pinGeometry(): ConeGeometry {
   // Ponta para baixo, na origem; a base fica PIN_HEIGHT acima.
   const g = new ConeGeometry(0.9, PIN_HEIGHT, 16)
@@ -72,9 +87,10 @@ function pinGeometry(): ConeGeometry {
 /**
  * Os carros na pista. Portado de `viz3d/src/cars/Grid.tsx`: um `InstancedMesh`
  * por primitiva do modelo, rodas giradas pelo hodômetro. A diferença é a
- * fonte: em vez do `LiveBuffer` do viz3d, a pose vem da store do frontend,
- * lida com `getState()` dentro do `useFrame` (sem re-render por tick), e é
- * interpolada exatamente como em `track-2d.tsx`.
+ * fonte: em vez do `LiveBuffer` do viz3d, a pose vem da reprodução com buffer
+ * (`live-clock.ts`), lida dentro do `useFrame` (sem re-render por tick), e é
+ * interpolada com a mesma função do 2D (`interpolateCars`), num instante
+ * ~150 ms atrás do frame mais novo.
  */
 export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, overviewDistance, followRef, onPick, probe }: Props) {
   const spec = useMemo(
@@ -106,7 +122,27 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
       })
     })
     for (const m of [...body, pins]) if (m.instanceColor) m.instanceColor.needsUpdate = true
-    return { body, wheels, pins }
+
+    // Faixa do composto: um anel por roda, todos num só InstancedMesh (carro k, roda w -> k * W + w),
+    // com a cor por instância. Começam escondidos; a cor entra quando o composto do carro é lido.
+    const W = parts.wheels.length
+    const bands = new InstancedMesh(
+      new TorusGeometry(1, TYRE_BAND.tube / TYRE_BAND.ring, 8, 40),
+      // Sem luz e sem tone mapping: a cor do composto sai exata em qualquer clima (a neblina ainda vale).
+      new MeshBasicMaterial({ color: "#ffffff", toneMapped: false }),
+      count * W,
+    )
+    bands.instanceMatrix.setUsage(DynamicDrawUsage)
+    bands.frustumCulled = false
+    bands.name = "tyre-bands"
+    const hidden = new Matrix4().makeScale(0, 0, 0)
+    colour.set("#ffffff")
+    for (let i = 0; i < count * W; i++) {
+      bands.setMatrixAt(i, hidden)
+      bands.setColorAt(i, colour)
+    }
+    const bandLocal = parts.wheels.map((w) => tyreBandLocal(w, new Matrix4()))
+    return { body, wheels, pins, bands, bandLocal }
   }, [parts, drivers, colors, count])
 
   useEffect(
@@ -116,6 +152,9 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
       meshes.pins.dispose()
       meshes.pins.geometry.dispose()
       ;(meshes.pins.material as MeshBasicMaterial).dispose()
+      meshes.bands.dispose()
+      meshes.bands.geometry.dispose()
+      ;(meshes.bands.material as MeshBasicMaterial).dispose()
     },
     [meshes],
   )
@@ -143,8 +182,15 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
       lastHeading: new Map<string, number>(),
       odometer: new WheelOdometer(),
       unwrap: new LapUnwrapper(),
-      lastFrame: null as unknown,
+      lastResyncs: -1,
       lastSelected: -2,
+      band: new Matrix4(),
+      bandColour: new Color(),
+      /** Frame de onde `tyreOf` saiu, e a cor de faixa aplicada a cada carro (null = sem faixa). */
+      tyreFrame: null as Frame | null,
+      tyreOf: new Map<string, CarFrame>(),
+      bandHex: [] as (string | null | undefined)[],
+      bandMeshes: null as unknown,
   })
   // Altura do teto do carro, para o marcador, medida na própria geometria.
   const carTopM = useMemo(() => {
@@ -160,28 +206,43 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
   const pinsRef = useRef<InstancedMesh>(null)
 
   useFrame((state) => {
-    const { now, s, frozen } = readLive()
+    const { now, view, frozen } = readLive()
     const scratch = scratchRef.current
     const f = followRef.current
     let nearest = Infinity
+    const W = meshes.wheels.length
+    const bands = meshes.bands
+    if (scratch.bandMeshes !== meshes) {
+      scratch.bandMeshes = meshes
+      scratch.bandHex = []
+    }
+    const hideBands = (i: number) => {
+      for (let w = 0; w < W; w++) bands.setMatrixAt(i * W + w, scratch.hidden)
+    }
 
-    if (!s.frame) {
+    if (!view.cur) {
       for (let i = 0; i < count; i++) {
         for (const m of meshes.body) m.setMatrixAt(i, scratch.hidden)
         for (const w of meshes.wheels) for (const m of w.meshes) m.setMatrixAt(i, scratch.hidden)
         meshes.pins.setMatrixAt(i, scratch.hidden)
+        hideBands(i)
       }
       f.carIndex = -1
     } else {
-      const alpha = frameAlpha(now, s.frameAt, s.tickIntervalMs)
-      const poses = interpolatePoses(s.prevFrame, s.frame, alpha, scratch.lastHeading)
-      scratch.odometer.update(s.prevFrame, s.frame)
+      // Composto de cada carro no frame desenhado (o mesmo da pose): muda no pit stop.
+      if (view.cur !== scratch.tyreFrame) {
+        scratch.tyreFrame = view.cur
+        scratch.tyreOf.clear()
+        for (const c of view.cur.cars) scratch.tyreOf.set(c.driverId, c)
+      }
+      const alpha = view.alpha
+      const poses = interpolatePoses(view.prev, view.cur, alpha, scratch.lastHeading)
+      scratch.odometer.update(view.prev, view.cur)
       // Ressincronização: o carro seguido pode ter saltado; a câmera corta.
-      const jumped = s.frame !== scratch.lastFrame && s.prevFrame === null && scratch.lastFrame !== null
-      scratch.lastFrame = s.frame
-      if (jumped || selectedIndex !== scratch.lastSelected) {
+      if (view.resyncs !== scratch.lastResyncs || selectedIndex !== scratch.lastSelected) {
         scratch.unwrap.reset()
         f.cut++
+        scratch.lastResyncs = view.resyncs
         scratch.lastSelected = selectedIndex
       }
       const cam = state.camera.position
@@ -192,8 +253,18 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
           for (const m of meshes.body) m.setMatrixAt(i, scratch.hidden)
           for (const w of meshes.wheels) for (const m of w.meshes) m.setMatrixAt(i, scratch.hidden)
           meshes.pins.setMatrixAt(i, scratch.hidden)
+          hideBands(i)
           if (i === selectedIndex) f.carIndex = -1
           continue
+        }
+        const hex = compoundColor(scratch.tyreOf.get(ids[i])?.tyre)
+        if (hex !== scratch.bandHex[i]) {
+          scratch.bandHex[i] = hex
+          if (hex) {
+            scratch.bandColour.set(hex)
+            for (let w = 0; w < W; w++) bands.setColorAt(i * W + w, scratch.bandColour)
+            coloursChanged(bands)
+          }
         }
         const x = toThreeX(pose.x)
         const z = toThreeZ(pose.y)
@@ -202,10 +273,13 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
         for (const m of meshes.body) m.setMatrixAt(i, scratch.car)
 
         const travelled = scratch.odometer.sample(ids[i], alpha)
-        for (const w of meshes.wheels) {
+        meshes.wheels.forEach((w, k) => {
           wheelMatrix(scratch.car, w.wheel, wheelAngle(travelled, w.wheel.radiusM), scratch.wheel)
           for (const m of w.meshes) m.setMatrixAt(i, scratch.wheel)
-        }
+          // O anel vai junto com a roda (mesma matriz), no flanco externo.
+          if (hex) bands.setMatrixAt(i * W + k, scratch.band.multiplyMatrices(scratch.wheel, meshes.bandLocal[k]))
+          else bands.setMatrixAt(i * W + k, scratch.hidden)
+        })
 
         scratch.world.set(x, carTopM, z)
         const dist = cam.distanceTo(scratch.world)
@@ -225,6 +299,8 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
           f.d = 0
           // Congelado (gancho de desenvolvimento), o carro está parado para a câmera.
           f.speedMps = frozen ? 0 : pose.speedMps
+          f.wallMs = now
+          f.frozen = frozen
           f.carIndex = i
           f.posed = true
           f.x = x
@@ -253,8 +329,9 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
     publish(meshes.body, true)
     for (const w of meshes.wheels) publish(w.meshes, false)
     publish([meshes.pins], true)
+    publish([bands], false)
 
-    probe?.record(now, s, meshes.body[0] ?? null, meshes.pins, ids)
+    probe?.record(now, view, meshes.body[0] ?? null, meshes.pins, ids, { mesh: bands, perCar: W, hex: scratch.bandHex })
   })
 
   const pick = (e: ThreeEvent<MouseEvent>) => {
@@ -279,6 +356,7 @@ export function Cars({ drivers, colors, frame, carBox, selectedIndex, showPins, 
         <primitive key={`body${i}`} object={m} onClick={pick} onPointerOver={over} onPointerOut={out} />
       ))}
       {meshes.wheels.map((w, i) => w.meshes.map((m, k) => <primitive key={`wheel${i}-${k}`} object={m} />))}
+      <primitive object={meshes.bands} />
       <primitive ref={pinsRef} object={meshes.pins} onClick={pick} onPointerOver={over} onPointerOut={out} />
     </>
   )

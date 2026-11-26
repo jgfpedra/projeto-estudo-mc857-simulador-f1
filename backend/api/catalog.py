@@ -91,8 +91,8 @@ class Catalog:
     def find_layout(self, circuit: Dict[str, Any], year: int) -> Optional[Dict[str, Any]]:
         """Encontra o traçado do circuito para um dado ano."""
         for layout in circuit.get("layouts", []):
-            first = layout.get("first_year") or layout.get("years", [0])[0]
-            last = layout.get("last_year") or layout.get("years", [0])[-1]
+            first = layout.get("first_year") or (layout.get("years", [0])[0] if layout.get("years") else 0)
+            last = layout.get("last_year") or (layout.get("years", [-1])[-1] if layout.get("years") else 0)
             if first <= year <= last:
                 return layout
         return None
