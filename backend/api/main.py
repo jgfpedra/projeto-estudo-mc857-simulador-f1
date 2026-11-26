@@ -62,7 +62,8 @@ def create_race(req: RaceSetupRequest):
             for driver_id in req.grid:
                 d = available[driver_id]
                 record = driver_record(d.get('abbreviation') or '', d.get('name') or driver_id,
-                                       d.get('number', d.get('permanent_number')), d.get('team_name'), d.get('team_color'))
+                                       d.get('number', d.get('permanent_number')), d.get('team_name'),
+                                       d.get('team_color'), color_source=d.get('team_color_source'))
                 record['driver_id'] = driver_id
                 selected_roster.append(record)
         options = {

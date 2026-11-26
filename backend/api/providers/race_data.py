@@ -11,6 +11,7 @@ import logging
 import math
 import re
 from typing import Protocol
+from database.team_colors import resolve_team_color
 from integrations.openf1 import OpenF1Client
 from .f1db_layouts import normalize
 
@@ -44,13 +45,11 @@ FALLBACK = [
 ]
 
 
-def driver_record(abbr, name, number, team, color):
+def driver_record(abbr, name, number, team, color, *, color_source=None):
     slug = re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
-    color = str(color or '').lstrip('#')
-    if not re.fullmatch(r'[0-9a-fA-F]{6}', color):
-        color = '808080'
+    color, color_source = resolve_team_color(team, color, color_source)
     return {'driver_id': slug, 'abbreviation': abbr, 'name': name,
-            'number': number, 'team': team, 'team_color': '#'+color.upper()}
+            'number': number, 'team': team, 'team_color': color, 'team_color_source': color_source}
 
 
 class RaceDataProvider(Protocol):
@@ -100,7 +99,8 @@ class OpenF1Provider:
         key = session['session_key']
         rows = self.fetch('drivers', session_key=key)
         drivers = [driver_record(row.get('name_acronym', ''), row['full_name'],
-                                 row.get('driver_number'), row.get('team_name'), row.get('team_colour'))
+                                 row.get('driver_number'), row.get('team_name'), row.get('team_colour'),
+                                 color_source='openf1')
                    for row in rows if row.get('full_name')]
         if not drivers:
             raise ValueError('Pilotos OpenF1 indisponíveis')
@@ -175,7 +175,7 @@ class FallbackProvider:
         if season < 2018:
             raise ValueError('Sem geometria histórica verificada para esta pista e temporada: OpenF1 cobre 2023+ e FastF1 geralmente 2018+; F1DB informa layouts, não waypoints de simulação.')
         track = load_live_track(track_name=circuit, year=season)
-        drivers = [driver_record(*item) for item in FALLBACK] if season >= 2023 else []
+        drivers = [driver_record(*item, color_source='team_palette') for item in FALLBACK] if season >= 2023 else []
         return track, drivers, {'track_source':track.source, 'driver_source':'local_2023'}
 
 

@@ -17,7 +17,15 @@ import { PitLaneRibbon } from './PitLaneRibbon'
 import type { LiveTrack } from './track'
 import { StartFinishLine } from './StartFinishLine'
 
-type Meta = { race_id: string; num_laps: number; car_geometry?: { length_m: number; width_m: number; height_m: number }; track: LiveTrack; drivers: { driver_id: string; name: string; grid_position: number }[] }
+type LiveDriver = {
+  driver_id: string
+  name: string
+  grid_position: number
+  team?: string | null
+  team_color?: string | null
+  team_color_source?: string | null
+}
+type Meta = { race_id: string; num_laps: number; car_geometry?: { length_m: number; width_m: number; height_m: number }; track: LiveTrack; drivers: LiveDriver[] }
 const api = (import.meta.env.VITE_API_URL || (import.meta.env.VITE_USE_API_PROXY === '1' ? window.location.origin : `${window.location.protocol}//${window.location.hostname}:8000`)).replace(/\/$/, '')
 
 export function LiveRace() {
@@ -101,10 +109,18 @@ export function LiveRace() {
     const pitLane = pitLaneFromLive(meta.track.pit_lane)
     const sphere = new Sphere().setFromPoints([...track.points, ...(pitLane?.points ?? [])])
     const distance = sphere.radius / Math.sin(Math.PI / 8) * 1.3
-    const cars: CarIdentity[] = [...meta.drivers].sort((a, b) => a.grid_position - b.grid_position).map((driver, index) => ({
-      index, label: driver.driver_id, name: driver.name, colourName: PALETTE[index % PALETTE.length].name, hex: PALETTE[index % PALETTE.length].hex,
-    }))
-    const ids = [...meta.drivers].sort((a, b) => a.grid_position - b.grid_position).map((driver) => driver.driver_id)
+    const drivers = [...meta.drivers].sort((a, b) => a.grid_position - b.grid_position)
+    const cars: CarIdentity[] = drivers.map((driver, index) => {
+      const fallback = PALETTE[index % PALETTE.length]
+      const color = driver.team_color
+      const useTeamColor = color && /^#[0-9a-f]{6}$/i.test(color) && driver.team_color_source !== 'unknown'
+      return {
+        index, label: driver.driver_id, name: driver.name,
+        colourName: useTeamColor ? driver.team || color : fallback.name,
+        hex: useTeamColor ? color : fallback.hex,
+      }
+    })
+    const ids = drivers.map((driver) => driver.driver_id)
     const source: MotionSource = {
       kind: 'engine', cars, durationS: Infinity,
       sampleInto(_time, car, out) {

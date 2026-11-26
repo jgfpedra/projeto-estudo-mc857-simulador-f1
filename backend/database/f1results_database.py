@@ -9,6 +9,7 @@ import re
 import unicodedata
 
 from .driver_db import DriverDatabase
+from .team_colors import resolve_team_color
 
 DEFAULT_PATH = Path(__file__).resolve().parents[1] / 'config' / 'historical_tracks' / 'f1results_rosters.json'
 
@@ -36,8 +37,14 @@ def _abbreviation(name):
     return (words[-1][:3] if words else 'UNK').upper()
 
 
+def _with_display_color(record):
+    color, source = resolve_team_color(record['team_name'])
+    return {**record, 'team_color': color, 'team_color_source': source,
+            'team': {**record['team'], 'color': color}}
+
+
 class F1ResultsDriverDatabase(DriverDatabase):
-    """Metadados locais versionados; cores e siglas não constam na fonte."""
+    """Metadados locais versionados com siglas e cores de exibição derivadas."""
     def __init__(self, data=None, default_year=2024):
         from storage import postgres
         self._postgres = data is None and not os.environ.get('F1_RESULTS_ROSTERS_PATH') and postgres.configured()
@@ -68,14 +75,14 @@ class F1ResultsDriverDatabase(DriverDatabase):
         if not raw:
             raise ValueError(f'Piloto histórico {driver_id} ausente no catálogo')
         name = raw['name']
-        return {'id': f'f1results-{driver_id}', 'driver_id': f'f1results-{driver_id}',
+        return _with_display_color({'id': f'f1results-{driver_id}', 'driver_id': f'f1results-{driver_id}',
                 'name': name, 'full_name': name, 'abbreviation': _abbreviation(name),
                 'abbreviation_source': 'generated_from_name', 'number': number, 'permanent_number': None,
-                'team_name': team, 'team_color': '#808080', 'team_color_source': 'unknown',
+                'team_name': team,
                 'country_name': raw.get('nationality'), 'country_code': None,
-                'team': {'id': None, 'name': team, 'color': '#808080'},
+                'team': {'id': None, 'name': team},
                 'source': 'f1results_database', 'source_grand_prix': event['grand_prix'],
-                'historical_grid_position': grid}
+                'historical_grid_position': grid})
 
     def race_roster(self, circuit_id, season, grand_prix=None):
         event = self.event_for_race(circuit_id, season, grand_prix)
@@ -88,7 +95,8 @@ class F1ResultsDriverDatabase(DriverDatabase):
     def load_season_drivers(self, year):
         if year not in self._seasons and self._postgres:
             from storage import postgres
-            self._seasons[year] = postgres.season_drivers(year)
+            # Rows imported before the palette was added still contain gray.
+            self._seasons[year] = [_with_display_color(record) for record in postgres.season_drivers(year)]
         if year not in self._seasons:
             # Um piloto pode mudar de equipe durante a temporada: devolvemos a última
             # inscrição registrada e informamos o GP de origem daquele registro.
@@ -133,4 +141,4 @@ def race_driver_record(record):
 def roster_provenance(database, event):
     return {**database.provenance, 'grand_prix': event['grand_prix'],
             'grid': 'starting_grid_position', 'abbreviation': 'generated_from_name',
-            'team_color': 'unknown'}
+            'team_color': 'display_palette'}

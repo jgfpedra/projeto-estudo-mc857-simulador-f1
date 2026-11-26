@@ -342,7 +342,7 @@ class RaceManager:
         roster = list(roster[:num_drivers])
         while len(roster) < num_drivers:
             i = len(roster)+1
-            roster.append(driver_record(f'P{i:02d}', f'Piloto {i:02d}', None, None, '808080'))
+            roster.append(driver_record(f'P{i:02d}', f'Piloto {i:02d}', None, None, None))
         if user_driver_id is not None and user_driver_id not in {entry['driver_id'] for entry in roster}:
             raise ValueError('O piloto do usuário deve pertencer ao grid da corrida.')
         drivers = [replace(DEFAULT_DRIVERS[i % len(DEFAULT_DRIVERS)], driver_id=entry['driver_id'], name=entry['name'],

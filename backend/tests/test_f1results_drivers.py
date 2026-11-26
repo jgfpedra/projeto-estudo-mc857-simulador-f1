@@ -16,12 +16,16 @@ def test_real_grids_and_offline_seasons():
         ('Ronnie Peterson', 2, 1), ('Emerson Fittipaldi', 1, 2)]
     assert roster[0]['team_name'] == 'John Player Team Lotus'
     assert roster[0]['abbreviation_source'] == 'generated_from_name'
-    assert roster[0]['team_color_source'] == 'unknown'
+    assert roster[0]['team_color_source'] == 'generated_for_team'
+    assert roster[0]['team_color'] == roster[1]['team_color'] != '#808080'
     assert all(r['historical_grid_position'] > 0 for r in roster)
     assert len(db.race_roster('interlagos', 1979)[1]) == 24
     assert {'Ronnie Peterson', 'Emerson Fittipaldi'} <= {r['name'] for r in db.load_season_drivers(1973)}
     assert 1950 in db.get_available_seasons() and 2026 in db.get_available_seasons()
     assert len({r['id'] for r in db.load_season_drivers(1973)}) == len(db.load_season_drivers(1973))
+    modern = {r['name']: r for r in db.race_roster('monza', 2025)[1]}
+    assert modern['Max Verstappen']['team_color'] == '#3671C6'
+    assert modern['Lando Norris']['team_color'] == '#FF8000'
 
 
 def test_ambiguous_event_requires_selection():
