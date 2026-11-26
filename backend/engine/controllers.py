@@ -55,6 +55,7 @@ class CarInput:
     brake: float = 0.0
     grip_override: Optional[float] = None
     throttle: Optional[float] = None
+    reverse_speed_mps: float = 0.0  # alvo de ré para manobras de recuperação
 
     @classmethod
     def neutral(cls) -> "CarInput":

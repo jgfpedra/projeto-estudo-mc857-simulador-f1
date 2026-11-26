@@ -16,8 +16,12 @@ DEFAULT_PATH = Path(__file__).resolve().parents[2] / 'config' / 'historical_trac
 
 @lru_cache(maxsize=4)
 def load_historical_snapshot(path=None):
-    selected = Path(path or os.environ.get('F1_RESULTS_TRACKS_PATH') or DEFAULT_PATH)
-    data = json.loads(selected.read_text(encoding='utf-8'))
+    from storage import postgres
+    if path is None and not os.environ.get('F1_RESULTS_TRACKS_PATH') and postgres.configured():
+        data = postgres.catalog('f1results_tracks')
+    else:
+        selected = Path(path or os.environ.get('F1_RESULTS_TRACKS_PATH') or DEFAULT_PATH)
+        data = json.loads(selected.read_text(encoding='utf-8'))
     if not isinstance(data.get('geometries'), dict) or not isinstance(data.get('races'), dict):
         raise ValueError('Catálogo de geometrias históricas inválido')
     return data
@@ -50,7 +54,7 @@ def grid_along_track(points, width_m, slots=24):
 
 
 class HistoricalResultsProvider:
-    """Fonte local versionada, usada após telemetria e pistas congeladas."""
+    """Fonte local versionada de geometria e grid por circuito e temporada."""
     def __init__(self, snapshot=None, catalog=None):
         self.snapshot = snapshot
         self.catalog = catalog

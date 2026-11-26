@@ -1,13 +1,10 @@
-import { useState } from "react"
-import { Play, Settings, Trophy } from "lucide-react"
+import { Play, Trophy } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
-import { SettingsDialog } from "@/components/settings-dialog"
-import { useNavigate } from "react-router-dom"
 
 export function MainMenu() {
   const navigate = useNavigate()
-  const [settingsOpen, setSettingsOpen] = useState(false)
 
   function handleStart() {
     navigate("/circuit-selection")
@@ -56,26 +53,6 @@ export function MainMenu() {
                   →
                 </span>
               </Button>
-
-              <Button
-                onClick={() => window.location.assign(import.meta.env.VITE_VIZ3D_URL || `${window.location.protocol}//${window.location.hostname}:3001/?live=1`)}
-                variant='outline'
-                size='lg'
-                className='h-16 justify-start gap-3 rounded-none border-border bg-background/70 px-6 text-lg font-bold uppercase tracking-wider'
-              >
-                <Play className='h-5 w-5' />
-                Corrida 3D ao vivo
-              </Button>
-
-              <Button
-                onClick={() => setSettingsOpen(true)}
-                variant='outline'
-                size='lg'
-                className='h-16 justify-start gap-3 rounded-none border-border bg-background/70 px-6 text-lg font-bold uppercase tracking-wider text-foreground hover:bg-accent hover:text-accent-foreground'
-              >
-                <Settings className='h-5 w-5' />
-                Configurações
-              </Button>
             </div>
 
             <div className='mt-12 flex items-center gap-3 text-sm text-muted-foreground'>
@@ -92,8 +69,6 @@ export function MainMenu() {
           01
         </span>
       </div>
-
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </main>
   )
 }

@@ -185,7 +185,7 @@ function parseFinal(raw: unknown): FinalEntry | null {
 export function parseSnapshot(raw: unknown): RaceSnapshot | null {
   if (!isObj(raw)) return null
   return {
-    status: raw.status === "finished" ? "finished" : "running",
+    status: raw.status === "finished" || raw.status === "cancelled" ? raw.status : "running",
     simTs: num(raw.sim_ts) ?? 0,
     lastFrame: parseFrame(raw.last_tick),
     classification: Array.isArray(raw.classification)

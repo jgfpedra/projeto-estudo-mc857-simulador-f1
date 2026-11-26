@@ -56,9 +56,9 @@ def test_catalog_shows_real_layouts_and_recorded_years(ctx):
     assert [v['id'] for v in interlagos['layouts']] == ['interlagos-1', 'interlagos-2']
     assert all(v['simulable'] for v in interlagos['layouts'])
     monza = next(c for c in circuits if c['id'] == 'monza')
-    assert len(monza['layouts']) == 7
-    assert len([v for v in monza['layouts'] if v['simulable']]) == 6
-    assert not next(v for v in monza['layouts'] if v['id'] == 'monza-2')['simulable']
+    assert len(monza['layouts']) == 6
+    assert all(v['simulable'] for v in monza['layouts'])
+    assert all(v['id'] != 'monza-2' for v in monza['layouts'])
 
 
 def test_2d_grid_1968_uses_austin_layout_reference_and_warns(ctx):

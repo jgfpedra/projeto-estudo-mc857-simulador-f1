@@ -4,12 +4,15 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import time
+import uuid
 import anyio
 import redis
 import redis.asyncio as aioredis
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from .race_manager import REDIS_URL, race_manager
+from .redis_client import async_client
 from .schemas import (PitStopCancelResponse, PitStopRequest, PitStopResponse,
                       RaceSetupRequest, RaceSetupResponse)
 from domain import TyreCompound
@@ -17,10 +20,24 @@ from database.f1results_database import AmbiguousHistoricalEvent, F1ResultsDrive
 from service.driver_service import DriverService
 from .providers.historical_f1results import load_historical_snapshot
 from .providers.race_data import driver_record
+from .providers.track_reference import verified_layout_ids
+from storage import postgres
 
 
 app = FastAPI(title='F1 Simulator API')
-driver_service = DriverService()
+driver_service = DriverService(db=F1ResultsDriverDatabase() if postgres.configured() else None)
+
+@app.on_event('startup')
+def start_recovery():
+    getattr(race_manager, "start_recovery", lambda: None)()
+    if postgres.configured() and race_manager.catalog is not None:
+        from storage.svg import warm_catalog
+        warm_catalog(race_manager.catalog.circuits, verified_layout_ids(race_manager.catalog))
+
+@app.on_event('shutdown')
+def stop_recovery():
+    getattr(race_manager, "stop_recovery", lambda: None)()
+
 origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174,http://localhost:3000,http://localhost:3001,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:3000,http://127.0.0.1:3001').split(',')
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=['*'], allow_headers=['*'])
 
@@ -46,7 +63,8 @@ def create_race(req: RaceSetupRequest):
             for driver_id in req.grid:
                 d = available[driver_id]
                 record = driver_record(d.get('abbreviation') or '', d.get('name') or driver_id,
-                                       d.get('number', d.get('permanent_number')), d.get('team_name'), d.get('team_color'))
+                                       d.get('number', d.get('permanent_number')), d.get('team_name'),
+                                       d.get('team_color'), color_source=d.get('team_color_source'))
                 record['driver_id'] = driver_id
                 selected_roster.append(record)
         options = {
@@ -209,40 +227,46 @@ def list_historical_grid(season: int, circuit_id: str, grand_prix: str | None = 
 
 
 @app.get('/circuits')
-def list_circuits(season: int | None = None):
+def list_circuits(season: int | None = None, include_unavailable: bool = False):
     catalog = race_manager.catalog
     if catalog is None:
         raise HTTPException(status_code=503, detail='Catálogo F1DB indisponível')
-    snapshot = load_historical_snapshot()
-    historical_years = {}
-    for key in snapshot['races']:
-        circuit_id, year = key.rsplit(':', 1)
-        historical_years.setdefault(circuit_id, []).append(int(year))
+    available = verified_layout_ids(catalog)
     circuits = []
     for circuit in catalog.circuits:
         layouts = circuit.get('layouts', [])
         latest = max((item.get('last_year') or 0 for item in layouts), default=0)
-        historical_layouts = {layout['id'] for year in historical_years.get(circuit['id'], [])
-                              if (layout := catalog.find_layout(circuit, year)) is not None}
         current_id = circuit.get('current_layout_id')
         detailed = [{**item, 'is_current': item['id'] == current_id if current_id else
                                          (item.get('last_year') or 0) == latest,
-                     'simulable': (item.get('last_year') or 0) >= 2018
-                                  or item['id'] in historical_layouts} for item in layouts]
-        circuits.append({**circuit, 'layouts_count': len(layouts), 'layouts': detailed,
+                     'simulable': item['id'] in available} for item in layouts
+                    if include_unavailable or item['id'] in available]
+        if postgres.configured():
+            for item in detailed:
+                item['svg'] = {
+                    style: f"/circuits/svg/{item['id']}/{style}"
+                    for style, url in (item.get('svg') or {}).items() if url
+                }
+        if not detailed and not include_unavailable:
+            continue
+        circuits.append({**circuit, 'layouts_count': len(detailed), 'layouts': detailed,
                          'simulable': any(item['simulable'] for item in detailed)})
     if season is None:
         return {'catalog': catalog.provenance, 'circuits': circuits}
     database = F1ResultsDriverDatabase()
+    snapshot = load_historical_snapshot()
     events = [event_summary(e, snapshot) for e in database.events(season)]
     by_id = {c['id']: c for c in circuits}
+    known_ids = {c['id'] for c in catalog.circuits}
     for event in events:
         item = by_id.get(event['circuit_id'])
         if item is not None:
-            item.setdefault('events', []).append(event)
+            layout = catalog.find_layout(item, season)
+            if include_unavailable or (layout and layout['id'] in available):
+                item.setdefault('events', []).append(event)
     return {'catalog': catalog.provenance, 'season': season, 'source': database.provenance,
             'circuits': [c for c in circuits if c.get('events')],
-            'unmapped_events': [e for e in events if e['circuit_id'] not in by_id]}
+            'unmapped_events': [e for e in events if e['circuit_id'] not in known_ids]}
 
 
 @app.get('/circuits/{circuit_id}/layouts')
@@ -255,6 +279,31 @@ def circuit_layout_history(circuit_id: str):
         raise HTTPException(status_code=404, detail='Circuito não encontrado no catálogo F1DB')
     return {'circuit_id': circuit['id'], 'name': circuit['full_name'],
             'catalog': catalog.provenance, 'layouts': circuit['layouts']}
+
+
+@app.get('/circuits/svg/{layout_id}/{style}')
+def circuit_svg(layout_id: str, style: str):
+    catalog = race_manager.catalog
+    if not postgres.configured() or catalog is None:
+        raise HTTPException(404, 'Catálogo de SVG não configurado')
+    layout = next((item for circuit in catalog.circuits for item in circuit.get('layouts', [])
+                   if item['id'] == layout_id), None)
+    url = (layout.get('svg') or {}).get(style) if layout else None
+    if not url:
+        raise HTTPException(404, 'SVG não encontrado')
+    from storage.svg import PREFIX, get_svg
+    if not url.startswith(PREFIX):
+        raise HTTPException(404, 'Fonte de SVG não configurada')
+    try:
+        content = get_svg(layout_id, style, url)
+    except (OSError, ValueError) as exc:
+        # Preserve the catalog image during a transient preload or download failure.
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url)
+    return Response(content=content, media_type='image/svg+xml', headers={
+        'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+        'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'public, max-age=86400',
+    })
 
 
 @app.post('/races/{race_id}/drivers/{driver_id}/pit-stop', status_code=202, response_model=PitStopResponse)
@@ -306,8 +355,20 @@ def get_race_snapshot(race_id: str):
 
 @app.websocket('/ws/races/{race_id}')
 async def race_websocket(websocket: WebSocket, race_id: str):
-    client = aioredis.from_url(REDIS_URL, decode_responses=True, socket_connect_timeout=2)
+    client = async_client(REDIS_URL)
     pubsub = client.pubsub()
+    manager = race_manager
+    attached = False
+    viewer_id = uuid.uuid4().hex if getattr(manager, '_distributed', False) else None
+    viewers_key = f'race:{race_id}:viewers'
+
+    async def refresh_viewer():
+        now = time.time()
+        async with client.pipeline(transaction=True) as pipe:
+            pipe.zremrangebyscore(viewers_key, '-inf', now)
+            pipe.zadd(viewers_key, {viewer_id: now + 15.0})
+            pipe.expire(viewers_key, 60)
+            await pipe.execute()
     try:
         if not await client.exists(f'race:{race_id}:meta'):
             await websocket.close(code=4404)
@@ -315,6 +376,10 @@ async def race_websocket(websocket: WebSocket, race_id: str):
         # Inscrever antes de ler o último estado evita perder ticks na conexão.
         await pubsub.subscribe(f'race:{race_id}:events')
         await websocket.accept()
+        if viewer_id is not None:
+            await refresh_viewer()
+        else:
+            attached = manager.attach_viewer(race_id)
         start_event = await client.get(f'race:{race_id}:start')
         start_sent = bool(start_event)
         if start_event:
@@ -338,6 +403,8 @@ async def race_websocket(websocket: WebSocket, race_id: str):
                 if final_tick['sim_ts'] > last_tick:
                     await websocket.send_json(final_tick)
             await websocket.send_text(result)
+            if json.loads(result).get('type') == 'race_cancelled':
+                await websocket.close(code=4410)
             return
 
         async def forward():
@@ -350,11 +417,16 @@ async def race_websocket(websocket: WebSocket, race_id: str):
                     if start_sent:
                         continue
                     start_sent = True
+                if payload.get('type') == 'race_recovered':
+                    last_tick = -1.0
                 if payload.get('type') == 'tick':
                     if payload['sim_ts'] <= last_tick:
                         continue
                     last_tick = payload['sim_ts']
                 await websocket.send_json(payload)
+                if payload.get('type') == 'race_cancelled':
+                    await websocket.close(code=4410)
+                    return
                 if payload.get('type') in ('race_end', 'race_error'):
                     return
 
@@ -364,6 +436,12 @@ async def race_websocket(websocket: WebSocket, race_id: str):
                     return
 
         tasks = [asyncio.create_task(forward()), asyncio.create_task(wait_for_disconnect())]
+        if viewer_id is not None:
+            async def heartbeat():
+                while True:
+                    await asyncio.sleep(5)
+                    await refresh_viewer()
+            tasks.append(asyncio.create_task(heartbeat()))
         try:
             done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
             for task in done:
@@ -379,6 +457,14 @@ async def race_websocket(websocket: WebSocket, race_id: str):
     except redis.RedisError:
         await websocket.close(code=1011)
     finally:
+        if attached:
+            manager.detach_viewer(race_id)
         with anyio.CancelScope(shield=True):
+            if viewer_id is not None:
+                with anyio.move_on_after(2):
+                    try:
+                        await client.zrem(viewers_key, viewer_id)
+                    except redis.RedisError:
+                        pass  # o heartbeat expira mesmo se o Redis estiver trocando de primário
             await pubsub.aclose()
             await client.aclose()

@@ -146,7 +146,7 @@ export type LiveMessage =
 
 /** GET /races/{race_id}/snapshot. */
 export type RaceSnapshot = {
-  status: "running" | "finished"
+  status: "running" | "finished" | "cancelled"
   simTs: number
   lastFrame: Frame | null
   classification: FinalEntry[] | null

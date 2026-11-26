@@ -18,6 +18,7 @@ from typing import Any, Dict, Optional, Tuple
 import numpy as np
 
 from .controllers import CarController, CarInput, EnvironmentState
+from .physics import CHASSIS_LENGTH_M, CHASSIS_WIDTH_M
 
 
 @dataclass
@@ -44,8 +45,18 @@ class _DriverStyle:
     escape_left_s: float = 0.0
     escape_cooldown_s: float = 0.0
     queue_avoid_id: Optional[str] = None
+    queue_end_id: Optional[str] = None
     queue_avoid_lane_m: float = 0.0
     queue_blocked_s: float = 0.0
+    queue_stopped_s: float = 0.0
+    queue_lane_blocked_s: float = 0.0
+    queue_reverse_origin: Optional[Tuple[float, float]] = None
+    queue_reverse_until_s: float = 0.0
+    queue_reverse_retry_s: float = 0.0
+    queue_backed_up: bool = False
+    gridlock_stopped_s: float = 0.0
+    gridlock_anchor: Optional[Tuple[float, float]] = None
+    gridlock_retry_s: float = 0.0
     launch_offset_m: Optional[float] = None
     corner_armed: bool = False
     corner_exit_window_s: float = 0.0
@@ -53,6 +64,21 @@ class _DriverStyle:
     corner_error_left_s: float = 0.0
     corner_error_factor: float = 1.0
     corner_error_count: int = 0
+
+
+@dataclass
+class _GridlockMove:
+    driver_id: str
+    waiting_ids: frozenset[str]
+    origin: Tuple[float, float]
+    direction: int
+    distance_m: float
+    until_s: float
+
+    def input(self) -> CarInput:
+        if self.direction < 0:
+            return CarInput(reverse_speed_mps=1.6)
+        return CarInput(target_speed_mps=1.6)
 
 
 class RuleBasedRaceController(CarController):
@@ -155,6 +181,7 @@ class RuleBasedRaceController(CarController):
         self._projection_env = None
         self._projection_cache: Dict[str, Tuple[float, float, Tuple[float, float]]] = {}
         self._styles: Dict[str, _DriverStyle] = {}
+        self._gridlock: Optional[_GridlockMove] = None
         self.last_authority: Dict[str, str] = {}
         self.REJOIN_RAMP_ENABLED = False
 
@@ -274,6 +301,7 @@ class RuleBasedRaceController(CarController):
         self._projection_env = None
         self._projection_cache.clear()
         self._styles.clear()
+        self._gridlock = None
         self.last_authority.clear()
 
     def on_pit_exit(self, driver_id: str) -> None:
@@ -289,7 +317,16 @@ class RuleBasedRaceController(CarController):
             style.escape_left_s = 0.0
             style.escape_cooldown_s = 0.0
             style.queue_avoid_id = None
+            style.queue_end_id = None
             style.queue_blocked_s = 0.0
+            style.queue_stopped_s = 0.0
+            style.queue_lane_blocked_s = 0.0
+            style.queue_reverse_origin = None
+            style.queue_reverse_retry_s = 0.0
+            style.queue_backed_up = False
+            style.gridlock_stopped_s = 0.0
+            style.gridlock_anchor = None
+            style.gridlock_retry_s = 0.0
             style.corner_armed = False
             style.corner_exit_window_s = 0.0
             style.corner_error_left_s = 0.0
@@ -337,6 +374,135 @@ class RuleBasedRaceController(CarController):
 
     def _segment_at(self, s: float) -> int:
         return int(np.searchsorted(self._seg_s, s % self._track_len, side="right") - 1) % len(self._a)
+
+    def _queue_reverse_clear(self, env: EnvironmentState, driver_state: Any,
+                             distance_m: float) -> bool:
+        x, y = driver_state.position_x, driver_state.position_y
+        forward_x = math.cos(driver_state.heading_rad)
+        forward_y = math.sin(driver_state.heading_rad)
+        # Keep the chassis inside the asphalt, including its rear overhang.
+        for distance in (2.5, 2.5 + distance_m):
+            if self.track.distance_to_centerline(
+                x - distance * forward_x, y - distance * forward_y,
+            ) > self._half_width - 1.0:
+                return False
+        for other_id, other in env.all_driver_states.items():
+            if other_id == driver_state.driver_id:
+                continue
+            dx, dy = other.position_x - x, other.position_y - y
+            rear = -(dx * forward_x + dy * forward_y)
+            lateral = abs(-dx * forward_y + dy * forward_x)
+            closing = max(0.0, other.velocity_mps *
+                          math.cos(other.heading_rad - driver_state.heading_rad))
+            if -1.0 < rear < distance_m + 6.0 + closing and lateral < 3.4:
+                return False
+        return True
+
+    def _gridlock_path_clear(self, env: EnvironmentState, car: Any,
+                             direction: int, distance: float) -> bool:
+        """Check the full swept chassis against other cars at low speed."""
+        x, y = car.position_x, car.position_y
+        fx, fy = math.cos(car.heading_rad), math.sin(car.heading_rad)
+        half_length = CHASSIS_LENGTH_M / 2.0
+        half_width = CHASSIS_WIDTH_M / 2.0
+        for other_id, other in env.all_driver_states.items():
+            if other_id == car.driver_id:
+                continue
+            dx, dy = other.position_x - x, other.position_y - y
+            travel = max(0.0, other.velocity_mps) * 0.8
+            if dx * dx + dy * dy > (distance + 6.0 + travel) ** 2:
+                continue
+            ox, oy = math.cos(other.heading_rad), math.sin(other.heading_rad)
+            dx += ox * travel / 2.0
+            dy += oy * travel / 2.0
+            entry, exit = -math.inf, math.inf
+            for ax, ay in ((fx, fy), (-fy, fx), (ox, oy), (-oy, ox)):
+                projected = dx * ax + dy * ay
+                rate = direction * (fx * ax + fy * ay)
+                extent = (half_length * abs(fx * ax + fy * ay)
+                          + half_width * abs(-fy * ax + fx * ay)
+                          + (half_length + travel / 2.0) * abs(ox * ax + oy * ay)
+                          + half_width * abs(-oy * ax + ox * ay) + 0.15)
+                if abs(rate) < 1e-6:
+                    if abs(projected) > extent:
+                        break
+                    continue
+                a = (projected - extent) / rate
+                b = (projected + extent) / rate
+                entry, exit = max(entry, min(a, b)), min(exit, max(a, b))
+                if entry > exit:
+                    break
+            else:
+                # Allow motion away from a chassis already touching this car.
+                if entry <= distance + 0.25 and exit > 0.2:
+                    return False
+        return True
+
+    def _gridlock_input(self, env: EnvironmentState, car: Any,
+                        style: _DriverStyle, dt: float, speed: float) -> Optional[CarInput]:
+        now = float(env.sim_ts)
+        position = (car.position_x, car.position_y)
+        move = self._gridlock
+        if move is not None and (now >= move.until_s or move.driver_id not in env.all_driver_states
+                                 or getattr(env.all_driver_states[move.driver_id], "pitting", False)):
+            if move.driver_id == car.driver_id:
+                self._gridlock = None
+                style.gridlock_stopped_s = 0.0
+                return CarInput.brake_full()
+            self._gridlock = move = None
+        if move is not None:
+            if move.driver_id == car.driver_id:
+                remaining = move.distance_m - math.dist(position, move.origin)
+                if remaining > 0.0 and self._gridlock_path_clear(env, car, move.direction, remaining):
+                    self.last_authority[car.driver_id] = "traffic-unblock"
+                    return move.input()
+                self._gridlock = None
+                style.gridlock_stopped_s = 0.0
+                return CarInput.brake_full()
+            if car.driver_id in move.waiting_ids and speed < 2.0:
+                self.last_authority[car.driver_id] = "traffic-yield"
+                return CarInput.brake_full()
+            return None
+
+        if speed > 1.2 or now < 5.0:
+            style.gridlock_stopped_s = 0.0
+            style.gridlock_anchor = None
+            return None
+        nearby = frozenset(
+            other_id for other_id, other in env.all_driver_states.items()
+            if other_id != car.driver_id and not getattr(other, "pitting", False)
+            and other.velocity_mps < 1.6
+            and math.dist(position, (other.position_x, other.position_y)) < 9.0
+        )
+        if len(nearby) < 2:
+            style.gridlock_stopped_s = 0.0
+            style.gridlock_anchor = None
+            return None
+        if style.gridlock_anchor is None or math.dist(position, style.gridlock_anchor) > 1.4:
+            style.gridlock_stopped_s = 0.0
+            style.gridlock_anchor = position
+        style.gridlock_stopped_s += dt
+        if style.gridlock_stopped_s < 2.5 or now < style.gridlock_retry_s:
+            return None
+        style.gridlock_retry_s = now + 0.8
+        fx, fy = math.cos(car.heading_rad), math.sin(car.heading_rad)
+        options = []
+        for direction in (1, -1):
+            for distance in (4.5, 3.0, 1.8):
+                end_x = position[0] + direction * distance * fx
+                end_y = position[1] + direction * distance * fy
+                lateral = self.track.distance_to_centerline(end_x, end_y)
+                if lateral <= self._half_width + 2.0 and self._gridlock_path_clear(env, car, direction, distance):
+                    options.append((max(0.0, lateral - self._half_width), -distance, -direction))
+        if not options:
+            return None
+        _, neg_distance, neg_direction = min(options)
+        self._gridlock = _GridlockMove(car.driver_id, nearby, position, -neg_direction,
+                                      -neg_distance, now + 6.0)
+        style.gridlock_retry_s = now + 8.0
+        style.queue_reverse_origin = None
+        self.last_authority[car.driver_id] = "traffic-unblock"
+        return self._gridlock.input()
 
     def _point_at(self, s: float, lateral_offset_m: float = 0.0,
                   centerline: bool = False) -> Tuple[float, float]:
@@ -457,6 +623,7 @@ class RuleBasedRaceController(CarController):
         downforce_per_speed_sq: float,
         braking_accel: float,
         aero_drag_multiplier: float = 1.0,
+        recovering: bool = False,
     ) -> Tuple[float, float]:
         """Smooth speed tracking with drag/rolling-resistance feed-forward."""
         specs = driver_state.car.specs
@@ -485,9 +652,14 @@ class RuleBasedRaceController(CarController):
             # tire traction. A 6 m/s² request was below what this F1 model can
             # deliver after slow corners, leaving throttle unused on exits.
             accel_request = min(
-                self._max_target_accel_mps2, 0.85 * speed_error,
+                self._max_target_accel_mps2, (1.35 if recovering else 0.85) * speed_error,
             )
-            required_force = rolling_force + drag_force + mass * accel_request
+            steering_drag = 0.0
+            if recovering and speed_error > 0.0:
+                steering_drag = min(
+                    0.50 * mass * self.G, max(0.0, driver_state.cornering_drag_n),
+                )
+            required_force = rolling_force + drag_force + steering_drag + mass * accel_request
             if required_force > 0.0:
                 required_power = required_force * max(speed_abs, 1.0)
                 available_power = max(1.0, float(specs.power_kw) * 1000.0)
@@ -563,6 +735,9 @@ class RuleBasedRaceController(CarController):
             driver_id, float(driver_state.position_x), float(driver_state.position_y),
         )
         speed = max(0.0, float(driver_state.velocity_mps))
+        unblock_input = self._gridlock_input(env, driver_state, style, dt, speed)
+        if unblock_input is not None:
+            return unblock_input
         track_heading = float(self._heading[self._segment_at(s)])
         heading_error = self._wrap(track_heading - float(driver_state.heading_rad))
         near_edge_and_wrong_way = (
@@ -663,6 +838,7 @@ class RuleBasedRaceController(CarController):
                     break
         if (style.escape_left_s <= 0.0 and style.escape_cooldown_s <= 0.0
                 and style.blocked_time_s >= 0.8 and escape_clear
+                and (style.queue_avoid_id is None or not style.queue_backed_up)
                 and abs(signed_lat) < self._half_width + 2.0):
             style.escape_left_s = 1.2
             style.escape_cooldown_s = 5.0
@@ -683,48 +859,91 @@ class RuleBasedRaceController(CarController):
         # track into a queue. Pick a corridor that has room for the car, and
         # keep it until the obstacle is behind. Normal overtaking remains
         # conservative at racing speed.
+        # Wait for the launch formation before treating a stationary pack
+        # as an obstruction. Once committed, hold the lane past the last car.
+        formation_s = self.AIN_DIAB_FORMATION_HOLD_S if pack_tuning else 2.0
         slow_blocker = (not rejoining and blocker is not None
-                        and (not pack_tuning or env.sim_ts >= 4.0)
-                        and 0.35 < blocker_gap < 15.0 and speed < 5.0
-                        and float(blocker.velocity_mps) < 2.5)
+                        and env.sim_ts >= formation_s and blocker_gap < 15.0
+                        and speed < 5.0 and float(blocker.velocity_mps) < 2.5)
         style.queue_blocked_s = style.queue_blocked_s + dt if slow_blocker else 0.0
         queue_target = env.all_driver_states.get(style.queue_avoid_id)
+        queue_end = env.all_driver_states.get(style.queue_end_id)
         queue_gap = None
-        if queue_target is not None:
-            queue_s, queue_lat = self._project_in_frame(
-                queue_target.driver_id, float(queue_target.position_x), float(queue_target.position_y),
+        queue_lane_obstructed = False
+        if queue_target is not None and queue_end is not None:
+            end_s, _ = self._project_in_frame(queue_end.driver_id, queue_end.position_x, queue_end.position_y)
+            end_gap = self._forward_gap(s, end_s, self._track_len)
+            merge_clear = not any(
+                -7.0 < gap < 12.0 and abs(lat - line_offset) < 3.2
+                for _, gap, lat in nearby_cars
+            ) and not any(
+                (0.0 < gap < 10.0 or (abs(gap) < 0.2 and other_id < driver_id))
+                for other_id, gap, _ in nearby_cars
             )
-            queue_gap = self._forward_gap(s, queue_s, self._track_len)
-            if (not -8.0 < queue_gap < 20.0 or rejoining
-                    or (queue_gap > 8.0 and float(queue_target.velocity_mps) > 5.0)):
+            if end_gap <= -8.0 and (merge_clear or end_gap <= -30.0):
                 queue_target = None
-                style.queue_avoid_id = None
-        if queue_target is None and style.queue_blocked_s >= 0.4:
+                style.avoid_offset_m = max(-room, min(room, signed_lat - line_offset))
+            elif end_gap >= 48.0 or rejoining or (end_gap > 8.0 and queue_end.velocity_mps > 5.0):
+                queue_target = None
+            else:
+                queue_s, queue_lat = self._project_in_frame(
+                    queue_target.driver_id, queue_target.position_x, queue_target.position_y,
+                )
+                queue_gap = self._forward_gap(s, queue_s, self._track_len)
+        else:
+            queue_target = None
+        if queue_target is None and style.queue_blocked_s >= 1.5:
+            queue = [(blocker.driver_id, blocker_gap, blocker_lat)]
+            for other_id, gap, lat in sorted(nearby_cars, key=lambda item: item[1]):
+                if (blocker_gap < gap <= min(40.0, queue[-1][1] + 10.0)
+                        and abs(lat - blocker_lat) < 2.5
+                        and env.all_driver_states[other_id].velocity_mps < 2.5):
+                    queue.append((other_id, gap, lat))
+            end_id, end_gap, _ = queue[-1]
+            edge = self._half_width - 1.2
+            lanes = (min(lat for _, _, lat in queue) - 3.6, max(lat for _, _, lat in queue) + 3.6)
             candidates = []
-            for side in (-1.0, 1.0):
-                lane = blocker_lat + side * 3.6
-                if abs(lane) > self._half_width - 1.2:
+            for lane in lanes:
+                if abs(lane) > edge:
                     continue
-                if any(other_id != blocker.driver_id and -7.0 < gap < 12.0
-                       and abs(other_lat - lane) < 3.2
-                       for other_id, gap, other_lat in nearby_cars):
-                    continue
-                candidates.append((abs(lane - signed_lat), lane))
+                corridor = [abs(lat - lane) for _, gap, lat in nearby_cars
+                            if -7.0 < gap < max(12.0, end_gap + 6.0)]
+                clearance = min(corridor, default=edge)
+                if clearance >= 3.2:
+                    candidates.append((-clearance, abs(lane - signed_lat), lane))
             if candidates:
-                _, style.queue_avoid_lane_m = min(candidates)
+                _, _, style.queue_avoid_lane_m = min(candidates)
                 style.queue_avoid_id = blocker.driver_id
+                style.queue_end_id = end_id
+                style.queue_backed_up = False
                 queue_target, queue_gap, queue_lat = blocker, blocker_gap, blocker_lat
         queue_avoiding = queue_target is not None
-        queue_lane_obstructed = False
+        lane_follow_speed = math.inf
         if queue_avoiding:
             lane = style.queue_avoid_lane_m
-            if (abs(queue_lat - lane) < 2.8
-                    or any(other_id != queue_target.driver_id and -7.0 < gap < 12.0
-                           and abs(other_lat - lane) < 3.2
-                           for other_id, gap, other_lat in nearby_cars)):
-                style.queue_avoid_id = None
-                queue_avoiding = False
-                queue_lane_obstructed = True
+            queue_lane_obstructed = (
+                0.0 < queue_gap < 12.0 and abs(queue_lat - lane) < 2.8
+            )
+            for other_id, gap, other_lat in nearby_cars:
+                if abs(other_lat - lane) >= 3.2:
+                    continue
+                if -5.5 < gap <= 0.0 and abs(lane - signed_lat) >= 1.5:
+                    queue_lane_obstructed = True
+                elif 0.0 < gap < 18.0:
+                    other = env.all_driver_states[other_id]
+                    available = max(0.0, gap - (CHASSIS_LENGTH_M + 1.5 + speed * 0.25))
+                    lane_follow_speed = min(
+                        lane_follow_speed, math.sqrt(other.velocity_mps ** 2 + 2.0 * 5.0 * available),
+                    )
+                    if available == 0.0 and other.velocity_mps < 1.0:
+                        queue_lane_obstructed = True
+        style.queue_lane_blocked_s = style.queue_lane_blocked_s + dt if queue_lane_obstructed else 0.0
+        if style.queue_lane_blocked_s >= 3.0 and abs(style.queue_avoid_lane_m - signed_lat) > 2.0:
+            queue_avoiding = False
+            style.queue_lane_blocked_s = 0.0
+        if not queue_avoiding:
+            style.queue_avoid_id = None
+            style.queue_end_id = None
         if pack_tuning and style.launch_offset_m is None:
             style.launch_offset_m = max(-room, min(room, signed_lat - line_offset))
         passing_target = env.all_driver_states.get(style.avoid_target_id)
@@ -808,6 +1027,11 @@ class RuleBasedRaceController(CarController):
         # o piso precisa encolher para 3.2m para não mirar fora do arco da curva.
         if rejoining:
             lookahead = max(4.0, min(8.0, 4.0 + speed * 0.1))
+            if abs(heading_error) < math.radians(50) and abs(signed_lat) > self._half_width:
+                # Aim downstream when already facing forward so the car can
+                # work its way back in instead of turning across the asphalt.
+                depth = abs(signed_lat) - self._half_width
+                lookahead = min(24.0, 8.0 + depth * 0.85)
             target_x, target_y = self._point_at(
                 s + lookahead, centerline=True,
             )
@@ -925,36 +1149,29 @@ class RuleBasedRaceController(CarController):
             target_speed *= self.INTERLAGOS_ATTACK_SPEED_MULTIPLIER
         target_speed *= style.skill * style.lap_noise * style.form_factor
 
-        if pack_tuning:
-            follow_brake = 0.0
-            if (blocker is not None and abs(blocker_lat - signed_lat) < follow_clearance):
-                # Bound the closing speed before the car ahead brakes. The old
-                # fixed 38 m detection only reacted once the queue was very close.
-                bumper_gap = 6.0 + min(12.0, speed * 0.20)
-                available = max(0.0, blocker_gap - bumper_gap)
-                front_speed = max(0.0, float(blocker.velocity_mps))
-                safe_speed = math.sqrt(front_speed * front_speed + 2.0 * 14.0 * available)
-                target_speed = min(target_speed, safe_speed)
-                if speed > safe_speed + 0.5:
-                    follow_brake = min(0.85, (speed - safe_speed) / 4.8)
+        unobstructed_speed = target_speed
+        follow_brake = 0.0
+        if blocker is not None:
+            bumper_gap = CHASSIS_LENGTH_M + 1.5 + min(12.0, speed * 0.20)
+            if speed < 5.0 and blocker.velocity_mps < 1.0 and env.sim_ts >= formation_s:
+                bumper_gap = max(bumper_gap, 8.0)  # room to turn out of the queue
+            available = max(0.0, blocker_gap - bumper_gap)
+            front_speed = max(0.0, float(blocker.velocity_mps))
+            deceleration = min(14.0, braking_accel)
+            safe_speed = math.sqrt(front_speed * front_speed + 2.0 * deceleration * available)
+            target_speed = min(target_speed, safe_speed)
+            if speed > safe_speed + 0.5:
+                follow_brake = min(0.85, (speed - safe_speed) / 4.8)
 
-        else:
+        if (blocker is not None and speed < 6.0 and not queue_avoiding
+                and (follow_brake > 0.0 or target_speed < 2.5)
+                and (rejoining or abs(blocker_lat - signed_lat) >= self.FOLLOW_LATERAL_CLEARANCE_M)
+                and abs(alpha) < math.radians(20)
+                and self._gridlock_path_clear(env, driver_state, 1, 4.0)):
+            # Track progress alone can put a car "ahead" even when it is
+            # clear of the direction we need to move in.
+            target_speed = min(unobstructed_speed, 5.0)
             follow_brake = 0.0
-            if (blocker is not None
-                    and abs(blocker_lat - signed_lat) < follow_clearance):
-                closing = max(0.0, speed - float(blocker.velocity_mps))
-                if passing_allowed:
-                    safe_gap = 5.2 + min(3.0, speed * 0.04) + min(6.0, closing * 0.4)
-                else:
-                    safe_gap = 8.0 + min(5.0, speed * 0.12) + min(8.0, closing * 0.6)
-                gap_error = safe_gap - blocker_gap
-                if gap_error > 0.0:
-                    target_speed = min(
-                        target_speed,
-                        max(6.5, float(blocker.velocity_mps) - min(2.0, gap_error * 0.25)),
-                    )
-                    if closing > 0.5 or gap_error > 1.5:
-                        follow_brake = min(0.65, 0.04 + gap_error * 0.08 + closing * 0.05)
 
         if rejoining:
             # Carry speed while far into the grass, then slow as the car enters
@@ -969,22 +1186,40 @@ class RuleBasedRaceController(CarController):
                 recovery_cap = self.REJOIN_ON_TRACK_SPEED_MPS
             target_speed = min(target_speed, recovery_cap)
             self.last_authority[driver_id] = "rejoin"
-        elif follow_brake > 0.0:
+        elif follow_brake > 0.0 or (blocker is not None and target_speed <= 0.5):
             self.last_authority[driver_id] = "traffic"
         else:
             self.last_authority[driver_id] = "apex-rules"
 
+        queue_stopped = False
+        clear_lane = False
+        clear_pull_out = False
+        yielding_to_reverse = any(
+            0.0 < gap < 12.0 and abs(other_lat - signed_lat) < 3.4
+            and (other_style := self._styles.get(other_id)) is not None
+            and other_style.queue_reverse_origin is not None
+            for other_id, gap, other_lat in nearby_cars
+        )
         if escaping:
-            target_speed = min(target_speed, 4.0)
+            target_speed = min(unobstructed_speed, 4.0)
             follow_brake = 0.0
             self.last_authority[driver_id] = "traffic-escape"
-        elif escape_obstructed or queue_lane_obstructed:
+        elif escape_obstructed or queue_lane_obstructed or yielding_to_reverse:
             target_speed = 0.0
             follow_brake = max(follow_brake, 0.8)
+            self.last_authority[driver_id] = "traffic"
         elif queue_avoiding:
             # Creep while steering into the free lane, and stop if the
             # obstacle is already too close to safely start the maneuver.
             separation = abs(queue_lat - signed_lat)
+            # Use the available runway even before reaching the bypass lane.
+            # Near the obstacle, keep the original pull-out speed and reverse
+            # rules. A traffic-limited lane still caps either target.
+            clear_pull_out = (
+                queue_gap >= 8.5
+                and lane_follow_speed >= 4.0
+                and self._gridlock_path_clear(env, driver_state, 1, max(4.0, speed))
+            )
             forward_x, forward_y = math.cos(facing), math.sin(facing)
             close_car = any(
                 0.0 < ((float(other.position_x) - float(driver_state.position_x)) * forward_x
@@ -996,10 +1231,43 @@ class RuleBasedRaceController(CarController):
             if close_car or (queue_gap is not None and 0.0 < queue_gap < 5.5 and separation < 2.2):
                 target_speed = 0.0
                 follow_brake = max(follow_brake, 0.8)
+                queue_stopped = queue_gap > 0.0 and float(queue_target.velocity_mps) < 2.5
             else:
-                target_speed = min(target_speed, 3.0)
+                pull_out = queue_gap > 0.0 and separation < 2.6
+                clear_lane = (not pull_out and abs(alpha) < math.radians(18)
+                              and self._gridlock_path_clear(
+                                  env, driver_state, 1, max(5.0, speed * 0.9),
+                              ))
+                # Use the corner speed plan once the car has cleared the
+                # obstacle sideways, even while still alongside it.
+                bypass_speed = 8.0 if clear_lane else (4.5 if clear_pull_out else 3.0)
+                target_speed = min(unobstructed_speed, lane_follow_speed, bypass_speed)
                 follow_brake = 0.0
             self.last_authority[driver_id] = "traffic-avoid"
+
+        # Steering alone cannot move the chassis sideways at a standstill.
+        # Make room for the chosen bypass with one short, low-speed reversal.
+        style.queue_stopped_s = style.queue_stopped_s + dt if queue_stopped and speed < 0.35 else 0.0
+        position = (driver_state.position_x, driver_state.position_y)
+        now = float(env.sim_ts)
+        if (style.queue_reverse_origin is None and style.queue_stopped_s >= 0.6
+                and now >= style.queue_reverse_retry_s
+                and abs(heading_error) <= math.radians(40)
+                and self._queue_reverse_clear(env, driver_state, 4.5)):
+            style.queue_reverse_origin = position
+            style.queue_reverse_until_s = now + 4.0
+            style.queue_backed_up = True
+        if style.queue_reverse_origin is not None:
+            remaining = 4.5 - math.dist(position, style.queue_reverse_origin)
+            if (queue_avoiding and not escaping and remaining > 0.0
+                    and now < style.queue_reverse_until_s
+                    and self._queue_reverse_clear(env, driver_state, remaining)):
+                self.last_authority[driver_id] = "traffic-reverse"
+                return CarInput(reverse_speed_mps=1.6)
+            style.queue_reverse_origin = None
+            style.queue_reverse_retry_s = now + 5.0
+            style.queue_stopped_s = 0.0
+            return CarInput.brake_full()
 
         # Occasional brief lifts give drivers different exits without random
         # steering impulses or a guaranteed loss of control.
@@ -1015,6 +1283,7 @@ class RuleBasedRaceController(CarController):
             driver_state, speed, target_speed, effective_grip, effective_mu,
             downforce_per_speed_sq, braking_accel,
             aero_drag_multiplier=aero_drag_multiplier,
+            recovering=rejoining or clear_lane or clear_pull_out,
         )
         if follow_brake > 0.0:
             throttle = 0.0
@@ -1024,7 +1293,7 @@ class RuleBasedRaceController(CarController):
             throttle, brake, dt, rejoining,
         )
         ordinary_factor = (style.mistake_throttle_factor
-                           if style.mistake_left_s > 0.0 and not rejoining else 1.0)
+                           if style.mistake_left_s > 0.0 and not (rejoining or queue_avoiding) else 1.0)
         # Two overlapping mistakes must not multiply into a near-stop.
         throttle *= min(ordinary_factor, corner_factor)
         if (not rejoining and driver_state.lap == 0 and speed < 2.0

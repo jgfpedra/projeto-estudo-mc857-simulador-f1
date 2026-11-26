@@ -20,10 +20,28 @@ services:
       - "8000:8000"
     environment:
       REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql://f1:${POSTGRES_PASSWORD:-f1dev}@postgres:5432/f1sim
     volumes:
       - ./data:/app/data:ro
     depends_on:
-      - redis
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: f1
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-f1dev}
+      POSTGRES_DB: f1sim
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U f1 -d f1sim"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
   ai:
     build: ./ai
@@ -65,4 +83,5 @@ services:
       - "6379:6379"
 
 volumes:
+  postgres_data:
   ollama_data:

@@ -7,7 +7,8 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-
+ARG VITE_USE_API_PROXY
+ENV VITE_USE_API_PROXY=$VITE_USE_API_PROXY
 RUN npm run build
 
 

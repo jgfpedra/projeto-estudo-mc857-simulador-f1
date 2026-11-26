@@ -6,6 +6,7 @@ import re
 from typing import Optional
 from database.driver_db import DriverDatabase, FastF1DriverDatabase
 from database.f1results_database import F1ResultsDriverDatabase
+from database.team_colors import resolve_team_color
 from integrations.openf1 import OpenF1Client
 
 logger = logging.getLogger(__name__)
@@ -42,13 +43,13 @@ class OpenF1DriverDatabase(DriverDatabase):
                 code = row.get('name_acronym') or ''
                 country = row.get('country_code')
                 team = row.get('team_name') or 'Unknown'
-                color = str(row.get('team_colour') or '').lstrip('#')
-                color = '#'+color.upper() if re.fullmatch('[0-9A-Fa-f]{6}', color) else None
+                color, color_source = resolve_team_color(team, row.get('team_colour'), 'openf1')
                 result.append({'id': re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-'),
                     'name': name, 'full_name': name, 'source': 'openf1', 'first_name': row.get('first_name'),
                     'last_name': row.get('last_name'), 'abbreviation':code,
                     'permanent_number':row.get('driver_number'), 'team_name':team,
-                    'team_color':color, 'country_code':country, 'nationality_country_id':country,
+                    'team_color':color, 'team_color_source':color_source,
+                    'country_code':country, 'nationality_country_id':country,
                     'team':{'id':None, 'name':team, 'color':color}})
             if not result:
                 raise ValueError('sessão sem pilotos')

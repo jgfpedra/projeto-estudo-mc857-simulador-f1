@@ -339,6 +339,7 @@ class PyBulletPhysics:
         brake: float = 0.0,
         throttle: Optional[float] = None,
         aero_drag_multiplier: float = 1.0,
+        reverse_speed_mps: float = 0.0,
     ) -> None:
         """Orquestra as 4 fases de física analítica de F1 para 1 sub-step.
 
@@ -369,12 +370,18 @@ class PyBulletPhysics:
         cmd_throttle, cmd_brake = self._resolve_throttle_brake(
             throttle, brake, target_speed_mps, v_forward
         )
+        reversing = reverse_speed_mps > 0.0
+        if reversing:
+            reverse_error = min(2.0, reverse_speed_mps) + v_forward
+            cmd_throttle = min(1.0, max(0.0, reverse_error) * mass * 3.0
+                               * max(abs(v_forward), 1.0) / max(1.0, handle.power_kw * 1000.0))
+            cmd_brake = min(1.0, max(0.0, -reverse_error))
         drive_force, actual_brake, f_rolling, f_engine_drag, \
         v_forward, v_lateral, v_speed, yaw_rate = self._apply_longitudinal(
             car_id, pos, forward, handle,
             cmd_throttle, cmd_brake, grip_multiplier, mu_effective,
             f_z_total, f_z_rear, v_forward, v_lateral, v_speed, yaw_rate,
-            mass, lin_vel, dt_sub, cid,
+            mass, lin_vel, dt_sub, cid, reversing=reversing,
         )
 
         # Fase 4 — dinâmica lateral + guinada + atrito de curva
@@ -525,6 +532,7 @@ class PyBulletPhysics:
         lin_vel,
         dt_sub: float,
         cid: int,
+        reversing: bool = False,
     ):
         """Calcula e aplica força longitudinal líquida (tração − freios − atrito).
 
@@ -539,9 +547,11 @@ class PyBulletPhysics:
         drive_force = 0.0
         if cmd_throttle > 0.0:
             power_watts    = (handle.power_kw * 1000.0) * cmd_throttle
-            f_engine       = power_watts / max(v_forward, 1.0)
+            f_engine       = power_watts / max(abs(v_forward) if reversing else v_forward, 1.0)
             f_traction_max = mu_effective * f_z_rear
             drive_force    = min(f_engine, f_traction_max)
+            if reversing:
+                drive_force = -drive_force
 
         # --- Frenagem (até ~5G, limitada por Fz total) ---
         brake_force = 0.0
@@ -937,6 +947,7 @@ class PyBulletPhysics:
             - (handle, target_speed, steering, grip, brake) [5 elementos]
             - (handle, target_speed, steering, grip, brake, throttle) [6 elementos]
             - Tupla de 7 elementos pode incluir multiplicador do arrasto aerodinâmico.
+            - O oitavo elemento opcional é a velocidade alvo em marcha a ré.
         sub_steps : int
             Número de sub-passos PyBullet a executar.
         """
@@ -957,6 +968,7 @@ class PyBulletPhysics:
                         handle, target_speed, steering, grip,
                         brake=brake, throttle=throttle,
                         aero_drag_multiplier=aero_drag,
+                        reverse_speed_mps=ctrl[7] if len(ctrl) >= 8 else 0.0,
                     )
                 elif len(ctrl) >= 6:
                     handle, target_speed, steering, grip, brake, throttle = ctrl[:6]

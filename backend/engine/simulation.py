@@ -451,12 +451,15 @@ class SimulationEngine:
     # Loop principal
     # ------------------------------------------------------------------
 
-    def run(self) -> None:
+    def run(self, *, should_cancel: Optional[Callable[[], bool]] = None) -> bool:
+        """Run until completion. Return false if the owner cancels the race."""
         if not self.states:
             self.setup()
 
+        resuming = self.race_started
         self.race_started = True
-        self._publish_race_start()
+        if not resuming:
+            self._publish_race_start()
 
         logic_dt = 1.0 / max(1.0, self.config.logic_step_hz)
         # Usa o valor da config; deve satisfazer physics_sub_steps = logic_dt / time_step
@@ -471,17 +474,23 @@ class SimulationEngine:
             physics_sub_steps = expected_sub_steps
 
         # Etapa: dar start imediato em weather (avalia no início da volta 1)
-        self.weather_model.step(lap=1)
-        self._weather_evaluated_lap = 1
-        self._publish_weather_changed(prev_kind=self.last_weather_kind, new_kind=self.weather_model.current.kind, new_lap=1)
+        if not resuming:
+            self.weather_model.step(lap=1)
+            self._weather_evaluated_lap = 1
+            self._publish_weather_changed(prev_kind=self.last_weather_kind, new_kind=self.weather_model.current.kind, new_lap=1)
 
         # Cap de segurança: 3x o tempo esperado para a corrida
         # (~75s/volta * num_laps * 3 = generoso; evita corrida infinita)
         max_ticks = int(self.config.num_laps * 200 * 3 / logic_dt)
-        tick = 0
+        tick = int(self.sim_ts / logic_dt)
         next_tick_deadline = time.monotonic()
 
         while not self.race_finished and tick < max_ticks:
+            if should_cancel is not None and should_cancel():
+                self.race_finished = True
+                self.publisher.flush()
+                self.publisher.close()
+                return False
             self._step_tick(logic_dt, physics_sub_steps)
             # Atualiza câmera se em modo follow
             if self.config.gui and self.config.camera_mode == "follow":
@@ -501,6 +510,7 @@ class SimulationEngine:
         self._publish_race_end()
         self.publisher.flush()
         self.publisher.close()
+        return True
 
     # ------------------------------------------------------------------
     # Step de simulação (1 tick lógico)
@@ -582,6 +592,7 @@ class SimulationEngine:
                 car_input.brake,
                 car_input.throttle,
                 aero_drag_multipliers.get(drv.driver_id, 1.0),
+                car_input.reverse_speed_mps,
             ))
 
         # 4 — avança física reaplicando os controles a cada sub-step
@@ -755,6 +766,7 @@ class SimulationEngine:
         state.position_y  = phys["y"]
         state.heading_rad = phys["heading_rad"]
         state.velocity_mps = phys["speed_mps"]
+        state.cornering_drag_n = phys.get("cornering_drag_n", 0.0)
 
     def _resolve_car_input(self, driver_id: str, env, state) -> "CarInput":
         """Obtém o :class:`CarInput` para o driver: controller → fallback → cache.
