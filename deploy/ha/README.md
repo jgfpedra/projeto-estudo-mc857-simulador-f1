@@ -12,6 +12,8 @@ O Compose é para desenvolvimento em um único host: a queda do próprio host ou
 
 O PostgreSQL importa os snapshots locais de circuitos, waypoints e pilotos na primeira inicialização. Se um snapshot não estiver incluído na imagem, o bootstrap busca a cópia versionada e valida seu hash. O backend usa o banco para consultas do catálogo e por temporada. Os SVGs dos layouts simuláveis são baixados em segundo plano e cacheados no PostgreSQL. O Compose padrão também usa PostgreSQL e permanece disponível para execução local sem Sentinel.
 
+O Compose inicia uma instância do consumidor de IA e o Ollama. Na primeira inicialização o Ollama baixa o modelo `llama3.2` para o volume `ollama_data`. O consumidor acompanha os eventos das corridas no Redis Sentinel e publica `ai_suggestion` no canal da corrida; usa o piloto do usuário quando informado ou o primeiro piloto do grid. A interface atual ainda não exibe essas sugestões. `AI_INTERVAL_SECONDS` ajusta o intervalo em segundos simulados (padrão: 10).
+
 Os espectadores são acompanhados por heartbeats no Redis, inclusive quando o WebSocket está em outra réplica. Uma perda de conexão tem prazo de reconexão antes de a corrida ser cancelada por falta de público. A queda simultânea de todo o Redis não tem garantia de retomada. O PostgreSQL deste Compose é uma instância única.
 
 O consumidor de IA está fora deste Compose.
