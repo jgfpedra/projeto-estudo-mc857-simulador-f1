@@ -324,6 +324,10 @@ class RaceManager:
                                     'track_year':track_year,
                                     'catalog_generated_at':self.catalog.data.get('generated_at')} if layout else None,
                 'num_laps':laps, 'num_drivers':num_drivers, 'user_driver_id':user_driver_id,
+                # No fluxo atual o piloto controlado pelo jogador é também o
+                # piloto que o engenheiro de IA acompanha. Exposto explicitamente
+                # para o viz3d/HUD e para o listener da IA.
+                'followed_driver_id':user_driver_id,
                 'random_seed':bot_seed, 'sources':sources,
                 'car_geometry':{'length_m':CHASSIS_LENGTH_M,'width_m':CHASSIS_WIDTH_M,'height_m':CHASSIS_HEIGHT_M},
                 'track':{'name':track_obj.name, 'source':track_obj.source, 'geometry_sha256':digest,

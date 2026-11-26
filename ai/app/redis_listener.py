@@ -58,6 +58,24 @@ def _race_id_from_channel(channel) -> str | None:
     return None
 
 
+def _resolve_followed_driver(r, race_id: str, default: str) -> str:
+    """Piloto que o engenheiro acompanha naquela corrida.
+
+    A API grava o piloto escolhido pelo jogador em ``race:<id>:meta``. Usar o
+    valor da corrida é o que liga o seletor "Piloto Controlado / Focado" da UI
+    ao engenheiro; o valor de ``F1_FOLLOWED_DRIVER`` fica só como fallback para
+    corridas antigas ou criadas sem ``user_driver_id``.
+    """
+    raw = r.get(f"race:{race_id}:meta")
+    if not raw:
+        return default
+    try:
+        meta = json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        return default
+    return meta.get("followed_driver_id") or meta.get("user_driver_id") or default
+
+
 def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float = 10.0):
     r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
     pubsub = r.pubsub()
@@ -74,6 +92,7 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
     warm_up()
 
     states: dict[str, LiveRaceState] = {}
+    followed_by_race: dict[str, str] = {}
     last_periodic_sim_ts: dict[str, float] = {}
 
     for message in pubsub.listen():
@@ -91,7 +110,12 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
             state = LiveRaceState(race_id=current_race)
             states[current_race] = state
             last_periodic_sim_ts[current_race] = 0.0
-            print(f"[ai_listener] nova corrida detectada: {current_race}")
+            followed_by_race[current_race] = _resolve_followed_driver(
+                r, current_race, followed_driver_id)
+            print(f"[ai_listener] nova corrida detectada: {current_race} "
+                  f"(seguindo {followed_by_race[current_race]})")
+
+        followed = followed_by_race[current_race]
 
         try:
             event = json.loads(message["data"])
@@ -105,7 +129,7 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
                 print(f"[ai_listener] tick recebido: lap={event.get('lap')} "
                       f"sim_ts={sim_ts:.1f}s")
 
-        eventos = apply_event(state, event, followed_driver_id)
+        eventos = apply_event(state, event, followed)
 
         if event.get("type") == "tick":
             sim_ts = event.get("sim_ts", 0.0)
@@ -118,9 +142,8 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
         if not should_trigger_live(eventos):
             continue
 
-        print(f"[ai_listener] volta {
-              state.lap}: eventos detectados, acionando agente...")
-        context_text = format_live_context(state, followed_driver_id, eventos)
+        print(f"[ai_listener] volta {state.lap}: eventos detectados, acionando agente...")
+        context_text = format_live_context(state, followed, eventos)
         prompt = build_live_prompt(context_text)
         print(f"[DEBUG] contexto enviado ao modelo:\n{context_text}\n")
 

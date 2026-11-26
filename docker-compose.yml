@@ -27,9 +27,15 @@ services:
 
   ai:
     build: ./ai
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OLLAMA_URL: http://llama:11434
+      F1_FOLLOWED_DRIVER: drv_02
     volumes:
       - ./data:/app/data:ro
     depends_on:
+      - redis
       - llama
 
   frontend:

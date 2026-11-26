@@ -28,6 +28,9 @@ import { loadRecording, trackFromRecording } from './engine/load'
 import { engineSource, lapAtTime, pitStateAt, positionAt } from './engine/source'
 import type { Recording } from './engine/types'
 import { PROBE_ENABLED, Probe } from './probe'
+import { AiEngineer } from './ai/AiEngineer'
+import type { AiSuggestion, AiCommand } from './live/types'
+import { newMotionState } from './cars/motion'
 
 /**
  * Which track, from `?track=` (src/track/registry.ts). Read once: switching
@@ -318,6 +321,35 @@ export default function App() {
   if (!track || !scene || !motion) return <Overlay>Loading {TRACK_SOURCE_URL}…</Overlay>
 
   const { frame, checks, camera } = scene
+
+  /**
+   * Minimal store adapter for AiEngineer in replay/engine mode.
+   * Real AI data only comes from live WebSocket, so this provides empty
+   * messages/commands but serves car positions from the motion source.
+   */
+  const engineerStore = useMemo(() => {
+    const cars = motion.source.cars
+    const lengthM = frame.lengthM
+    return {
+      messages: [] as AiSuggestion[],
+      trackEvents: [] as AiCommand[],
+      meta: {
+        drivers: cars.map((c) => ({ driver_id: c.label, name: c.name, grid_position: c.index })),
+      },
+      latestRow: (index: number): { driver_id: string; lap: number; position_xy?: [number, number]; heading_deg: number; velocity_mps: number } | undefined => {
+        if (index >= cars.length) return undefined
+        const motionState = motion.source.sampleInto(clock.current.tS, index, newMotionState())
+        return {
+          driver_id: cars[index].label,
+          lap: Math.floor(motionState.sUnwrapped / lengthM),
+          position_xy: motionState.posed ? [motionState.x, -motionState.z] as [number, number] : undefined,
+          heading_deg: motionState.posed ? (motionState.yawRad * 180) / Math.PI : 0,
+          velocity_mps: motionState.speedMps,
+        }
+      },
+      activeCommand: () => null,
+    }
+  }, [motion, frame, clock])
   const { source, lapOf } = motion
   const rankOf = 'rankOf' in motion ? motion.rankOf : undefined
   const pitOf = 'pitOf' in motion ? motion.pitOf : undefined
@@ -360,6 +392,8 @@ export default function App() {
             cutKey={cutKey}
           />
         </Suspense>
+        {/* AI Engineer hovering above start/finish line */}
+        <AiEngineer store={engineerStore} position={track.points[0].clone().setY(8)} followedIndex={selected} />
         {/* x red, y green, z blue: which way is +z on screen is the whole
             mirror question, so keep the axes visible while checking. */}
         <axesHelper args={[250]} />

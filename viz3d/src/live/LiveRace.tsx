@@ -16,8 +16,12 @@ import { pitLaneFromLive, trackFromLive } from './track'
 import { PitLaneRibbon } from './PitLaneRibbon'
 import type { LiveTrack } from './track'
 import { StartFinishLine } from './StartFinishLine'
+import { LiveStore } from './store'
+import type { RaceMeta } from './types'
+import { AiPanel } from '../ai/AiPanel'
+import { AiEngineer } from '../ai/AiEngineer'
 
-type Meta = { race_id: string; num_laps: number; car_geometry?: { length_m: number; width_m: number; height_m: number }; track: LiveTrack; drivers: { driver_id: string; name: string; grid_position: number }[] }
+type Meta = { race_id: string; num_laps: number; car_geometry?: { length_m: number; width_m: number; height_m: number }; track: LiveTrack; drivers: { driver_id: string; name: string; grid_position: number }[]; followed_driver_id?: string; dt_s?: number }
 const api = (import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8000`).replace(/\/$/, '')
 
 export function LiveRace() {
@@ -35,6 +39,7 @@ export function LiveRace() {
   const [cameraMode, setCameraMode] = useState<CameraMode>('chase')
   const [wheelMarkers, setWheelMarkers] = useState(false)
   const [cutKey, setCutKey] = useState(0)
+  const storeRef = useRef<LiveStore | null>(null)
 
   useEffect(() => {
     if (!raceId) return
@@ -50,12 +55,25 @@ export function LiveRace() {
         const data = await response.json() as Meta
         if (disposed) return
         setMeta(data)
+        // Create LiveStore for AI messages. The engine block type requires a
+        // `geometry_sha256`, which the live API may omit; the store only reads
+        // drivers, so the cast is safe here.
+        storeRef.current = new LiveStore({
+          race_id: data.race_id,
+          num_laps: data.num_laps,
+          track: data.track as unknown as RaceMeta['track'],
+          drivers: data.drivers,
+          followed_driver_id: data.followed_driver_id,
+          dt_s: data.dt_s,
+        })
         const url = new URL(`/ws/races/${encodeURIComponent(raceId)}`, api)
         url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
         socket = new WebSocket(url)
         socket.onopen = () => setStatus('Ao vivo')
         socket.onmessage = (message) => {
           const event = JSON.parse(message.data)
+          // Feed all events to LiveStore for AI messages
+          storeRef.current?.ingest(event)
           if (event.type === 'tick') {
             const next = event as LiveTick
             const previousRevision = buffer.current.revision
@@ -129,6 +147,19 @@ export function LiveRace() {
     <button onClick={start}>Iniciar corrida</button><p>{status}</p><a href="/">Visualização de gravações</a>
   </div>
   if (!scene || !tick) return <div style={{ padding: 30, color: 'white', background: '#15151e', minHeight: '100vh' }}>{status || 'Aguardando primeiro estado da corrida…'}</div>
+
+  // Position the AI engineer above the start/finish line
+  const engineerPosition = useMemo(() => {
+    const line = scene.track.points[0].clone()
+    line.y = 8 // hover height above track
+    return line
+  }, [scene])
+
+  // The store's followed driver may differ from the panel's selected car
+  const followedIndex = storeRef.current
+    ? storeRef.current.indexOfDriver(storeRef.current.meta.followed_driver_id ?? '') ?? selected
+    : selected
+
   return <div style={{ position: 'fixed', inset: 0, background: '#15151e' }}>
     <Canvas camera={{ position: [scene.center.x, scene.distance, scene.center.z + scene.distance * 0.3], fov: 45, near: 1, far: scene.distance * 8 }}>
       <hemisphereLight args={['#ffffff', '#30303c', 1.1]} /><directionalLight position={[600, 1200, 400]} intensity={1.2} />
@@ -139,7 +170,9 @@ export function LiveRace() {
         <Grid frame={scene.frame} cars={scene.cars} source={scene.source} modelSpec={scene.modelSpec} clock={clock} selected={selected} readout={readout} wheelMarkers={wheelMarkers} />
         <CameraRig frame={scene.frame} mode={cameraMode} readout={readout} fitted={scene.fitted} orbitFovDeg={45} clock={clock} cutKey={cutKey} />
       </Suspense>
+      {storeRef.current && <AiEngineer store={storeRef.current} position={engineerPosition} followedIndex={followedIndex} />}
     </Canvas>
+    {storeRef.current && <AiPanel store={storeRef.current} selected={selected} />}
     <div style={{ position: 'absolute', top: 12, left: 12, color: 'white', background: '#15151ee8', padding: 12, font: '14px sans-serif' }}>
       <strong>{scene.track.name} · {status}</strong>
       {scene.pitLane && <div style={{ color: '#c4c4cd' }}>Via dos boxes{scene.pitLane.source === 'estimated' ? ' (estimada)' : ''}</div>}
