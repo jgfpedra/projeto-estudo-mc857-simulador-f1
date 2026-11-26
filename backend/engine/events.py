@@ -158,3 +158,112 @@ class CollisionEvent(Event):
     position_xy: List[float] = field(default_factory=list)
     impact_force_n: float = 0.0
     penetration_m: float = 0.0
+
+
+@dataclass
+class OffTrackEvent(Event):
+    """Emitido quando um carro sai da pista."""
+    type: str = "off_track"
+    driver_id: str = ""
+    driver_name: str = ""
+    lap: int = 0
+    side: str = ""
+    distance_m: float = 0.0
+    speed_mps: float = 0.0
+    severity: str = ""
+
+
+@dataclass
+class OnTrackEvent(Event):
+    """Emitido quando um carro retorna à pista."""
+    type: str = "on_track"
+    driver_id: str = ""
+    driver_name: str = ""
+    lap: int = 0
+    duration_s: float = 0.0
+
+
+@dataclass
+class AiCommandEvent(Event):
+    """Comando do engenheiro de IA aplicado ao piloto.
+
+    Publicado quando um comando novo (push, conserve, defend, overtake, careful, pace, neutral)
+    entra em vigor. O HUD mostra o comando e o motivo.
+    """
+    type: str = "ai_command"
+    driver_id: str = ""
+    driver_name: str = ""
+    lap: int = 0
+    command: str = ""
+    value: float = 0.0
+    reason: str = ""
+    issued_by: str = "ai"
+
+
+@dataclass
+class AiSuggestionEvent(Event):
+    """Sugestão textual do engenheiro de IA (o que ele 'diz').
+
+    Publicado periodicamente ou quando há mudança de estratégia. O HUD mostra
+    a mensagem, a urgência (baixa/media/alta) e um comando sugerido opcional.
+    """
+    type: str = "ai_suggestion"
+    driver_id: str = ""
+    driver_name: str = ""
+    lap: int = 0
+    aviso: str = ""
+    urgencia: str = "media"  # "baixa" | "media" | "alta"
+    previsao: Optional[Dict[str, Any]] = None
+    comando: Optional[Dict[str, Any]] = None
+    fallback: bool = False
+
+
+# ==================== EVENTOS DE CICLO DE VIDA DO AI ENGINEER ====================
+
+@dataclass
+class AiStartedEvent(Event):
+    """Emitido quando o AiEngineer é iniciado para uma corrida."""
+    type: str = "ai_started"
+    race_id: str = ""
+    total_laps: int = 0
+    user_driver_id: Optional[str] = None
+    num_drivers: int = 0
+    decision_interval_s: float = 5.0
+
+
+@dataclass
+class AiMonitoringEvent(Event):
+    """Emitido periodicamente como heartbeat do AiEngineer.
+
+    Indica que a IA está ativa e monitorando, mesmo sem recomendações novas.
+    O frontend pode usar isso para mostrar status "IA analisando..." em vez de "sem dados".
+    """
+    type: str = "ai_monitoring"
+    race_id: str = ""
+    status: str = "running"  # "waiting_for_race_start" | "running" | "paused"
+    sim_ts: float = 0.0
+    stats: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class AiStoppedEvent(Event):
+    """Emitido quando o AiEngineer é encerrado (fim da corrida, erro, etc.)."""
+    type: str = "ai_stopped"
+    race_id: str = ""
+    reason: str = "race_ended"  # "race_ended" | "error" | "cancelled"
+    stats: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class AiErrorEvent(Event):
+    """Emitido quando ocorre erro no processamento do AiEngineer.
+
+    Não indica falha fatal - o engenheiro continua rodando.
+    O frontend pode exibir avisos ou métricas de saúde.
+    """
+    type: str = "ai_error"
+    race_id: str = ""
+    error: str = ""
+    error_type: str = ""
+    cycle: int = 0
+    driver_id: Optional[str] = None

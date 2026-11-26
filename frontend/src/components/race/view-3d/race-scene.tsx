@@ -8,9 +8,9 @@
 import { Suspense, memo, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { Canvas, useThree } from "@react-three/fiber"
-import { Sphere } from "three"
+import { Sphere, Vector3 } from "three"
 
-import type { RaceInfo } from "@/types/race"
+import type { RaceInfo, AiSuggestion, AiCommand } from "@/types/race"
 import { CameraRig } from "./scene/camera-rig"
 import { newFollowState } from "./scene/camera-math"
 import type { CameraMode, FollowState } from "./scene/camera-math"
@@ -30,6 +30,8 @@ import { buildFrame } from "./scene/track-frame"
 import type { TrackFrame } from "./scene/track-frame"
 import { PitLaneRibbon, StartFinishLine, TrackRibbon } from "./scene/track-meshes"
 import { View3DToolbarSlot } from "./toolbar-slot"
+import { AiEngineer } from "@/components/race/ai/ai-engineer"
+import { useLiveRaceStore } from "@/stores/live-race-store"
 
 type FollowMode = Exclude<CameraMode, "orbit">
 
@@ -37,6 +39,10 @@ export type RaceSceneProps = {
   race: RaceInfo
   selectedDriverId: string | null
   onSelectDriver: (driverId: string | null) => void
+  /** Sugestões do engenheiro de IA (do live-race-store). */
+  aiSuggestions?: AiSuggestion[]
+  /** Comandos ativos do engenheiro de IA. */
+  aiCommands?: Map<string, AiCommand>
 }
 
 const FOLLOW_LABEL: Record<FollowMode, string> = { chase: "Perseguição", onboard: "A bordo" }
@@ -111,10 +117,13 @@ type ContentProps = {
   mode: CameraMode
   selectedDriverId: string | null
   onSelectDriver: (driverId: string | null) => void
+  aiSuggestions: AiSuggestion[]
+  aiCommands: Map<string, AiCommand>
+  aiEngineerStatus: "idle" | "started" | "monitoring" | "stopped" | "error"
 }
 
 /** Carros, câmera e gancho de desenvolvimento: precisam do estado do Canvas. */
-function Content({ race, scene, layout, quality, followRef, mode, selectedDriverId, onSelectDriver }: ContentProps) {
+function Content({ race, scene, layout, quality, followRef, mode, selectedDriverId, onSelectDriver, aiSuggestions, aiCommands, aiEngineerStatus }: ContentProps) {
   const { frame, center, drivers, colors } = scene
   const size = useThree((s) => s.size)
   const getThree = useThree((s) => s.get)
@@ -141,6 +150,16 @@ function Content({ race, scene, layout, quality, followRef, mode, selectedDriver
 
   const selectedIndex = selectedDriverId ? drivers.findIndex((d) => d.driverId === selectedDriverId) : -1
 
+  // Posição do engenheiro: acima da linha de chegada (s=0)
+  const engineerPosition = useMemo(() => {
+    const pos = new Vector3()
+    // frame não tem toWorld exposto aqui, mas center.center é o centro do circuito
+    // A linha de chegada está aproximadamente em center.center
+    pos.copy(center.center)
+    pos.y = 8 // altura do engenheiro
+    return pos
+  }, [center])
+
   return (
     <>
       <Cars
@@ -162,6 +181,14 @@ function Content({ race, scene, layout, quality, followRef, mode, selectedDriver
         overview={overview}
         probeCamera={probe?.sink.camera ?? null}
       />
+      {/* Engenheiro de IA 3D */}
+      <AiEngineer
+        suggestions={aiSuggestions}
+        commands={aiCommands}
+        followedDriverId={selectedDriverId}
+        position={engineerPosition}
+        engineerStatus={aiEngineerStatus}
+      />
     </>
   )
 }
@@ -172,7 +199,7 @@ function Content({ race, scene, layout, quality, followRef, mode, selectedDriver
  */
 function Stage(props: Omit<ContentProps, "followRef"> & { overviewDistance: number }) {
   const followRef = useRef<FollowState>(newFollowState())
-  const { scene, layout, quality, overviewDistance } = props
+  const { scene, layout, quality, overviewDistance, aiSuggestions, aiCommands, aiEngineerStatus } = props
   const env = QUALITY[quality].environment ? layout : null
   return (
     <>
@@ -199,7 +226,7 @@ function Stage(props: Omit<ContentProps, "followRef"> & { overviewDistance: numb
       )}
       <StartFinishLine track={scene.track} />
       <Suspense fallback={null}>
-        <Content {...props} followRef={followRef} />
+        <Content {...props} followRef={followRef} aiSuggestions={aiSuggestions} aiCommands={aiCommands} aiEngineerStatus={aiEngineerStatus} />
       </Suspense>
     </>
   )
@@ -216,6 +243,11 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
     setQuality(q)
     saveQuality(q)
   }
+
+  // AI state from store (fallback to props for compatibility)
+  const aiSuggestions = useLiveRaceStore((s) => s.aiSuggestions)
+  const aiCommands = useLiveRaceStore((s) => s.aiCommands)
+  const aiEngineerStatus = useLiveRaceStore((s) => s.aiEngineerStatus)
 
   const scene = useMemo(() => {
     const track = trackFromRace(race.track)
@@ -290,6 +322,9 @@ function RaceScene({ race, selectedDriverId, onSelectDriver }: RaceSceneProps) {
             mode={mode}
             selectedDriverId={selectedDriverId}
             onSelectDriver={onSelectDriver}
+            aiSuggestions={aiSuggestions}
+            aiCommands={aiCommands}
+            aiEngineerStatus={aiEngineerStatus}
           />
           <FollowExit following={selectedDriverId !== null} onExit={() => onSelectDriver(null)} />
         </Canvas>

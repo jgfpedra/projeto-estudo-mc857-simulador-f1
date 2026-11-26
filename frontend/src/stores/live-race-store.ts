@@ -5,6 +5,8 @@ import { api, raceSocketUrl } from "@/services/api"
 import { parseLiveMessage } from "@/services/race-parser"
 import { openRaceSocket } from "@/services/race-socket"
 import type {
+  AiCommand,
+  AiSuggestion,
   FeedItem,
   FinalEntry,
   Frame,
@@ -43,6 +45,14 @@ type LiveRaceState = {
   viewMode: ViewMode
   pitBusy: boolean
   pitError: string | null
+  /** Histórico de sugestões do engenheiro de IA (máx 50). */
+  aiSuggestions: AiSuggestion[]
+  /** Comando ativo do engenheiro de IA por driverId. */
+  aiCommands: Map<string, AiCommand>
+  // Estado do ciclo de vida do AiEngineer
+  aiEngineerStatus: "idle" | "started" | "monitoring" | "stopped" | "error"
+  aiEngineerStats: Record<string, unknown> | null
+  aiEngineerError: string | null
   requestPit: (driverId: string, tyre: PitTyre) => Promise<void>
   cancelPit: (driverId: string) => Promise<void>
   load: (raceId: string) => Promise<void>
@@ -58,6 +68,8 @@ const TRACK_TONE: Record<TrackStatus, Tone> = {
   VSC: "warn",
   RED_FLAG: "danger",
 }
+
+const MAX_AI_SUGGESTIONS = 50
 
 let session = 0
 let feedSeq = 0
@@ -79,6 +91,12 @@ function freshRaceState() {
     trackStatus: "GREEN" as TrackStatus,
     feed: [] as FeedItem[],
     classification: null as FinalEntry[] | null,
+    aiSuggestions: [] as AiSuggestion[],
+    aiCommands: new Map<string, AiCommand>(),
+    // Estado do ciclo de vida do AiEngineer
+    aiEngineerStatus: "idle" as "idle" | "started" | "monitoring" | "stopped" | "error",
+    aiEngineerStats: null as Record<string, unknown> | null,
+    aiEngineerError: null as string | null,
   }
 }
 
@@ -110,6 +128,13 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
   }
 
   const apply = (msg: LiveMessage) => {
+    // Validar raceId para eventos que o carregam (previne eventos órfãos/stale)
+    const currentRaceId = get().raceId
+    if (currentRaceId && 'raceId' in msg && msg.raceId !== currentRaceId) {
+      console.warn('[live-store] Evento de race_id diferente ignorado:', msg.raceId, 'esperado:', currentRaceId, 'kind:', msg.kind)
+      return
+    }
+
     switch (msg.kind) {
       case "tick": {
         const now = performance.now()
@@ -229,6 +254,55 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
         })
         return
 
+      case "ai_suggestion": {
+        set((s) => ({
+          aiSuggestions: [...s.aiSuggestions, {
+            simTs: msg.simTs,
+            lap: msg.lap,
+            driverId: msg.driverId,
+            message: msg.message,
+            urgency: msg.urgency,
+            command: msg.command,
+          }].slice(-MAX_AI_SUGGESTIONS),
+        }))
+        // Push to event feed as well
+        const urgencyLabel = msg.urgency === "alta" ? "🔴" : msg.urgency === "media" ? "🟡" : "🟢"
+        pushFeed({
+          simTs: msg.simTs,
+          lap: msg.lap,
+          kind: "pit_request", // reuse kind for feed display
+          tone: msg.urgency === "alta" ? "danger" : msg.urgency === "media" ? "warn" : "info",
+          driverIds: [msg.driverId],
+          message: `${urgencyLabel} Engenheiro (${nameOf(msg.driverId)}): ${msg.message}`,
+        })
+        return
+      }
+
+      case "ai_command": {
+        set((s) => {
+          const newCommands = new Map(s.aiCommands)
+          newCommands.set(msg.driverId, {
+            simTs: msg.simTs,
+            lap: msg.lap,
+            driverId: msg.driverId,
+            command: msg.command,
+            value: msg.value,
+            reason: msg.reason,
+            issuedBy: msg.issuedBy,
+          })
+          return { aiCommands: newCommands }
+        })
+        pushFeed({
+          simTs: msg.simTs,
+          lap: msg.lap,
+          kind: "pit_request",
+          tone: "info",
+          driverIds: [msg.driverId],
+          message: `⚡ Comando IA (${nameOf(msg.driverId)}): ${msg.command.toUpperCase()} — ${msg.reason}`,
+        })
+        return
+      }
+
       case "race_end":
         set({ status: "finished", classification: msg.classification })
         pushFeed({
@@ -240,6 +314,69 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
           message: "Corrida finalizada",
         })
         return
+
+      case "ai_started": {
+        set({
+          aiEngineerStatus: "started",
+          aiEngineerStats: {
+            totalLaps: msg.totalLaps,
+            userDriverId: msg.userDriverId,
+            numDrivers: msg.numDrivers,
+            decisionIntervalS: msg.decisionIntervalS,
+          },
+          aiEngineerError: null,
+        })
+        pushFeed({
+          simTs: msg.simTs,
+          lap: 0,
+          kind: "pit_request",
+          tone: "info",
+          driverIds: [],
+          message: `🤖 Engenheiro de IA iniciado — monitorando ${msg.numDrivers} pilotos`,
+        })
+        return
+      }
+
+      case "ai_monitoring": {
+        set({
+          aiEngineerStatus: "monitoring",
+          aiEngineerStats: msg.stats,
+        })
+        // Não adiciona ao feed - é apenas heartbeat interno
+        return
+      }
+
+      case "ai_stopped": {
+        set({
+          aiEngineerStatus: "stopped",
+          aiEngineerStats: msg.stats,
+        })
+        pushFeed({
+          simTs: msg.simTs,
+          lap: get().frame?.lap ?? 0,
+          kind: "pit_request",
+          tone: msg.reason === "error" ? "danger" : "info",
+          driverIds: [],
+          message: `🤖 Engenheiro de IA finalizado (${msg.reason})`,
+        })
+        return
+      }
+
+      case "ai_error": {
+        set({
+          aiEngineerStatus: "error",
+          aiEngineerError: `${msg.errorType}: ${msg.error}`,
+        })
+        pushFeed({
+          simTs: msg.simTs,
+          lap: msg.cycle,
+          kind: "pit_request",
+          tone: "warn",
+          driverIds: msg.driverId ? [msg.driverId] : [],
+          message: `⚠️ Erro no Engenheiro IA: ${msg.error}`,
+        })
+        return
+      }
     }
   }
 
@@ -295,6 +432,9 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
     viewMode: "2d",
     pitBusy: false,
     pitError: null,
+    aiEngineerStatus: "idle",
+    aiEngineerStats: null,
+    aiEngineerError: null,
 
     load: async (raceId) => {
       get().disconnect()
@@ -303,7 +443,8 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
       feedSeq = 0
       lastPass.clear()
 
-      set({ ...freshRaceState(), status: "loading", raceId, selectedDriverId: null })
+      const fresh = freshRaceState()
+      set({ ...fresh, status: "loading", raceId, selectedDriverId: null })
 
       try {
         const [race, snap] = await Promise.all([api.getRace(raceId), api.getSnapshot(raceId)])

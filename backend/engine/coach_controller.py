@@ -17,12 +17,16 @@ consome os eventos.
 
 from __future__ import annotations
 
+import json
 import threading
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, asdict
 from typing import Any, Dict, Optional
 
+import redis
+
 from .controllers import CarController, CarInput, EnvironmentState
-from .events import AiCommandEvent, OffTrackEvent, OnTrackEvent
+from .events import AiCommandEvent, AiSuggestionEvent, OffTrackEvent, OnTrackEvent
 
 # Aliases aceitos vindos do LLM ou de um endpoint humano.
 _COMMAND_ALIASES = {
@@ -59,15 +63,35 @@ class CoachCommand:
     reason: str = ""
     issued_by: str = "ai"
     seq: int = 0
+    ts: float = 0.0  # Unix timestamp
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CoachCommand":
+        return cls(**data)
 
 
 class CommandBus:
-    """Último comando por piloto, seguro entre a thread da API e a do motor."""
+    """Bus de comandos por piloto.
 
-    def __init__(self) -> None:
-        self._lock = threading.Lock()
-        self._commands: Dict[str, CoachCommand] = {}
+    Implementação baseada em Redis para persistência e suporte a múltiplas
+    instâncias do backend (HA). Cada corrida tem seu próprio namespace.
+    """
+
+    def __init__(self, client: redis.Redis, race_id: str, ttl: int = 86400) -> None:
+        self.client = client
+        self.race_id = race_id
+        self.ttl = ttl
         self._seq = 0
+        self._seq_lock = threading.Lock()
+
+    def _key(self, driver_id: str) -> str:
+        return f"race:{self.race_id}:coach:{driver_id}"
+
+    def _seq_key(self) -> str:
+        return f"race:{self.race_id}:coach:seq"
 
     def push(
         self,
@@ -77,25 +101,34 @@ class CommandBus:
         reason: str = "",
         issued_by: str = "ai",
     ) -> CoachCommand:
-        with self._lock:
+        with self._seq_lock:
             self._seq += 1
-            cmd = CoachCommand(
-                command=normalize_command(command),
-                value=float(value or 0.0),
-                reason=str(reason or ""),
-                issued_by=str(issued_by or "ai"),
-                seq=self._seq,
-            )
-            self._commands[driver_id] = cmd
-            return cmd
+            local_seq = self._seq
+
+        cmd = CoachCommand(
+            command=normalize_command(command),
+            value=float(value or 0.0),
+            reason=str(reason or ""),
+            issued_by=str(issued_by or "ai"),
+            seq=local_seq,
+            ts=time.time(),
+        )
+        self.client.setex(self._key(driver_id), self.ttl, json.dumps(cmd.to_dict()))
+        # Also update global sequence
+        self.client.set(self._seq_key(), local_seq)
+        return cmd
 
     def latest(self, driver_id: str) -> Optional[CoachCommand]:
-        with self._lock:
-            cmd = self._commands.get(driver_id)
-            if cmd is None:
-                return None
-            # Copia: a thread do motor não pode ler um objeto mutado depois.
-            return CoachCommand(cmd.command, cmd.value, cmd.reason, cmd.issued_by, cmd.seq)
+        data = self.client.get(self._key(driver_id))
+        if not data:
+            return None
+        try:
+            return CoachCommand.from_dict(json.loads(data))
+        except (json.JSONDecodeError, TypeError, KeyError):
+            return None
+
+    def clear(self, driver_id: str) -> None:
+        self.client.delete(self._key(driver_id))
 
 
 class CoachController(CarController):
@@ -175,6 +208,45 @@ class CoachController(CarController):
                 reason=cmd.reason,
                 issued_by=cmd.issued_by,
             ))
+            # Também publica sugestão textual para o HUD
+            suggestion_text = self._suggestion_text(cmd)
+            if suggestion_text:
+                self.publisher.publish(AiSuggestionEvent(
+                    sim_ts=float(env.sim_ts),
+                    driver_id=self.driver_id,
+                    driver_name=str(getattr(driver_state, "name", "")),
+                    lap=int(getattr(driver_state, "lap", 0)),
+                    aviso=suggestion_text,
+                    urgencia=self._suggestion_urgency(cmd),
+                    comando={"tipo": cmd.command, "valor": float(cmd.value), "motivo": cmd.reason} if cmd.command != "neutral" else None,
+                    fallback=False,
+                ))
+
+    def _suggestion_text(self, cmd: CoachCommand) -> str:
+        """Gera texto da sugestão baseada no comando."""
+        if cmd.command == "push":
+            return f"Vamos atacar! {cmd.reason or 'Aumentando ritmo.'}"
+        if cmd.command == "overtake":
+            return f"Hora da ultrapassagem! {cmd.reason or 'Modo ataque ativado.'}"
+        if cmd.command == "conserve":
+            return f"Economizando. {cmd.reason or 'Gerenciando pneus/combustível.'}"
+        if cmd.command == "defend":
+            return f"Defenda a posição! {cmd.reason or 'Protegendo a linha interna.'}"
+        if cmd.command == "careful":
+            return f"Cuidado! {cmd.reason or 'Condições difíceis, mais margem.'}"
+        if cmd.command == "pace":
+            return f"Ajuste de ritmo: {cmd.value:.0%}. {cmd.reason or ''}"
+        if cmd.command == "neutral" and cmd.reason:
+            return cmd.reason
+        return ""
+
+    def _suggestion_urgency(self, cmd: CoachCommand) -> str:
+        """Define urgência baseada no comando."""
+        if cmd.command in ("push", "overtake", "careful"):
+            return "alta"
+        if cmd.command in ("conserve", "defend", "pace"):
+            return "media"
+        return "baixa"
 
     @staticmethod
     def _throttle_multiplier(cmd: CoachCommand) -> float:

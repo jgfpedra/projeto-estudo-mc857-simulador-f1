@@ -10,9 +10,32 @@ from live_context import (
 )
 from client import call_model, warm_up
 from schemas import validate_agent_output, fallback_output
+from fallback_tactical import get_fallback_tactical, build_race_context_from_state
+from metrics import record_ollama_call, record_duplicate_suppressed, start_periodic_flush
 
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
+
+
+def _should_stay_silent(is_real_event: bool, new_command: str, new_text: str,
+                        last_command: str | None, last_text: str | None) -> bool:
+    """
+    Decide se o engenheiro deve ficar em silêncio (não publicar sugestão).
+
+    Regras anti-repetição:
+    - Evento real: fala se comando OU texto mudou (não engole mudança de plano).
+    - Gatilho periódico: só fala se comando E texto são novos (não repete nem um nem outro).
+    - Primeira mensagem: sempre fala.
+    """
+    if last_command is None or last_text is None:
+        return False  # primeira mensagem sempre fala
+
+    if is_real_event:
+        # Evento real (ex.: rádio da equipe, saída de pista): não engole mudança de plano
+        return new_command == last_command and new_text == last_text
+
+    # Gatilho periódico (timer): silenciar se só comando OU só texto repete
+    return new_command == last_command or new_text == last_text
 
 
 def build_live_prompt(context_text: str) -> str:
@@ -91,9 +114,15 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
 
     warm_up()
 
+    # Inicia flush periódico de métricas no MLflow
+    start_periodic_flush(interval_seconds=60)
+
     states: dict[str, LiveRaceState] = {}
     followed_by_race: dict[str, str] = {}
     last_periodic_sim_ts: dict[str, float] = {}
+    # Estado anti-repetição por corrida
+    last_command_by_race: dict[str, str | None] = {}
+    last_text_by_race: dict[str, str | None] = {}
 
     for message in pubsub.listen():
         if message["type"] not in ("message", "pmessage"):
@@ -110,6 +139,8 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
             state = LiveRaceState(race_id=current_race)
             states[current_race] = state
             last_periodic_sim_ts[current_race] = 0.0
+            last_command_by_race[current_race] = None
+            last_text_by_race[current_race] = None
             followed_by_race[current_race] = _resolve_followed_driver(
                 r, current_race, followed_driver_id)
             print(f"[ai_listener] nova corrida detectada: {current_race} "
@@ -148,20 +179,48 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
         print(f"[DEBUG] contexto enviado ao modelo:\n{context_text}\n")
 
         model_result = call_model(prompt)
+
+        # Constrói contexto tático para fallback inteligente
+        tactical_ctx = build_race_context_from_state(state, followed)
+
         if not model_result["ok"]:
-            output = fallback_output(model_result["error"])
+            # Fallback tático baseado na situação real da corrida
+            output = get_fallback_tactical(tactical_ctx)
+            output["fallback_motivo"] = model_result["error"]
         else:
             validated = validate_agent_output(model_result["response"])
-            output = validated if validated else fallback_output(
-                "resposta em formato inválido")
+            if validated:
+                output = validated
+            else:
+                # JSON inválido → fallback tático
+                output = get_fallback_tactical(tactical_ctx)
+                output["fallback_motivo"] = "resposta em formato inválido"
 
         output["type"] = "ai_suggestion"
         output["volta"] = state.lap
 
-        # publica de volta no mesmo canal, para o #42 (WebSocket Gateway) repassar
-        events_channel = f"race:{current_race}:events"
-        r.publish(events_channel, json.dumps(output, ensure_ascii=False))
-        print(f"[ai_listener] sugestão publicada: {output['aviso']}")
+        # Anti-repetição: decide se deve ficar em silêncio
+        new_command = output.get("comando", {}).get("tipo", "neutral")
+        new_text = output.get("aviso", "")
+        last_cmd = last_command_by_race.get(current_race)
+        last_txt = last_text_by_race.get(current_race)
+
+        # Determina se o gatilho foi evento real ou periódico
+        is_real_event = any(e for e in eventos if not e.startswith("Atualização periódica"))
+
+        if _should_stay_silent(is_real_event, new_command, new_text, last_cmd, last_txt):
+            record_duplicate_suppressed()
+            print(f"[ai_listener] sugestão suprimida (repetição): comando={new_command}, texto={new_text[:40]}...")
+        else:
+            # Atualiza estado anti-repetição
+            last_command_by_race[current_race] = new_command
+            last_text_by_race[current_race] = new_text
+
+            # publica de volta no mesmo canal, para o #42 (WebSocket Gateway) repassar
+            events_channel = f"race:{current_race}:events"
+            r.publish(events_channel, json.dumps(output, ensure_ascii=False))
+            fallback_tag = " [FALLBACK]" if output.get("fallback") else ""
+            print(f"[ai_listener] sugestão publicada{fallback_tag}: {output['aviso']}")
 
 
 if __name__ == "__main__":

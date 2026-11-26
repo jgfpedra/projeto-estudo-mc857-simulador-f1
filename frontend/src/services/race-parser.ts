@@ -282,6 +282,71 @@ export function parseLiveMessage(raw: unknown): LiveMessage | null {
       return { kind: "pit_cancel_rejected", simTs, lap, driverId, reason: str(raw.reason) ?? "" }
     }
 
+    case "ai_suggestion": {
+      const driverId = str(raw.driver_id)
+      const message = str(raw.aviso)
+      const urgency = str(raw.urgencia)
+      const lap = num(raw.lap) ?? 0
+      if (!driverId || !message || !urgency || !["baixa", "media", "alta"].includes(urgency)) return null
+      let command: { type: string; value: number; reason: string } | null = null
+      if (raw.comando && isObj(raw.comando)) {
+        const tipo = str(raw.comando.tipo)
+        const valor = num(raw.comando.valor)
+        const motivo = str(raw.comando.motivo)
+        if (tipo && valor !== undefined && motivo) {
+          command = { type: tipo, value: valor, reason: motivo }
+        }
+      }
+      return { kind: "ai_suggestion", simTs, lap, driverId, message, urgency: urgency as "baixa" | "media" | "alta", command }
+    }
+
+    case "ai_command": {
+      const driverId = str(raw.driver_id)
+      const command = str(raw.command)
+      const value = num(raw.value)
+      const reason = str(raw.reason)
+      const issuedBy = str(raw.issued_by)
+      const lap = num(raw.lap) ?? 0
+      if (!driverId || !command || value === undefined || !reason || !issuedBy) return null
+      return { kind: "ai_command", simTs, lap, driverId, command, value, reason, issuedBy }
+    }
+
+    case "ai_started": {
+      const raceId = str(raw.race_id)
+      const totalLaps = num(raw.total_laps) ?? 0
+      const userDriverId = str(raw.user_driver_id) ?? null
+      const numDrivers = num(raw.num_drivers) ?? 0
+      const decisionIntervalS = num(raw.decision_interval_s) ?? 5.0
+      if (!raceId) return null
+      return { kind: "ai_started", simTs, raceId, totalLaps, userDriverId, numDrivers, decisionIntervalS }
+    }
+
+    case "ai_monitoring": {
+      const raceId = str(raw.race_id)
+      const status = str(raw.status)
+      const stats = isObj(raw.stats) ? raw.stats : {}
+      if (!raceId || !status || !["waiting_for_race_start", "running", "paused"].includes(status)) return null
+      return { kind: "ai_monitoring", simTs, raceId, status: status as "waiting_for_race_start" | "running" | "paused", stats }
+    }
+
+    case "ai_stopped": {
+      const raceId = str(raw.race_id)
+      const reason = str(raw.reason)
+      const stats = isObj(raw.stats) ? raw.stats : {}
+      if (!raceId || !reason || !["race_ended", "error", "cancelled"].includes(reason)) return null
+      return { kind: "ai_stopped", simTs, raceId, reason: reason as "race_ended" | "error" | "cancelled", stats }
+    }
+
+    case "ai_error": {
+      const raceId = str(raw.race_id)
+      const error = str(raw.error)
+      const errorType = str(raw.error_type)
+      const cycle = num(raw.cycle) ?? 0
+      const driverId = str(raw.driver_id)
+      if (!raceId || !error || !errorType) return null
+      return { kind: "ai_error", simTs, raceId, error, errorType, cycle, driverId }
+    }
+
     default:
       return null
   }

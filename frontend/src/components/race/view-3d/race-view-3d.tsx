@@ -1,7 +1,7 @@
 import { Component, Suspense, lazy } from "react"
 import type { ReactNode } from "react"
 
-import type { Frame, RaceInfo } from "@/types/race"
+import type { AiSuggestion, AiCommand, Frame, RaceInfo } from "@/types/race"
 
 /**
  * Contrato da visualização 3D (definido pelo Luiz; as props não mudam):
@@ -27,6 +27,8 @@ export type RaceView3DProps = {
   frame: Frame | null
   selectedDriverId: string | null
   onSelectDriver: (driverId: string | null) => void
+  aiSuggestions?: AiSuggestion[]
+  aiCommands?: Map<string, AiCommand>
 }
 
 const RaceScene = lazy(() => import("./race-scene"))
@@ -53,11 +55,17 @@ class View3DBoundary extends Component<{ children: ReactNode }, { error: Error |
   }
 }
 
-export function RaceView3D({ race, selectedDriverId, onSelectDriver }: RaceView3DProps) {
+export function RaceView3D({ race, selectedDriverId, onSelectDriver, aiSuggestions, aiCommands }: RaceView3DProps) {
   return (
     <View3DBoundary>
       <Suspense fallback={<Message>Carregando visualização 3D...</Message>}>
-        <RaceScene race={race} selectedDriverId={selectedDriverId} onSelectDriver={onSelectDriver} />
+        <RaceScene
+          race={race}
+          selectedDriverId={selectedDriverId}
+          onSelectDriver={onSelectDriver}
+          aiSuggestions={aiSuggestions}
+          aiCommands={aiCommands}
+        />
       </Suspense>
     </View3DBoundary>
   )

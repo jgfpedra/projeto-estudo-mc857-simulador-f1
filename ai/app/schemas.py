@@ -1,5 +1,7 @@
 import json
 
+from metrics import record_ollama_call
+
 REQUIRED_KEYS = {"aviso", "previsao", "urgencia"}
 REQUIRED_PREVISAO_KEYS = {"pit_stop_recomendado", "volta_estimada", "composto_sugerido"}
 VALID_URGENCIA = {"baixa", "media", "alta"}
@@ -10,15 +12,18 @@ def validate_agent_output(raw_output: str) -> dict | None:
         parsed = json.loads(raw_output)
     except json.JSONDecodeError:
         print("[schemas] ERRO: resposta não é JSON válido:", raw_output)
+        record_ollama_call(elapsed=0, ok=False, error_type="json_decode", invalid_json=True)
         return None
 
     missing = REQUIRED_KEYS - parsed.keys()
     if missing:
         print(f"[schemas] ERRO: faltando chaves de topo: {missing}")
+        record_ollama_call(elapsed=0, ok=False, error_type="missing_keys", invalid_json=True)
         return None
 
     if not isinstance(parsed.get("previsao"), dict):
         print("[schemas] ERRO: 'previsao' deveria ser um objeto")
+        record_ollama_call(elapsed=0, ok=False, error_type="invalid_previsao", invalid_json=True)
         return None
 
     missing_previsao = REQUIRED_PREVISAO_KEYS - parsed["previsao"].keys()
