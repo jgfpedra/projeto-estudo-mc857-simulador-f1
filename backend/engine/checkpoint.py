@@ -44,11 +44,7 @@ def _shared_base(controllers):
     if not controllers:
         raise ValueError('Checkpoint só aceita controlador por regras compartilhado')
     unwrapped = [c.base if isinstance(c, CoachController) else c for c in controllers.values()]
-    print(f'DEBUG _shared_base: controllers={list(controllers.keys())}')
-    print(f'DEBUG _shared_base: unwrapped={[id(c) for c in unwrapped]}')
     base = unwrapped[0]
-    print(f'DEBUG _shared_base: base={id(base)}, isinstance={isinstance(base, RuleBasedRaceController)}')
-    print(f'DEBUG _shared_base: any different={any(c is not base for c in unwrapped)}')
     if not isinstance(base, RuleBasedRaceController) or any(c is not base for c in unwrapped):
         raise ValueError('Checkpoint só aceita controlador por regras compartilhado')
     return base
@@ -74,9 +70,11 @@ def _rebuild_controllers(engine, base, coaches, publisher):
     stored = publisher.client.get(bus._seq_key())
     bus._seq = max(saved_seq, int(stored or 0))
     for driver in engine.drivers:
-        state = coaches.get(driver.driver_id, {'last_seq': -1, 'last_command': 'neutral',
-                                               'off_track': False, 'off_since_s': 0.0,
-                                               'off_track_margin_m': None})
+        # Checkpoints antigos podem conter coaches de todos os bots.
+        if driver.driver_id != engine.user_driver_id or driver.driver_id not in coaches:
+            engine.set_controller(driver.driver_id, base)
+            continue
+        state = coaches[driver.driver_id]
         kwargs = {}
         if state['off_track_margin_m'] is not None:
             kwargs['off_track_margin_m'] = state['off_track_margin_m']

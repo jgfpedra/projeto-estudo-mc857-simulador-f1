@@ -209,7 +209,9 @@ class LivePublisher(Publisher):
                 from engine.checkpoint import capture
                 checkpoint = capture(self.engine, self)
             except Exception:
-                # Se falhar (ex.: engine mock em testes), apenas não cria checkpoint
+                logger.exception('Falha ao salvar checkpoint periódico da corrida %s', self.race_id)
+                if self.lease_token:
+                    raise
                 checkpoint = None
         deadline = time.monotonic() + 90.0
         while True:
@@ -466,13 +468,11 @@ class RaceManager:
         command_bus = CommandBus(self.redis, race_id, ttl=RACE_TTL)
         base_controller = RuleBasedRaceController(track_obj, seed=config.random_seed)
         for driver in drivers:
-            coach = CoachController(
-                base_controller,
-                driver.driver_id,
-                publisher=publisher,
-                bus=command_bus,
-            )
-            engine.set_controller(driver.driver_id, coach)
+            controller = base_controller
+            if driver.driver_id == user_driver_id:
+                controller = CoachController(base_controller, driver.driver_id,
+                                             publisher=publisher, bus=command_bus)
+            engine.set_controller(driver.driver_id, controller)
 
         # Sempre inicializa engine e cria checkpoint inicial (para permitir recovery futuro)
         from engine.checkpoint import capture
@@ -483,8 +483,10 @@ class RaceManager:
         try:
             initial_checkpoint = capture(engine, publisher)
         except Exception:
-            # Se falhar (ex.: engine mock em testes), continua sem checkpoint inicial
-            pass
+            if self._distributed:
+                engine.teardown()
+                raise
+            logger.exception('Falha ao criar checkpoint inicial da corrida %s', race_id)
 
         if self._distributed:
             publisher.lease_token = uuid.uuid4().hex
@@ -844,4 +846,4 @@ class RaceManager:
         return json.loads(value) if value else None
 
 
-race_manager = RaceManager(catalog=get_catalog(), viewer_grace_s=3600.0)  # 1h para testes
+race_manager = RaceManager(catalog=get_catalog())

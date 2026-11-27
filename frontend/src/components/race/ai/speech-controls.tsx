@@ -10,7 +10,7 @@ export function SpeechControls() {
   const { enabled, supported } = speechSynthesis.getState()
   const config = speechSynthesis.getConfig()
   const voices = speechSynthesis.getVoices()
-    .filter((voice) => /^(pt|en)[-_]/i.test(voice.lang))
+    .filter((voice) => /^(pt|en)([-_]|$)/i.test(voice.lang))
     .sort((a, b) => a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name))
 
   return (
@@ -23,7 +23,7 @@ export function SpeechControls() {
           aria-label="Voz do engenheiro"
           title="Voz do engenheiro"
         >
-          <option value="">Automática (pt-BR)</option>
+          <option value="">Voz neural (pt-BR)</option>
           {voices.map((voice) => (
             <option key={voice.voiceURI} value={voice.voiceURI}>{voice.name} ({voice.lang})</option>
           ))}
@@ -40,7 +40,7 @@ export function SpeechControls() {
         }}
         className={`p-1 rounded transition-colors ${enabled ? "text-green-400 hover:text-green-300" : "text-muted-foreground hover:text-red-400"}`}
         aria-label={enabled ? "Desativar síntese de voz" : "Ativar síntese de voz"}
-        title={supported ? (enabled ? "TTS ativo" : "TTS desativado") : "Síntese de voz não suportada neste navegador"}
+        title={supported ? (enabled ? "Rádio ligado" : "Rádio desligado") : "Síntese de voz não suportada neste navegador"}
       >
         {enabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
       </button>

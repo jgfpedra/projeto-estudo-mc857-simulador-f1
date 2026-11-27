@@ -54,6 +54,7 @@ def _create_race_engine(drivers, track, config):
     publisher = Publisher(client)
     engine = SimulationEngine(config, track, drivers, publisher)
     engine.setup()
+    engine.user_driver_id = drivers[0].driver_id
     base = RuleBasedRaceController(track, seed=config.random_seed)
     for driver in drivers:
         engine.set_controller(driver.driver_id, CoachController(base, driver.driver_id, publisher=publisher))
@@ -113,7 +114,7 @@ def test_full_race_recovery_flow():
     # 6. Verificar coaches restaurados
     restored_coach = restored_engine.controllers[first_driver]
     assert isinstance(restored_coach, CoachController), "Deve ser CoachController"
-    assert restored_coach.base is restored_engine.controllers[drivers[1].driver_id].base, "Base controller compartilhado"
+    assert restored_coach.base is restored_engine.controllers[drivers[1].driver_id], "Bot usa o controlador base compartilhado"
 
     # Estado do coach restaurado
     assert restored_coach._last_seq == 10, f"seq restaurado: {restored_coach._last_seq}"
@@ -153,6 +154,7 @@ def test_recovery_preserves_ai_engineer_bus():
 
     engine = SimulationEngine(config, track, drivers, publisher)
     engine.setup()
+    engine.user_driver_id = drivers[0].driver_id
     base = RuleBasedRaceController(track, seed=42)
     for driver in drivers:
         engine.set_controller(driver.driver_id, CoachController(base, driver.driver_id, publisher=publisher))
@@ -174,10 +176,9 @@ def test_recovery_preserves_ai_engineer_bus():
     restored_publisher = Publisher(client)
     restored_engine = restore(checkpoint_data, restored_publisher)
 
-    # Verificar que o bus é o MESMO para todos os coaches
+    # Checkpoint legado com dois coaches restaura apenas o piloto do usuário.
     bus1 = restored_engine.controllers[drivers[0].driver_id].bus
-    bus2 = restored_engine.controllers[drivers[1].driver_id].bus
-    assert bus1 is bus2, "Todos coaches devem compartilhar o mesmo bus"
+    assert isinstance(restored_engine.controllers[drivers[1].driver_id], RuleBasedRaceController)
 
     # Seq deve ser >= 42 (restaurado do checkpoint)
     assert bus1._seq >= 42, f"Bus seq deve ser >= 42, é {bus1._seq}"
