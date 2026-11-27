@@ -1,4 +1,7 @@
 services:
+  tts:
+    build: ./tts
+
   backend:
     restart: unless-stopped
     build: ./backend
@@ -19,6 +22,26 @@ services:
         condition: service_started
       postgres:
         condition: service_healthy
+  llama:
+    image: ollama/ollama:latest
+    cpus: ${F1_OLLAMA_CPUS:-2.0}
+    environment:
+      OLLAMA_NUM_PARALLEL: "1"
+    restart: unless-stopped
+    volumes: ["ollama_data:/root/.ollama"]
+    entrypoint: >
+      /bin/sh -c "ollama serve & sleep 3 &&
+      if ! ollama list | grep -q '^llama3.2'; then ollama pull llama3.2; fi && wait"
+  ai:
+    build: ./ai
+    restart: unless-stopped
+    environment:
+      REDIS_SENTINELS: sentinel-1:26379,sentinel-2:26379,sentinel-3:26379
+      REDIS_SENTINEL_MASTER: mymaster
+      OLLAMA_URL: http://llama:11434
+      F1_OLLAMA_THREADS: ${F1_OLLAMA_THREADS:-2}
+      F1_FOLLOWED_DRIVER: drv_02
+    depends_on: [sentinel-1, sentinel-2, sentinel-3, llama]
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -107,6 +130,7 @@ services:
     volumes: ["./deploy/ha/viz3d-nginx.conf:/etc/nginx/conf.d/default.conf:ro"]
     depends_on: [gateway, gateway-alt]
 volumes:
+  ollama_data:
   postgres_data:
   redis1:
   redis2:

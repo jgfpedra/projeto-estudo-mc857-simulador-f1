@@ -56,12 +56,12 @@ export function TimingPanel({
 
           return (
             <li key={e.driverId}>
-              <div className={rowClass(selected, controlledDriverId === e.driverId).replace("button", "div").replace("aria-pressed", "")}>
+              <div className="flex items-center border-b border-border">
                 <button
                   type="button"
                   aria-pressed={selected}
                   onClick={() => onSelect(selected ? null : e.driverId)}
-                  className="w-full text-left"
+                  className={rowClass(selected, controlledDriverId === e.driverId)}
                 >
                 <span className="text-sm font-black italic tabular-nums">
                   {String(e.position).padStart(2, "0")}
@@ -82,7 +82,7 @@ export function TimingPanel({
                 {!followed && (
                   <button
                     type="button"
-                    onClick={() => onFollow(e.driverId)}
+                    onClick={() => { onFollow(e.driverId); onSelect(e.driverId) }}
                     className="ml-2 flex h-6 w-6 items-center justify-center rounded border border-border/60 bg-background/75 text-muted-foreground hover:text-foreground hover:border-primary/70 transition-colors"
                     aria-label={`Acompanhar ${codeOf(e.driverId)}`}
                     title="Acompanhar piloto"
@@ -132,12 +132,12 @@ export function TimingPanel({
 
         return (
           <li key={car.driverId}>
-            <div className={rowClass(selected, controlledDriverId === car.driverId).replace("button", "div").replace("aria-pressed", "")}>
+            <div className="flex items-center border-b border-border">
               <button
                 type="button"
                 aria-pressed={selected}
                 onClick={() => onSelect(selected ? null : car.driverId)}
-                className="w-full text-left"
+                className={rowClass(selected, controlledDriverId === car.driverId)}
               >
               <span className="text-sm font-black italic tabular-nums">
                 {String(car.position).padStart(2, "0")}
@@ -174,7 +174,7 @@ export function TimingPanel({
                 {!followed && (
                   <button
                     type="button"
-                    onClick={() => onFollow(car.driverId)}
+                    onClick={() => { onFollow(car.driverId); onSelect(car.driverId) }}
                     className="ml-2 flex h-6 w-6 items-center justify-center rounded border border-border/60 bg-background/75 text-muted-foreground hover:text-foreground hover:border-primary/70 transition-colors"
                     aria-label={`Acompanhar ${codeOf(car.driverId)}`}
                     title="Acompanhar piloto"

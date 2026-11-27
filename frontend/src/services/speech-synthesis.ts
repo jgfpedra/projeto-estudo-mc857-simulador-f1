@@ -1,4 +1,8 @@
 /** Fila única de síntese de voz para todos os painéis do engenheiro. */
+import { env } from "@/config/env"
+
+const RADIO_URL = `${(env.apiUrl ?? "").replace(/\/$/, "")}/races/radio/audio`
+
 
 export type SpeechUrgency = 'baixa' | 'media' | 'alta'
 
@@ -14,33 +18,43 @@ type QueueItem = {
   text: string
   priority: number
   timestamp: number
+  noticeKey: string
 }
 
 type UtteranceFactory = (text: string) => SpeechSynthesisUtterance
 
 const DEFAULT_CONFIG: VoiceConfig = {
   lang: 'pt-BR',
-  rate: 1,
+  rate: 0.82,
   pitch: 1,
   volume: 1,
 }
 
-const URGENCY_CONFIG: Record<SpeechUrgency, Pick<VoiceConfig, 'rate' | 'pitch' | 'volume'>> = {
-  alta: { rate: 1.1, pitch: 1.05, volume: 1 },
-  media: { rate: 1, pitch: 1, volume: 0.95 },
-  baixa: { rate: 0.95, pitch: 0.98, volume: 0.9 },
-}
+const RADIO_INTERVAL_MS = { alta: 8_000, media: 20_000 }
+const REPEAT_INTERVAL_MS = 35_000
+const MAX_PENDING_AGE_MS = 10_000
+const NATURAL_VOICE = /natural|neural|premium|enhanced/i
 
 const normalizeLang = (lang: string) => lang.replace('_', '-').toLowerCase()
 
+function preferredVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
+  return voices.find((voice) => NATURAL_VOICE.test(voice.name))
+    ?? voices.find((voice) => voice.default)
+    ?? voices[0]
+}
+
 export class SpeechSynthesisManager {
   #queue: QueueItem[] = []
-  #current: QueueItem | null = null
   #speaking = false
   #enabled = true
   #config: VoiceConfig = { ...DEFAULT_CONFIG }
   #listeners = new Set<() => void>()
   #activeId = 0
+  #audio: HTMLAudioElement | null = null
+  #audioUrl: string | null = null
+  #audioRequest: AbortController | null = null
+  #lastSpokenAt = -Infinity
+  #recentNotices = new Map<string, number>()
   #synth: SpeechSynthesis | null
   #createUtterance: UtteranceFactory
 
@@ -78,7 +92,7 @@ export class SpeechSynthesisManager {
       speaking: this.#speaking,
       queueLength: this.#queue.length,
       enabled: this.#enabled,
-      supported: this.#synth !== null,
+      supported: this.#synth !== null || (typeof window !== 'undefined' && typeof Audio !== 'undefined'),
     }
   }
 
@@ -116,28 +130,34 @@ export class SpeechSynthesisManager {
 
     // Português do Brasil, fallback explícito para Portugal e então inglês.
     for (const lang of [this.#config.lang, 'pt-BR', 'pt-PT', 'en-US']) {
-      const selected = voices.find((voice) => normalizeLang(voice.lang) === normalizeLang(lang))
+      const selected = preferredVoice(voices.filter((voice) => normalizeLang(voice.lang) === normalizeLang(lang)))
       if (selected) return selected
     }
     for (const prefix of ['pt', 'en']) {
-      const selected = voices.find((voice) => normalizeLang(voice.lang).startsWith(prefix))
+      const selected = preferredVoice(voices.filter((voice) => normalizeLang(voice.lang).startsWith(prefix)))
       if (selected) return selected
     }
     return voices[0]
   }
 
-  speak(text: string, urgency: SpeechUrgency = 'media'): void {
+  speak(text: string, urgency: SpeechUrgency = 'media', subject?: string): void {
     const trimmed = text.trim()
-    if (!this.#enabled || !this.#synth || !trimmed) return
+    if (!this.#enabled || !this.getState().supported || !trimmed || urgency === 'baixa') return
 
-    const priority = urgency === 'alta' ? 3 : urgency === 'media' ? 2 : 1
-    // AiPanel e AiEngineer observam a mesma mensagem; não a enfileirar duas vezes.
-    const duplicate = this.#current?.text === trimmed && this.#current.priority === priority
-      || this.#queue.some((item) => item.text === trimmed && item.priority === priority)
-    if (duplicate) return
+    const now = Date.now()
+    if (now - this.#lastSpokenAt < RADIO_INTERVAL_MS[urgency]) return
 
-    this.#queue.push({ text: trimmed, priority, timestamp: Date.now() })
-    this.#queue.sort((a, b) => b.priority - a.priority || a.timestamp - b.timestamp)
+    const priority = urgency === 'alta' ? 3 : 2
+    const noticeKey = `${urgency}:${subject ?? trimmed}`
+    for (const [key, time] of this.#recentNotices) {
+      if (now - time >= REPEAT_INTERVAL_MS) this.#recentNotices.delete(key)
+    }
+    if (this.#recentNotices.has(noticeKey)) return
+
+    // Keep one pending notice so the radio does not read a backlog of old advice.
+    const pending = this.#queue[0]
+    if (pending && (pending.noticeKey === noticeKey || pending.priority > priority)) return
+    this.#queue = [{ text: trimmed, priority, timestamp: now, noticeKey }]
     this.#emit()
     this.#processQueue()
   }
@@ -145,18 +165,27 @@ export class SpeechSynthesisManager {
   stop(): void {
     this.#activeId += 1
     this.#queue = []
-    this.#current = null
     this.#speaking = false
+    this.#lastSpokenAt = -Infinity
+    this.#recentNotices.clear()
     this.#synth?.cancel()
+    this.#audioRequest?.abort()
+    this.#audioRequest = null
+    this.#audio?.pause()
+    this.#audio = null
+    if (this.#audioUrl) URL.revokeObjectURL(this.#audioUrl)
+    this.#audioUrl = null
     this.#emit()
   }
 
   pause(): void {
-    if (this.#speaking) this.#synth?.pause()
+    if (this.#audio) this.#audio.pause()
+    else if (this.#speaking) this.#synth?.pause()
   }
 
   resume(): void {
-    if (this.#speaking) this.#synth?.resume()
+    if (this.#audio) void this.#audio.play().catch((error) => console.warn('[Rádio] Erro ao continuar:', error))
+    else if (this.#speaking) this.#synth?.resume()
   }
 
   clearQueue(): void {
@@ -165,28 +194,88 @@ export class SpeechSynthesisManager {
   }
 
   #processQueue(): void {
-    if (!this.#synth || this.#speaking || this.#queue.length === 0 || !this.#enabled) return
+    if (!this.getState().supported || this.#speaking || this.#queue.length === 0 || !this.#enabled) return
     const item = this.#queue.shift()!
-    this.#current = item
+    const now = Date.now()
+    if (now - item.timestamp > MAX_PENDING_AGE_MS) {
+      this.#emit()
+      return
+    }
+    this.#lastSpokenAt = now
+    this.#recentNotices.set(item.noticeKey, now)
     this.#speaking = true
     const id = ++this.#activeId
     this.#emit()
 
+    if (typeof window !== 'undefined' && !this.#config.voiceURI) {
+      void this.#playNeural(item, id)
+      return
+    }
+    this.#playBrowser(item, id)
+  }
+
+  async #playNeural(item: QueueItem, id: number): Promise<void> {
+    const controller = new AbortController()
+    this.#audioRequest = controller
+    try {
+      const response = await fetch(RADIO_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: item.text.slice(0, 480) }),
+        signal: controller.signal,
+      })
+      if (!response.ok) throw new Error('Voz neural indisponível')
+      const blob = await response.blob()
+      if (id !== this.#activeId) return
+      const url = URL.createObjectURL(blob)
+      const audio = new Audio(url)
+      this.#audioUrl = url
+      this.#audio = audio
+      const finish = () => {
+        if (id !== this.#activeId) return
+        URL.revokeObjectURL(url)
+        this.#audioUrl = null
+        this.#audio = null
+        this.#audioRequest = null
+        this.#speaking = false
+        this.#emit()
+        this.#processQueue()
+      }
+      audio.onended = finish
+      audio.onerror = () => {
+        if (id !== this.#activeId || this.#audio !== audio) return
+        URL.revokeObjectURL(url)
+        this.#audioUrl = null
+        this.#audio = null
+        this.#audioRequest = null
+        this.#playBrowser(item, id)
+      }
+      await audio.play()
+    } catch (error) {
+      if (id !== this.#activeId || controller.signal.aborted || this.#audioRequest !== controller) return
+      this.#audioRequest = null
+      if (this.#audioUrl) URL.revokeObjectURL(this.#audioUrl)
+      this.#audioUrl = null
+      this.#audio = null
+      this.#audioRequest = null
+      console.warn('[Rádio] Voz neural indisponível, usando a voz do navegador:', error)
+      this.#playBrowser(item, id)
+    }
+  }
+
+  #playBrowser(item: QueueItem, id: number): void {
     const utterance = this.#createUtterance(item.text)
     const voice = this.#selectVoice()
     if (voice) utterance.voice = voice
     utterance.lang = voice?.lang ?? this.#config.lang
 
-    const urgency: SpeechUrgency = item.priority === 3 ? 'alta' : item.priority === 2 ? 'media' : 'baixa'
-    const adjustment = URGENCY_CONFIG[urgency]
-    utterance.rate = this.#config.rate * adjustment.rate
-    utterance.pitch = this.#config.pitch * adjustment.pitch
-    utterance.volume = Math.min(1, this.#config.volume * adjustment.volume)
+    utterance.rate = this.#config.rate
+    utterance.pitch = this.#config.pitch
+    utterance.volume = this.#config.volume
 
     const finish = () => {
       // cancel() pode disparar onend/onerror depois de outra fala ter começado.
       if (id !== this.#activeId) return
-      this.#current = null
       this.#speaking = false
       this.#emit()
       setTimeout(() => this.#processQueue(), 0)
@@ -203,6 +292,7 @@ export class SpeechSynthesisManager {
     }
 
     try {
+      if (!this.#synth) { finish(); return }
       this.#synth.speak(utterance)
     } catch (error) {
       console.warn('[TTS] Unable to start speech:', error)

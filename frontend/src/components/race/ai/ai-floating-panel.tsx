@@ -125,11 +125,12 @@ export function AiFloatingPanel({
 }: AiFloatingPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(initiallyCollapsed)
   const [showAllSuggestions, setShowAllSuggestions] = useState(false)
-  const lastSpokenIndex = useRef(suggestions.length - 1)
+  const lastSuggestion = useRef(suggestions.at(-1))
 
   // Get followed driver from store
   const followedDriverId = useLiveRaceStore((s) => s.followedDriverId)
   const race = useLiveRaceStore((s) => s.race)
+  const radioDriverId = followedDriverId ?? race?.userDriverId ?? race?.drivers[0]?.driverId
 
   // Status config
   const statusCfg = STATUS_CONFIG[engineerStatus]
@@ -173,19 +174,18 @@ export function AiFloatingPanel({
   // Short race ID para display
   const shortRaceId = useMemo(() => raceId.replace("race_", "").slice(0, 8), [raceId])
 
-  // A fila global evita sobreposição e descarta duplicatas entre os painéis.
-  useEffect(() => {
-    const lastIndex = suggestions.length - 1
-    const prevIndex = lastSpokenIndex.current
+  useEffect(() => () => speechSynthesis.stop(), [raceId, radioDriverId])
 
-    if (lastIndex > prevIndex) {
-      for (let i = prevIndex + 1; i <= lastIndex; i++) {
-        const msg = suggestions[i]
-        if (msg?.message) speechSynthesis.speak(msg.message, msg.urgency as "baixa" | "media" | "alta")
-      }
-      lastSpokenIndex.current = lastIndex
+  useEffect(() => {
+    const previous = lastSuggestion.current
+    lastSuggestion.current = suggestions.at(-1)
+    const start = previous ? suggestions.lastIndexOf(previous) + 1 : 0
+    for (const suggestion of suggestions.slice(start)) {
+      if (suggestion.driverId !== radioDriverId) continue
+      const subject = suggestion.command?.type ?? suggestion.message
+      speechSynthesis.speak(suggestion.message, suggestion.urgency, subject)
     }
-  }, [suggestions])
+  }, [suggestions, radioDriverId])
 
   const handleToggleCollapse = () => {
     setIsCollapsed(!isCollapsed)

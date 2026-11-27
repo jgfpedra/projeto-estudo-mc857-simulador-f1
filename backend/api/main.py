@@ -7,14 +7,15 @@ import os
 import time
 import uuid
 import anyio
+import httpx
 import redis
 import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from .race_manager import REDIS_URL, race_manager
+from .race_manager import REDIS_URL, RACE_TTL, race_manager
 from .redis_client import async_client, sync_client
 from .schemas import (CoachCommandRequest, CoachCommandResponse, PitStopCancelResponse,
-                      PitStopRequest, PitStopResponse, RaceSetupRequest, RaceSetupResponse)
+                      PitStopRequest, PitStopResponse, RadioAudioRequest, RaceSetupRequest, RaceSetupResponse)
 from engine.coach_controller import CommandBus
 from domain import TyreCompound
 from database.f1results_database import AmbiguousHistoricalEvent, F1ResultsDriverDatabase
@@ -353,8 +354,11 @@ def send_coach_command(race_id: str, driver_id: str, req: CoachCommandRequest):
     """
     try:
         # Verifica se a corrida existe
-        if not sync_client(REDIS_URL).exists(f'race:{race_id}:meta'):
+        meta = race_manager.metadata(race_id)
+        if not meta:
             raise LookupError('Corrida não encontrada')
+        if not meta.get('user_driver_id') or driver_id != meta['user_driver_id']:
+            raise HTTPException(status_code=403, detail='Comandos disponíveis apenas para o piloto do usuário')
         # Bus do comando já existe no Redis com a corrida (criado no create_race)
         bus = CommandBus(sync_client(REDIS_URL), race_id, ttl=RACE_TTL)
         cmd = bus.push(driver_id, req.command.value, req.value, req.reason, req.issued_by)
@@ -372,6 +376,17 @@ def send_coach_command(race_id: str, driver_id: str, req: CoachCommandRequest):
         reason=cmd.reason,
         issued_by=cmd.issued_by,
     )
+
+
+@app.post('/races/radio/audio')
+def radio_audio(request: RadioAudioRequest):
+    voice_url = os.environ.get('F1_VOICE_URL', 'http://tts:5000')
+    try:
+        response = httpx.post(f"{voice_url}/audio", json={'message': request.message}, timeout=15.0)
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=503, detail='Voz neural indisponível') from exc
+    return Response(content=response.content, media_type='audio/wav')
 
 
 @app.get('/races/{race_id}')

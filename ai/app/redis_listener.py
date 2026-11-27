@@ -100,7 +100,7 @@ def _load_race_meta(r, race_id: str) -> dict:
     return meta if isinstance(meta, dict) else {}
 
 
-def _resolve_followed_driver(r, race_id: str, default: str) -> str:
+def _resolve_followed_driver(r, race_id: str, default: str) -> str | None:
     """Piloto que o engenheiro acompanha naquela corrida.
 
     A API grava o piloto escolhido pelo jogador em ``race:<id>:meta``. Usar o
@@ -109,11 +109,19 @@ def _resolve_followed_driver(r, race_id: str, default: str) -> str:
     corridas antigas ou criadas sem ``user_driver_id``.
     """
     meta = _load_race_meta(r, race_id)
-    return meta.get("followed_driver_id") or meta.get("user_driver_id") or default
+    return meta.get("user_driver_id")
 
 
 def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float = 10.0):
-    r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+    sentinels = os.environ.get("REDIS_SENTINELS", "")
+    if sentinels:
+        from redis.sentinel import Sentinel
+        addresses = [(host, int(port)) for host, port in
+                     (item.strip().rsplit(":", 1) for item in sentinels.split(","))]
+        r = Sentinel(addresses, socket_timeout=2).master_for(
+            os.environ.get("REDIS_SENTINEL_MASTER", "mymaster"), decode_responses=True)
+    else:
+        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
     pubsub = r.pubsub()
     if race_id:
         events_channel = f"race:{race_id}:events"
@@ -230,7 +238,7 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
                     f"Atualização periódica (t={sim_ts:.0f}s de simulação)")
                 print(f"[ai_listener] gatilho periódico em t={sim_ts:.1f}s")
 
-        if not should_trigger_live(eventos):
+        if not followed or not should_trigger_live(eventos):
             continue
 
         print(f"[ai_listener] volta {state.lap}: eventos detectados, acionando agente...")
@@ -258,6 +266,10 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
 
         output["type"] = "ai_suggestion"
         output["volta"] = state.lap
+        output["lap"] = state.lap
+        output["driver_id"] = followed
+        output["race_id"] = current_race
+        output["sim_ts"] = event.get("sim_ts", last_periodic_sim_ts[current_race])
 
         # Anti-repetição: decide se deve ficar em silêncio
         new_command = output.get("comando", {}).get("tipo", "neutral")

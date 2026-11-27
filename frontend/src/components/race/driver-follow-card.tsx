@@ -62,7 +62,7 @@ export function DriverFollowCard({
   }
 
   return (
-    <div className="pointer-events-auto relative z-10 w-60 h-full border-l border-border/60 bg-background/75 p-3 backdrop-blur-sm flex flex-col overflow-y-auto">
+    <div className="pointer-events-auto absolute right-0 top-0 z-10 w-60 max-h-full border-l border-border/60 bg-background/75 p-3 backdrop-blur-sm flex flex-col overflow-y-auto">
       {/* Header */}
       <div className="mb-3 flex items-start gap-2 border-b border-border/60 pb-3">
         <span className="mt-0.5 h-8 w-1 shrink-0" style={{ backgroundColor: color }} />

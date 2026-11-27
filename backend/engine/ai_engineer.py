@@ -131,6 +131,8 @@ class AiEngineer:
 
     def start(self) -> None:
         """Inicia o engenheiro de IA."""
+        if not self.user_driver_id:
+            return
         if self._thread and self._thread.is_alive():
             logger.warning("AiEngineer já rodando para corrida %s", self.race_id)
             return
@@ -143,15 +145,17 @@ class AiEngineer:
         self._publish_lifecycle_event("ai_started", {
             "total_laps": self.total_laps,
             "user_driver_id": self.user_driver_id,
-            "num_drivers": len(self.drivers_meta),
+            "num_drivers": 1,
             "decision_interval_s": self.DECISION_INTERVAL_S,
         })
         logger.info("=== AiEngineer INICIADO para corrida %s ===", self.race_id)
-        logger.info("  total_laps=%s, user_driver_id=%s, drivers=%d, decision_interval=%.1fs",
-                    self.total_laps, self.user_driver_id, len(self.drivers_meta), self.DECISION_INTERVAL_S)
+        logger.info("  total_laps=%s, user_driver_id=%s, decision_interval=%.1fs",
+                    self.total_laps, self.user_driver_id, self.DECISION_INTERVAL_S)
 
     def stop(self, reason: str = "race_ended") -> None:
         """Para o engenheiro de IA graciosamente."""
+        if not self._started:
+            return
         self._stop.set()
         if self._thread:
             self._thread.join(timeout=3.0)
@@ -250,9 +254,12 @@ class AiEngineer:
 
     def _evaluate_and_recommend(self) -> List[Recommendation]:
         """
-        Avalia a corrida e gera recomendações para TODOS os pilotos.
+        Avalia a corrida e gera recomendações para o piloto do usuário.
         NÃO executa comandos - apenas retorna lista de recomendações.
         """
+        if not self.user_driver_id:
+            return []
+
         # Pega snapshot mais recente do publisher
         snapshot = getattr(self.publisher, "snapshot", None)
         if not snapshot:
@@ -539,6 +546,8 @@ class AiEngineer:
 
         for idx, pos in enumerate(positions):
             driver_id = pos.get("driver_id")
+            if driver_id != self.user_driver_id:
+                continue
             meta = self.drivers_meta.get(driver_id, {})
             name = meta.get("name", driver_id)
 
