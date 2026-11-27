@@ -166,8 +166,9 @@ Os resultados abaixo são da rodada mais recente; não representam uma nova vali
 - `actions/setup-node` agora usa `cache-dependency-path: frontend/package-lock.json` nos jobs de typecheck e build; o lockfile não precisa estar na raiz do repositório.
 - Os dois f-strings inválidos de `ai/app/context/weather_context.py` foram corrigidos para Python 3.11.
 - O stub de Redis de `test_radio_espera_a_corrida_largar` passou a implementar `get()` e representar o snapshot `running`, acompanhando a interface usada pela produção.
-- Sintaxe Python 3.11 validada em 27 arquivos de `ai/app` e `ai/tests`.
-- Testes de IA: **35 passed**; testes backend do workflow: **7 passed, 1 skipped**.
+- Compatibilidade com Python 3.11 revisada também em `tyre_context.py`, `race_context.py`, `schemas.py` e `live_context.py`, onde o mesmo padrão de f-string multilinha foi removido.
+- Uma varredura com `tokenize` confirmou que não restam f-strings não triplos multilinha em `ai/app`; a confirmação final da sintaxe deve ocorrer no runner Python 3.11.
+- Testes de IA após todas as correções: **35 passed**; testes backend do workflow: **7 passed, 1 skipped**.
 - `npx tsc --noEmit` e `npm run lint` concluídos no frontend; o lint mantém somente avisos não bloqueantes.
 - YAML do workflow validado. O pipeline completo ainda precisa ser confirmado no GitHub Actions.
 

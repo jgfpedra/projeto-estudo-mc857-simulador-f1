@@ -82,8 +82,9 @@ def get_tyre_context(race_id: int, driver_id: int, up_to_lap: int) -> dict:
     stint_laps = _get_current_stint(conn, race_id, driver_id, up_to_lap)
     if stint_laps.empty:
         conn.close()
-        raise ValueError(f"Sem dados de pneu para driverId={
-                         driver_id} até a volta {up_to_lap}")
+        raise ValueError(
+            f"Sem dados de pneu para driverId={driver_id} até a volta {up_to_lap}"
+        )
 
     current = stint_laps.iloc[-1]
     compound = current["Compound"]
@@ -112,15 +113,15 @@ def get_tyre_context(race_id: int, driver_id: int, up_to_lap: int) -> dict:
 
 def format_tyre_context(context: dict) -> str:
     linhas = [
-        f"Pneu atual: {context['composto_atual']
-                       } ({context['voltas_no_pneu_atual']} voltas de uso)",
+        f"Pneu atual: {context['composto_atual']} "
+        f"({context['voltas_no_pneu_atual']} voltas de uso)",
     ]
 
     deg = context["degradacao"]
     if deg["segundos_por_volta"] is not None:
         linhas.append(
-            f"Degradação estimada: {deg['nivel']
-                                    } ({deg['segundos_por_volta']}s/volta de perda)"
+            f"Degradação estimada: {deg['nivel']} "
+            f"({deg['segundos_por_volta']}s/volta de perda)"
         )
     else:
         linhas.append(f"Degradação estimada: {deg['nivel']}")
@@ -128,8 +129,8 @@ def format_tyre_context(context: dict) -> str:
     hist = context["referencia_historica_2024"]
     if hist["media"] is not None:
         linhas.append(
-            f"Referência histórica 2024 para {
-                context['composto_atual']} (todos os circuitos): "
+            f"Referência histórica 2024 para {context['composto_atual']} "
+            "(todos os circuitos): "
             f"~{hist['media']} voltas (n={hist['amostras']})"
         )
 
@@ -142,8 +143,10 @@ def format_tyre_context(context: dict) -> str:
             "está baixa — não há urgência, mas fica fora do padrão observado em 2024"
         )
     elif context["voltas_restantes_estimadas_ate_pit"] is not None and context["voltas_restantes_estimadas_ate_pit"] <= 3:
-        linhas.append(f"Janela de pit stop: aproximando-se (~{
-                      context['voltas_restantes_estimadas_ate_pit']} voltas, baseado em histórico)")
+        linhas.append(
+            "Janela de pit stop: aproximando-se "
+            f"(~{context['voltas_restantes_estimadas_ate_pit']} voltas, baseado em histórico)"
+        )
     else:
         linhas.append("Janela de pit stop: sem urgência no momento")
 
