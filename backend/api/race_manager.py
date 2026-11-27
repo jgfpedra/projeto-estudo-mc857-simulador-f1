@@ -305,7 +305,7 @@ class RaceManager:
             circuit_id = catalog_circuit['id']
             season = year or (2024 if circuit_id == 'monza' else 2023)
             season_layout = self.catalog.find_layout(catalog_circuit, season)
-            if season_layout is None:
+            if season_layout is None and selected_roster is None and layout_id is None:
                 available = []
                 for l in catalog_circuit.get("layouts", []):
                     fy = l.get("first_year") or (l.get("years", [0])[0] if l.get("years") else 0)
@@ -320,6 +320,16 @@ class RaceManager:
             season = year or (2024 if circuit_id == 'monza' else 2023)
             season_layout = None
         layout = season_layout
+        # Quando o grid é explícito, o ano identifica os pilotos. Se o circuito
+        # ainda não existia nessa temporada, usa seu layout atual por padrão.
+        if layout is None and selected_roster is not None and self.catalog:
+            layouts = catalog_circuit.get('layouts', [])
+            current_id = catalog_circuit.get('current_layout_id')
+            layout = next((item for item in layouts if item['id'] == current_id), None)
+            if layout is None and not current_id and layouts:
+                layout = max(layouts, key=lambda item: item.get('last_year') or 0)
+            if layout is None and layout_id is None:
+                raise ValueError(f"Circuito '{circuit_id}' não possui layout atual; informe um layout disponível.")
         if layout_id is not None:
             layout = next((item for item in (catalog_circuit or {}).get('layouts', [])
                            if item['id'] == layout_id), None)
@@ -371,7 +381,7 @@ class RaceManager:
         safe_grid = track_obj.metadata.get('max_safe_grid_cars')
         if safe_grid is not None and num_drivers > safe_grid:
             raise ValueError(f'A geometria histórica aproximada comporta apenas {safe_grid} carros no grid; solicite menos carros.')
-        if not roster:
+        if not roster and selected_roster is None:
             raise ValueError('Fonte não forneceu pilotos')
         if selected_roster is not None:
             roster = selected_roster
