@@ -27,12 +27,19 @@ def warm_up():
     record_ollama_availability(result["ok"])
 
 
-def call_model(prompt: str) -> dict:
+def call_model(
+    prompt: str,
+    options: dict | None = None,
+    timeout: float | None = None,
+) -> dict:
     """
     Retorna {"ok": True, "response": str, "elapsed": float}
     ou {"ok": False, "error": str, "elapsed": float} — nunca levanta exceção,
     pra quem chama poder decidir o fallback sem try/except espalhado.
+    ``options`` e ``timeout`` permitem ampliar tarefas como o debrief sem
+    alterar os parâmetros curtos e rápidos das sugestões ao vivo.
     """
+    request_timeout = TIMEOUT_SECONDS if timeout is None else timeout
     start = time.time()
     error_type = None
     ok = False
@@ -45,9 +52,9 @@ def call_model(prompt: str) -> dict:
                 "prompt": prompt,
                 "stream": False,
                 "format": "json",
-                "options": OLLAMA_OPTIONS,
+                "options": {**OLLAMA_OPTIONS, **(options or {})},
             },
-            timeout=TIMEOUT_SECONDS,
+            timeout=request_timeout,
         )
         elapsed = time.time() - start
         response.raise_for_status()
@@ -61,7 +68,7 @@ def call_model(prompt: str) -> dict:
         error_type = "timeout"
         record_ollama_call(elapsed=elapsed, ok=False, error_type="timeout")
         record_ollama_availability(False)
-        return {"ok": False, "error": f"timeout após {TIMEOUT_SECONDS}s", "elapsed": elapsed}
+        return {"ok": False, "error": f"timeout após {request_timeout:g}s", "elapsed": elapsed}
 
     except requests.exceptions.ConnectionError as e:
         elapsed = time.time() - start

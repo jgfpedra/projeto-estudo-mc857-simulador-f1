@@ -124,3 +124,32 @@ export interface LiveCommandRecord {
   reason: string
   issued_by: string
 }
+
+export type DebriefImpact = 'alto' | 'medio' | 'baixo'
+
+export interface DebriefMoment {
+  volta: number
+  evento: string
+  impacto: DebriefImpact
+}
+
+export interface Debrief {
+  resumo_geral: string
+  largada: string
+  estrategia_pneus: string
+  combustivel: string
+  momentos_chave: DebriefMoment[]
+  contatos_incidentes: string
+  performance_pilotos: {
+    vencedor?: string
+    surpresa_positiva?: string
+    decepcao?: string
+    melhor_ultrapassagem?: string
+  }
+  decisoes_engenheiro: string
+  licoes_aprendidas: string
+  fallback?: boolean
+  fallback_motivo?: string
+  race_id: string
+  gerado_em: number
+}

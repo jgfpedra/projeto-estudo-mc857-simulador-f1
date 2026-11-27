@@ -3,7 +3,7 @@ import type { ApiCircuit, ApiDriver, ApiLayout, ApiRaceRequest, ApiRaceResponse 
 import type { Circuit, CircuitLayout } from "@/types/circuit"
 import type { Driver } from "@/types/driver"
 import { parseRaceInfo, parseSnapshot } from "@/services/race-parser"
-import type { RaceInfo, RaceSnapshot } from "@/types/race"
+import type { RaceInfo, RaceSnapshot, Debrief } from "@/types/race"
 
 export type RaceStartResponse = {
   raceId: string
@@ -157,6 +157,11 @@ export const api = {
     )
     if (!snapshot) throw new Error("Resposta inválida ao carregar o estado da corrida.")
     return snapshot
+  },
+
+  async getDebrief(raceId: string): Promise<Debrief> {
+    const data = await request<unknown>(`/races/${encodeURIComponent(raceId)}/debrief`)
+    return data as Debrief
   },
   async getCircuits(): Promise<Circuit[]> {
     const data = await request<ApiCircuit[] | { circuits: ApiCircuit[] }>("/circuits")

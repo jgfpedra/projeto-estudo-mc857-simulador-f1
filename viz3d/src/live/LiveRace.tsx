@@ -20,6 +20,7 @@ import { LiveStore } from './store'
 import type { RaceMeta } from './types'
 import { AiPanel } from '../ai/AiPanel'
 import { AiEngineer } from '../ai/AiEngineer'
+import { DebriefPanel } from './DebriefPanel'
 
 type LiveDriver = {
   driver_id: string
@@ -47,10 +48,14 @@ export function LiveRace() {
   const [cameraMode, setCameraMode] = useState<CameraMode>('chase')
   const [wheelMarkers, setWheelMarkers] = useState(false)
   const [cutKey, setCutKey] = useState(0)
+  const [raceEnded, setRaceEnded] = useState(false)
+  const [debriefOpen, setDebriefOpen] = useState(false)
   const storeRef = useRef<LiveStore | null>(null)
 
   useEffect(() => {
     if (!raceId) return
+    setRaceEnded(false)
+    setDebriefOpen(false)
     let disposed = false
     let socket: WebSocket | undefined
     let retry: ReturnType<typeof setTimeout> | undefined
@@ -96,6 +101,7 @@ export function LiveRace() {
           } else if (event.type === 'race_end' || event.type === 'race_error' || event.type === 'race_cancelled') {
             finished = true
             buffer.current.finish()
+            if (event.type === 'race_end') setRaceEnded(true)
             setStatus(event.type === 'race_end' ? 'Corrida encerrada' :
               event.type === 'race_cancelled' ? event.message : `Erro: ${event.message}`)
           }
@@ -202,9 +208,11 @@ export function LiveRace() {
         <button onClick={() => setCameraMode('onboard')}>A bordo</button>{' '}
         <button onClick={() => setCameraMode('orbit')}>Pista</button>{' '}
         <button onClick={() => setWheelMarkers((enabled) => !enabled)}>{wheelMarkers ? 'Ocultar marcas' : 'Marcar rodas'}</button>
+        {raceEnded && <button onClick={() => setDebriefOpen(true)}>Ver debrief</button>}
       </div><div>Tempo: {tick.sim_ts.toFixed(1)} s</div>
       {tick.positions.map((p) => <div key={p.driver_id}><button onClick={() => { setSelected(scene.cars.findIndex((c) => c.label === p.driver_id)); setCutKey((key) => key + 1) }}>{p.position}. {p.driver_id}</button> · {Math.round(p.velocity_mps * 3.6)} km/h · volta {p.lap + 1}</div>)}
       {tick.collisions?.length > 0 && <div>Contato: {tick.collisions[0].drv_a} / {tick.collisions[0].drv_b}</div>}
     </div>
+    {debriefOpen && <DebriefPanel />}
   </div>
 }

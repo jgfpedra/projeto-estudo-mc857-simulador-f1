@@ -389,6 +389,22 @@ def get_race_snapshot(race_id: str):
         raise HTTPException(status_code=404, detail='Corrida não encontrada')
     return snapshot
 
+
+@app.get('/races/{race_id}/debrief')
+def get_race_debrief(race_id: str):
+    try:
+        client = sync_client(REDIS_URL)
+        key = f"race:{race_id}:debrief"
+        raw = client.get(key)
+        if raw is None:
+            raise HTTPException(status_code=404, detail='Debrief não encontrado ou ainda não gerado')
+        return json.loads(raw)
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail='Redis indisponível') from exc
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail='Erro ao decodificar debrief')
+
+
 @app.websocket('/ws/races/{race_id}')
 async def race_websocket(websocket: WebSocket, race_id: str):
     client = async_client(REDIS_URL)

@@ -214,3 +214,25 @@ export type RaceSnapshot = {
   lastFrame: Frame | null
   classification: FinalEntry[] | null
 }
+
+/** Debrief pós-corrida gerado pelo LLM. */
+export type Debrief = {
+  resumo_geral: string
+  largada: string
+  estrategia_pneus: string
+  combustivel: string
+  momentos_chave: Array<{ volta: number; evento: string; impacto: "alta" | "media" | "baixa" }>
+  contatos_incidentes: string
+  performance_pilotos: {
+    vencedor?: string
+    surpresa_positiva?: string
+    decepcao?: string
+    melhor_ultrapassagem?: string
+  }
+  decisoes_engenheiro: string
+  licoes_aprendidas: string
+  fallback?: boolean
+  fallback_motivo?: string
+  race_id: string
+  gerado_em: number
+}

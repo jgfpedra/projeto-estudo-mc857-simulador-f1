@@ -1,10 +1,10 @@
 import { useFrame } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Color, ConeGeometry, Group, MeshBasicMaterial, RingGeometry, SphereGeometry, Vector3 } from 'three'
 
 /** Minimal store interface needed by AiEngineer. */
 interface EngineerStore {
-  messages: readonly { urgencia?: string }[]
+  messages: readonly { urgencia?: string; aviso?: string }[]
   trackEvents: readonly unknown[]
   meta: { drivers: { driver_id: string }[] }
   latestRow: (index: number) => { position_xy?: [number, number] } | undefined
@@ -31,6 +31,54 @@ export function AiEngineer({ store, position, followedIndex }: Props) {
   const pulsePhase = useRef(0)
   const targetYaw = useRef(0)
   const currentYaw = useRef(0)
+  const lastSpokenIndex = useRef(store.messages.length - 1)
+  const ttsEnabled = useRef(true)
+
+  // Initialize TTS
+  useEffect(() => {
+    // Check if TTS is supported
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      console.log("[AiEngineer] TTS initialized")
+    }
+    return () => {
+      // Cleanup on unmount
+    }
+  }, [])
+
+  // Speak new messages
+  useEffect(() => {
+    if (!ttsEnabled.current) return
+
+    const messages = store.messages
+    const lastIndex = messages.length - 1
+    const prevIndex = lastSpokenIndex.current
+
+    if (lastIndex > prevIndex) {
+      // New message(s) arrived
+      for (let i = prevIndex + 1; i <= lastIndex; i++) {
+        const msg = messages[i]
+        if (msg?.aviso) {
+          const urgency = msg.urgencia as "baixa" | "media" | "alta" || "media"
+          // Small delay to avoid overlap
+          setTimeout(() => {
+            if (typeof window !== "undefined" && "speechSynthesis" in window) {
+              const utterance = new SpeechSynthesisUtterance(msg.aviso)
+              utterance.lang = "pt-BR"
+              utterance.rate = urgency === "alta" ? 1.1 : urgency === "media" ? 1.0 : 0.9
+              utterance.pitch = urgency === "alta" ? 1.05 : urgency === "media" ? 1.0 : 0.98
+              utterance.volume = urgency === "alta" ? 1.0 : urgency === "media" ? 0.95 : 0.9
+              // Try to use pt-BR voice
+              const voices = window.speechSynthesis.getVoices()
+              const ptVoice = voices.find(v => v.lang === "pt-BR") || voices.find(v => v.lang.startsWith("pt"))
+              if (ptVoice) utterance.voice = ptVoice
+              window.speechSynthesis.speak(utterance)
+            }
+          }, (i - prevIndex) * 500) // Stagger multiple messages
+        }
+      }
+      lastSpokenIndex.current = lastIndex
+    }
+  }, [store.messages])
 
   // Colours matching the urgency palette in AiPanel
   const urgencyColor = useMemo(() => {

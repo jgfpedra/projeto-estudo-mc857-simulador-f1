@@ -7,7 +7,10 @@ type Props = {
   prevFrame: Frame | null
   classification: FinalEntry[] | null
   selectedDriverId: string | null
+  followedDriverId: string | null
   onSelect: (driverId: string | null) => void
+  onFollow: (driverId: string) => void
+  onUnfollow: () => void
   /** Piloto controlado pelo usuário: fica destacado no ranking. */
   controlledDriverId?: string | null
 }
@@ -23,7 +26,10 @@ export function TimingPanel({
   prevFrame,
   classification,
   selectedDriverId,
+  followedDriverId,
   onSelect,
+  onFollow,
+  onUnfollow,
   controlledDriverId = null,
 }: Props) {
   const drivers = new Map(race.drivers.map((d, i) => [d.driverId, { d, i }]))
@@ -39,6 +45,7 @@ export function TimingPanel({
       <ol className="min-h-0 flex-1 overflow-y-auto">
         {classification.map((e) => {
           const selected = selectedDriverId === e.driverId
+          const followed = followedDriverId === e.driverId
           const lapsDiff = leader ? leader.lapsCompleted - e.lapsCompleted : 0
           const timeLabel =
             e.position === 1
@@ -49,12 +56,13 @@ export function TimingPanel({
 
           return (
             <li key={e.driverId}>
-              <button
-                type="button"
-                aria-pressed={selected}
-                onClick={() => onSelect(selected ? null : e.driverId)}
-                className={rowClass(selected, controlledDriverId === e.driverId)}
-              >
+              <div className={rowClass(selected, controlledDriverId === e.driverId).replace("button", "div").replace("aria-pressed", "")}>
+                <button
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => onSelect(selected ? null : e.driverId)}
+                  className="w-full text-left"
+                >
                 <span className="text-sm font-black italic tabular-nums">
                   {String(e.position).padStart(2, "0")}
                 </span>
@@ -71,6 +79,29 @@ export function TimingPanel({
                 </div>
                 <span className="text-right text-xs font-bold tabular-nums">{timeLabel}</span>
               </button>
+                {!followed && (
+                  <button
+                    type="button"
+                    onClick={() => onFollow(e.driverId)}
+                    className="ml-2 flex h-6 w-6 items-center justify-center rounded border border-border/60 bg-background/75 text-muted-foreground hover:text-foreground hover:border-primary/70 transition-colors"
+                    aria-label={`Acompanhar ${codeOf(e.driverId)}`}
+                    title="Acompanhar piloto"
+                  >
+                    <span className="text-[10px] font-bold">👁</span>
+                  </button>
+                )}
+                {followed && (
+                  <button
+                    type="button"
+                    onClick={onUnfollow}
+                    className="ml-2 flex h-6 w-6 items-center justify-center rounded border border-border/60 bg-background/75 text-muted-foreground hover:text-red-400 hover:border-red-500/70 transition-colors"
+                    aria-label={`Parar de acompanhar ${codeOf(e.driverId)}`}
+                    title="Parar de acompanhar"
+                  >
+                    <span className="text-[10px] font-bold">✕</span>
+                  </button>
+                )}
+              </div>
             </li>
           )
         })}
@@ -94,18 +125,20 @@ export function TimingPanel({
     <ol className="min-h-0 flex-1 overflow-y-auto">
       {cars.map((car) => {
         const selected = selectedDriverId === car.driverId
+        const followed = followedDriverId === car.driverId
         const before = prevPosition.get(car.driverId)
         const delta = before === undefined ? 0 : before - car.position
         const tyre = COMPOUND_BADGE[car.tyre]
 
         return (
           <li key={car.driverId}>
-            <button
-              type="button"
-              aria-pressed={selected}
-              onClick={() => onSelect(selected ? null : car.driverId)}
-              className={rowClass(selected, controlledDriverId === car.driverId)}
-            >
+            <div className={rowClass(selected, controlledDriverId === car.driverId).replace("button", "div").replace("aria-pressed", "")}>
+              <button
+                type="button"
+                aria-pressed={selected}
+                onClick={() => onSelect(selected ? null : car.driverId)}
+                className="w-full text-left"
+              >
               <span className="text-sm font-black italic tabular-nums">
                 {String(car.position).padStart(2, "0")}
               </span>
@@ -138,7 +171,30 @@ export function TimingPanel({
                 <span>{gapLabel(car)}</span>
               </span>
             </button>
-          </li>
+                {!followed && (
+                  <button
+                    type="button"
+                    onClick={() => onFollow(car.driverId)}
+                    className="ml-2 flex h-6 w-6 items-center justify-center rounded border border-border/60 bg-background/75 text-muted-foreground hover:text-foreground hover:border-primary/70 transition-colors"
+                    aria-label={`Acompanhar ${codeOf(car.driverId)}`}
+                    title="Acompanhar piloto"
+                  >
+                    <span className="text-[10px] font-bold">👁</span>
+                  </button>
+                )}
+                {followed && (
+                  <button
+                    type="button"
+                    onClick={onUnfollow}
+                    className="ml-2 flex h-6 w-6 items-center justify-center rounded border border-border/60 bg-background/75 text-muted-foreground hover:text-red-400 hover:border-red-500/70 transition-colors"
+                    aria-label={`Parar de acompanhar ${codeOf(car.driverId)}`}
+                    title="Parar de acompanhar"
+                  >
+                    <span className="text-[10px] font-bold">✕</span>
+                  </button>
+                )}
+              </div>
+            </li>
         )
       })}
     </ol>

@@ -1,4 +1,4 @@
-import type { RaceMeta } from './types'
+import type { Debrief, RaceMeta } from './types'
 
 /**
  * Live backend (`backend/api`) — **consumer only**.
@@ -27,6 +27,15 @@ export async function fetchRaceMeta(raceId: string): Promise<RaceMeta> {
   })
   if (!response.ok) throw new Error(await readError(response))
   return (await response.json()) as RaceMeta
+}
+
+/** Recupera o debrief salvo pelo serviço de IA ao final da corrida. */
+export async function fetchDebrief(raceId: string): Promise<Debrief> {
+  const response = await fetch(`${API_BASE}/races/${encodeURIComponent(raceId)}/debrief`, {
+    headers: { Accept: 'application/json' },
+  })
+  if (!response.ok) throw new Error(await readError(response))
+  return (await response.json()) as Debrief
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { AiSuggestion, AiCommand } from "@/types/race"
 
 interface Props {
@@ -42,6 +42,40 @@ export function AiPanel({ suggestions, commands, followedDriverId, engineerStatu
   }, [commands, followedDriverId])
 
   const recentSuggestions = useMemo(() => suggestions.slice(-5).reverse(), [suggestions])
+  const [ttsEnabled, setTtsEnabled] = useState(true)
+  const lastSpokenIndex = useRef(suggestions.length - 1)
+
+  // TTS: speak new suggestions
+  useEffect(() => {
+    if (!ttsEnabled) return
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return
+
+    const lastIndex = suggestions.length - 1
+    const prevIndex = lastSpokenIndex.current
+
+    if (lastIndex > prevIndex) {
+      for (let i = prevIndex + 1; i <= lastIndex; i++) {
+        const msg = suggestions[i]
+        if (msg?.message) {
+          const urgency = msg.urgency as "baixa" | "media" | "alta" || "media"
+          setTimeout(() => {
+            if (typeof window !== "undefined" && "speechSynthesis" in window) {
+              const utterance = new SpeechSynthesisUtterance(msg.message)
+              utterance.lang = "pt-BR"
+              utterance.rate = urgency === "alta" ? 1.1 : urgency === "media" ? 1.0 : 0.9
+              utterance.pitch = urgency === "alta" ? 1.05 : urgency === "media" ? 1.0 : 0.98
+              utterance.volume = urgency === "alta" ? 1.0 : urgency === "media" ? 0.95 : 0.9
+              const voices = window.speechSynthesis.getVoices()
+              const ptVoice = voices.find(v => v.lang === "pt-BR") || voices.find(v => v.lang.startsWith("pt"))
+              if (ptVoice) utterance.voice = ptVoice
+              window.speechSynthesis.speak(utterance)
+            }
+          }, (i - lastSpokenIndex.current) * 500)
+        }
+      }
+      lastSpokenIndex.current = lastIndex
+    }
+  }, [suggestions])
 
   const statusStyle = STATUS_STYLE[engineerStatus]
   const hasContent = suggestions.length > 0 || activeCommand || engineerStatus !== "idle"
@@ -73,6 +107,15 @@ export function AiPanel({ suggestions, commands, followedDriverId, engineerStatu
           <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
           {activeCommand?.command && activeCommand.command !== "neutral" ? "COMANDO ATIVO" : statusStyle.label}
         </span>
+        {/* TTS Toggle */}
+        <button
+          onClick={() => setTtsEnabled(!ttsEnabled)}
+          className={`p-1 rounded transition-colors ${ttsEnabled ? "text-green-400 hover:text-green-300" : "text-muted-foreground hover:text-red-400"}`}
+          aria-label={ttsEnabled ? "Desativar síntese de voz" : "Ativar síntese de voz"}
+          title={ttsEnabled ? "TTS Ativo (clique para desativar)" : "TTS Desativado (clique para ativar)"}
+        >
+          {ttsEnabled ? <span className="text-[10px] font-bold">🔊</span> : <span className="text-[10px] font-bold">🔇</span>}
+        </button>
       </div>
 
       {engineerError && (
