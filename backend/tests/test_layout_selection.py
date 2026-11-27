@@ -84,6 +84,26 @@ def test_2d_grid_1968_uses_austin_layout_reference_and_warns(ctx):
     assert [d['name'] for d in meta['drivers']] == [d['name'] for d in chosen]
 
 
+@pytest.mark.parametrize('layout_id', ['interlagos-2', None])
+def test_1955_grid_uses_interlagos_independently_of_driver_season(ctx, monkeypatch, layout_id):
+    import api.race_manager as module
+    monkeypatch.setattr(module, 'AiEngineer', lambda **_kwargs: SimpleNamespace(start=lambda: None))
+    chosen = ctx.database.load_season_drivers(1955)[:2]
+    assert len(chosen) == 2
+    circuit = {'id': 'interlagos'}
+    if layout_id:
+        circuit['layout_id'] = layout_id
+    response = ctx.http.post('/races', json={
+        'circuit': circuit, 'year': 1955, 'grid': [d['id'] for d in chosen], 'laps': 1,
+    })
+    assert response.status_code == 200, response.text
+    meta = ctx.manager.metadata(response.json()['race_id'])
+    assert meta['season'] == 1955
+    assert meta['layout_id'] == 'interlagos-2'
+    assert meta['layout_reference']['track_year'] != 1955
+    assert [d['driver_id'] for d in meta['drivers']] == [d['id'] for d in chosen]
+
+
 def test_explicit_historical_variation_uses_that_layout_not_season_layout(ctx):
     chosen = [race_driver_record(d) for d in ctx.database.load_season_drivers(1968)[:2]]
     race_id, track, _ = ctx.manager.create_race(3, 'monza', 1968, 2, layout_id='monza-1',

@@ -22,6 +22,7 @@ const STATUS_BADGE: Record<LiveStatus, { label: string; className: string }> = {
   loading: { label: "Carregando", className: "bg-secondary text-muted-foreground" },
   live: { label: "Ao vivo", className: "bg-primary text-primary-foreground" },
   reconnecting: { label: "Reconectando", className: "bg-amber-400 text-black" },
+  syncing: { label: "Reconectando", className: "bg-amber-400 text-black" },
   finished: { label: "Finalizada", className: "bg-zinc-100 text-black" },
   error: { label: "Erro", className: "bg-destructive text-destructive-foreground" },
 }
@@ -34,6 +35,7 @@ export function RaceSimulation() {
   const warnings = (location.state as RaceStartResponse | null)?.warnings ?? []
 
   const status = useLiveRaceStore((s) => s.status)
+  const justResumed = useLiveRaceStore((s) => s.justResumed)
   const error = useLiveRaceStore((s) => s.error)
   const race = useLiveRaceStore((s) => s.race)
   const frame = useLiveRaceStore((s) => s.frame)
@@ -97,7 +99,9 @@ export function RaceSimulation() {
     )
   }
 
-  const badge = STATUS_BADGE[status]
+  const badge = justResumed
+    ? { label: "Corrida retomada", className: "bg-emerald-500 text-black" }
+    : STATUS_BADGE[status]
   const mapReady = race.track.waypoints.length >= 2
 
   return (
@@ -249,11 +253,13 @@ export function RaceSimulation() {
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 {status === "finished"
                   ? "Corrida concluída"
-                  : status === "reconnecting"
+                  : status === "reconnecting" || status === "syncing"
                     ? "Reconectando ao simulador..."
-                    : trackStatus !== "GREEN"
-                      ? TRACK_STATUS_LABEL[trackStatus]
-                      : "Simulação em andamento"}
+                    : justResumed
+                      ? "Corrida retomada"
+                      : trackStatus !== "GREEN"
+                        ? TRACK_STATUS_LABEL[trackStatus]
+                        : "Simulação em andamento"}
               </span>
               <div className="flex items-center gap-4">
                 {frame?.weather && (

@@ -25,7 +25,8 @@ const PASS_DEDUP_S = 5
 
 export type PitTyre = "soft" | "medium" | "hard" | "intermediate" | "wet"
 
-export type LiveStatus = "idle" | "loading" | "live" | "reconnecting" | "finished" | "error"
+/** syncing: socket reconectado, aguardando a simulação voltar a andar. */
+export type LiveStatus = "idle" | "loading" | "live" | "reconnecting" | "syncing" | "finished" | "error"
 
 type LiveRaceState = {
   status: LiveStatus
@@ -46,6 +47,8 @@ type LiveRaceState = {
   viewMode: ViewMode
   pitBusy: boolean
   pitError: string | null
+  /** true logo após a corrida ser retomada, por alguns segundos. */
+  justResumed: boolean
   /** Histórico de sugestões do engenheiro de IA (máx 50). */
   aiSuggestions: AiSuggestion[]
   /** Comando ativo do engenheiro de IA por driverId. */
@@ -80,6 +83,14 @@ let feedSeq = 0
 let attempts = 0
 let socketClose: (() => void) | null = null
 let reconnectTimer: number | null = null
+let syncTimer: number | null = null
+let resumedTimer: number | null = null
+/** true enquanto uma reconexão está em curso (até a simulação confirmar que voltou). */
+let recovering = false
+/** sim_ts do primeiro tick recebido após reconectar; a confirmação exige um tick com tempo maior. */
+let syncBaseSimTs: number | null = null
+const SYNC_TIMEOUT_MS = 20_000
+const RESUMED_BANNER_MS = 4000
 const lastPass = new Map<string, number>()
 
 /** Estado da corrida. Não inclui a seleção nem o modo de visualização, que são escolhas do usuário. */
@@ -100,6 +111,7 @@ function freshRaceState() {
     aiEngineerStatus: "idle" as "idle" | "started" | "monitoring" | "stopped" | "error",
     aiEngineerStats: null as Record<string, unknown> | null,
     aiEngineerError: null as string | null,
+    justResumed: false,
   }
 }
 
@@ -121,13 +133,67 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
       if (current !== session) return
       if (snap.lastFrame) set({ frame: snap.lastFrame, prevFrame: null, frameAt: performance.now() })
       if (snap.status === "finished") {
+        recovering = false
+        clearSyncTimer()
         set({ status: "finished", classification: snap.classification })
       } else if (snap.status === "cancelled") {
+        recovering = false
+        clearSyncTimer()
         set({ status: "error", error: RACE_CANCELLED_MESSAGE })
       }
     } catch {
       // Se falhar, a próxima reconexão ressincroniza de novo.
     }
+  }
+
+  const clearSyncTimer = () => {
+    if (syncTimer !== null) {
+      window.clearTimeout(syncTimer)
+      syncTimer = null
+    }
+  }
+
+  /** Marca a corrida como ao vivo. `resumed` indica que ela voltou depois de uma falha. */
+  const confirmLive = (resumed: boolean) => {
+    recovering = false
+    attempts = 0
+    syncBaseSimTs = null
+    clearSyncTimer()
+    if (resumedTimer !== null) window.clearTimeout(resumedTimer)
+    resumedTimer = null
+    set({ status: "live", error: null, justResumed: resumed })
+    if (resumed) {
+      resumedTimer = window.setTimeout(() => {
+        resumedTimer = null
+        set({ justResumed: false })
+      }, RESUMED_BANNER_MS)
+    }
+  }
+
+  const scheduleReconnect = (raceId: string, current: number) => {
+    if (current !== session) return
+    if (attempts >= MAX_RECONNECTS) {
+      recovering = false
+      set({ status: "error", error: "Conexão com o simulador perdida. Tente novamente." })
+      return
+    }
+    attempts += 1
+    recovering = true
+    syncBaseSimTs = null
+    set({ status: "reconnecting" })
+    reconnectTimer = window.setTimeout(() => openFeed(raceId, current), 1000 * 2 ** (attempts - 1))
+  }
+
+  /** Se a simulação não voltar a andar a tempo, a tentativa conta como falha e reconecta. */
+  const armSyncTimer = (raceId: string, current: number) => {
+    clearSyncTimer()
+    syncTimer = window.setTimeout(() => {
+      syncTimer = null
+      if (current !== session || get().status !== "syncing") return
+      socketClose?.()
+      socketClose = null
+      scheduleReconnect(raceId, current)
+    }, SYNC_TIMEOUT_MS)
   }
 
   const apply = (msg: LiveMessage) => {
@@ -145,6 +211,14 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
         const measured = frameAt > 0 ? now - frameAt : 0
         const interval =
           measured > 0 && measured < 1000 ? 0.8 * tickIntervalMs + 0.2 * measured : tickIntervalMs
+
+        const status = get().status
+        if (status === "loading") {
+          confirmLive(false)
+        } else if (status === "syncing") {
+          if (syncBaseSimTs === null) syncBaseSimTs = msg.frame.simTs
+          else if (msg.frame.simTs > syncBaseSimTs) confirmLive(true)
+        }
 
         const rewound = prev !== null && msg.frame.simTs < prev.simTs
         if (rewound) lastPass.clear()
@@ -306,6 +380,22 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
         return
       }
 
+      case "race_recovered":
+        if (get().status === "finished") return
+        // Outra réplica restaurou a corrida a partir do checkpoint: o tempo pode voltar para trás.
+        lastPass.clear()
+        set({ prevFrame: null })
+        confirmLive(true)
+        pushFeed({
+          simTs: msg.simTs,
+          lap: get().frame?.lap ?? 0,
+          kind: "race_control",
+          tone: "success",
+          driverIds: [],
+          message: "Corrida retomada após falha no servidor",
+        })
+        return
+
       case "race_end":
         set({ status: "finished", classification: msg.classification })
         pushFeed({
@@ -393,11 +483,13 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
     socketClose = openRaceSocket(raceSocketUrl(`/ws/races/${raceId}`), {
       onOpen: () => {
         if (current !== session) return
-        const recovering = attempts > 0
-        attempts = 0
-        set({ status: "live", error: null })
-        // Depois de reconectar, o servidor só manda ticks novos: busca o estado atual pelo snapshot.
-        if (recovering) void resync(raceId, current)
+        // Conexão inicial: vira "ao vivo" no primeiro tick.
+        if (!recovering) return
+        // Reconexão: só confirma depois que a simulação voltar a andar.
+        set({ status: "syncing", error: null })
+        syncBaseSimTs = null
+        armSyncTimer(raceId, current)
+        void resync(raceId, current)
       },
 
       onMessage: (raw) => {
@@ -408,6 +500,7 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
 
       onClose: (code) => {
         if (current !== session || get().status === "finished") return
+        clearSyncTimer()
 
         if (code === 4404) {
           set({ status: "error", error: "Corrida não encontrada no simulador." })
@@ -418,17 +511,7 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
           return
         }
 
-        if (attempts >= MAX_RECONNECTS) {
-          set({ status: "error", error: "Conexão com o simulador perdida." })
-          return
-        }
-
-        attempts += 1
-        set({ status: "reconnecting" })
-        reconnectTimer = window.setTimeout(
-          () => openFeed(raceId, current),
-          1000 * 2 ** (attempts - 1),
-        )
+        scheduleReconnect(raceId, current)
       },
     })
   }
@@ -450,6 +533,9 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
       get().disconnect()
       const current = session
       attempts = 0
+      recovering = false
+      syncBaseSimTs = null
+      clearSyncTimer()
       feedSeq = 0
       lastPass.clear()
 
@@ -482,6 +568,7 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
 
     disconnect: () => {
       session++
+      clearSyncTimer()
       if (reconnectTimer !== null) {
         window.clearTimeout(reconnectTimer)
         reconnectTimer = null
