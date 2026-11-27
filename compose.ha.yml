@@ -91,7 +91,9 @@ services:
     depends_on: [redis-1, redis-2, redis-3]
   frontend:
     restart: unless-stopped
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: production
     ports: ["${F1_FRONTEND_PORT:-3000}:80"]
     volumes: ["./deploy/ha/frontend-nginx.conf:/etc/nginx/conf.d/default.conf:ro"]
     depends_on: [gateway, gateway-alt]
@@ -99,6 +101,7 @@ services:
     restart: unless-stopped
     build:
       context: ./viz3d
+      target: production
       args: { VITE_USE_API_PROXY: "1" }
     ports: ["${F1_VIZ3D_PORT:-3001}:80"]
     volumes: ["./deploy/ha/viz3d-nginx.conf:/etc/nginx/conf.d/default.conf:ro"]

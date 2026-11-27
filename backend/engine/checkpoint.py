@@ -16,8 +16,9 @@ import pybullet as pb
 
 from .simulation import SimulationEngine
 from .rule_based_race_controller import RuleBasedRaceController
+from .coach_controller import CommandBus, CoachController
 
-VERSION = 2
+VERSION = 3
 ENGINE_FIELDS = (
     'user_driver_id', 'states', 'last_inputs', 'last_input_ts', 'sim_ts',
     'current_lap', 'race_started', 'race_finished', 'prev_waypoint_idx',
@@ -35,6 +36,54 @@ def _signature(payload):
     return hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest() if secret else ''
 
 
+COACH_BUS_TTL = 86400
+
+
+def _shared_base(controllers):
+    """Retorna o RuleBasedRaceController compartilhado, aceitando o wrapper CoachController."""
+    if not controllers:
+        raise ValueError('Checkpoint só aceita controlador por regras compartilhado')
+    unwrapped = [c.base if isinstance(c, CoachController) else c for c in controllers.values()]
+    base = unwrapped[0]
+    if not isinstance(base, RuleBasedRaceController) or any(c is not base for c in unwrapped):
+        raise ValueError('Checkpoint só aceita controlador por regras compartilhado')
+    return base
+
+
+def _coach_state(coach):
+    return {
+        'last_seq': coach._last_seq, 'last_command': coach._last_command,
+        'off_track': coach._off_track, 'off_since_s': coach._off_since_s,
+        'off_track_margin_m': coach.off_track_margin_m,
+    }
+
+
+def _rebuild_controllers(engine, base, coaches, publisher):
+    """Reinstala os controladores do checkpoint. Com CoachController, o bus volta ao Redis da corrida."""
+    if not coaches:
+        for driver in engine.drivers:
+            engine.set_controller(driver.driver_id, base)
+        return
+    bus = CommandBus(publisher.client, publisher.race_id, ttl=COACH_BUS_TTL)
+    # Retoma a sequência: comandos novos não podem reutilizar seq já consumido.
+    saved_seq = max((s['last_seq'] for s in coaches.values()), default=0)
+    stored = publisher.client.get(bus._seq_key())
+    bus._seq = max(saved_seq, int(stored or 0))
+    for driver in engine.drivers:
+        state = coaches.get(driver.driver_id, {'last_seq': -1, 'last_command': 'neutral',
+                                               'off_track': False, 'off_since_s': 0.0,
+                                               'off_track_margin_m': None})
+        kwargs = {}
+        if state['off_track_margin_m'] is not None:
+            kwargs['off_track_margin_m'] = state['off_track_margin_m']
+        coach = CoachController(base, driver.driver_id, publisher=publisher, bus=bus, **kwargs)
+        coach._last_seq = state['last_seq']
+        coach._last_command = state['last_command']
+        coach._off_track = state['off_track']
+        coach._off_since_s = state['off_since_s']
+        engine.set_controller(driver.driver_id, coach)
+
+
 def capture(engine, publisher):
     cid = engine.physics._client_id
     if cid is None:
@@ -49,9 +98,9 @@ def capture(engine, publisher):
                        for i in range(pb.getNumJoints(body, physicsClientId=cid))],
             'mass': handle.mass_kg,
         }
-    controller = next(iter(engine.controllers.values()))
-    if not isinstance(controller, RuleBasedRaceController) or any(c is not controller for c in engine.controllers.values()):
-        raise ValueError('Checkpoint só aceita controlador por regras compartilhado')
+    controller = _shared_base(engine.controllers)
+    coaches = {driver_id: _coach_state(c) for driver_id, c in engine.controllers.items()
+               if isinstance(c, CoachController)}
     with engine._pit_command_lock:
         data = {
             'version': VERSION, 'config': engine.config, 'track': engine.track,
@@ -59,7 +108,8 @@ def capture(engine, publisher):
             'engine': {name: getattr(engine, name) for name in ENGINE_FIELDS},
             'pit_progress': engine.pit_controller.progress,
             'controller': {'hints': controller._hints, 'styles': controller._styles,
-                           'authority': controller.last_authority, 'gridlock': controller._gridlock},
+                           'authority': controller.last_authority, 'gridlock': controller._gridlock,
+                           'coaches': coaches},
             'bodies': bodies,
             'publisher': {'snapshot': publisher.snapshot, 'timing': publisher.timing,
                           'collisions': publisher.collisions},
@@ -88,8 +138,7 @@ def restore(encoded, publisher):
         controller._styles = data['controller']['styles']
         controller.last_authority = data['controller']['authority']
         controller._gridlock = data['controller']['gridlock']
-        for driver in engine.drivers:
-            engine.set_controller(driver.driver_id, controller)
+        _rebuild_controllers(engine, controller, data['controller'].get('coaches', {}), publisher)
         cid = engine.physics._client_id
         for driver_id, body in data['bodies'].items():
             handle = engine.handles[driver_id]

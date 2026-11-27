@@ -21,6 +21,8 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/0
       DATABASE_URL: postgresql://f1:${POSTGRES_PASSWORD:-f1dev}@postgres:5432/f1sim
+      F1_DISTRIBUTED_COMMANDS: "1"
+      F1_CHECKPOINT_SECRET: ${F1_CHECKPOINT_SECRET:-f1-development-checkpoint}
     volumes:
       - ./data:/app/data:ro
     depends_on:
