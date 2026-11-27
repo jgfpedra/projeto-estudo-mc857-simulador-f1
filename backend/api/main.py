@@ -42,6 +42,11 @@ def stop_recovery():
 origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174,http://localhost:3000,http://localhost:3001,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:3000,http://127.0.0.1:3001').split(',')
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=['*'], allow_headers=['*'])
 
+@app.get('/health')
+def health_check():
+    """Health check endpoint for CI/CD and load balancers."""
+    return {"status": "ok", "service": "f1-simulator-api"}
+
 @app.post('/races', response_model=RaceSetupResponse)
 def create_race(req: RaceSetupRequest):
     print(f"=== HTTP create_race: req={req.dict()} ===", flush=True)
