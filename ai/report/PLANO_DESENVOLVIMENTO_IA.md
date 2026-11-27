@@ -557,7 +557,7 @@ Trabalhar em **worktrees separados** é o preferível. Se usarem o mesmo worktre
 - Aplicar lazy loading às rotas do frontend e às entradas do `viz3d`.
 - Separar os vendors do frontend e registrar explicitamente o orçamento do Three monolítico.
 - Atualizar o plano de desenvolvimento e o relatório de validação com resultados e pendências reais.
-- Corrigir o pipeline de pull request: caminho do lockfile no cache npm, f-strings incompatíveis com Python 3.11 nos contextos/schemas e stub Redis do teste de largada.
+- Corrigir o pipeline de pull request: caminho do lockfile no cache npm, f-strings incompatíveis com Python 3.11 nos contextos/schemas, stub Redis do teste de largada e configuração TypeScript 6 do `viz3d` validada no Docker.
 
 **Validação registrada:** 35 testes de IA, 4 testes da API do debrief, 56 testes do frontend e 4 testes de TTS passando; builds dos dois frontends concluídos.
 

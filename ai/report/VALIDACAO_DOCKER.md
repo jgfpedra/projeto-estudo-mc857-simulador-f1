@@ -171,6 +171,7 @@ Os resultados abaixo são da rodada mais recente; não representam uma nova vali
 - Testes de IA após todas as correções: **35 passed**; testes backend do workflow: **7 passed, 1 skipped**.
 - `npx tsc --noEmit` e `npm run lint` concluídos no frontend; o lint mantém somente avisos não bloqueantes.
 - YAML do workflow validado. O pipeline completo ainda precisa ser confirmado no GitHub Actions.
+- `viz3d/tsconfig.json` foi migrado para TypeScript 6 removendo `baseUrl` e usando `./src/*` em `paths`; `docker compose build viz3d` **passou com Node 24, TypeScript 6.0.3 e Vite 8.2.2**. Resta apenas o aviso não bloqueante do chunk Three.
 
 ### Dificuldades atuais
 
