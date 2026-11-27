@@ -318,6 +318,12 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
         })
         return
 
+      case "race_recovered":
+        // Corrida foi recuperada no backend (HA). O snapshot já será buscado via resync() no onOpen.
+        // Apenas garantimos que o status volte para "live" para a UI sair do estado "reconnecting".
+        set({ status: "live" })
+        return
+
       case "ai_started": {
         set({
           aiEngineerStatus: "started",

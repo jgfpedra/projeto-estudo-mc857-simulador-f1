@@ -1,5 +1,6 @@
 import { useEffect, useReducer } from 'react'
 import type { LiveStore } from '../live/store'
+import { SpeechControls } from './SpeechControls'
 
 interface Props {
   store: LiveStore
@@ -73,6 +74,7 @@ export function AiPanel({ store, selected }: Props) {
         >
           {store.status}
         </span>
+        <SpeechControls />
       </div>
 
       <div style={{ marginTop: 4, opacity: 0.75 }}>

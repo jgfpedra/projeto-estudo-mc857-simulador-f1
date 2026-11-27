@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ChevronDown, ChevronUp, X, AlertCircle, CheckCircle, Loader2, Zap, Target, Volume2, VolumeX } from "lucide-react"
+import { ChevronDown, ChevronUp, X, AlertCircle, CheckCircle, Loader2, Zap, Target } from "lucide-react"
 import { useLiveRaceStore } from "@/stores/live-race-store"
 import type { AiSuggestion, AiCommand } from "@/types/race"
+import { speechSynthesis } from "@/services/speech-synthesis"
+import { SpeechControls } from "./speech-controls"
 
 interface AiFloatingPanelProps {
   // Estado da IA
@@ -123,7 +125,6 @@ export function AiFloatingPanel({
 }: AiFloatingPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(initiallyCollapsed)
   const [showAllSuggestions, setShowAllSuggestions] = useState(false)
-  const [ttsEnabled, setTtsEnabled] = useState(true)
   const lastSpokenIndex = useRef(suggestions.length - 1)
 
   // Get followed driver from store
@@ -172,33 +173,15 @@ export function AiFloatingPanel({
   // Short race ID para display
   const shortRaceId = useMemo(() => raceId.replace("race_", "").slice(0, 8), [raceId])
 
-  // TTS: speak new suggestions
+  // A fila global evita sobreposição e descarta duplicatas entre os painéis.
   useEffect(() => {
-    if (!ttsEnabled) return
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return
-
     const lastIndex = suggestions.length - 1
     const prevIndex = lastSpokenIndex.current
 
     if (lastIndex > prevIndex) {
       for (let i = prevIndex + 1; i <= lastIndex; i++) {
         const msg = suggestions[i]
-        if (msg?.message) {
-          const urgency = msg.urgency as "baixa" | "media" | "alta" || "media"
-          setTimeout(() => {
-            if (typeof window !== "undefined" && "speechSynthesis" in window) {
-              const utterance = new SpeechSynthesisUtterance(msg.message)
-              utterance.lang = "pt-BR"
-              utterance.rate = urgency === "alta" ? 1.1 : urgency === "media" ? 1.0 : 0.9
-              utterance.pitch = urgency === "alta" ? 1.05 : urgency === "media" ? 1.0 : 0.98
-              utterance.volume = urgency === "alta" ? 1.0 : urgency === "media" ? 0.95 : 0.9
-              const voices = window.speechSynthesis.getVoices()
-              const ptVoice = voices.find(v => v.lang === "pt-BR") || voices.find(v => v.lang.startsWith("pt"))
-              if (ptVoice) utterance.voice = ptVoice
-              window.speechSynthesis.speak(utterance)
-            }
-          }, (i - lastSpokenIndex.current) * 500)
-        }
+        if (msg?.message) speechSynthesis.speak(msg.message, msg.urgency as "baixa" | "media" | "alta")
       }
       lastSpokenIndex.current = lastIndex
     }
@@ -277,15 +260,7 @@ export function AiFloatingPanel({
               <X className="w-4 h-4" />
             </button>
           )}
-          {/* TTS Toggle */}
-          <button
-            onClick={() => setTtsEnabled(!ttsEnabled)}
-            className={`p-1 rounded transition-colors ${ttsEnabled ? "text-green-400 hover:text-green-300" : "text-muted-foreground hover:text-red-400"}`}
-            aria-label={ttsEnabled ? "Desativar síntese de voz" : "Ativar síntese de voz"}
-            title={ttsEnabled ? "TTS Ativo (clique para desativar)" : "TTS Desativado (clique para ativar)"}
-          >
-            {ttsEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          </button>
+          <SpeechControls />
         </div>
       </div>
 

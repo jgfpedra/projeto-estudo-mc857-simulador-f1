@@ -22,9 +22,10 @@
 | **Separação followedDriverId / selectedDriverId** | ✅ **Completo** | `live-race-store.ts` |
 | **DriverFollowCard integrado à lateral** | ✅ **Completo** | `driver-follow-card.tsx` |
 | **TimingPanel com 👁/✕** | ✅ **Completo** | `timing-panel.tsx` |
-| **Síntese de voz (TTS)** | 🔄 Implementado - Validação manual pendente | `viz3d/src/ai/SpeechSynthesis.ts` + painéis |
-| **Debrief pós-corrida** | 🔄 Fluxo completo - LLM requer validação de desempenho | `ai/app/debrief.py` + `viz3d/src/live/DebriefPanel.tsx` |
-| **Code-splitting frontend** | ❌ Pendente | - |
+| **Síntese de voz (TTS)** | 🔄 Centralizada e testada; validação manual pendente | `viz3d/src/ai/SpeechSynthesis.ts` + `frontend/src/services/speech-synthesis.ts` |
+| **Debrief pós-corrida** | 🔄 Prompt otimizado e UI corrigida; LLM real/visual pendentes | `ai/app/debrief.py` + `viz3d/src/live/DebriefPanel.tsx` |
+| **Code-splitting frontend** | ✅ Rotas e vendors divididos; build validado | `frontend/src/App.tsx` + `frontend/vite.config.ts` |
+| **Code-splitting viz3d** | 🔄 Entradas lazy concluídas; vendor Three pendente | `viz3d/src/main.tsx` + `viz3d/vite.config.ts` |
 
 ---
 
@@ -82,17 +83,17 @@
 ## 3. Rádio com Síntese de Voz (TTS) (Prioridade: MÉDIA) 🔄 **IMPLEMENTADO - VALIDAÇÃO MANUAL PENDENTE**
 
 ### Estado Atual
-- ✅ `viz3d/src/ai/SpeechSynthesis.ts` criado com Web Speech API, seleção de voz em português, fila por prioridade e controles de reprodução
-- ✅ Sugestões faladas em `AiEngineer.tsx` (viz3d), `ai-panel.tsx` e `ai-floating-panel.tsx` (frontend)
-- ✅ Velocidade, tom e volume ajustados pela urgência; ativação/desativação disponível nos painéis principais
-- ✅ Builds de `frontend` e `viz3d` concluídos
+- ✅ Os painéis não chamam mais `window.speechSynthesis.speak()` diretamente; usam o gerenciador compartilhado de cada app
+- ✅ Fila serializada, prioridade por urgência, deduplicação entre painéis e cancelamento protegido contra callbacks antigos
+- ✅ Seleção de voz pelo usuário nos painéis e fallback explícito `pt-BR` → `pt-PT` → `en-US`
+- ✅ Controles globais em `speech-controls.tsx`/`SpeechControls.tsx`; desligar o TTS descarta a fila sem reproduzir atrasos ao reativar
+- ✅ Quatro testes unitários do gerenciador passam; builds de `frontend` e `viz3d` concluídos
 
 ### Pendente
-- [ ] Centralizar os componentes no gerenciador `SpeechSynthesis.ts`; atualmente parte deles chama a API nativa diretamente
-- [ ] Validar manualmente voz `pt-BR`, ausência de sobreposição e interrupção em navegadores diferentes
-- [ ] Completar seleção de voz pelo usuário e fallback explícito para `pt-PT`/`en-US`
+- [ ] Validar manualmente voz `pt-BR`, fallbacks, ausência de sobreposição e interrupção em navegadores diferentes
+- [ ] Confirmar que a seleção de voz permanece coerente entre os painéis durante uma corrida real
 
-### Estimativa restante: 2h
+### Estimativa restante: 1h de validação manual
 
 ---
 
@@ -110,12 +111,16 @@
 - ✅ `viz3d/src/live/DebriefPanel.tsx` exibe todas as seções e consulta a API até o conteúdo ficar disponível
 - ✅ Botão **Ver debrief** integrado ao `LiveRace.tsx` após `race_end`
 - ✅ Testes unitários cobrem prompt, validação, geração, fallback, Redis, endpoint e histórico do listener
+- ✅ Prompt reduzido nesta rodada: classificação sem duplicação, até 16 eventos relevantes, até 12 comandos e JSON compacto
+- ✅ Geração limitada a 512 tokens, contexto de 3072, temperatura 0.1 e timeout padrão de 30s, configuráveis por ambiente
+- ✅ Painel do `viz3d` corrigido para usar `live/api.ts` e os impactos `alto`/`medio`/`baixo`; polling, fechamento e estilos próprios incluídos
 
 ### Validação executada
-- ✅ 38 testes de IA e do endpoint passaram
-- ✅ Builds de `frontend` e `viz3d` concluídos
-- ✅ Teste com Ollama e Redis reais confirmou geração do fallback, persistência, recuperação e resposta da API
-- ⚠️ O LLM excedeu 30 segundos no primeiro teste e 60 segundos no segundo; portanto, uma resposta real válida ainda não foi confirmada
+- ✅ Nesta rodada: 35 testes de IA e 4 testes do endpoint passaram
+- ✅ Builds atuais de `frontend` e `viz3d` concluídos; o `viz3d` ainda apresenta o chunk monolítico do Three
+- ✅ Teste anterior com Ollama e Redis reais confirmou geração do fallback, persistência, recuperação e resposta da API
+- ⚠️ O LLM excedeu 30 segundos no primeiro teste e 60 segundos no segundo; a nova configuração ainda **não foi medida com Ollama real**
+- ⚠️ Ollama e os containers não estavam disponíveis nesta rodada; portanto, latência real e resposta válida continuam não confirmadas
 
 ### Pendente
 - [ ] Ajustar prompt, limite de tokens e tempo de geração para obter resposta válida do LLM em uma corrida real
@@ -170,9 +175,12 @@
 - ✅ **Eventos de ciclo de vida**: `ai_started`, `ai_monitoring`, `ai_stopped`, `ai_error`
 - ✅ **Anti-repetição**: evento real vs periódico (7/7 testes passam)
 
+### Concluído nesta rodada
+- [x] **Frontend build**: rotas lazy e vendors separados; entrada principal reduzida de 598,42 kB para 42,02 kB
+- [x] **Arquivos temporários**: `_ws_probe_tmp.py` e `_start_probe_tmp.py` não estão presentes no worktree
+
 ### Pendente
-- [ ] **Frontend build**: Code splitting para chunks >500kB
-- [ ] **Limpar arquivos temporários**: `_ws_probe_tmp.py`, `_start_probe_tmp.py`
+- [ ] **Viz3d build**: separar o vendor Three (925,80 kB) após alinhar o Vite instalado à versão do manifesto
 
 ---
 
@@ -191,15 +199,16 @@
 |--------|--------|
 | MLflowTracker + integração | ✅ |
 | Dashboard/queries MLflow | ✅ (métricas disponíveis) |
-| Limpeza arquivos temporários | ⬜ Pendente |
+| Limpeza arquivos temporários | ✅ Verificado; arquivos ausentes |
 
 ### Fase 3: Features Avançadas (Semana 3) 🔄 **EM ANDAMENTO**
 | Tarefa | Status |
 |--------|--------|
-| TTS (Web Speech API) | 🔄 Implementado; validação manual pendente |
-| Debrief pós-corrida | 🔄 Fluxo completo; desempenho do LLM pendente |
-| Endpoint/API debrief + UI | ✅ Implementado e testado |
-| Code-splitting frontend | ❌ Pendente |
+| TTS (Web Speech API) | 🔄 Centralizado, com seleção de voz e testes; validação manual pendente |
+| Debrief pós-corrida | 🔄 Prompt otimizado; desempenho do LLM real pendente |
+| Endpoint/API debrief + UI | ✅ Implementado e testado; validação visual pendente |
+| Code-splitting frontend | ✅ Concluído e validado |
+| Code-splitting viz3d | 🔄 Lazy loading concluído; divisão do vendor Three pendente |
 
 ---
 
@@ -222,9 +231,10 @@
 - [x] Exportação CSV funciona (via `mlflow.search_runs`)
 
 ### TTS 🔄
-- [ ] Voz pt-BR reproduz `aviso` (código implementado; validação manual pendente)
-- [ ] Sem sobreposição de mensagens (fila implementada; integração dos componentes ao gerenciador pendente)
-- [ ] Interrupção funciona (controle implementado; validação manual pendente)
+- [x] Fila, prioridade, deduplicação, cancelamento e fallbacks cobertos por 4 testes unitários
+- [ ] Voz pt-BR reproduz `aviso` em navegador real (código implementado; validação manual pendente)
+- [ ] Ausência de sobreposição confirmada em navegadores diferentes (fila integrada e testada; validação manual pendente)
+- [ ] Interrupção confirmada em navegador real (controle implementado e testado; validação manual pendente)
 
 ### Debrief 🔄
 - [ ] Gerado pelo LLM em < 30s após `race_end` (houve timeout nos testes reais; fallback persistido corretamente)
@@ -317,10 +327,11 @@
 
 ## 11. Próximos Passos Imediatos (Atualizado)
 
-1. **Validar e ajustar geração do debrief pelo LLM** — resposta real excedeu 60s; fallback, API e persistência já validados — ~1–2h
-2. **Validar TTS nos navegadores e centralizar componentes no gerenciador** — `viz3d/src/ai/SpeechSynthesis.ts` — ~2h
-3. **Code-splitting frontend** — reduzir chunks >500kB — ~4h
-4. **Validação visual de uma corrida completa** — acompanhar `race_end`, abrir o debrief no `viz3d` e verificar todas as seções — ~1h
+A execução foi dividida em duas frentes com arquivos isolados; detalhes, bloqueios e critérios de conclusão estão na **seção 15**.
+
+1. **Frente A — IA/Ollama:** medir o novo prompt do debrief com serviços reais, ajustar somente se os dados mostrarem necessidade e validar `race_end` → Redis → API.
+2. **Frente B — Frontend/TTS/Viz3d:** alinhar o Vite do `viz3d`, concluir a divisão do vendor Three e executar as validações manuais de voz e do painel.
+3. **Integração final:** após as duas frentes, rodar uma corrida completa e atualizar este plano com resultados medidos, sem marcar validações manuais como concluídas antecipadamente.
 
 ---
 
@@ -363,7 +374,191 @@ cd frontend && npm run build
 - **Preservar** compatibilidade com `viz3d` e `frontend/`
 - **Usar** `mlflow.d` SQLite existente (não criar novo)
 - **Web Speech API** é nativa, sem dependência externa
-- **Debrief** síncrono no `race_end` (não interfere tempo real); timeout específico de 60s e fallback factual garantem persistência mesmo sem resposta do LLM
-- **Desempenho do debrief** ainda não atende à meta de 30s com o LLM; não marcar esse critério como concluído
-- **Code-splitting** necessário no frontend (chunks >500kB)
+- **Debrief** síncrono no `race_end` (não interfere tempo real); timeout específico padrão de 30s e fallback factual garantem persistência mesmo sem resposta do LLM
+- **Desempenho do debrief** ainda não foi medido após a redução do prompt; não marcar o critério de 30s como concluído sem Ollama real
+- **Code-splitting frontend** concluído; o Three permanece como vendor monolítico de 675,59 kB e possui orçamento explícito de 700 kB
+- **Code-splitting viz3d** parcial; o build atual ainda contém `AiEngineer` de 925,80 kB porque o vendor não foi separado
 - **Separação clara**: `followedDriverId` (rádio/modal) ≠ `selectedDriverId` (visual/câmera)
+
+---
+
+## 14. Arquivos Prováveis para as Próximas Modificações
+
+Os caminhos abaixo indicam onde cada pendência provavelmente será alterada ou verificada. Não é necessário abrir todos: começar pelos arquivos principais e consultar integração e testes conforme o comportamento observado.
+
+### 14.1. Desempenho e validação do debrief pelo LLM
+
+| Finalidade | Arquivos |
+|------------|----------|
+| Ajustar prompt, limite de tokens, timeout, validação e fallback | `ai/app/debrief.py` |
+| Conferir parâmetros enviados ao Ollama | `ai/app/client.py` |
+| Revisar coleta do histórico e disparo no `race_end` | `ai/app/redis_listener.py` |
+| Configurar variáveis de ambiente do serviço | `docker-compose.yml` |
+| Verificar contrato e consulta do debrief | `backend/api/main.py`, `viz3d/src/live/api.ts`, `viz3d/src/live/types.ts` |
+| Validar apresentação e abertura após a corrida | `viz3d/src/live/DebriefPanel.tsx`, `viz3d/src/live/LiveRace.tsx` |
+| Ampliar testes do fluxo | `ai/tests/test_debrief.py`, `ai/tests/test_debrief_listener.py`, `ai/tests/test_client.py`, `backend/tests/test_debrief_api.py` |
+
+### 14.2. Centralização e validação do TTS
+
+| Finalidade | Arquivos |
+|------------|----------|
+| Centralizar fila, prioridade, seleção de voz e controles | `viz3d/src/ai/SpeechSynthesis.ts` |
+| Substituir chamadas diretas à Web Speech API no viz3d | `viz3d/src/ai/AiEngineer.tsx`, `viz3d/src/ai/AiPanel.tsx` |
+| Avaliar a mesma integração nos painéis do frontend | `frontend/src/components/race/ai/ai-panel.tsx`, `frontend/src/components/race/ai/ai-floating-panel.tsx` |
+| Conferir contratos das mensagens faladas | `frontend/src/types/race.ts`, `viz3d/src/live/types.ts` |
+
+### 14.3. Code-splitting dos frontends
+
+| Finalidade | Arquivos |
+|------------|----------|
+| Configurar divisão dos bundles | `frontend/vite.config.ts`, `viz3d/vite.config.ts` |
+| Revisar carregamento das páginas principais | `frontend/src/App.tsx`, `frontend/src/pages/race-simulation.tsx`, `viz3d/src/App.tsx`, `viz3d/src/live/LiveRace.tsx` |
+| Manter a cena 3D sob carregamento lazy | `frontend/src/components/race/view-3d/race-view-3d.tsx`, `frontend/src/components/race/view-3d/race-scene.tsx` |
+| Executar e comparar os builds | `frontend/package.json`, `viz3d/package.json` |
+
+### 14.4. Validação integrada de uma corrida completa
+
+| Finalidade | Arquivos |
+|------------|----------|
+| Criar corridas curtas e injetar eventos de demonstração | `backend/scripts/visualization/run_live_compare.py`, `backend/scripts/visualization/random_events.py` |
+| Subir e configurar os serviços | `docker-compose.yml` |
+| Registrar os resultados da validação manual | `ai/report/VALIDACAO_DOCKER.md` |
+| Manter a automação alinhada ao fluxo validado | `.github/workflows/ai-validation.yml` |
+
+Após as modificações, atualizar este plano e `ai/report/VALIDACAO_DOCKER.md` somente com resultados efetivamente reproduzidos, distinguindo testes unitários, builds, validação com serviços reais e verificação visual.
+
+---
+
+## 15. Handoff e Execução Paralela (2026-11-27)
+
+Esta seção é o estado mais recente e prevalece sobre resumos anteriores quando houver divergência.
+
+### 15.1. O que foi feito nesta rodada
+
+- **Debrief:** prompt e histórico reduzidos; classificação não é mais duplicada; limite de 512 tokens e timeout de 30s; novo teste garante o limite de eventos.
+- **UI do debrief:** removidas as duplicações que impediam o TypeScript de compilar; o painel agora recebe `raceId` por props, usa `live/api.ts`, fecha corretamente e possui CSS próprio do `viz3d`.
+- **TTS:** chamadas nativas espalhadas substituídas por gerenciadores com fila, prioridade, deduplicação, cancelamento, seleção de voz e fallbacks.
+- **Frontend:** páginas carregadas com `React.lazy`; vendors separados no Vite/Rolldown.
+- **Viz3d:** modos gravação/ao vivo carregados com `React.lazy`; build voltou a compilar.
+
+Validações reproduzidas:
+
+| Validação | Resultado |
+|-----------|-----------|
+| `pytest ai/tests/ -q` | **35 passed** |
+| `pytest backend/tests/test_debrief_api.py -q` | **4 passed** |
+| Testes do frontend | **56 passed** |
+| Testes do gerenciador TTS | **4 passed** |
+| `frontend/npm run build` | **Passou** |
+| `viz3d/npm run build` | **Passou**, com aviso do chunk Three de 925,80 kB |
+| Ollama + corrida real após as mudanças | **Não executado; serviços indisponíveis** |
+| Validação manual de voz/painel em navegador | **Pendente** |
+
+Bundles do frontend:
+
+| Chunk | Antes | Agora |
+|-------|-------|-------|
+| Entrada `index` | 598,42 kB | **42,02 kB** |
+| `race-scene` | 1.007,61 kB | **157,75 kB** |
+| `race-simulation` | incluído na entrada | **52,41 kB** |
+| `react-three` | incluído na cena | **169,58 kB** |
+| `three` | incluído na cena | **675,59 kB** (171,52 kB gzip) |
+
+O orçamento de aviso do Three foi definido explicitamente como 700 kB. Isso **não significa** que todos os chunks ficaram abaixo de 500 kB; significa que o vendor monolítico foi isolado e o código da aplicação foi dividido.
+
+### 15.2. Dificuldades e bloqueios conhecidos
+
+1. **Sem benchmark real do novo debrief:** Ollama não respondeu em `localhost:11434` e `docker compose ps` não mostrou serviços ativos. Ajustes de latência foram validados por testes, não por uma corrida real.
+2. **Versões divergentes no `viz3d`:** o `node_modules` contém Vite **5.4.21**, enquanto `package.json` e `package-lock.json` declaram **8.2.2**. A configuração `rolldownOptions` funciona no frontend com Vite 8, mas falha no TypeScript do `viz3d` com Vite 5. A configuração incompatível foi revertida; não se deve manter as duas versões como estado final.
+3. **Three monolítico:** o Rolldown separa rotas e dependências, mas não divide o módulo principal do Three em unidades menores que 500 kB. O vendor ficou isolado; qualquer aumento de `chunkSizeWarningLimit` precisa ser documentado, não apresentado como redução de código.
+4. **Validação de Web Speech depende do navegador:** testes com mocks provam fila e seleção, mas não provam voz audível, política de autoplay nem diferenças Chrome/Firefox.
+5. **Worktree compartilhado:** há uma frente independente de recuperação de corridas em `ai/report/plano-recuperacao-corridas.md`, com alterações em checkpoint, `race_manager`, store, tipos e `docker-compose.yml`. Essas alterações **não fazem parte desta rodada de IA/TTS e não devem ser sobrescritas**.
+
+### 15.3. Frente A — IA/Ollama/Debrief (uma IA)
+
+**Objetivo:** obter evidência real de que o debrief atual produz JSON válido em até 30s, ou registrar medidas suficientes para revisar essa meta.
+
+**Arquivos que pode alterar:**
+
+- `ai/app/debrief.py`, `ai/app/client.py` e `ai/app/redis_listener.py` (somente se um defeito for reproduzido)
+- `ai/tests/test_debrief.py`, `ai/tests/test_debrief_listener.py`, `ai/tests/test_client.py`
+- `ai/report/VALIDACAO_DOCKER.md`
+
+**Não alterar:** frontends, `docker-compose.yml`, arquivos de checkpoint/recovery e este plano principal durante a execução.
+
+**Passos:**
+
+- [ ] **A1 — Preparar serviços:** subir Ollama/Redis e confirmar modelo carregado; não editar o compose compartilhado para isso.
+- [ ] **A2 — Medir antes de otimizar novamente:** executar uma chamada fria e pelo menos três chamadas quentes com dados reais; registrar latência, tokens, `fallback`, `fallback_motivo` e validade do JSON.
+- [ ] **A3 — Ajustar somente com evidência:** se necessário, alterar `DEBRIEF_NUM_PREDICT`, `DEBRIEF_NUM_CTX` ou o prompt sem mudar os parâmetros das sugestões ao vivo.
+- [ ] **A4 — Validar fluxo integral:** executar `race_end` → geração → `race:{id}:debrief` → `GET /races/{id}/debrief`; testar também timeout/fallback.
+- [ ] **A5 — Registrar handoff:** documentar comandos, ambiente, versões e medições em `VALIDACAO_DOCKER.md`; devolver um resumo para o integrador atualizar este plano.
+
+**Critérios de conclusão:**
+
+- JSON do LLM aceito por `validate_debrief_output()` e persistido com `fallback: false`.
+- Meta de 30s medida em corrida real, ou nova meta explicitamente justificada pelos resultados.
+- Testes de IA e do endpoint continuam passando.
+
+### 15.4. Frente B — Frontend/Viz3d/TTS (outra IA)
+
+**Objetivo:** terminar o bundle do `viz3d` e fazer as validações que dependem de navegador, sem tocar no backend nem na frente de recovery.
+
+**Arquivos que pode alterar:**
+
+- `frontend/src/App.tsx`, `frontend/vite.config.ts`
+- `frontend/src/services/speech-synthesis.ts`, `frontend/src/components/race/ai/*`
+- `viz3d/src/main.tsx`, `viz3d/vite.config.ts`, `viz3d/src/ai/*`
+- `viz3d/src/live/DebriefPanel.tsx`, `DebriefPanel.css`, `LiveRace.tsx`, `api.ts`, `types.ts`
+- `viz3d/src/services/api.ts`
+- `ai/report/VALIDACAO_FRONTEND.md` (novo, para evitar escrita concorrente no relatório da Frente A)
+
+**Não alterar:** `ai/app/*`, backend, `docker-compose.yml`, `frontend/src/stores/live-race-store.ts`, `frontend/src/types/race.ts`, arquivos de recovery e este plano principal durante a execução.
+
+**Passos:**
+
+- [ ] **B1 — Reproduzir o ambiente:** no `viz3d`, executar `npm ci` e confirmar que o Vite instalado é 8.2.2. Se a instalação não for possível, registrar o bloqueio e usar configuração compatível, sem alterar versões do manifesto silenciosamente.
+- [ ] **B2 — Fechar o code-splitting:** separar React/Three/R3F no `viz3d`, mantendo `App` e `LiveRace` lazy. Documentar qualquer orçamento acima de 500 kB; não ocultar avisos sem justificativa.
+- [ ] **B3 — Regressão automática:** rodar builds e todos os testes de `frontend` e `viz3d`; verificar navegação entre rotas e alternância 2D/3D após o lazy loading.
+- [ ] **B4 — Validar TTS manualmente:** em Chrome e Firefox disponíveis, testar `pt-BR`, seleção de voz, fallback instalado, fila sem sobreposição, desligar durante a fala e reativar sem backlog.
+- [ ] **B5 — Validar o painel:** abrir/fechar o debrief após `race_end`, verificar todas as seções, polling enquanto não existe conteúdo, estado de erro e apresentação do fallback. A validação com LLM depende da Frente A; a validação com fallback pode começar já.
+- [ ] **B6 — Registrar handoff:** salvar evidências em `VALIDACAO_FRONTEND.md` e devolver resumo ao integrador.
+
+**Critérios de conclusão:**
+
+- `npm run build` e testes passam nos dois frontends com dependências alinhadas aos manifestos.
+- `viz3d` não contém mais o chunk de aplicação+Three de 925,80 kB; qualquer vendor restante está isolado e justificado.
+- Checklist manual registra navegador, voz, comportamento ouvido e resultado; testes com mocks não são usados como substitutos.
+
+### 15.5. Integração final (após A e B)
+
+- [ ] Executar uma corrida curta completa com Ollama, Redis, backend e frontends.
+- [ ] Confirmar TTS durante a corrida e debrief real após `race_end` na mesma execução.
+- [ ] Rodar a suíte combinada e comparar os tamanhos finais dos bundles com a tabela acima.
+- [ ] Atualizar este plano central em uma única escrita, incorporando os dois handoffs.
+- [ ] Validar recovery separadamente pelo plano próprio; não misturar seus critérios com os de IA/TTS.
+
+### 15.6. Regra para as duas IAs
+
+Trabalhar em **worktrees separados** é o preferível. Se usarem o mesmo worktree, cada uma deve respeitar estritamente sua lista de arquivos, não rodar `git reset`/`checkout`, não apagar mudanças alheias e não editar este plano principal. Commits e pushes somente mediante solicitação explícita do usuário.
+
+### 15.7. Identificação sugerida para a entrega
+
+- **Branch atual:** `feat/ai-engineer-integration-4`
+- **Branch sugerida, caso esta entrega seja separada:** `feat/ai-debrief-tts-bundles`
+- **Título de commit sugerido:** `feat(ai): otimizar debrief, centralizar TTS e dividir bundles`
+
+**Resumo da entrega:**
+
+- Reduzir o prompt e os parâmetros de geração do debrief, mantendo fallback e contrato validados por testes.
+- Corrigir o painel de debrief do `viz3d`, incluindo integração da API, polling, fechamento e estilos próprios.
+- Centralizar o TTS em gerenciadores com fila, prioridade, deduplicação, cancelamento e seleção de voz com fallbacks.
+- Adicionar testes para limites do prompt e comportamento do gerenciador de voz.
+- Aplicar lazy loading às rotas do frontend e às entradas do `viz3d`.
+- Separar os vendors do frontend e registrar explicitamente o orçamento do Three monolítico.
+- Atualizar o plano de desenvolvimento e o relatório de validação com resultados e pendências reais.
+- Corrigir o pipeline de pull request: caminho do lockfile no cache npm, sintaxe Python 3.11 do contexto climático e stub Redis do teste de largada.
+
+**Validação registrada:** 35 testes de IA, 4 testes da API do debrief, 56 testes do frontend e 4 testes de TTS passando; builds dos dois frontends concluídos.
+
+**Fora do escopo deste commit:** alterações de checkpoint/recovery, `race_manager`, store/tipos da recuperação e configurações compartilhadas do `docker-compose.yml`. Antes de um commit solicitado pelo usuário, revisar o stage para não misturar essas frentes.

@@ -146,10 +146,42 @@ cd frontend && npm run build
 
 ---
 
-## Próximos Passos Pendentes
+## Atualização de 2026-11-27 — IA, TTS e bundles
 
-1. **TTS (Web Speech API)** no viz3d/frontend
-2. **Debrief pós-corrida** (evento `race_end` → LLM → `race:{id}:debrief`)
-3. **Dashboard MLflow** com queries para slides
-4. **Code-splitting frontend** para reduzir chunk size
-5. **Log do `ai_started`** no backend AiEngineer
+Os resultados abaixo são da rodada mais recente; não representam uma nova validação Docker completa.
+
+| Escopo | Comando/verificação | Resultado |
+|--------|---------------------|-----------|
+| IA | `.venv/bin/python -m pytest ai/tests/ -q` | **35 passed** |
+| API do debrief | `.venv/bin/python -m pytest backend/tests/test_debrief_api.py -q` | **4 passed** |
+| Frontend | `npm test` | **56 passed** |
+| TTS | `vitest run src/ai/SpeechSynthesis.test.ts` | **4 passed** |
+| Frontend | `npm run build` | **Passou**; entrada de 42,02 kB e Three isolado de 675,59 kB |
+| Viz3d | `npm run build` | **Passou** com Vite 5.4.21; chunk Three de 925,80 kB ainda pendente |
+| Ollama/corrida real | Nova medição do prompt otimizado | **Não executada; serviços indisponíveis** |
+| Navegador | Voz audível e painel em corrida completa | **Pendente** |
+
+### Correção do pipeline de pull request
+
+- `actions/setup-node` agora usa `cache-dependency-path: frontend/package-lock.json` nos jobs de typecheck e build; o lockfile não precisa estar na raiz do repositório.
+- Os dois f-strings inválidos de `ai/app/context/weather_context.py` foram corrigidos para Python 3.11.
+- O stub de Redis de `test_radio_espera_a_corrida_largar` passou a implementar `get()` e representar o snapshot `running`, acompanhando a interface usada pela produção.
+- Sintaxe Python 3.11 validada em 27 arquivos de `ai/app` e `ai/tests`.
+- Testes de IA: **35 passed**; testes backend do workflow: **7 passed, 1 skipped**.
+- `npx tsc --noEmit` e `npm run lint` concluídos no frontend; o lint mantém somente avisos não bloqueantes.
+- YAML do workflow validado. O pipeline completo ainda precisa ser confirmado no GitHub Actions.
+
+### Dificuldades atuais
+
+1. Ollama e os containers não estavam ativos para medir a nova configuração do debrief; a meta de 30s continua aberta.
+2. O `viz3d` tem Vite 5.4.21 instalado, mas manifesto e lockfile declaram 8.2.2. A configuração de Rolldown foi revertida nesse app até o alinhamento das dependências.
+3. O Three é um vendor monolítico. O orçamento de 700 kB no frontend isola o aviso conhecido, mas não deve ser descrito como redução para menos de 500 kB.
+4. Testes unitários da Web Speech API não substituem validação audível em navegadores.
+5. Existe trabalho paralelo de recuperação de corridas no mesmo worktree; seus arquivos não devem ser alterados pelas frentes de IA/TTS.
+
+### Próximos passos modularizados
+
+- **Frente A — IA/Ollama:** medir o debrief em chamada fria e três quentes, validar JSON real e o fluxo `race_end` → Redis → API, e registrar as evidências neste arquivo.
+- **Frente B — Frontend/Viz3d/TTS:** alinhar o Vite do `viz3d`, separar o vendor Three e validar TTS/painel em navegadores; registrar as evidências em `ai/report/VALIDACAO_FRONTEND.md`.
+
+A divisão completa de arquivos, tarefas A1–A5/B1–B6 e critérios de conclusão está em `PLANO_DESENVOLVIMENTO_IA.md`, **seção 15**. A validação Docker integrada deve ser repetida somente após os dois handoffs.

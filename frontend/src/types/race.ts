@@ -140,6 +140,7 @@ export type LiveMessage =
   | { kind: "weather_changed"; simTs: number; lap: number; weather: Weather }
   | { kind: "collision"; simTs: number; lap: number; driverAId: string; driverBId: string; impactForceN: number }
   | { kind: "race_end"; simTs: number; classification: FinalEntry[] }
+  | { kind: "race_recovered"; simTs: number; raceId: string }
   | { kind: "pit_requested"; simTs: number; lap: number; driverId: string; tyreCompound: string }
   | { kind: "pit_cancelled"; simTs: number; lap: number; driverId: string }
   | { kind: "pit_cancel_rejected"; simTs: number; lap: number; driverId: string; reason: string }

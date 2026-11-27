@@ -213,6 +213,6 @@ export function LiveRace() {
       {tick.positions.map((p) => <div key={p.driver_id}><button onClick={() => { setSelected(scene.cars.findIndex((c) => c.label === p.driver_id)); setCutKey((key) => key + 1) }}>{p.position}. {p.driver_id}</button> · {Math.round(p.velocity_mps * 3.6)} km/h · volta {p.lap + 1}</div>)}
       {tick.collisions?.length > 0 && <div>Contato: {tick.collisions[0].drv_a} / {tick.collisions[0].drv_b}</div>}
     </div>
-    {debriefOpen && <DebriefPanel />}
+    {debriefOpen && <DebriefPanel raceId={raceId} onClose={() => setDebriefOpen(false)} />}
   </div>
 }

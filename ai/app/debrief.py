@@ -16,7 +16,12 @@ REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 REDIS_URL = os.environ.get("REDIS_URL")
 DEBRIEF_TTL_SECONDS = 7 * 24 * 60 * 60
-DEBRIEF_OLLAMA_TIMEOUT = float(os.environ.get("DEBRIEF_OLLAMA_TIMEOUT", "60"))
+DEBRIEF_OLLAMA_TIMEOUT = float(os.environ.get("DEBRIEF_OLLAMA_TIMEOUT", "30"))
+DEBRIEF_OLLAMA_OPTIONS = {
+    "num_predict": int(os.environ.get("DEBRIEF_NUM_PREDICT", "512")),
+    "num_ctx": int(os.environ.get("DEBRIEF_NUM_CTX", "3072")),
+    "temperature": 0.1,
+}
 
 TEXT_FIELDS = (
     "resumo_geral",
@@ -29,31 +34,32 @@ TEXT_FIELDS = (
 )
 
 DEBRIEF_PROMPT = """Você é o engenheiro chefe de uma equipe de Fórmula 1.
-Analise somente os dados fornecidos e produza um debrief em português, em JSON
-válido, sem markdown ou texto adicional. Não invente fatos: quando uma informação
-não estiver disponível, declare essa limitação no campo correspondente.
+Use somente os dados fornecidos. Responda em português somente com JSON válido,
+sem markdown. Não invente fatos; informe quando um dado não estiver disponível.
+Seja conciso: até 2 frases no resumo, 1 frase nos demais campos textuais e no
+máximo 3 momentos-chave. Não repita a classificação nem os eventos no texto.
 
 Use exatamente esta estrutura:
 {
-  "resumo_geral": "resumo de 2 ou 3 frases com vencedor e fato marcante",
-  "largada": "ganhos, perdas e incidentes iniciais observáveis",
+  "resumo_geral": "vencedor e fato marcante",
+  "largada": "fatos iniciais observáveis",
   "estrategia_pneus": "compostos, paradas e preservação observados",
-  "combustivel": "o que a telemetria permite concluir sobre combustível",
+  "combustivel": "conclusão permitida pela telemetria",
   "momentos_chave": [
     {"volta": 1, "evento": "descrição objetiva", "impacto": "alto"}
   ],
-  "contatos_incidentes": "colisões, saídas de pista e penalidades registradas",
+  "contatos_incidentes": "incidentes e penalidades registrados",
   "performance_pilotos": {
-    "vencedor": "piloto e principal razão da vitória",
+    "vencedor": "piloto e razão da vitória",
     "surpresa_positiva": "opcional",
     "decepcao": "opcional",
     "melhor_ultrapassagem": "opcional"
   },
-  "decisoes_engenheiro": "análise dos comandos da IA e de seu timing",
-  "licoes_aprendidas": "aprendizados objetivos para a próxima corrida"
+  "decisoes_engenheiro": "análise objetiva dos comandos da IA",
+  "licoes_aprendidas": "aprendizado objetivo para a próxima corrida"
 }
 
-O impacto de cada momento deve ser "alto", "medio" ou "baixo".
+O impacto deve ser "alto", "medio" ou "baixo".
 
 === DADOS DA CORRIDA ===
 {race_data}
@@ -110,7 +116,7 @@ def build_race_data(
     ai_commands: list[dict],
     stats: dict,
 ) -> dict[str, Any]:
-    """Seleciona os metadados e a classificação relevantes para o prompt."""
+    """Seleciona os metadados sem duplicar a classificação enviada abaixo."""
     track = race_meta.get("track") if isinstance(race_meta.get("track"), dict) else {}
     return {
         "race_id": race_meta.get("race_id"),
@@ -119,16 +125,6 @@ def build_race_data(
         "voltas_previstas": race_meta.get("num_laps"),
         "numero_de_pilotos": race_meta.get("num_drivers") or len(classification),
         "piloto_do_usuario": race_meta.get("user_driver_id"),
-        "classificacao": [
-            {
-                "posicao": entry.get("position"),
-                "piloto": entry.get("driver_name") or entry.get("driver_id"),
-                "voltas": entry.get("laps_completed"),
-                "tempo_total_s": entry.get("total_time_s"),
-                "pit_stops": entry.get("pit_stops"),
-            }
-            for entry in classification[:10]
-        ],
         "eventos_disponiveis": len(events),
         "comandos_disponiveis": len(ai_commands),
         "estatisticas_fornecidas": bool(stats),
@@ -148,21 +144,32 @@ def _classification_text(classification: list[dict]) -> str:
     return "\n".join(lines) or "Classificação não disponível"
 
 
-def _events_text(events: list[dict], limit: int = 40) -> str:
+def _events_text(events: list[dict], limit: int = 16) -> str:
     if not events:
         return "Nenhum evento principal disponível"
-    selected = events[-limit:]
+
+    # Voltas e sugestões já estão resumidas nas estatísticas e nos comandos.
+    # Priorizar incidentes e mudanças de estado evita que eventos repetitivos
+    # expulsem do prompt os fatos necessários para o debrief.
+    routine_types = {"lap_completed", "ai_suggestion", "ai_command", "tyre_worn", "on_track"}
+    relevant = [event for event in events if event.get("type") not in routine_types]
+    candidates = relevant or events
+    selected = candidates[-limit:]
+    race_start = next((event for event in events if event.get("type") == "race_start"), None)
+    if race_start is not None and all(event is not race_start for event in selected):
+        selected = [race_start, *selected[-(limit - 1):]]
+
     lines = [
-        json.dumps(event, ensure_ascii=False, default=str)
+        json.dumps(event, ensure_ascii=False, default=str, separators=(",", ":"))
         for event in selected
     ]
     omitted = len(events) - len(selected)
     if omitted > 0:
-        lines.insert(0, f"{omitted} eventos anteriores omitidos do prompt")
+        lines.insert(0, f"{omitted} eventos omitidos ou já resumidos nas estatísticas")
     return "\n".join(lines)
 
 
-def _commands_text(ai_commands: list[dict], limit: int = 20) -> str:
+def _commands_text(ai_commands: list[dict], limit: int = 12) -> str:
     if not ai_commands:
         return "Nenhum comando da IA registrado"
     lines = []
@@ -188,11 +195,11 @@ def generate_debrief_prompt(
         race_meta, classification, events, ai_commands, stats
     )
     replacements = {
-        "{race_data}": json.dumps(race_data, ensure_ascii=False, default=str, indent=2),
+        "{race_data}": json.dumps(race_data, ensure_ascii=False, default=str, separators=(",", ":")),
         "{classification}": _classification_text(classification),
         "{events}": _events_text(events),
         "{ai_commands}": _commands_text(ai_commands),
-        "{stats}": json.dumps(stats, ensure_ascii=False, default=str, indent=2),
+        "{stats}": json.dumps(stats, ensure_ascii=False, default=str, separators=(",", ":")),
     }
     prompt = DEBRIEF_PROMPT
     for placeholder, value in replacements.items():
@@ -368,7 +375,7 @@ def generate_debrief(
     )
     result = call_model(
         prompt,
-        options={"num_predict": 900, "num_ctx": 4096},
+        options=DEBRIEF_OLLAMA_OPTIONS,
         timeout=DEBRIEF_OLLAMA_TIMEOUT,
     )
     if result["ok"]:

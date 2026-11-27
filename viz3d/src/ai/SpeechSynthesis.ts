@@ -1,228 +1,228 @@
-/**
- * Síntese de voz (TTS) para o rádio do engenheiro.
- * Usa a Web Speech API nativa do navegador.
- */
+/** Fila única de síntese de voz para todos os painéis do engenheiro. */
+
+export type SpeechUrgency = 'baixa' | 'media' | 'alta'
+
+export type VoiceConfig = {
+  lang: string
+  voiceURI?: string
+  rate: number
+  pitch: number
+  volume: number
+}
 
 type QueueItem = {
-  text: string;
-  priority: number; // maior = mais urgente
-  timestamp: number;
-};
+  text: string
+  priority: number
+  timestamp: number
+}
 
-type VoiceConfig = {
-  lang: string;
-  rate: number;
-  pitch: number;
-  volume: number;
-};
+type UtteranceFactory = (text: string) => SpeechSynthesisUtterance
 
 const DEFAULT_CONFIG: VoiceConfig = {
-  lang: "pt-BR",
-  rate: 1.0,
-  pitch: 1.0,
-  volume: 1.0,
-};
+  lang: 'pt-BR',
+  rate: 1,
+  pitch: 1,
+  volume: 1,
+}
 
-const URGENCY_CONFIG: Record<string, Partial<VoiceConfig>> = {
-  alta: { rate: 1.1, pitch: 1.05, volume: 1.0 },
-  media: { rate: 1.0, pitch: 1.0, volume: 0.95 },
+const URGENCY_CONFIG: Record<SpeechUrgency, Pick<VoiceConfig, 'rate' | 'pitch' | 'volume'>> = {
+  alta: { rate: 1.1, pitch: 1.05, volume: 1 },
+  media: { rate: 1, pitch: 1, volume: 0.95 },
   baixa: { rate: 0.95, pitch: 0.98, volume: 0.9 },
-};
+}
 
-class SpeechSynthesisManager {
-  private synth: SpeechSynthesis | null = null;
-  private queue: QueueItem[] = [];
-  private isSpeaking = false;
-  private config: VoiceConfig = { ...DEFAULT_CONFIG };
-  private enabled = true;
-  private onStateChange?: (speaking: boolean) => void;
+const normalizeLang = (lang: string) => lang.replace('_', '-').toLowerCase()
 
-  constructor() {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      this.synth = window.speechSynthesis;
-      this.loadVoices();
-      // Voices podem carregar assincronamente
-      if (this.synth.onvoiceschanged !== undefined) {
-        this.synth.onvoiceschanged = () => this.loadVoices();
-      }
+export class SpeechSynthesisManager {
+  private queue: QueueItem[] = []
+  private current: QueueItem | null = null
+  private speaking = false
+  private enabled = true
+  private config: VoiceConfig = { ...DEFAULT_CONFIG }
+  private listeners = new Set<() => void>()
+  private activeId = 0
+
+  constructor(
+    private synth: SpeechSynthesis | null = typeof window !== 'undefined' && 'speechSynthesis' in window
+      ? window.speechSynthesis
+      : null,
+    private createUtterance: UtteranceFactory = (text) => new SpeechSynthesisUtterance(text),
+  ) {
+    this.synth?.addEventListener('voiceschanged', () => this.emit())
+  }
+
+  private emit(): void {
+    for (const listener of this.listeners) listener()
+  }
+
+  /** Assina mudanças de fala, fila, configuração e carregamento assíncrono de vozes. */
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
+
+  getVoices(): SpeechSynthesisVoice[] {
+    return this.synth?.getVoices() ?? []
+  }
+
+  getConfig(): VoiceConfig {
+    return { ...this.config }
+  }
+
+  getState(): { speaking: boolean; queueLength: number; enabled: boolean; supported: boolean } {
+    return {
+      speaking: this.speaking,
+      queueLength: this.queue.length,
+      enabled: this.enabled,
+      supported: this.synth !== null,
     }
   }
 
-  private loadVoices(): void {
-    if (!this.synth) return;
-    const voices = this.synth.getVoices();
-    // Log para debug
-    console.log("[TTS] Voices loaded:", voices.map(v => `${v.name} (${v.lang})`));
-  }
-
-  private selectVoice(lang: string): SpeechSynthesisVoice | null {
-    if (!this.synth) return null;
-    const voices = this.synth.getVoices();
-    // Prioriza voz exata, depois por prefixo de idioma
-    return (
-      voices.find(v => v.lang === lang) ??
-      voices.find(v => v.lang.startsWith(lang.split("-")[0])) ??
-      voices.find(v => v.lang.startsWith("pt")) ??
-      voices[0] ??
-      null
-    );
-  }
-
-  /** Habilita/desabilita TTS */
   setEnabled(enabled: boolean): void {
-    this.enabled = enabled;
-    if (!enabled) {
-      this.stop();
-      this.queue = [];
-    }
+    this.enabled = enabled
+    if (enabled) this.emit()
+    else this.stop()
   }
 
-  /** Callback quando estado de fala muda */
-  setOnStateChange(callback: (speaking: boolean) => void): void {
-    this.onStateChange = callback;
-  }
-
-  /** Configurações globais */
   setConfig(config: Partial<VoiceConfig>): void {
-    this.config = { ...this.config, ...config };
+    this.config = { ...this.config, ...config }
+    this.emit()
   }
 
-  /** Adiciona texto à fila de fala */
-  speak(text: string, urgency: "baixa" | "media" | "alta" = "media"): void {
-    if (!this.enabled || !this.synth || !text.trim()) return;
+  /** Seleciona uma voz instalada; null restaura a escolha automática pt-BR. */
+  setVoice(voiceURI: string | null): void {
+    if (voiceURI === null) {
+      this.config = { ...this.config, lang: DEFAULT_CONFIG.lang, voiceURI: undefined }
+    } else {
+      const voice = this.getVoices().find((candidate) => candidate.voiceURI === voiceURI)
+      if (!voice) return
+      this.config = { ...this.config, lang: voice.lang, voiceURI: voice.voiceURI }
+    }
+    this.emit()
+  }
 
-    const priority = urgency === "alta" ? 3 : urgency === "media" ? 2 : 1;
+  private selectVoice(): SpeechSynthesisVoice | null {
+    const voices = this.getVoices()
+    if (voices.length === 0) return null
 
-    // Evita duplicatas exatas consecutivas
-    const last = this.queue[this.queue.length - 1];
-    if (last && last.text === text && last.priority === priority) {
-      return;
+    if (this.config.voiceURI) {
+      const selected = voices.find((voice) => voice.voiceURI === this.config.voiceURI)
+      if (selected) return selected
     }
 
-    this.queue.push({
-      text: text.trim(),
-      priority,
-      timestamp: Date.now(),
-    });
-
-    // Ordena por prioridade (maior primeiro), depois por timestamp (mais antigo primeiro)
-    this.queue.sort((a, b) => b.priority - a.priority || a.timestamp - b.timestamp);
-
-    this.processQueue();
+    // Português do Brasil, fallback explícito para Portugal e então inglês.
+    for (const lang of [this.config.lang, 'pt-BR', 'pt-PT', 'en-US']) {
+      const selected = voices.find((voice) => normalizeLang(voice.lang) === normalizeLang(lang))
+      if (selected) return selected
+    }
+    for (const prefix of ['pt', 'en']) {
+      const selected = voices.find((voice) => normalizeLang(voice.lang).startsWith(prefix))
+      if (selected) return selected
+    }
+    return voices[0]
   }
 
-  /** Interrompe fala atual e limpa fila */
+  speak(text: string, urgency: SpeechUrgency = 'media'): void {
+    const trimmed = text.trim()
+    if (!this.enabled || !this.synth || !trimmed) return
+
+    const priority = urgency === 'alta' ? 3 : urgency === 'media' ? 2 : 1
+    // AiPanel e AiEngineer observam a mesma mensagem; não a enfileirar duas vezes.
+    const duplicate = this.current?.text === trimmed && this.current.priority === priority
+      || this.queue.some((item) => item.text === trimmed && item.priority === priority)
+    if (duplicate) return
+
+    this.queue.push({ text: trimmed, priority, timestamp: Date.now() })
+    this.queue.sort((a, b) => b.priority - a.priority || a.timestamp - b.timestamp)
+    this.emit()
+    this.processQueue()
+  }
+
   stop(): void {
-    if (this.synth) {
-      this.synth.cancel();
-    }
-    this.isSpeaking = false;
-    this.queue = [];
-    this.onStateChange?.(false);
+    this.activeId += 1
+    this.queue = []
+    this.current = null
+    this.speaking = false
+    this.synth?.cancel()
+    this.emit()
   }
 
-  /** Pausa fala atual */
   pause(): void {
-    if (this.synth && this.isSpeaking) {
-      this.synth.pause();
-    }
+    if (this.speaking) this.synth?.pause()
   }
 
-  /** Retoma fala pausada */
   resume(): void {
-    if (this.synth && this.isSpeaking) {
-      this.synth.resume();
-    }
+    if (this.speaking) this.synth?.resume()
+  }
+
+  clearQueue(): void {
+    this.queue = []
+    this.emit()
   }
 
   private processQueue(): void {
-    if (!this.synth || this.isSpeaking || this.queue.length === 0 || !this.enabled) {
-      return;
+    if (!this.synth || this.speaking || this.queue.length === 0 || !this.enabled) return
+    const item = this.queue.shift()!
+    this.current = item
+    this.speaking = true
+    const id = ++this.activeId
+    this.emit()
+
+    const utterance = this.createUtterance(item.text)
+    const voice = this.selectVoice()
+    if (voice) utterance.voice = voice
+    utterance.lang = voice?.lang ?? this.config.lang
+
+    const urgency: SpeechUrgency = item.priority === 3 ? 'alta' : item.priority === 2 ? 'media' : 'baixa'
+    const adjustment = URGENCY_CONFIG[urgency]
+    utterance.rate = this.config.rate * adjustment.rate
+    utterance.pitch = this.config.pitch * adjustment.pitch
+    utterance.volume = Math.min(1, this.config.volume * adjustment.volume)
+
+    const finish = () => {
+      // cancel() pode disparar onend/onerror depois de outra fala ter começado.
+      if (id !== this.activeId) return
+      this.current = null
+      this.speaking = false
+      this.emit()
+      setTimeout(() => this.processQueue(), 0)
     }
-
-    const item = this.queue.shift()!;
-    this.speakItem(item);
-  }
-
-  private speakItem(item: QueueItem): void {
-    if (!this.synth || !this.enabled) {
-      this.isSpeaking = false;
-      this.processQueue();
-      return;
-    }
-
-    this.isSpeaking = true;
-    this.onStateChange?.(true);
-
-    const utterance = new SpeechSynthesisUtterance(item.text);
-
-    // Configura voz
-    const voice = this.selectVoice(this.config.lang);
-    if (voice) {
-      utterance.voice = voice;
-    }
-
-    // Configura parâmetros
-    utterance.lang = this.config.lang;
-    utterance.rate = this.config.rate * (URGENCY_CONFIG[item.priority === 3 ? "alta" : item.priority === 2 ? "media" : "baixa"]?.rate ?? 1);
-    utterance.pitch = this.config.pitch * (URGENCY_CONFIG[item.priority === 3 ? "alta" : item.priority === 2 ? "media" : "baixa"]?.pitch ?? 1);
-    utterance.volume = this.config.volume * (URGENCY_CONFIG[item.priority === 3 ? "alta" : item.priority === 2 ? "media" : "baixa"]?.volume ?? 1);
-
-    // Callbacks
     utterance.onstart = () => {
-      this.isSpeaking = true;
-      this.onStateChange?.(true);
-    };
-
-    utterance.onend = () => {
-      this.isSpeaking = false;
-      this.onStateChange?.(false);
-      // Processa próximo na fila
-      setTimeout(() => this.processQueue(), 50);
-    };
-
+      if (id !== this.activeId) return
+      this.speaking = true
+      this.emit()
+    }
+    utterance.onend = finish
     utterance.onerror = (event) => {
-      console.warn("[TTS] Speech error:", event.error);
-      this.isSpeaking = false;
-      this.onStateChange?.(false);
-      // Continua com próximo mesmo em erro
-      setTimeout(() => this.processQueue(), 50);
-    };
+      if (id === this.activeId) console.warn('[TTS] Speech error:', event.error)
+      finish()
+    }
 
-    this.synth.speak(utterance);
-  }
-
-  /** Retorna estado atual */
-  getState(): { speaking: boolean; queueLength: number; enabled: boolean } {
-    return {
-      speaking: this.isSpeaking,
-      queueLength: this.queue.length,
-      enabled: this.enabled,
-    };
-  }
-
-  /** Limpa fila mantendo fala atual */
-  clearQueue(): void {
-    this.queue = [];
+    try {
+      this.synth.speak(utterance)
+    } catch (error) {
+      console.warn('[TTS] Unable to start speech:', error)
+      finish()
+    }
   }
 }
 
-// Singleton
-export const speechSynthesis = new SpeechSynthesisManager();
+export const speechSynthesis = new SpeechSynthesisManager()
 
-/** Hook React para usar TTS */
+/** API estável para componentes que não precisam assinar o estado. */
 export function useSpeechSynthesis() {
   return {
-    speak: (text: string, urgency?: "baixa" | "media" | "alta") => speechSynthesis.speak(text, urgency),
+    speak: (text: string, urgency?: SpeechUrgency) => speechSynthesis.speak(text, urgency),
     stop: () => speechSynthesis.stop(),
     pause: () => speechSynthesis.pause(),
     resume: () => speechSynthesis.resume(),
     setEnabled: (enabled: boolean) => speechSynthesis.setEnabled(enabled),
     setConfig: (config: Partial<VoiceConfig>) => speechSynthesis.setConfig(config),
-    setOnStateChange: (callback: (speaking: boolean) => void) => speechSynthesis.setOnStateChange(callback),
+    setVoice: (voiceURI: string | null) => speechSynthesis.setVoice(voiceURI),
+    getVoices: () => speechSynthesis.getVoices(),
     getState: () => speechSynthesis.getState(),
+    getConfig: () => speechSynthesis.getConfig(),
     clearQueue: () => speechSynthesis.clearQueue(),
-  };
+    subscribe: (listener: () => void) => speechSynthesis.subscribe(listener),
+  }
 }
-
-export type { VoiceConfig };

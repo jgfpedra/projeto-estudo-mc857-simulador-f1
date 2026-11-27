@@ -69,8 +69,9 @@ def get_weather_context(race_id: int, driver_id: int, up_to_lap: int) -> dict:
     weather_window = _get_race_weather(conn, race_id, up_to_lap)
     if weather_window.empty:
         conn.close()
-        raise ValueError(f"Sem dados climáticos para raceId={
-                         race_id} até a volta {up_to_lap}")
+        raise ValueError(
+            f"Sem dados climáticos para raceId={race_id} até a volta {up_to_lap}"
+        )
 
     current_compound = _get_driver_current_compound(conn, race_id, driver_id, up_to_lap)
     conn.close()
@@ -115,8 +116,8 @@ def format_weather_context(context: dict) -> str:
         "seco_estavel": "Pista seca, sem mudança",
         "estavel": "Sem dados suficientes para detectar tendência",
     }
-    linhas.append(f"Tendência: {transicao_texto.get(
-        context['transicao_detectada'], context['transicao_detectada'])}")
+    transicao = context["transicao_detectada"]
+    linhas.append(f"Tendência: {transicao_texto.get(transicao, transicao)}")
 
     if context["sugestao_composto"]:
         linhas.append(f"Sugestão de pneu: {context['sugestao_composto']}")

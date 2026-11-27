@@ -20,7 +20,7 @@ CLASSIFICATION = [
 ]
 EVENTS = [
     {"type": "race_start", "sim_ts": 0.0, "lap": 0},
-    {"type": "pit_stop", "sim_ts": 30.0, "lap": 1, "driver_id": "drv_01", "new_compound": "MEDIUM"},
+    {"type": "pit_stop", "sim_ts": 30.0, "lap": 1, "driver_id": "drv_01", "new_compound":"MEDIUM"},
     {"type": "collision", "sim_ts": 62.0, "lap": 2, "driver_a_id": "drv_01", "driver_b_id": "drv_02"},
     {"type": "ai_suggestion", "sim_ts": 65.0, "lap": 2, "driver_id": "drv_01", "aviso": "Defenda"},
 ]
@@ -50,11 +50,32 @@ def test_prompt_usa_dados_reais_da_corrida():
 
     assert "Interlagos" in prompt
     assert "Piloto Um" not in prompt or "drv_01" in prompt
-    assert '"new_compound": "MEDIUM"' in prompt
-    assert '"colisoes": 1' in prompt
-    assert '"pit_stops": 1' in prompt
+    assert '"new_compound":"MEDIUM"' in prompt
+    assert '"colisoes":1' in prompt
+    assert '"pit_stops":1' in prompt
     assert "Rival próximo" in prompt
     assert '"circuit": "Autódromo"' not in prompt
+
+
+def test_prompt_limita_eventos_e_preserva_largada_e_desfecho():
+    events = [
+        {"type": "race_start", "sim_ts": 0, "lap": 0},
+        *[
+            {"type": "race_control", "sim_ts": index + 1, "message": f"controle {index}"}
+            for index in range(30)
+        ],
+        {"type": "race_end", "sim_ts": 31, "lap": 3},
+    ]
+    prompt = debrief.generate_debrief_prompt(
+        RACE_META, CLASSIFICATION, events, AI_COMMANDS, {}
+    )
+
+    assert prompt.count('"type":') == 16
+    assert '"type":"race_start"' in prompt
+    assert '"type":"race_end"' in prompt
+    assert '"message":"controle 0"' not in prompt
+    assert '"message":"controle 29"' in prompt
+    assert "eventos omitidos" in prompt
 
 
 def test_validate_debrief_output_aceita_contrato_e_normaliza_impacto():
@@ -92,9 +113,13 @@ def test_generate_debrief_usa_opcoes_ampliadas_e_retorna_contrato(monkeypatch):
         {"total_time_s": 91.2},
     )
 
-    assert captured["options"] == {"num_predict": 900, "num_ctx": 4096}
+    assert captured["options"] == {
+        "num_predict": 512,
+        "num_ctx": 3072,
+        "temperature": 0.1,
+    }
     assert captured["timeout"] == debrief.DEBRIEF_OLLAMA_TIMEOUT
-    assert '"new_compound": "MEDIUM"' in captured["prompt"]
+    assert '"new_compound":"MEDIUM"' in captured["prompt"]
     assert result["fallback"] is False
     assert result["race_id"] == "race_test"
     assert result["resumo_geral"] == VALID_OUTPUT["resumo_geral"]

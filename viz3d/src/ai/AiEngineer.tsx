@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef } from 'react'
 import { Color, ConeGeometry, Group, MeshBasicMaterial, RingGeometry, SphereGeometry, Vector3 } from 'three'
+import { speechSynthesis } from './SpeechSynthesis'
 
 /** Minimal store interface needed by AiEngineer. */
 interface EngineerStore {
@@ -32,48 +33,19 @@ export function AiEngineer({ store, position, followedIndex }: Props) {
   const targetYaw = useRef(0)
   const currentYaw = useRef(0)
   const lastSpokenIndex = useRef(store.messages.length - 1)
-  const ttsEnabled = useRef(true)
 
-  // Initialize TTS
+  // O gerenciador serializa a fila e elimina duplicatas também enviadas pelo AiPanel.
   useEffect(() => {
-    // Check if TTS is supported
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      console.log("[AiEngineer] TTS initialized")
-    }
-    return () => {
-      // Cleanup on unmount
-    }
-  }, [])
-
-  // Speak new messages
-  useEffect(() => {
-    if (!ttsEnabled.current) return
-
     const messages = store.messages
     const lastIndex = messages.length - 1
     const prevIndex = lastSpokenIndex.current
 
     if (lastIndex > prevIndex) {
-      // New message(s) arrived
       for (let i = prevIndex + 1; i <= lastIndex; i++) {
         const msg = messages[i]
         if (msg?.aviso) {
-          const urgency = msg.urgencia as "baixa" | "media" | "alta" || "media"
-          // Small delay to avoid overlap
-          setTimeout(() => {
-            if (typeof window !== "undefined" && "speechSynthesis" in window) {
-              const utterance = new SpeechSynthesisUtterance(msg.aviso)
-              utterance.lang = "pt-BR"
-              utterance.rate = urgency === "alta" ? 1.1 : urgency === "media" ? 1.0 : 0.9
-              utterance.pitch = urgency === "alta" ? 1.05 : urgency === "media" ? 1.0 : 0.98
-              utterance.volume = urgency === "alta" ? 1.0 : urgency === "media" ? 0.95 : 0.9
-              // Try to use pt-BR voice
-              const voices = window.speechSynthesis.getVoices()
-              const ptVoice = voices.find(v => v.lang === "pt-BR") || voices.find(v => v.lang.startsWith("pt"))
-              if (ptVoice) utterance.voice = ptVoice
-              window.speechSynthesis.speak(utterance)
-            }
-          }, (i - prevIndex) * 500) // Stagger multiple messages
+          const urgency = msg.urgencia === 'alta' || msg.urgencia === 'baixa' ? msg.urgencia : 'media'
+          speechSynthesis.speak(msg.aviso, urgency)
         }
       }
       lastSpokenIndex.current = lastIndex
