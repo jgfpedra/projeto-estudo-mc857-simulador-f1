@@ -127,36 +127,34 @@ export function AiFloatingPanel({
   const [showAllSuggestions, setShowAllSuggestions] = useState(false)
   const lastSuggestion = useRef(suggestions.at(-1))
 
-  // Get followed driver from store
-  const followedDriverId = useLiveRaceStore((s) => s.followedDriverId)
   const race = useLiveRaceStore((s) => s.race)
-  const radioDriverId = followedDriverId ?? race?.userDriverId ?? race?.drivers[0]?.driverId
+  const userDriverId = race?.userDriverId
 
   // Status config
   const statusCfg = STATUS_CONFIG[engineerStatus]
 
-  // Resolve followed driver name from race data
-  const followedDriverName = useMemo(() => {
-    if (!followedDriverId || !race) return "—"
-    return race.drivers.find(d => d.driverId === followedDriverId)?.name ?? followedDriverId
-  }, [followedDriverId, race])
+  // Piloto vinculado ao engenheiro
+  const userDriverName = useMemo(() => {
+    if (!userDriverId || !race) return "—"
+    return race.drivers.find(d => d.driverId === userDriverId)?.name ?? userDriverId
+  }, [userDriverId, race])
 
-  // Comando ativo para o piloto acompanhado
+  // Comando ativo para o piloto do usuário
   const activeCommand = useMemo(() => {
-    if (!followedDriverId) return null
-    return commands.get(followedDriverId) ?? null
-  }, [commands, followedDriverId])
+    if (!userDriverId) return null
+    return commands.get(userDriverId) ?? null
+  }, [commands, userDriverId])
 
-  // Sugestões do piloto acompanhado (destaque)
-  const followedSuggestions = useMemo(() => 
-    suggestions.filter(s => s.driverId === followedDriverId).slice(-10).reverse(),
-    [suggestions, followedDriverId]
+  // Sugestões do piloto do usuário (destaque)
+  const userSuggestions = useMemo(() =>
+    suggestions.filter(s => s.driverId === userDriverId).slice(-10).reverse(),
+    [suggestions, userDriverId]
   )
 
   // Outras sugestões (colapsadas)
   const otherSuggestions = useMemo(() =>
-    suggestions.filter(s => s.driverId !== followedDriverId).slice(-5).reverse(),
-    [suggestions, followedDriverId]
+    suggestions.filter(s => s.driverId !== userDriverId).slice(-5).reverse(),
+    [suggestions, userDriverId]
   )
 
   // Stats formatadas
@@ -174,18 +172,18 @@ export function AiFloatingPanel({
   // Short race ID para display
   const shortRaceId = useMemo(() => raceId.replace("race_", "").slice(0, 8), [raceId])
 
-  useEffect(() => () => speechSynthesis.stop(), [raceId, radioDriverId])
+  useEffect(() => () => speechSynthesis.stop(), [raceId, userDriverId])
 
   useEffect(() => {
     const previous = lastSuggestion.current
     lastSuggestion.current = suggestions.at(-1)
     const start = previous ? suggestions.lastIndexOf(previous) + 1 : 0
     for (const suggestion of suggestions.slice(start)) {
-      if (suggestion.driverId !== radioDriverId) continue
-      const subject = suggestion.command?.type ?? suggestion.message
-      speechSynthesis.speak(suggestion.message, suggestion.urgency, subject)
+      if (suggestion.driverId !== userDriverId) continue
+      const command = suggestion.command?.type
+      speechSynthesis.speak(suggestion.message, suggestion.urgency, command === "neutral" ? undefined : command)
     }
-  }, [suggestions, radioDriverId])
+  }, [suggestions, userDriverId])
 
   const handleToggleCollapse = () => {
     setIsCollapsed(!isCollapsed)
@@ -229,14 +227,11 @@ export function AiFloatingPanel({
               #{shortRaceId}
             </span>
           </div>
-          {followedDriverId && (
+          {userDriverId && (
             <div className="flex items-center gap-1.5 text-[11px] mt-0.5">
               <Target className="w-3 h-3 text-green-400" />
               <span className="text-muted-foreground">Engenheiro:</span>
-              <span className="text-foreground font-medium">{followedDriverName}</span>
-              <span className="px-1 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 text-[9px]">
-                ACOMPANHADO
-              </span>
+              <span className="text-foreground font-medium">{userDriverName}</span>
             </div>
           )}
         </div>
@@ -310,15 +305,15 @@ export function AiFloatingPanel({
 
           {/* Suggestions List */}
           <div className="flex-1 overflow-y-auto p-2 space-y-2">
-            {/* Followed Driver Suggestions (Priority) */}
-            {followedSuggestions.length > 0 && (
+            {/* Sugestões do piloto do usuário */}
+            {userSuggestions.length > 0 && (
               <div>
                 <div className="flex items-center gap-1.5 px-1 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   <Target className="w-3 h-3 text-green-400" />
-                  {followedDriverName} (prioritário)
+                  {userDriverName}
                 </div>
                 <div className="space-y-1.5">
-                  {followedSuggestions.map((suggestion, index) => (
+                  {userSuggestions.map((suggestion, index) => (
                     <SuggestionCard key={`${suggestion.simTs}-${index}`} suggestion={suggestion} isOwn={true} />
                   ))}
                 </div>
