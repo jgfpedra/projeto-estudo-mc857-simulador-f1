@@ -41,11 +41,12 @@
 - Checkpoints v2 existentes no Redis falharão com "Versão de checkpoint incompatível"
 - **Ação necessária:** Limpar checkpoints v2 ou implementar migração
 
-### 4. AI Engineer cria CommandBus separado após recovery 🟡 **MÉDIO**
+### 4. AI Engineer não era reiniciado e criava CommandBus separado após recovery 🟡 **MÉDIO** ✅ **RESOLVIDO**
 **Arquivo:** `backend/api/race_manager.py` → `_recover_race()`
-- CoachControllers restaurados usam CommandBus criado em `_rebuild_controllers()`
-- AI Engineer cria **novo** `CommandBus(self.redis, race_id, ttl=RACE_TTL)`
-- Ambos usam mesmas chaves Redis → funciona mas pode haver race condition no `_seq`
+- O fluxo agora recria e inicia o `AiEngineer` depois de restaurar a engine, usando os metadados da corrida, e o registra em `_ai_engineers`.
+- O engenheiro reutiliza o `CommandBus` dos `CoachController` restaurados; um novo bus só é criado como fallback para checkpoints sem coaches.
+- A sequência restaurada é preservada, evitando que novos comandos reutilizem números já consumidos.
+- Falha isolada na inicialização da IA é registrada sem derrubar a engine recuperada.
 
 ### 5. Variável `F1_CHECKPOINT_SECRET` precisa ser consistente 🟡 **MÉDIO**
 **Arquivo:** `docker-compose.yml` + `.env`
@@ -143,6 +144,12 @@ def test_recovery_preserves_ai_engineer_bus():
     # (não cria bus duplicado com seq=0)
 ```
 
+#### 3.1.1 ✅ **CONCLUÍDO** - Cobrir o reinício no fluxo da API
+**Arquivo:** `backend/tests/test_race_recovery_ai.py`
+- Executa `_recover_race()` com engine restaurada e mocks de Redis/AI.
+- Confirma que a thread da engine é iniciada, que o `AiEngineer` é iniciado e registrado e que recebe engine, publisher e metadados corretos.
+- Confirma que o bus recebido é exatamente o dos coaches restaurados, com `_seq == 42`.
+
 #### 3.2 Testar cenários de falha (manual)
 - Recovery com viewers conectados
 - Recovery sem viewers (race cancelled após grace period)
@@ -159,7 +166,8 @@ def test_recovery_preserves_ai_engineer_bus():
 - [x] Logs mostram recovery bem-sucedido: `Corrida X retomada em Ys`
 - [ ] Engine thread publica ticks após recovery (verificar Redis `race:*:state`)
 - [ ] Frontend recebe ticks e carros se movem
-- [ ] AI Engineer continua funcionando após recovery (sugestões/comandos aparecem)
+- [x] AI Engineer é iniciado no recovery e reutiliza o bus restaurado (teste automatizado)
+- [ ] AI Engineer continua funcionando após recovery (sugestões/comandos aparecem em validação manual)
 
 ---
 
@@ -173,6 +181,7 @@ def test_recovery_preserves_ai_engineer_bus():
 | `backend/engine/checkpoint.py` | Documentar versionamento / migração v2→v3 | 🟡 Alta | Pendente |
 | `docker-compose.yml` | `F1_CHECKPOINT_SECRET` com default dev | 🟡 Alta | OK (já tem default) |
 | `backend/tests/test_race_recovery.py` (novo) | Teste de integração end-to-end | 🔵 Baixa | ✅ Feito |
+| `backend/tests/test_race_recovery_ai.py` (novo) | Reinício da IA no fluxo da API + identidade/sequência do bus | 🔴 Alta | ✅ Feito |
 | `frontend/src/services/speech-synthesis.ts` | Fix `erasableSyntaxOnly` (private → #private) | 🟢 Fix build | ✅ Feito |
 | `frontend/src/components/race/ai/ai-floating-panel.tsx` | Fix imports (Volume2, VolumeX) | 🟢 Fix build | ✅ Feito |
 

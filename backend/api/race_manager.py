@@ -625,6 +625,41 @@ class RaceManager:
             pipe.execute()
             self._start_engine_thread(engine, publisher)
             logger.info('Engine thread reiniciada para corrida %s', race_id)
+
+            # Reinicia o engenheiro junto com a engine recuperada. Reutiliza o
+            # bus dos coaches restaurados para não reiniciar a sequência em zero.
+            try:
+                command_bus = next(
+                    (
+                        controller.bus
+                        for controller in engine.controllers.values()
+                        if isinstance(controller, CoachController) and controller.bus is not None
+                    ),
+                    None,
+                )
+                if command_bus is None:
+                    command_bus = CommandBus(self.redis, race_id, ttl=RACE_TTL)
+                ai_engineer = AiEngineer(
+                    race_id=race_id,
+                    redis_client=self.redis,
+                    command_bus=command_bus,
+                    publisher=publisher,
+                    engine=engine,
+                    total_laps=meta.get('num_laps', 10),
+                    drivers_meta=meta.get('drivers', []),
+                    user_driver_id=meta.get('user_driver_id'),
+                )
+                ai_engineer.start()
+                with self._engines_lock:
+                    self._ai_engineers[race_id] = ai_engineer
+                logger.info(
+                    'AiEngineer iniciado para corrida recuperada %s (bus seq=%d)',
+                    race_id,
+                    command_bus._seq,
+                )
+            except Exception as exc:
+                logger.warning('Não foi possível iniciar AiEngineer para corrida recuperada %s: %s', race_id, exc)
+            logger.info('Corrida %s retomada em %.1fs', race_id, engine.sim_ts)
         except Exception:
             if engine is not None:
                 engine.teardown()

@@ -172,6 +172,7 @@ Os resultados abaixo são da rodada mais recente; não representam uma nova vali
 - `npx tsc --noEmit` e `npm run lint` concluídos no frontend; o lint mantém somente avisos não bloqueantes.
 - YAML do workflow validado. O pipeline completo ainda precisa ser confirmado no GitHub Actions.
 - `viz3d/tsconfig.json` foi migrado para TypeScript 6 removendo `baseUrl` e usando `./src/*` em `paths`; `docker compose build viz3d` **passou com Node 24, TypeScript 6.0.3 e Vite 8.2.2**. Resta apenas o aviso não bloqueante do chunk Three.
+- Reinício da IA no recovery: o fluxo da API agora inicia e registra o `AiEngineer` com o bus restaurado. Testes de recovery/checkpoint: **6 passed**; testes live/viewer relacionados: **5 passed, 1 skipped**. A verificação manual de queda/restart do backend continua pendente.
 
 ### Dificuldades atuais
 
