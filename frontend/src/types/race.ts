@@ -144,21 +144,24 @@ export type LiveMessage =
   | { kind: "pit_requested"; simTs: number; lap: number; driverId: string; tyreCompound: string }
   | { kind: "pit_cancelled"; simTs: number; lap: number; driverId: string }
   | { kind: "pit_cancel_rejected"; simTs: number; lap: number; driverId: string; reason: string }
-  | { kind: "ai_suggestion"; simTs: number; lap: number; driverId: string; message: string; urgency: "baixa" | "media" | "alta"; command?: { type: string; value: number; reason: string; confianca?: number } | null }
+  | { kind: "ai_suggestion"; simTs: number; lap: number; driverId: string; raceId: string; message: string; urgency: "baixa" | "media" | "alta"; command?: { type: string; value: number; reason: string; confianca?: number } | null }
   | { kind: "ai_command"; simTs: number; lap: number; driverId: string; command: string; value: number; reason: string; issuedBy: string }
   | { kind: "ai_started"; simTs: number; raceId: string; totalLaps: number; userDriverId: string | null; numDrivers: number; decisionIntervalS: number }
   | { kind: "ai_monitoring"; simTs: number; raceId: string; status: "waiting_for_race_start" | "running" | "paused"; stats: Record<string, unknown> }
   | { kind: "ai_stopped"; simTs: number; raceId: string; reason: "race_ended" | "error" | "cancelled"; stats: Record<string, unknown> }
   | { kind: "ai_error"; simTs: number; raceId: string; error: string; errorType: string; cycle: number; driverId?: string }
+  | { kind: "driver_radio"; simTs: number; lap: number; driverId: string; driverName: string; message: string; trigger: string; confidence: number }
 
 /** Sugestão do engenheiro de IA para o HUD 2D. */
 export type AiSuggestion = {
   simTs: number
   lap: number
   driverId: string
+  raceId: string
   message: string
   urgency: "baixa" | "media" | "alta"
   command?: { type: string; value: number; reason: string; confianca?: number } | null
+  id?: string
 }
 
 /** Comando ativo do engenheiro de IA. */
@@ -206,6 +209,17 @@ export type AiError = {
   errorType: string
   cycle: number
   driverId?: string
+}
+
+/** Resposta/rádio do piloto (fallback) quando IA fala bobagem. */
+export type DriverRadio = {
+  simTs: number
+  lap: number
+  driverId: string
+  driverName: string
+  message: string
+  trigger: string
+  confidence: number
 }
 
 /** GET /races/{race_id}/snapshot. */

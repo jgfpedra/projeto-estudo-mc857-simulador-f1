@@ -125,7 +125,16 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
         pubsub.psubscribe(pattern)
         print(f"[ai_listener] assinando padrão {pattern} (todas as corridas)...")
 
-    warm_up()
+    # Verifica se deve usar Ollama (pode ser desabilitado via env ou Redis, padrão false)
+    use_ollama_env = os.environ.get("USE_OLLAMA", "false").lower() == "true"
+    # Redis pode sobrescrever o env (toggle dinâmico via API/frontend)
+    use_ollama_redis = r.get("settings:use_ollama")
+    use_ollama = use_ollama_redis == "true" if use_ollama_redis is not None else use_ollama_env
+    if use_ollama:
+        warm_up()
+        print("[ai_listener] Ollama HABILITADO - modelo aquecido")
+    else:
+        print("[ai_listener] Ollama DESABILITADO - usando apenas fallback tático")
 
     # Inicia flush periódico de métricas no MLflow
     start_periodic_flush(interval_seconds=60)
@@ -235,26 +244,37 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
 
         print(f"[ai_listener] volta {state.lap}: eventos detectados, acionando agente...")
         context_text = format_live_context(state, followed, eventos)
-        prompt = build_live_prompt(context_text)
-        print(f"[DEBUG] contexto enviado ao modelo:\n{context_text}\n")
-
-        model_result = call_model(prompt)
-
+        
         # Constrói contexto tático para fallback inteligente
         tactical_ctx = build_race_context_from_state(state, followed)
 
-        if not model_result["ok"]:
-            # Fallback tático baseado na situação real da corrida
-            output = get_fallback_tactical(tactical_ctx)
-            output["fallback_motivo"] = model_result["error"]
-        else:
-            validated = validate_agent_output(model_result["response"])
-            if validated:
-                output = validated
-            else:
-                # JSON inválido → fallback tático
+        # Verifica flag Redis dinamicamente (permite toggle sem restart)
+        use_ollama_redis = r.get("settings:use_ollama")
+        if use_ollama_redis is not None:
+            use_ollama = use_ollama_redis == "true"
+
+        if use_ollama:
+            prompt = build_live_prompt(context_text)
+            print(f"[DEBUG] contexto enviado ao modelo:\n{context_text}\n")
+
+            model_result = call_model(prompt)
+
+            if not model_result["ok"]:
+                # Fallback tático baseado na situação real da corrida
                 output = get_fallback_tactical(tactical_ctx)
-                output["fallback_motivo"] = "resposta em formato inválido"
+                output["fallback_motivo"] = model_result["error"]
+            else:
+                validated = validate_agent_output(model_result["response"])
+                if validated:
+                    output = validated
+                else:
+                    # JSON inválido → fallback tático
+                    output = get_fallback_tactical(tactical_ctx)
+                    output["fallback_motivo"] = "resposta em formato inválido"
+        else:
+            # Ollama desabilitado: usa fallback direto
+            output = get_fallback_tactical(tactical_ctx)
+            output["fallback_motivo"] = "ollama_desabilitado"
 
         output["type"] = "ai_suggestion"
         output["volta"] = state.lap

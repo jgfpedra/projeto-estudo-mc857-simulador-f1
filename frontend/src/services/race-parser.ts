@@ -20,7 +20,7 @@ const TRACK_STATUSES: readonly TrackStatus[] = ["GREEN", "YELLOW", "SAFETY_CAR",
 
 const isObj = (v: unknown): v is Raw => typeof v === "object" && v !== null && !Array.isArray(v)
 const num = (v: unknown): number | undefined => (typeof v === "number" && Number.isFinite(v) ? v : undefined)
-const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined)
+const str = (v: unknown): string => (typeof v === "string" ? v : "")
 const isTrackStatus = (v: unknown): v is TrackStatus =>
   typeof v === "string" && (TRACK_STATUSES as readonly string[]).includes(v)
 
@@ -106,12 +106,12 @@ function parseDriver(raw: unknown): RaceDriver | null {
 
   return {
     driverId,
-    abbreviation: str(raw.abbreviation) ?? driverId.slice(0, 3).toUpperCase(),
-    name: str(raw.name) ?? driverId,
+    abbreviation: str(raw.abbreviation) || driverId.slice(0, 3).toUpperCase(),
+    name: str(raw.name) || driverId,
     number: num(raw.number) ?? null,
-    team: str(raw.team) ?? null,
-    teamColor: str(raw.team_color) ?? null,
-    teamColorSource: str(raw.team_color_source) ?? null,
+    team: str(raw.team) || null,
+    teamColor: str(raw.team_color) || null,
+    teamColorSource: str(raw.team_color_source) || null,
     gridPosition: num(raw.grid_position) ?? 0,
   }
 }
@@ -287,6 +287,7 @@ export function parseLiveMessage(raw: unknown): LiveMessage | null {
       const message = str(raw.aviso)
       const urgency = str(raw.urgencia)
       const lap = num(raw.lap) ?? 0
+      const raceId = str(raw.race_id)
       if (!driverId || !message || !urgency || !["baixa", "media", "alta"].includes(urgency)) return null
       let command: { type: string; value: number; reason: string } | null = null
       if (raw.comando && isObj(raw.comando)) {
@@ -297,7 +298,7 @@ export function parseLiveMessage(raw: unknown): LiveMessage | null {
           command = { type: tipo, value: valor, reason: motivo }
         }
       }
-      return { kind: "ai_suggestion", simTs, lap, driverId, message, urgency: urgency as "baixa" | "media" | "alta", command }
+      return { kind: "ai_suggestion", simTs, lap, driverId, raceId, message, urgency: urgency as "baixa" | "media" | "alta", command }
     }
 
     case "ai_command": {
@@ -309,6 +310,17 @@ export function parseLiveMessage(raw: unknown): LiveMessage | null {
       const lap = num(raw.lap) ?? 0
       if (!driverId || !command || value === undefined || !reason || !issuedBy) return null
       return { kind: "ai_command", simTs, lap, driverId, command, value, reason, issuedBy }
+    }
+
+    case "driver_radio": {
+      const driverId = str(raw.driver_id)
+      const driverName = str(raw.driver_name)
+      const message = str(raw.message)
+      const trigger = str(raw.trigger)
+      const confidence = num(raw.confidence) ?? 0
+      const lap = num(raw.lap) ?? 0
+      if (!driverId || !driverName || !message || !trigger) return null
+      return { kind: "driver_radio", simTs, lap, driverId, driverName, message, trigger, confidence }
     }
 
     case "ai_started": {

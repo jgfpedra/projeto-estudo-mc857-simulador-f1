@@ -1,5 +1,7 @@
 /** Fila única de síntese de voz para todos os painéis do engenheiro. */
 
+import { env } from "@/config/env"
+
 export type SpeechUrgency = 'baixa' | 'media' | 'alta'
 
 export type VoiceConfig = {
@@ -31,7 +33,15 @@ const URGENCY_CONFIG: Record<SpeechUrgency, Pick<VoiceConfig, 'rate' | 'pitch' |
   baixa: { rate: 0.95, pitch: 0.98, volume: 0.9 },
 }
 
+// WAV silencioso: libera a reprodução de áudio no Firefox/Zen após o clique.
+const SILENT_WAV =
+  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA='
+
+const API_BASE_URL = (env.apiUrl ?? '').replace(/\/$/, '')
+
 const normalizeLang = (lang: string) => lang.replace('_', '-').toLowerCase()
+
+const canUseServerVoice = () => typeof window !== 'undefined' && typeof fetch === 'function'
 
 export class SpeechSynthesisManager {
   #queue: QueueItem[] = []
@@ -43,6 +53,8 @@ export class SpeechSynthesisManager {
   #activeId = 0
   #synth: SpeechSynthesis | null
   #createUtterance: UtteranceFactory
+  #audio: HTMLAudioElement | null = null
+  #abort: AbortController | null = null
 
   constructor(
     synth?: SpeechSynthesis | null,
@@ -78,14 +90,29 @@ export class SpeechSynthesisManager {
       speaking: this.#speaking,
       queueLength: this.#queue.length,
       enabled: this.#enabled,
-      supported: this.#synth !== null,
+      supported: this.#synth !== null || canUseServerVoice(),
+    }
+  }
+
+  /** Desbloqueia a síntese durante um gesto do usuário (Firefox/Zen e políticas de autoplay). */
+  unlock(): void {
+    if (!this.#enabled) return
+    this.#synth?.resume()
+    try {
+      const audio = new Audio(SILENT_WAV)
+      audio.volume = 0
+      void audio.play().then(() => audio.pause()).catch(() => {})
+    } catch {
+      // Sem áudio disponível neste contexto; a voz do servidor ainda pode funcionar.
     }
   }
 
   setEnabled(enabled: boolean): void {
     this.#enabled = enabled
-    if (enabled) this.#emit()
-    else this.stop()
+    if (enabled) {
+      this.unlock()
+      this.#emit()
+    } else this.stop()
   }
 
   setConfig(config: Partial<VoiceConfig>): void {
@@ -128,7 +155,8 @@ export class SpeechSynthesisManager {
 
   speak(text: string, urgency: SpeechUrgency = 'media'): void {
     const trimmed = text.trim()
-    if (!this.#enabled || !this.#synth || !trimmed) return
+    if (!this.#enabled || !trimmed) return
+    if (!this.#synth && !canUseServerVoice()) return
 
     const priority = urgency === 'alta' ? 3 : urgency === 'media' ? 2 : 1
     // AiPanel e AiEngineer observam a mesma mensagem; não a enfileirar duas vezes.
@@ -147,16 +175,31 @@ export class SpeechSynthesisManager {
     this.#queue = []
     this.#current = null
     this.#speaking = false
+    this.#abort?.abort()
+    this.#abort = null
+    if (this.#audio) {
+      this.#audio.onended = null
+      this.#audio.onerror = null
+      this.#audio.pause()
+      this.#audio.src = ''
+      this.#audio = null
+    }
     this.#synth?.cancel()
     this.#emit()
   }
 
   pause(): void {
-    if (this.#speaking) this.#synth?.pause()
+    if (this.#speaking) {
+      this.#synth?.pause()
+      this.#audio?.pause()
+    }
   }
 
   resume(): void {
-    if (this.#speaking) this.#synth?.resume()
+    if (this.#speaking) {
+      this.#synth?.resume()
+      void this.#audio?.play().catch(() => {})
+    }
   }
 
   clearQueue(): void {
@@ -164,32 +207,49 @@ export class SpeechSynthesisManager {
     this.#emit()
   }
 
+  #complete(id: number): void {
+    // cancel()/stop() pode disparar onend/onerror depois de outra fala ter começado.
+    if (id !== this.#activeId) return
+    this.#current = null
+    this.#speaking = false
+    this.#emit()
+    setTimeout(() => this.#processQueue(), 0)
+  }
+
   #processQueue(): void {
-    if (!this.#synth || this.#speaking || this.#queue.length === 0 || !this.#enabled) return
+    if (this.#speaking || this.#queue.length === 0 || !this.#enabled) return
+    if (!this.#synth && !canUseServerVoice()) return
+
     const item = this.#queue.shift()!
     this.#current = item
     this.#speaking = true
     const id = ++this.#activeId
     this.#emit()
 
-    const utterance = this.#createUtterance(item.text)
-    const voice = this.#selectVoice()
-    if (voice) utterance.voice = voice
-    utterance.lang = voice?.lang ?? this.#config.lang
+    const voice = this.#synth ? this.#selectVoice() : null
+    if (voice) this.#speakWithBrowser(item, voice, id, true)
+    else this.#speakWithServer(item, id)
+  }
 
-    const urgency: SpeechUrgency = item.priority === 3 ? 'alta' : item.priority === 2 ? 'media' : 'baixa'
-    const adjustment = URGENCY_CONFIG[urgency]
+  #urgencyFor(item: QueueItem): SpeechUrgency {
+    return item.priority === 3 ? 'alta' : item.priority === 2 ? 'media' : 'baixa'
+  }
+
+  #speakWithBrowser(item: QueueItem, voice: SpeechSynthesisVoice, id: number, allowServerFallback: boolean): void {
+    const utterance = this.#createUtterance(item.text)
+    utterance.voice = voice
+    utterance.lang = voice.lang ?? this.#config.lang
+
+    const adjustment = URGENCY_CONFIG[this.#urgencyFor(item)]
     utterance.rate = this.#config.rate * adjustment.rate
     utterance.pitch = this.#config.pitch * adjustment.pitch
     utterance.volume = Math.min(1, this.#config.volume * adjustment.volume)
 
+    let finished = false
     const finish = () => {
-      // cancel() pode disparar onend/onerror depois de outra fala ter começado.
-      if (id !== this.#activeId) return
-      this.#current = null
-      this.#speaking = false
-      this.#emit()
-      setTimeout(() => this.#processQueue(), 0)
+      if (finished) return
+      finished = true
+      this.#complete(id)
     }
     utterance.onstart = () => {
       if (id !== this.#activeId) return
@@ -198,16 +258,66 @@ export class SpeechSynthesisManager {
     }
     utterance.onend = finish
     utterance.onerror = (event) => {
-      if (id === this.#activeId) console.warn('[TTS] Speech error:', event.error)
-      finish()
+      if (finished) return
+      finished = true
+      const error = (event as SpeechSynthesisErrorEvent).error
+      console.warn('[TTS] Speech error:', error)
+      // Voz do sistema quebrada (ex.: sem speech-dispatcher): tenta o servidor.
+      if (allowServerFallback && canUseServerVoice() && error !== 'interrupted' && error !== 'canceled') {
+        this.#speakWithServer(item, id)
+        return
+      }
+      this.#complete(id)
     }
 
     try {
-      this.#synth.speak(utterance)
+      this.#synth!.speak(utterance)
     } catch (error) {
       console.warn('[TTS] Unable to start speech:', error)
-      finish()
+      if (allowServerFallback && canUseServerVoice()) this.#speakWithServer(item, id)
+      else this.#complete(id)
     }
+  }
+
+  #speakWithServer(item: QueueItem, id: number): void {
+    if (!canUseServerVoice()) {
+      this.#complete(id)
+      return
+    }
+    const controller = new AbortController()
+    this.#abort = controller
+    const url = `${API_BASE_URL}/tts?text=${encodeURIComponent(item.text)}&lang=${encodeURIComponent(this.#config.lang)}`
+
+    let finished = false
+    const finish = () => {
+      if (finished) return
+      finished = true
+      if (this.#abort === controller) this.#abort = null
+      this.#complete(id)
+    }
+
+    void fetch(url, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        const blob = await response.blob()
+        if (id !== this.#activeId) return
+
+        const objectUrl = URL.createObjectURL(blob)
+        const audio = new Audio(objectUrl)
+        this.#audio = audio
+        const release = () => {
+          URL.revokeObjectURL(objectUrl)
+          if (this.#audio === audio) this.#audio = null
+        }
+        audio.onended = () => { release(); finish() }
+        audio.onerror = () => { release(); finish() }
+        await audio.play()
+      })
+      .catch((error: unknown) => {
+        if ((error as { name?: string } | null)?.name === 'AbortError') return
+        console.warn('[TTS] Falha na voz do servidor:', error)
+        finish()
+      })
   }
 }
 

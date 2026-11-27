@@ -1,6 +1,7 @@
 "use client"
 
-import { X, ChevronLeft } from "lucide-react"
+import { X } from "lucide-react"
+import type { ReactNode } from "react"
 
 import { COMPOUND_BADGE, currentLap, driverColor, gapLabel } from "@/helpers/race-live"
 import type { CarFrame, FeedItem, FinalEntry, Frame, RaceInfo } from "@/types/race"
@@ -13,11 +14,12 @@ type Props = {
   feed: FeedItem[]
   classification: FinalEntry[] | null
   driverId: string
+  children?: ReactNode
 }
 
 /**
- * Painel de acompanhamento de piloto integrado à área do simulador.
- * Fica na lateral direita da área de visualização (2D/3D), respeitando os limites do container.
+ * Painel de acompanhamento dentro da área útil do visualizador (2D/3D).
+ * Começa abaixo da barra de controles/eventos para não cobrir esse header.
  * Só é renderizado quando há um piloto efetivamente sendo acompanhado (followedDriverId).
  */
 export function DriverFollowCard({
@@ -27,9 +29,9 @@ export function DriverFollowCard({
   feed,
   classification,
   driverId,
+  children,
 }: Props) {
   const unfollowDriver = useLiveRaceStore((s) => s.unfollowDriver)
-  const selectDriver = useLiveRaceStore((s) => s.selectDriver)
 
   const index = race.drivers.findIndex((d) => d.driverId === driverId)
   const info = race.drivers[index]
@@ -62,7 +64,7 @@ export function DriverFollowCard({
   }
 
   return (
-    <div className="pointer-events-auto relative z-10 w-60 h-full border-l border-border/60 bg-background/75 p-3 backdrop-blur-sm flex flex-col overflow-y-auto">
+    <div className="pointer-events-auto absolute bottom-6 left-6 top-16 z-10 flex w-60 flex-col overflow-y-auto border border-border/60 bg-background/75 p-3 backdrop-blur-sm">
       {/* Header */}
       <div className="mb-3 flex items-start gap-2 border-b border-border/60 pb-3">
         <span className="mt-0.5 h-8 w-1 shrink-0" style={{ backgroundColor: color }} />
@@ -84,16 +86,6 @@ export function DriverFollowCard({
           <X className="h-4 w-4" />
         </button>
       </div>
-
-      {/* Botão para voltar à seleção visual */}
-      <button
-        type="button"
-        onClick={() => selectDriver(driverId)}
-        className="mb-3 w-full flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="h-3 w-3" />
-        Voltar à seleção visual
-      </button>
 
       {car ? (
         <>
@@ -145,6 +137,8 @@ export function DriverFollowCard({
       {lastEvent && (
         <p className="border-t border-border/60 pt-2 text-[11px] leading-snug">{lastEvent.message}</p>
       )}
+
+      {children}
     </div>
   )
 }
