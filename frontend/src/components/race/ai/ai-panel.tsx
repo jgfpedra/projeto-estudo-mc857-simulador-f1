@@ -1,7 +1,9 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import type { AiSuggestion, AiCommand } from "@/types/race"
+import { speechSynthesis } from "@/services/speech-synthesis"
+import { SpeechControls } from "./speech-controls"
 
 interface Props {
   suggestions: AiSuggestion[]
@@ -42,6 +44,22 @@ export function AiPanel({ suggestions, commands, followedDriverId, engineerStatu
   }, [commands, followedDriverId])
 
   const recentSuggestions = useMemo(() => suggestions.slice(-5).reverse(), [suggestions])
+  const lastSpokenIndex = useRef(suggestions.length - 1)
+
+  // Novas mensagens entram na fila global; mensagens recebidas com TTS desligado
+  // avançam o cursor e não são reproduzidas em atraso ao reativar o recurso.
+  useEffect(() => {
+    const lastIndex = suggestions.length - 1
+    const prevIndex = lastSpokenIndex.current
+
+    if (lastIndex > prevIndex) {
+      for (let i = prevIndex + 1; i <= lastIndex; i++) {
+        const msg = suggestions[i]
+        if (msg?.message) speechSynthesis.speak(msg.message, msg.urgency)
+      }
+      lastSpokenIndex.current = lastIndex
+    }
+  }, [suggestions])
 
   const statusStyle = STATUS_STYLE[engineerStatus]
   const hasContent = suggestions.length > 0 || activeCommand || engineerStatus !== "idle"
@@ -73,6 +91,7 @@ export function AiPanel({ suggestions, commands, followedDriverId, engineerStatu
           <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
           {activeCommand?.command && activeCommand.command !== "neutral" ? "COMANDO ATIVO" : statusStyle.label}
         </span>
+        <SpeechControls />
       </div>
 
       {engineerError && (

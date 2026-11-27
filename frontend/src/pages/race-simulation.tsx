@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowLeft, Radio, X } from "lucide-react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
-import { DriverCard } from "@/components/race/driver-card"
+import { DriverFollowCard } from "@/components/race/driver-follow-card"
 import { EventFeed } from "@/components/race/event-feed"
 import { RaceBanner } from "@/components/race/race-banner"
 import { RaceView3D } from "@/components/race/view-3d/race-view-3d"
@@ -44,12 +44,15 @@ export function RaceSimulation() {
   const feed = useLiveRaceStore((s) => s.feed)
   const classification = useLiveRaceStore((s) => s.classification)
   const selectedDriverId = useLiveRaceStore((s) => s.selectedDriverId)
+  const followedDriverId = useLiveRaceStore((s) => s.followedDriverId)
   const viewMode = useLiveRaceStore((s) => s.viewMode)
   const aiSuggestions = useLiveRaceStore((s) => s.aiSuggestions)
   const aiCommands = useLiveRaceStore((s) => s.aiCommands)
   const aiEngineerStatus = useLiveRaceStore((s) => s.aiEngineerStatus)
   const aiEngineerStats = useLiveRaceStore((s) => s.aiEngineerStats)
   const aiEngineerError = useLiveRaceStore((s) => s.aiEngineerError)
+  const followDriver = useLiveRaceStore((s) => s.followDriver)
+  const unfollowDriver = useLiveRaceStore((s) => s.unfollowDriver)
   const load = useLiveRaceStore((s) => s.load)
   const disconnect = useLiveRaceStore((s) => s.disconnect)
   const selectDriver = useLiveRaceStore((s) => s.selectDriver)
@@ -183,8 +186,6 @@ export function RaceSimulation() {
                 engineerError={aiEngineerError}
                 raceId={race.raceId}
                 raceName={race.track.name}
-                followedDriverId={race.userDriverId ?? selectedDriverId}
-                followedDriverName={race.drivers.find(d => d.driverId === (race.userDriverId ?? selectedDriverId))?.name ?? (race.userDriverId ?? selectedDriverId ?? "—")}
                 suggestions={aiSuggestions}
                 commands={aiCommands}
                 position="top-right"
@@ -214,19 +215,20 @@ export function RaceSimulation() {
                 )}
               </div>
 
-              {selectedDriverId && (
-                <DriverCard
+              {/* Painel de acompanhamento integrado à área do simulador */}
+              {followedDriverId && (
+                <DriverFollowCard
                   race={race}
                   frame={frame}
                   prevFrame={prevFrame}
                   feed={feed}
                   classification={classification}
-                  driverId={selectedDriverId}
-                  onClose={() => selectDriver(null)}
+                  driverId={followedDriverId}
                 />
               )}
 
-              {selectedDriverId && (
+              {/* Botão "Visão geral" apenas quando há piloto selecionado visualmente mas não acompanhado */}
+              {selectedDriverId && !followedDriverId && (
                 <div className="absolute bottom-4 left-4 z-20">
                   <Button
                     variant="outline"
@@ -281,7 +283,10 @@ export function RaceSimulation() {
                 prevFrame={prevFrame}
                 classification={classification}
                 selectedDriverId={selectedDriverId}
+                followedDriverId={followedDriverId}
                 onSelect={selectDriver}
+                onFollow={followDriver}
+                onUnfollow={unfollowDriver}
                 controlledDriverId={race.userDriverId}
               />
             </section>

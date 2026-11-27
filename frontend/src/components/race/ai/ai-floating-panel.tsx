@@ -1,8 +1,11 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ChevronDown, ChevronUp, X, AlertCircle, CheckCircle, Loader2, Zap, Target } from "lucide-react"
+import { useLiveRaceStore } from "@/stores/live-race-store"
 import type { AiSuggestion, AiCommand } from "@/types/race"
+import { speechSynthesis } from "@/services/speech-synthesis"
+import { SpeechControls } from "./speech-controls"
 
 interface AiFloatingPanelProps {
   // Estado da IA
@@ -13,10 +16,6 @@ interface AiFloatingPanelProps {
   // Dados da corrida
   raceId: string
   raceName: string
-  
-  // Piloto acompanhado (alvo do engenheiro)
-  followedDriverId: string | null
-  followedDriverName: string
   
   // Dados de recomendação
   suggestions: AiSuggestion[]
@@ -117,8 +116,6 @@ export function AiFloatingPanel({
   engineerError,
   raceId,
   raceName,
-  followedDriverId,
-  followedDriverName,
   suggestions,
   commands,
   onClose,
@@ -128,9 +125,20 @@ export function AiFloatingPanel({
 }: AiFloatingPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(initiallyCollapsed)
   const [showAllSuggestions, setShowAllSuggestions] = useState(false)
+  const lastSpokenIndex = useRef(suggestions.length - 1)
+
+  // Get followed driver from store
+  const followedDriverId = useLiveRaceStore((s) => s.followedDriverId)
+  const race = useLiveRaceStore((s) => s.race)
 
   // Status config
   const statusCfg = STATUS_CONFIG[engineerStatus]
+
+  // Resolve followed driver name from race data
+  const followedDriverName = useMemo(() => {
+    if (!followedDriverId || !race) return "—"
+    return race.drivers.find(d => d.driverId === followedDriverId)?.name ?? followedDriverId
+  }, [followedDriverId, race])
 
   // Comando ativo para o piloto acompanhado
   const activeCommand = useMemo(() => {
@@ -164,6 +172,20 @@ export function AiFloatingPanel({
 
   // Short race ID para display
   const shortRaceId = useMemo(() => raceId.replace("race_", "").slice(0, 8), [raceId])
+
+  // A fila global evita sobreposição e descarta duplicatas entre os painéis.
+  useEffect(() => {
+    const lastIndex = suggestions.length - 1
+    const prevIndex = lastSpokenIndex.current
+
+    if (lastIndex > prevIndex) {
+      for (let i = prevIndex + 1; i <= lastIndex; i++) {
+        const msg = suggestions[i]
+        if (msg?.message) speechSynthesis.speak(msg.message, msg.urgency as "baixa" | "media" | "alta")
+      }
+      lastSpokenIndex.current = lastIndex
+    }
+  }, [suggestions])
 
   const handleToggleCollapse = () => {
     setIsCollapsed(!isCollapsed)
@@ -238,6 +260,7 @@ export function AiFloatingPanel({
               <X className="w-4 h-4" />
             </button>
           )}
+          <SpeechControls />
         </div>
       </div>
 

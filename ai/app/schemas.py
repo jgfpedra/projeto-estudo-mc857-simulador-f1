@@ -28,14 +28,18 @@ def validate_agent_output(raw_output: str) -> dict | None:
 
     missing_previsao = REQUIRED_PREVISAO_KEYS - parsed["previsao"].keys()
     if missing_previsao:
-        print(f"[schemas] AVISO: faltando chaves em 'previsao': {
-              missing_previsao} (preenchendo com None)")
+        print(
+            f"[schemas] AVISO: faltando chaves em 'previsao': {missing_previsao} "
+            "(preenchendo com None)"
+        )
         for key in missing_previsao:
             parsed["previsao"][key] = None
 
     if parsed["urgencia"] not in VALID_URGENCIA:
-        print(f"[schemas] AVISO: urgencia inesperada '{
-              parsed['urgencia']}', ajustando para 'media'")
+        print(
+            f"[schemas] AVISO: urgencia inesperada '{parsed['urgencia']}', "
+            "ajustando para 'media'"
+        )
         parsed["urgencia"] = "media"
 
     return parsed

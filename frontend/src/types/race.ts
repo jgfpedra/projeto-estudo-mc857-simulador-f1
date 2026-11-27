@@ -140,7 +140,7 @@ export type LiveMessage =
   | { kind: "weather_changed"; simTs: number; lap: number; weather: Weather }
   | { kind: "collision"; simTs: number; lap: number; driverAId: string; driverBId: string; impactForceN: number }
   | { kind: "race_end"; simTs: number; classification: FinalEntry[] }
-  | { kind: "race_recovered"; simTs: number }
+  | { kind: "race_recovered"; simTs: number; raceId: string }
   | { kind: "pit_requested"; simTs: number; lap: number; driverId: string; tyreCompound: string }
   | { kind: "pit_cancelled"; simTs: number; lap: number; driverId: string }
   | { kind: "pit_cancel_rejected"; simTs: number; lap: number; driverId: string; reason: string }
@@ -214,4 +214,26 @@ export type RaceSnapshot = {
   simTs: number
   lastFrame: Frame | null
   classification: FinalEntry[] | null
+}
+
+/** Debrief pós-corrida gerado pelo LLM. */
+export type Debrief = {
+  resumo_geral: string
+  largada: string
+  estrategia_pneus: string
+  combustivel: string
+  momentos_chave: Array<{ volta: number; evento: string; impacto: "alta" | "media" | "baixa" }>
+  contatos_incidentes: string
+  performance_pilotos: {
+    vencedor?: string
+    surpresa_positiva?: string
+    decepcao?: string
+    melhor_ultrapassagem?: string
+  }
+  decisoes_engenheiro: string
+  licoes_aprendidas: string
+  fallback?: boolean
+  fallback_motivo?: string
+  race_id: string
+  gerado_em: number
 }

@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { parseFrame, parseRaceInfo } from "../src/services/race-parser.ts"
+import { parseFrame, parseLiveMessage, parseRaceInfo } from "../src/services/race-parser.ts"
 
 const race = (track) => ({ race_id: "race-1", num_laps: 3, track })
 const track = { name: "Interlagos", waypoints: [[0, 0], [100, 0], [100, 100]], width_m: 14 }
@@ -84,4 +84,12 @@ test("reads the team colour source and keeps it null when absent", () => {
   const parsed = parseRaceInfo({ ...race(track), drivers }).drivers
   assert.deepEqual(parsed.map((d) => d.teamColorSource), ["openf1", "unknown", null, null])
   assert.deepEqual(parsed.map((d) => d.teamColor), ["#3671C6", "#808080", "#27F4D2", null])
+})
+
+test("preserves the race id when parsing a recovery event", () => {
+  assert.deepEqual(
+    parseLiveMessage({ type: "race_recovered", sim_ts: 42.5, race_id: "race-1" }),
+    { kind: "race_recovered", simTs: 42.5, raceId: "race-1" },
+  )
+  assert.equal(parseLiveMessage({ type: "race_recovered", sim_ts: 42.5 }), null)
 })

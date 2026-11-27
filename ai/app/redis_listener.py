@@ -12,9 +12,16 @@ from client import call_model, warm_up
 from schemas import validate_agent_output, fallback_output
 from fallback_tactical import get_fallback_tactical, build_race_context_from_state
 from metrics import record_ollama_call, record_duplicate_suppressed, start_periodic_flush
+from debrief import generate_and_save_debrief
 
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
+MAX_DEBRIEF_EVENTS = 250
+DEBRIEF_EVENT_TYPES = {
+    "race_start", "race_end", "lap_completed", "pit_stop", "off_track",
+    "on_track", "collision", "weather_changed", "tyre_worn", "race_control",
+    "ai_suggestion", "ai_command",
+}
 
 
 def _should_stay_silent(is_real_event: bool, new_command: str, new_text: str,
@@ -81,6 +88,18 @@ def _race_id_from_channel(channel) -> str | None:
     return None
 
 
+def _load_race_meta(r, race_id: str) -> dict:
+    """Lê os metadados usados tanto pelo acompanhamento quanto pelo debrief."""
+    raw = r.get(f"race:{race_id}:meta")
+    if not raw:
+        return {}
+    try:
+        meta = json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        return {}
+    return meta if isinstance(meta, dict) else {}
+
+
 def _resolve_followed_driver(r, race_id: str, default: str) -> str:
     """Piloto que o engenheiro acompanha naquela corrida.
 
@@ -89,13 +108,7 @@ def _resolve_followed_driver(r, race_id: str, default: str) -> str:
     ao engenheiro; o valor de ``F1_FOLLOWED_DRIVER`` fica só como fallback para
     corridas antigas ou criadas sem ``user_driver_id``.
     """
-    raw = r.get(f"race:{race_id}:meta")
-    if not raw:
-        return default
-    try:
-        meta = json.loads(raw)
-    except (TypeError, json.JSONDecodeError):
-        return default
+    meta = _load_race_meta(r, race_id)
     return meta.get("followed_driver_id") or meta.get("user_driver_id") or default
 
 
@@ -123,6 +136,11 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
     # Estado anti-repetição por corrida
     last_command_by_race: dict[str, str | None] = {}
     last_text_by_race: dict[str, str | None] = {}
+    # Histórico limitado para o debrief; ticks completos ficam de fora para
+    # evitar crescimento de memória e prompts com milhares de posições.
+    debrief_events: dict[str, list[dict]] = {}
+    debrief_ai_commands: dict[str, list[dict]] = {}
+    debrief_completed: set[str] = set()
 
     for message in pubsub.listen():
         if message["type"] not in ("message", "pmessage"):
@@ -141,6 +159,8 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
             last_periodic_sim_ts[current_race] = 0.0
             last_command_by_race[current_race] = None
             last_text_by_race[current_race] = None
+            debrief_events[current_race] = []
+            debrief_ai_commands[current_race] = []
             followed_by_race[current_race] = _resolve_followed_driver(
                 r, current_race, followed_driver_id)
             print(f"[ai_listener] nova corrida detectada: {current_race} "
@@ -152,6 +172,46 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
             event = json.loads(message["data"])
         except json.JSONDecodeError:
             print("[ai_listener] evento não é JSON válido, ignorando")
+            continue
+
+        if current_race in debrief_completed:
+            continue
+
+        event_type = event.get("type")
+        if event_type in DEBRIEF_EVENT_TYPES:
+            history = debrief_events[current_race]
+            history.append(event)
+            if len(history) > MAX_DEBRIEF_EVENTS:
+                del history[:-MAX_DEBRIEF_EVENTS]
+        if event_type == "ai_command":
+            commands = debrief_ai_commands[current_race]
+            commands.append(event)
+            if len(commands) > MAX_DEBRIEF_EVENTS:
+                del commands[:-MAX_DEBRIEF_EVENTS]
+
+        if event_type == "race_end":
+            print(f"[ai_listener] race_end detectado para {current_race}, gerando debrief...")
+            try:
+                classification = event.get("final_classification", [])
+                if not isinstance(classification, list):
+                    classification = []
+                generate_and_save_debrief(
+                    race_id=current_race,
+                    race_meta=_load_race_meta(r, current_race),
+                    classification=classification,
+                    events=list(debrief_events[current_race]),
+                    ai_commands=list(debrief_ai_commands[current_race]),
+                    stats={
+                        "total_time_s": event.get("total_time_s"),
+                        "race_end_sim_ts": event.get("sim_ts"),
+                    },
+                    redis_client=r,
+                )
+                debrief_completed.add(current_race)
+                print(f"[ai_listener] debrief gerado e salvo para {current_race}")
+            except Exception as e:
+                print(f"[ai_listener] ERRO ao gerar debrief: {e}")
+            # Não processa mais nada após race_end
             continue
 
         if event.get("type") == "tick":

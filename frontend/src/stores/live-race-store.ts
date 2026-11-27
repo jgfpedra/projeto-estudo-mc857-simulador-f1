@@ -43,6 +43,7 @@ type LiveRaceState = {
   feed: FeedItem[]
   classification: FinalEntry[] | null
   selectedDriverId: string | null
+  followedDriverId: string | null
   viewMode: ViewMode
   pitBusy: boolean
   pitError: string | null
@@ -61,6 +62,8 @@ type LiveRaceState = {
   load: (raceId: string) => Promise<void>
   disconnect: () => void
   selectDriver: (driverId: string | null) => void
+  followDriver: (driverId: string) => void
+  unfollowDriver: () => void
   setViewMode: (mode: ViewMode) => void
 }
 
@@ -405,6 +408,12 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
         })
         return
 
+      case "race_recovered":
+        // Corrida foi recuperada no backend (HA). O snapshot já será buscado via resync() no onOpen.
+        // Apenas garantimos que o status volte para "live" para a UI sair do estado "reconnecting".
+        set({ status: "live" })
+        return
+
       case "ai_started": {
         set({
           aiEngineerStatus: "started",
@@ -512,6 +521,7 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
     ...freshRaceState(),
     raceId: null,
     selectedDriverId: null,
+    followedDriverId: null,
     viewMode: "2d",
     pitBusy: false,
     pitError: null,
@@ -568,6 +578,10 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
     },
 
     selectDriver: (driverId) => set({ selectedDriverId: driverId }),
+
+    followDriver: (driverId: string) => set({ followedDriverId: driverId }),
+
+    unfollowDriver: () => set({ followedDriverId: null }),
 
     setViewMode: (mode) => set({ viewMode: mode }),
 

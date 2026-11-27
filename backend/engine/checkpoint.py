@@ -44,7 +44,11 @@ def _shared_base(controllers):
     if not controllers:
         raise ValueError('Checkpoint só aceita controlador por regras compartilhado')
     unwrapped = [c.base if isinstance(c, CoachController) else c for c in controllers.values()]
+    print(f'DEBUG _shared_base: controllers={list(controllers.keys())}')
+    print(f'DEBUG _shared_base: unwrapped={[id(c) for c in unwrapped]}')
     base = unwrapped[0]
+    print(f'DEBUG _shared_base: base={id(base)}, isinstance={isinstance(base, RuleBasedRaceController)}')
+    print(f'DEBUG _shared_base: any different={any(c is not base for c in unwrapped)}')
     if not isinstance(base, RuleBasedRaceController) or any(c is not base for c in unwrapped):
         raise ValueError('Checkpoint só aceita controlador por regras compartilhado')
     return base

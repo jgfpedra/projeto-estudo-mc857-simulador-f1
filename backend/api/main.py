@@ -42,6 +42,11 @@ def stop_recovery():
 origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,http://localhost:5174,http://localhost:3000,http://localhost:3001,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:3000,http://127.0.0.1:3001').split(',')
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=['*'], allow_headers=['*'])
 
+@app.get('/health')
+def health_check():
+    """Health check endpoint for CI/CD and load balancers."""
+    return {"status": "ok", "service": "f1-simulator-api"}
+
 @app.post('/races', response_model=RaceSetupResponse)
 def create_race(req: RaceSetupRequest):
     print(f"=== HTTP create_race: req={req.dict()} ===", flush=True)
@@ -388,6 +393,22 @@ def get_race_snapshot(race_id: str):
     if snapshot is None:
         raise HTTPException(status_code=404, detail='Corrida não encontrada')
     return snapshot
+
+
+@app.get('/races/{race_id}/debrief')
+def get_race_debrief(race_id: str):
+    try:
+        client = sync_client(REDIS_URL)
+        key = f"race:{race_id}:debrief"
+        raw = client.get(key)
+        if raw is None:
+            raise HTTPException(status_code=404, detail='Debrief não encontrado ou ainda não gerado')
+        return json.loads(raw)
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail='Redis indisponível') from exc
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail='Erro ao decodificar debrief')
+
 
 @app.websocket('/ws/races/{race_id}')
 async def race_websocket(websocket: WebSocket, race_id: str):

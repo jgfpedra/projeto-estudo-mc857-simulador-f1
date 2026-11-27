@@ -1,10 +1,11 @@
 import { useFrame } from '@react-three/fiber'
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Color, ConeGeometry, Group, MeshBasicMaterial, RingGeometry, SphereGeometry, Vector3 } from 'three'
+import { speechSynthesis } from './SpeechSynthesis'
 
 /** Minimal store interface needed by AiEngineer. */
 interface EngineerStore {
-  messages: readonly { urgencia?: string }[]
+  messages: readonly { urgencia?: string; aviso?: string }[]
   trackEvents: readonly unknown[]
   meta: { drivers: { driver_id: string }[] }
   latestRow: (index: number) => { position_xy?: [number, number] } | undefined
@@ -31,6 +32,25 @@ export function AiEngineer({ store, position, followedIndex }: Props) {
   const pulsePhase = useRef(0)
   const targetYaw = useRef(0)
   const currentYaw = useRef(0)
+  const lastSpokenIndex = useRef(store.messages.length - 1)
+
+  // O gerenciador serializa a fila e elimina duplicatas também enviadas pelo AiPanel.
+  useEffect(() => {
+    const messages = store.messages
+    const lastIndex = messages.length - 1
+    const prevIndex = lastSpokenIndex.current
+
+    if (lastIndex > prevIndex) {
+      for (let i = prevIndex + 1; i <= lastIndex; i++) {
+        const msg = messages[i]
+        if (msg?.aviso) {
+          const urgency = msg.urgencia === 'alta' || msg.urgencia === 'baixa' ? msg.urgencia : 'media'
+          speechSynthesis.speak(msg.aviso, urgency)
+        }
+      }
+      lastSpokenIndex.current = lastIndex
+    }
+  }, [store.messages])
 
   // Colours matching the urgency palette in AiPanel
   const urgencyColor = useMemo(() => {

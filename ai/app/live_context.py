@@ -72,8 +72,9 @@ def apply_event(state: LiveRaceState, event: dict,
         for driver_id, new_pos in current_by_driver.items():
             old_pos = state.previous_positions_by_driver.get(driver_id)
             if old_pos is not None and old_pos != new_pos:
-                eventos.append(f"Piloto {driver_id} mudou de posição: P{
-                               old_pos} -> P{new_pos}")
+                eventos.append(
+                    f"Piloto {driver_id} mudou de posição: P{old_pos} -> P{new_pos}"
+                )
         state.previous_positions_by_driver = current_by_driver
         state.positions = new_positions
 

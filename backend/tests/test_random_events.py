@@ -39,6 +39,11 @@ class _RedisStub:
     def exists(self, key):
         return self.has_state and key.endswith(':state')
 
+    def get(self, key):
+        if self.has_state and key.endswith(':snapshot'):
+            return '{"status":"running"}'
+        return None
+
 
 def test_radio_espera_a_corrida_largar():
     assert random_events._race_started(_RedisStub(False), 'race_x') is False

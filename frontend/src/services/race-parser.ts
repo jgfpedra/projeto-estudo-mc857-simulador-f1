@@ -347,8 +347,11 @@ export function parseLiveMessage(raw: unknown): LiveMessage | null {
       return { kind: "ai_error", simTs, raceId, error, errorType, cycle, driverId }
     }
 
-    case "race_recovered":
-      return { kind: "race_recovered", simTs }
+    case "race_recovered": {
+      const raceId = str(raw.race_id)
+      if (!raceId) return null
+      return { kind: "race_recovered", simTs, raceId }
+    }
 
     default:
       return null

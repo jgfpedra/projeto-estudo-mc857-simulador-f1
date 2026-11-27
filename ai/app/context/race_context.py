@@ -112,8 +112,8 @@ def get_race_context(race_id: int,
 
     if previous_state:
         if not previous_state["safety_car"]["ativo"] and current_state["safety_car"]["ativo"]:
-            eventos.append(f"Safety car ACIONADO (causa: {
-                           current_state['safety_car']['causa']})")
+            causa = current_state["safety_car"]["causa"]
+            eventos.append(f"Safety car ACIONADO (causa: {causa})")
         if previous_state["safety_car"]["ativo"] and not current_state["safety_car"]["ativo"]:
             eventos.append("Safety car RETIRADO, corrida retomada")
 
@@ -122,16 +122,16 @@ def get_race_context(race_id: int,
 
         if current_state["piloto_acompanhado_posicao"] != previous_state["piloto_acompanhado_posicao"]:
             eventos.append(
-                f"Piloto mudou de posição: P{
-                    previous_state['piloto_acompanhado_posicao']} "
+                f"Piloto mudou de posição: P{previous_state['piloto_acompanhado_posicao']} "
                 f"-> P{current_state['piloto_acompanhado_posicao']}"
             )
 
         rivais_fizeram_pit = set(current_state["pit_stops_recentes"]) & set(
             current_state["pilotos_proximos"])
         if rivais_fizeram_pit:
-            eventos.append(f"Rival(is) próximo(s) fez(fizeram) pit stop: {
-                           list(rivais_fizeram_pit)}")
+            eventos.append(
+                f"Rival(is) próximo(s) fez(fizeram) pit stop: {list(rivais_fizeram_pit)}"
+            )
 
     current_state["eventos_detectados"] = eventos
     return current_state
@@ -151,8 +151,8 @@ def should_trigger_alert(context: dict) -> bool:
 
 def format_race_context(context: dict) -> str:
     linhas = [
-        f"Volta {context['volta_atual']} — Posição do piloto acompanhado: P{
-            context['piloto_acompanhado_posicao']}",
+        f"Volta {context['volta_atual']} — Posição do piloto acompanhado: "
+        f"P{context['piloto_acompanhado_posicao']}",
     ]
 
     if context["safety_car"]["ativo"]:
@@ -169,8 +169,10 @@ def format_race_context(context: dict) -> str:
     if context.get("aviso_dado_inconsistente"):
         linhas.append(f"[AVISO] {context['aviso_dado_inconsistente']}")
 
-    top5 = ", ".join(f"P{d['Position']}:#{d['driverId']
-                                          }" for d in context["classificacao_top5"])
+    top5 = ", ".join(
+        f"P{driver['Position']}:#{driver['driverId']}"
+        for driver in context["classificacao_top5"]
+    )
     linhas.append(f"Top 5: {top5}")
 
     return "\n".join(linhas)
