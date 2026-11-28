@@ -13,7 +13,7 @@ OLLAMA_OPTIONS = {
     "keep_alive": "30m",      # Mantém modelo carregado por 30 min
     "num_predict": 150,       # Limita tokens de resposta (JSON curto)
     "num_ctx": 2048,          # Contexto menor = mais rápido
-    "temperature": 0.3,       # Mais determinístico
+    "temperature": 0.5,       # Equilíbrio entre coerência e variedade
     "top_p": 0.9,             # Nucleus sampling
     "repeat_penalty": 1.1,    # Evita repetições
 }

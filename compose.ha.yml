@@ -72,6 +72,9 @@ services:
     environment:
       REDIS_HOST: redis-1
       REDIS_PORT: 6379
+      REDIS_SENTINELS: sentinel-1:26379,sentinel-2:26379,sentinel-3:26379
+      REDIS_SENTINEL_MASTER: mymaster
+      GIT_PYTHON_REFRESH: quiet
       OLLAMA_URL: http://llama:11434
       OLLAMA_TIMEOUT: "120"
       USE_OLLAMA: "false"

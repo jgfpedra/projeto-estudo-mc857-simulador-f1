@@ -69,7 +69,7 @@ class MetricsCollector:
     ollama_available_checks: int = 0
     ollama_available_success: int = 0
 
-    _lock: threading.Lock = field(default_factory=threading.Lock)
+    _lock: threading.RLock = field(default_factory=threading.RLock)
 
     def record_call(self, elapsed: float, ok: bool, error_type: str = None,
                     fallback: bool = False, fallback_tactical: bool = False,

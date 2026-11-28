@@ -190,4 +190,12 @@ export const api = {
       warnings: data.warnings,
     }
   },
+
+  getOllamaSettings(): Promise<{ enabled: boolean }> {
+    return request<{ enabled: boolean }>("/settings/ollama")
+  },
+
+  setOllamaEnabled(enabled: boolean): Promise<{ enabled: boolean }> {
+    return request<{ enabled: boolean }>("/settings/ollama", { method: "POST", body: { enabled } })
+  },
 }

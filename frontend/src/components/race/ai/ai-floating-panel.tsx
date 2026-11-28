@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { ChevronDown, ChevronUp, X, AlertCircle, CheckCircle, Loader2, Zap, Target, ThumbsDown, ThumbsUp, MessageSquare } from "lucide-react"
 import { useLiveRaceStore } from "@/stores/live-race-store"
+import { api } from "@/services/api"
 import type { AiSuggestion, AiCommand, DriverRadio } from "@/types/race"
 import { speechSynthesis } from "@/services/speech-synthesis"
 import { SpeechControls } from "./speech-controls"
@@ -139,8 +140,7 @@ export function AiFloatingPanel({
 
   // Carrega estado inicial do Ollama
   useEffect(() => {
-    fetch('/api/settings/ollama')
-      .then(r => r.json())
+    api.getOllamaSettings()
       .then(data => setOllamaEnabled(data.enabled))
       .catch(() => {})
   }, [])
@@ -149,13 +149,7 @@ export function AiFloatingPanel({
   const toggleOllama = async () => {
     setOllamaLoading(true)
     try {
-      const newVal = !ollamaEnabled
-      const res = await fetch('/api/settings/ollama', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: newVal })
-      })
-      const data = await res.json()
+      const data = await api.setOllamaEnabled(!ollamaEnabled)
       setOllamaEnabled(data.enabled)
     } catch (e) {
       console.error('Falha ao toggle Ollama:', e)
