@@ -10,6 +10,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 MAX_GRID = 24  # slots do grid do motor (SimulationConfig.num_slots)
 
 
+class RadioAudioRequest(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    message: str = Field(min_length=1, max_length=480)
+
+
 # ---------------------------------------------------------------------------
 # Catálogo (GET /circuits, /seasons, /seasons/{year}/drivers)
 # ---------------------------------------------------------------------------

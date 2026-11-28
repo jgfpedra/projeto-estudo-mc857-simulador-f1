@@ -102,8 +102,13 @@ class CommandBus:
         issued_by: str = "ai",
     ) -> CoachCommand:
         with self._seq_lock:
-            self._seq += 1
-            local_seq = self._seq
+            # A sequência pertence à corrida, mesmo entre processos e após recovery.
+            local_seq = int(self.client.eval(
+                "local n = math.max(tonumber(redis.call('get', KEYS[1]) or '0'), tonumber(ARGV[1])) + 1; "
+                "redis.call('set', KEYS[1], n, 'EX', ARGV[2]); return n",
+                1, self._seq_key(), self._seq, self.ttl,
+            ))
+            self._seq = local_seq
 
         cmd = CoachCommand(
             command=normalize_command(command),
@@ -114,8 +119,6 @@ class CommandBus:
             ts=time.time(),
         )
         self.client.setex(self._key(driver_id), self.ttl, json.dumps(cmd.to_dict()))
-        # Also update global sequence
-        self.client.set(self._seq_key(), local_seq)
         return cmd
 
     def latest(self, driver_id: str) -> Optional[CoachCommand]:

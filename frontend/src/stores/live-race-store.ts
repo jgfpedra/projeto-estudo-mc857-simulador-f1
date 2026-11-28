@@ -459,7 +459,7 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
           kind: "pit_request",
           tone: "info",
           driverIds: [],
-          message: `🤖 Engenheiro de IA iniciado — monitorando ${msg.numDrivers} pilotos`,
+          message: "🤖 Engenheiro de IA iniciado para o piloto do usuário",
         })
         return
       }

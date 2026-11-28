@@ -246,8 +246,10 @@ class TyreState:
         else:  # WET
             base = self.model.grip_wet
 
-        # Quanto mais gasto, menos grip (até -15% no fim da vida).
-        wear_factor = 0.85 + 0.15 * (self.tyre_life / 100.0)
+        # A aderência cai gradualmente e se deteriora mais abaixo de 35%.
+        life = max(0.0, min(100.0, self.tyre_life))
+        critical_wear = max(0.0, (35.0 - life) / 35.0)
+        wear_factor = 0.85 + 0.15 * (life / 100.0) - 0.25 * critical_wear**2
 
         # Desvio de temperatura
         temp_dev = abs(track_temp_c - self.model.optimal_track_temp)

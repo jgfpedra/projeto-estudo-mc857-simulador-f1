@@ -12,6 +12,7 @@ TIMEOUT_SECONDS = int(os.environ.get("OLLAMA_TIMEOUT", "30"))
 OLLAMA_OPTIONS = {
     "keep_alive": "30m",      # Mantém modelo carregado por 30 min
     "num_predict": 150,       # Limita tokens de resposta (JSON curto)
+    "num_thread": int(os.environ.get("F1_OLLAMA_THREADS", "2")),
     "num_ctx": 2048,          # Contexto menor = mais rápido
     "temperature": 0.5,       # Equilíbrio entre coerência e variedade
     "top_p": 0.9,             # Nucleus sampling

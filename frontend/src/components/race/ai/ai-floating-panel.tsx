@@ -128,12 +128,13 @@ export function AiFloatingPanel({
   const [showAllSuggestions, setShowAllSuggestions] = useState(false)
   const [ollamaEnabled, setOllamaEnabled] = useState(false)
   const [ollamaLoading, setOllamaLoading] = useState(false)
-  const lastSpokenIndex = useRef(suggestions.length - 1)
+  const lastSuggestion = useRef<AiSuggestion | undefined>(undefined)
 
-  // Get followed driver from store
+  // Piloto acompanhado (rádio) e piloto controlado pelo usuário (sugestões da IA)
   const followedDriverId = useLiveRaceStore((s) => s.followedDriverId)
   const race = useLiveRaceStore((s) => s.race)
   const driverRadios = useLiveRaceStore((s) => s.driverRadios)
+  const userDriverId = race?.userDriverId ?? null
 
   // Status config
   const statusCfg = STATUS_CONFIG[engineerStatus]
@@ -164,22 +165,28 @@ export function AiFloatingPanel({
     return race.drivers.find(d => d.driverId === followedDriverId)?.name ?? followedDriverId
   }, [followedDriverId, race])
 
-  // Comando ativo para o piloto acompanhado
-  const activeCommand = useMemo(() => {
-    if (!followedDriverId) return null
-    return commands.get(followedDriverId) ?? null
-  }, [commands, followedDriverId])
+  // Resolve o nome do piloto do usuário
+  const userDriverName = useMemo(() => {
+    if (!userDriverId || !race) return "Piloto"
+    return race.drivers.find(d => d.driverId === userDriverId)?.name ?? userDriverId
+  }, [userDriverId, race])
 
-  // Sugestões do piloto acompanhado (destaque)
-  const followedSuggestions = useMemo(() => 
-    suggestions.filter(s => s.driverId === followedDriverId).slice(-10).reverse(),
-    [suggestions, followedDriverId]
+  // Comando ativo para o piloto do usuário
+  const activeCommand = useMemo(() => {
+    if (!userDriverId) return null
+    return commands.get(userDriverId) ?? null
+  }, [commands, userDriverId])
+
+  // Sugestões do piloto do usuário (destaque)
+  const userSuggestions = useMemo(() =>
+    suggestions.filter(s => s.driverId === userDriverId).slice(-10).reverse(),
+    [suggestions, userDriverId]
   )
 
   // Outras sugestões (colapsadas)
   const otherSuggestions = useMemo(() =>
-    suggestions.filter(s => s.driverId !== followedDriverId).slice(-5).reverse(),
-    [suggestions, followedDriverId]
+    suggestions.filter(s => s.driverId !== userDriverId).slice(-5).reverse(),
+    [suggestions, userDriverId]
   )
 
   // Rádios do piloto acompanhado (respostas à IA)
@@ -203,19 +210,18 @@ export function AiFloatingPanel({
   // Short race ID para display
   const shortRaceId = useMemo(() => raceId.replace("race_", "").slice(0, 8), [raceId])
 
-  // A fila global evita sobreposição e descarta duplicatas entre os painéis.
-  useEffect(() => {
-    const lastIndex = suggestions.length - 1
-    const prevIndex = lastSpokenIndex.current
+  useEffect(() => () => speechSynthesis.stop(), [raceId, userDriverId])
 
-    if (lastIndex > prevIndex) {
-      for (let i = prevIndex + 1; i <= lastIndex; i++) {
-        const msg = suggestions[i]
-        if (msg?.message) speechSynthesis.speak(msg.message, msg.urgency as "baixa" | "media" | "alta")
-      }
-      lastSpokenIndex.current = lastIndex
+  useEffect(() => {
+    const previous = lastSuggestion.current
+    lastSuggestion.current = suggestions.at(-1)
+    const start = previous ? suggestions.lastIndexOf(previous) + 1 : 0
+    for (const suggestion of suggestions.slice(start)) {
+      if (suggestion.driverId !== userDriverId) continue
+      const command = suggestion.command?.type
+      speechSynthesis.speak(suggestion.message, suggestion.urgency, command === "neutral" ? undefined : command)
     }
-  }, [suggestions])
+  }, [suggestions, userDriverId])
 
   const handleToggleCollapse = () => {
     setIsCollapsed(!isCollapsed)
@@ -352,15 +358,15 @@ export function AiFloatingPanel({
 
           {/* Suggestions List */}
           <div className="flex-1 overflow-y-auto p-2 space-y-2">
-            {/* Followed Driver Suggestions (Priority) */}
-            {followedSuggestions.length > 0 && (
+            {/* Sugestões do piloto do usuário */}
+            {userSuggestions.length > 0 && (
               <div>
                 <div className="flex items-center gap-1.5 px-1 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   <Target className="w-3 h-3 text-green-400" />
-                  {followedDriverName} (prioritário)
+                  {userDriverName}
                 </div>
                 <div className="space-y-1.5">
-                  {followedSuggestions.map((suggestion, index) => (
+                  {userSuggestions.map((suggestion, index) => (
                     <SuggestionCard key={`${suggestion.simTs}-${index}`} suggestion={suggestion} isOwn={true} />
                   ))}
                 </div>

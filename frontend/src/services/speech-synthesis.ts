@@ -1,6 +1,8 @@
 /** Fila única de síntese de voz para todos os painéis do engenheiro. */
-
 import { env } from "@/config/env"
+
+const RADIO_URL = `${(env.apiUrl ?? "").replace(/\/$/, "")}/races/radio/audio`
+
 
 export type SpeechUrgency = 'baixa' | 'media' | 'alta'
 
@@ -14,47 +16,56 @@ export type VoiceConfig = {
 
 type QueueItem = {
   text: string
-  priority: number
-  timestamp: number
+  expiresAt: number
+  noticeKey: string
 }
 
 type UtteranceFactory = (text: string) => SpeechSynthesisUtterance
 
 const DEFAULT_CONFIG: VoiceConfig = {
   lang: 'pt-BR',
-  rate: 1,
+  rate: 0.82,
   pitch: 1,
   volume: 1,
 }
 
-const URGENCY_CONFIG: Record<SpeechUrgency, Pick<VoiceConfig, 'rate' | 'pitch' | 'volume'>> = {
-  alta: { rate: 1.1, pitch: 1.05, volume: 1 },
-  media: { rate: 1, pitch: 1, volume: 0.95 },
-  baixa: { rate: 0.95, pitch: 0.98, volume: 0.9 },
-}
+const RADIO_PRIORITIES: SpeechUrgency[] = ['alta', 'media', 'baixa']
+const RADIO_INTERVAL_MS = { alta: 8_000, media: 20_000, baixa: 30_000 }
+const REPEAT_INTERVAL_MS = { alta: 20_000, media: 30_000, baixa: 35_000 }
+const PENDING_GRACE_MS = 5_000
+const RADIO_START_TIMEOUT_MS = 6_000
+const AUDIO_STALL_TIMEOUT_MS = 8_000
+const NATURAL_VOICE = /natural|neural|premium|enhanced/i
 
 // WAV silencioso: libera a reprodução de áudio no Firefox/Zen após o clique.
 const SILENT_WAV =
   'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA='
 
-const API_BASE_URL = (env.apiUrl ?? '').replace(/\/$/, '')
-
 const normalizeLang = (lang: string) => lang.replace('_', '-').toLowerCase()
 
-const canUseServerVoice = () => typeof window !== 'undefined' && typeof fetch === 'function'
+function preferredVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
+  return voices.find((voice) => NATURAL_VOICE.test(voice.name))
+    ?? voices.find((voice) => voice.default)
+    ?? voices[0]
+}
 
 export class SpeechSynthesisManager {
-  #queue: QueueItem[] = []
-  #current: QueueItem | null = null
+  #pending = new Map<SpeechUrgency, QueueItem>()
+  #pendingTimer: ReturnType<typeof setTimeout> | undefined
   #speaking = false
   #enabled = true
   #config: VoiceConfig = { ...DEFAULT_CONFIG }
   #listeners = new Set<() => void>()
   #activeId = 0
+  #audio: HTMLAudioElement | null = null
+  #audioRequest: AbortController | null = null
+  #watchdogTimer: ReturnType<typeof setTimeout> | undefined
+  #restartWatchdog: (() => void) | null = null
+  #paused = false
+  #lastSpokenAt = -Infinity
+  #recentNotices = new Map<string, number>()
   #synth: SpeechSynthesis | null
   #createUtterance: UtteranceFactory
-  #audio: HTMLAudioElement | null = null
-  #abort: AbortController | null = null
 
   constructor(
     synth?: SpeechSynthesis | null,
@@ -88,9 +99,9 @@ export class SpeechSynthesisManager {
   getState(): { speaking: boolean; queueLength: number; enabled: boolean; supported: boolean } {
     return {
       speaking: this.#speaking,
-      queueLength: this.#queue.length,
+      queueLength: this.#pending.size,
       enabled: this.#enabled,
-      supported: this.#synth !== null || canUseServerVoice(),
+      supported: this.#synth !== null || (typeof window !== 'undefined' && typeof Audio !== 'undefined'),
     }
   }
 
@@ -143,181 +154,245 @@ export class SpeechSynthesisManager {
 
     // Português do Brasil, fallback explícito para Portugal e então inglês.
     for (const lang of [this.#config.lang, 'pt-BR', 'pt-PT', 'en-US']) {
-      const selected = voices.find((voice) => normalizeLang(voice.lang) === normalizeLang(lang))
+      const selected = preferredVoice(voices.filter((voice) => normalizeLang(voice.lang) === normalizeLang(lang)))
       if (selected) return selected
     }
     for (const prefix of ['pt', 'en']) {
-      const selected = voices.find((voice) => normalizeLang(voice.lang).startsWith(prefix))
+      const selected = preferredVoice(voices.filter((voice) => normalizeLang(voice.lang).startsWith(prefix)))
       if (selected) return selected
     }
     return voices[0]
   }
 
-  speak(text: string, urgency: SpeechUrgency = 'media'): void {
+  speak(text: string, urgency: SpeechUrgency = 'media', subject?: string): void {
     const trimmed = text.trim()
-    if (!this.#enabled || !trimmed) return
-    if (!this.#synth && !canUseServerVoice()) return
+    if (!this.#enabled || !this.getState().supported || !trimmed) return
 
-    const priority = urgency === 'alta' ? 3 : urgency === 'media' ? 2 : 1
-    // AiPanel e AiEngineer observam a mesma mensagem; não a enfileirar duas vezes.
-    const duplicate = this.#current?.text === trimmed && this.#current.priority === priority
-      || this.#queue.some((item) => item.text === trimmed && item.priority === priority)
-    if (duplicate) return
+    const now = Date.now()
+    for (const [key, time] of this.#recentNotices) {
+      if (now - time >= REPEAT_INTERVAL_MS.baixa) this.#recentNotices.delete(key)
+    }
 
-    this.#queue.push({ text: trimmed, priority, timestamp: Date.now() })
-    this.#queue.sort((a, b) => b.priority - a.priority || a.timestamp - b.timestamp)
+    // Keep only the latest advice at each urgency while the radio is busy.
+    this.#pending.set(urgency, {
+      text: trimmed,
+      expiresAt: now + RADIO_INTERVAL_MS[urgency] + PENDING_GRACE_MS,
+      noticeKey: `${urgency}:${subject ?? trimmed}`,
+    })
     this.#emit()
     this.#processQueue()
   }
 
   stop(): void {
     this.#activeId += 1
-    this.#queue = []
-    this.#current = null
+    this.#resetPending()
     this.#speaking = false
-    this.#abort?.abort()
-    this.#abort = null
-    if (this.#audio) {
-      this.#audio.onended = null
-      this.#audio.onerror = null
-      this.#audio.pause()
-      this.#audio.src = ''
-      this.#audio = null
-    }
+    this.#paused = false
+    this.#lastSpokenAt = -Infinity
+    this.#recentNotices.clear()
+    this.#clearWatchdog()
+    this.#releaseAudio()
     this.#synth?.cancel()
     this.#emit()
   }
 
   pause(): void {
-    if (this.#speaking) {
-      this.#synth?.pause()
-      this.#audio?.pause()
-    }
+    if (!this.#speaking || (this.#audioRequest && !this.#audio)) return
+    this.#paused = true
+    clearTimeout(this.#watchdogTimer)
+    if (this.#audio) this.#audio.pause()
+    else this.#synth?.pause()
   }
 
   resume(): void {
-    if (this.#speaking) {
-      this.#synth?.resume()
-      void this.#audio?.play().catch(() => {})
-    }
+    if (!this.#paused) return
+    this.#paused = false
+    this.#restartWatchdog?.()
+    if (this.#audio) void this.#audio.play().catch((error) => console.warn('[Rádio] Erro ao continuar:', error))
+    else this.#synth?.resume()
   }
 
   clearQueue(): void {
-    this.#queue = []
+    this.#resetPending()
     this.#emit()
   }
 
-  #complete(id: number): void {
-    // cancel()/stop() pode disparar onend/onerror depois de outra fala ter começado.
-    if (id !== this.#activeId) return
-    this.#current = null
-    this.#speaking = false
-    this.#emit()
-    setTimeout(() => this.#processQueue(), 0)
+  #resetPending(): void {
+    clearTimeout(this.#pendingTimer)
+    this.#pendingTimer = undefined
+    this.#pending.clear()
   }
 
   #processQueue(): void {
-    if (this.#speaking || this.#queue.length === 0 || !this.#enabled) return
-    if (!this.#synth && !canUseServerVoice()) return
+    clearTimeout(this.#pendingTimer)
+    this.#pendingTimer = undefined
+    if (!this.#enabled || this.#speaking || this.#pending.size === 0) return
 
-    const item = this.#queue.shift()!
-    this.#current = item
+    const now = Date.now()
+    for (const urgency of RADIO_PRIORITIES) {
+      const item = this.#pending.get(urgency)
+      if (!item) continue
+
+      const lastNoticeAt = this.#recentNotices.get(item.noticeKey) ?? -Infinity
+      const playAt = Math.max(now, this.#lastSpokenAt + RADIO_INTERVAL_MS[urgency],
+        lastNoticeAt + REPEAT_INTERVAL_MS[urgency])
+      if (playAt > item.expiresAt) {
+        this.#pending.delete(urgency)
+        continue
+      }
+      if (playAt > now) {
+        this.#pendingTimer = setTimeout(() => this.#processQueue(), playAt - now)
+        this.#emit()
+        return
+      }
+      this.#resetPending()
+      this.#startSpeech(item, now)
+      return
+    }
+    this.#emit()
+  }
+
+  #startSpeech(item: QueueItem, now: number): void {
+    this.#lastSpokenAt = now
+    this.#recentNotices.set(item.noticeKey, now)
     this.#speaking = true
     const id = ++this.#activeId
     this.#emit()
 
-    const voice = this.#synth ? this.#selectVoice() : null
-    if (voice) this.#speakWithBrowser(item, voice, id, true)
-    else this.#speakWithServer(item, id)
+    if (typeof window !== 'undefined' && !this.#config.voiceURI) {
+      void this.#playNeural(item, id)
+    } else {
+      this.#playBrowser(item, id)
+    }
   }
 
-  #urgencyFor(item: QueueItem): SpeechUrgency {
-    return item.priority === 3 ? 'alta' : item.priority === 2 ? 'media' : 'baixa'
+  #watch(timeoutMs: number, expire: () => void): void {
+    this.#restartWatchdog = () => {
+      clearTimeout(this.#watchdogTimer)
+      if (!this.#paused) this.#watchdogTimer = setTimeout(expire, timeoutMs)
+    }
+    this.#restartWatchdog()
   }
 
-  #speakWithBrowser(item: QueueItem, voice: SpeechSynthesisVoice, id: number, allowServerFallback: boolean): void {
-    const utterance = this.#createUtterance(item.text)
-    utterance.voice = voice
-    utterance.lang = voice.lang ?? this.#config.lang
+  #clearWatchdog(): void {
+    clearTimeout(this.#watchdogTimer)
+    this.#watchdogTimer = undefined
+    this.#restartWatchdog = null
+  }
 
-    const adjustment = URGENCY_CONFIG[this.#urgencyFor(item)]
-    utterance.rate = this.#config.rate * adjustment.rate
-    utterance.pitch = this.#config.pitch * adjustment.pitch
-    utterance.volume = Math.min(1, this.#config.volume * adjustment.volume)
+  #releaseAudio(): void {
+    this.#audioRequest?.abort()
+    this.#audioRequest = null
+    const audio = this.#audio
+    this.#audio = null
+    if (!audio) return
+    audio.onended = null
+    audio.onerror = null
+    audio.ontimeupdate = null
+    audio.pause()
+    URL.revokeObjectURL(audio.src)
+  }
 
-    let finished = false
-    const finish = () => {
-      if (finished) return
-      finished = true
-      this.#complete(id)
+  #finish(id: number, cancelBrowserSpeech = false): void {
+    if (id !== this.#activeId) return
+    // Eventos atrasados de uma fala não podem encerrar a próxima.
+    this.#activeId += 1
+    this.#speaking = false
+    this.#paused = false
+    this.#clearWatchdog()
+    this.#releaseAudio()
+    if (cancelBrowserSpeech) this.#synth?.cancel()
+    this.#emit()
+    this.#processQueue()
+  }
+
+  async #playNeural(item: QueueItem, id: number): Promise<void> {
+    const controller = new AbortController()
+    this.#audioRequest = controller
+    const isCurrent = () => id === this.#activeId && this.#audioRequest === controller
+    const fallback = (error: unknown) => {
+      if (!isCurrent()) return
+      this.#clearWatchdog()
+      this.#releaseAudio()
+      console.warn('[Rádio] Voz neural indisponível, usando a voz do navegador:', error)
+      this.#playBrowser(item, id)
     }
-    utterance.onstart = () => {
-      if (id !== this.#activeId) return
-      this.#speaking = true
-      this.#emit()
-    }
-    utterance.onend = finish
-    utterance.onerror = (event) => {
-      if (finished) return
-      finished = true
-      const error = (event as SpeechSynthesisErrorEvent).error
-      console.warn('[TTS] Speech error:', error)
-      // Voz do sistema quebrada (ex.: sem speech-dispatcher): tenta o servidor.
-      if (allowServerFallback && canUseServerVoice() && error !== 'interrupted' && error !== 'canceled') {
-        this.#speakWithServer(item, id)
-        return
+
+    this.#watch(RADIO_START_TIMEOUT_MS, () => fallback('Tempo de geração excedido'))
+    try {
+      const response = await fetch(RADIO_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: item.text.slice(0, 480) }),
+        signal: controller.signal,
+      })
+      if (!response.ok) throw new Error('Voz neural indisponível')
+      const blob = await response.blob()
+      if (!isCurrent()) return
+
+      const audio = new Audio()
+      this.#audio = audio
+      audio.src = URL.createObjectURL(blob)
+      let lastPosition = 0
+      audio.onended = () => {
+        if (isCurrent()) this.#finish(id)
       }
-      this.#complete(id)
+      audio.onerror = () => fallback(audio.error)
+      audio.ontimeupdate = () => {
+        if (!isCurrent() || audio.currentTime <= lastPosition) return
+        lastPosition = audio.currentTime
+        this.#restartWatchdog?.()
+      }
+      this.#watch(AUDIO_STALL_TIMEOUT_MS, () => {
+        if (lastPosition === 0) {
+          fallback('A reprodução não iniciou')
+        } else {
+          console.warn('[Rádio] Reprodução interrompida')
+          this.#finish(id)
+        }
+      })
+      await audio.play()
+    } catch (error) {
+      fallback(error)
+    }
+  }
+
+  #playBrowser(item: QueueItem, id: number): void {
+    if (!this.#synth) {
+      this.#finish(id)
+      return
     }
 
     try {
-      this.#synth!.speak(utterance)
-    } catch (error) {
-      console.warn('[TTS] Unable to start speech:', error)
-      if (allowServerFallback && canUseServerVoice()) this.#speakWithServer(item, id)
-      else this.#complete(id)
-    }
-  }
+      const utterance = this.#createUtterance(item.text)
+      const voice = this.#selectVoice()
+      if (voice) utterance.voice = voice
+      utterance.lang = voice?.lang ?? this.#config.lang
+      utterance.rate = this.#config.rate
+      utterance.pitch = this.#config.pitch
+      utterance.volume = this.#config.volume
 
-  #speakWithServer(item: QueueItem, id: number): void {
-    if (!canUseServerVoice()) {
-      this.#complete(id)
-      return
-    }
-    const controller = new AbortController()
-    this.#abort = controller
-    const url = `${API_BASE_URL}/tts?text=${encodeURIComponent(item.text)}&lang=${encodeURIComponent(this.#config.lang)}`
-
-    let finished = false
-    const finish = () => {
-      if (finished) return
-      finished = true
-      if (this.#abort === controller) this.#abort = null
-      this.#complete(id)
-    }
-
-    void fetch(url, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        const blob = await response.blob()
+      const expire = () => {
+        console.warn('[Rádio] A voz do navegador parou de responder')
+        this.#finish(id, true)
+      }
+      this.#watch(RADIO_START_TIMEOUT_MS, expire)
+      utterance.onstart = () => {
         if (id !== this.#activeId) return
-
-        const objectUrl = URL.createObjectURL(blob)
-        const audio = new Audio(objectUrl)
-        this.#audio = audio
-        const release = () => {
-          URL.revokeObjectURL(objectUrl)
-          if (this.#audio === audio) this.#audio = null
-        }
-        audio.onended = () => { release(); finish() }
-        audio.onerror = () => { release(); finish() }
-        await audio.play()
-      })
-      .catch((error: unknown) => {
-        if ((error as { name?: string } | null)?.name === 'AbortError') return
-        console.warn('[TTS] Falha na voz do servidor:', error)
-        finish()
-      })
+        const durationMs = 5_000 + (item.text.length * 100) / utterance.rate
+        this.#watch(Math.max(12_000, durationMs), expire)
+      }
+      utterance.onend = () => this.#finish(id)
+      utterance.onerror = (event) => {
+        if (id !== this.#activeId) return
+        console.warn('[Rádio] Erro na voz do navegador:', event.error)
+        this.#finish(id)
+      }
+      this.#synth.speak(utterance)
+    } catch (error) {
+      console.warn('[Rádio] Erro ao iniciar a voz do navegador:', error)
+      this.#finish(id)
+    }
   }
 }
 
