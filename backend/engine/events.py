@@ -208,6 +208,7 @@ class AiSuggestionEvent(Event):
     a mensagem, a urgência (baixa/media/alta) e um comando sugerido opcional.
     """
     type: str = "ai_suggestion"
+    race_id: str = ""
     driver_id: str = ""
     driver_name: str = ""
     lap: int = 0

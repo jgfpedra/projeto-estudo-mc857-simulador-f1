@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import time
 import uuid
@@ -10,6 +11,8 @@ import anyio
 import httpx
 import redis
 import redis.asyncio as aioredis
+from typing import Optional, Dict, Any
+from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from .race_manager import REDIS_URL, RACE_TTL, race_manager
@@ -25,6 +28,8 @@ from .providers.race_data import driver_record
 from .providers.track_reference import verified_layout_ids
 from storage import postgres
 
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title='F1 Simulator API')
 driver_service = DriverService(db=F1ResultsDriverDatabase() if postgres.configured() else None)
@@ -47,6 +52,16 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=['*'], a
 def health_check():
     """Health check endpoint for CI/CD and load balancers."""
     return {"status": "ok", "service": "f1-simulator-api"}
+
+@app.get('/tts')
+def synthesize_speech(text: str, lang: str = 'pt-br'):
+    """Voz do engenheiro de IA sintetizada no servidor (fallback ao navegador)."""
+    from . import tts
+    audio = tts.synthesize(text, lang)
+    if audio is None:
+        raise HTTPException(status_code=503, detail='Síntese de voz indisponível no servidor')
+    return Response(content=audio, media_type='audio/wav',
+                    headers={'Cache-Control': 'public, max-age=86400'})
 
 @app.post('/races', response_model=RaceSetupResponse)
 def create_race(req: RaceSetupRequest):
@@ -378,15 +393,123 @@ def send_coach_command(race_id: str, driver_id: str, req: CoachCommandRequest):
     )
 
 
-@app.post('/races/radio/audio')
-def radio_audio(request: RadioAudioRequest):
-    voice_url = os.environ.get('F1_VOICE_URL', 'http://tts:5000')
+# ==================== FEEDBACK DA IA ====================
+
+class AiFeedbackRequest(BaseModel):
+    """Feedback do piloto sobre uma sugestão da IA."""
+    suggestionId: str
+    driverId: str
+    simTs: float
+    message: str
+    urgency: str
+    command: Optional[Dict[str, Any]] = None
+    rating: str  # "good" | "bad"
+    timestamp: int  # Unix timestamp ms
+
+
+class AiFeedbackResponse(BaseModel):
+    raceId: str
+    suggestionId: str
+    status: str
+
+
+@app.post('/races/{race_id}/ai-feedback', status_code=202, response_model=AiFeedbackResponse)
+def submit_ai_feedback(race_id: str, req: AiFeedbackRequest):
+    """Recebe feedback do piloto sobre uma sugestão do engenheiro de IA.
+    
+    O feedback é armazenado no Redis para análise posterior (melhoria do modelo, logs, etc.).
+    """
     try:
-        response = httpx.post(f"{voice_url}/audio", json={'message': request.message}, timeout=15.0)
-        response.raise_for_status()
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=503, detail='Voz neural indisponível') from exc
-    return Response(content=response.content, media_type='audio/wav')
+        client = sync_client(REDIS_URL)
+        # Verifica se a corrida existe
+        if not client.exists(f'race:{race_id}:meta'):
+            raise HTTPException(status_code=404, detail='Corrida não encontrada')
+        
+        # Armazena feedback em lista Redis (TTL longo - 30 dias)
+        feedback_key = f'race:{race_id}:ai_feedback'
+        feedback_data = {
+            "suggestionId": req.suggestionId,
+            "driverId": req.driverId,
+            "simTs": req.simTs,
+            "message": req.message,
+            "urgency": req.urgency,
+            "command": req.command,
+            "rating": req.rating,
+            "timestamp": req.timestamp,
+            "receivedAt": int(time.time() * 1000),
+        }
+        client.rpush(feedback_key, json.dumps(feedback_data, ensure_ascii=False))
+        client.expire(feedback_key, 30 * 24 * 3600)  # 30 dias
+        
+        # Também incrementa contadores para stats rápidas
+        stats_key = f'race:{race_id}:ai_feedback_stats'
+        client.hincrby(stats_key, f"total_{req.rating}", 1)
+        client.expire(stats_key, 30 * 24 * 3600)
+        
+        logger.info("AiEngineer feedback: race=%s driver=%s rating=%s msg=%.50s",
+                    race_id, req.driverId, req.rating, req.message)
+        
+        return AiFeedbackResponse(
+            raceId=race_id,
+            suggestionId=req.suggestionId,
+            status="received",
+        )
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail='Redis indisponível') from exc
+
+
+# Endpoint para consultar feedback (útil para admins/debug)
+@app.get('/races/{race_id}/ai-feedback')
+def get_ai_feedback(race_id: str, limit: int = 100):
+    """Retorna feedbacks recebidos para uma corrida."""
+    try:
+        client = sync_client(REDIS_URL)
+        if not client.exists(f'race:{race_id}:meta'):
+            raise HTTPException(status_code=404, detail='Corrida não encontrada')
+        
+        feedback_key = f'race:{race_id}:ai_feedback'
+        raw_list = client.lrange(feedback_key, -limit, -1)
+        feedbacks = [json.loads(item) for item in raw_list]
+        
+        stats_key = f'race:{race_id}:ai_feedback_stats'
+        stats = client.hgetall(stats_key) or {}
+        
+        return {
+            "raceId": race_id,
+            "feedbacks": feedbacks,
+            "stats": {k: int(v) for k, v in stats.items()},
+        }
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail='Redis indisponível') from exc
+
+
+class OllamaSettingsRequest(BaseModel):
+    enabled: bool
+
+class OllamaSettingsResponse(BaseModel):
+    enabled: bool
+    source: str
+
+@app.get('/settings/ollama')
+def get_ollama_settings():
+    """Retorna se Ollama está habilitado."""
+    try:
+        client = sync_client(REDIS_URL)
+        enabled = client.get("settings:use_ollama") == "true"
+        return OllamaSettingsResponse(enabled=enabled, source="redis")
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail='Redis indisponível') from exc
+
+@app.post('/settings/ollama')
+def set_ollama_settings(req: OllamaSettingsRequest):
+    """Habilita/desabilita Ollama (toggle dinâmico via Redis)."""
+    try:
+        client = sync_client(REDIS_URL)
+        client.set("settings:use_ollama", "true" if req.enabled else "false")
+        logger.info("Ollama %s via API", "habilitado" if req.enabled else "desabilitado")
+        return OllamaSettingsResponse(enabled=req.enabled, source="api")
+    except redis.RedisError as exc:
+        raise HTTPException(status_code=503, detail='Redis indisponível') from exc
 
 
 @app.get('/races/{race_id}')

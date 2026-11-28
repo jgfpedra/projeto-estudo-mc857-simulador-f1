@@ -32,7 +32,12 @@ export function SpeechControls() {
       <button
         type="button"
         disabled={!supported}
-        onClick={() => speechSynthesis.setEnabled(!enabled)}
+        onClick={() => {
+          const next = !enabled
+          speechSynthesis.setEnabled(next)
+          // Feedback imediato: confirma que a voz do navegador ou do servidor está audível.
+          if (next) speechSynthesis.speak("Engenheiro de IA ativado.")
+        }}
         className={`p-1 rounded transition-colors ${enabled ? "text-green-400 hover:text-green-300" : "text-muted-foreground hover:text-red-400"}`}
         aria-label={enabled ? "Desativar síntese de voz" : "Ativar síntese de voz"}
         title={supported ? (enabled ? "Rádio ligado" : "Rádio desligado") : "Síntese de voz não suportada neste navegador"}

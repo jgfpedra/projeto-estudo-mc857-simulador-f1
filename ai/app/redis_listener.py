@@ -17,6 +17,28 @@ from debrief import generate_and_save_debrief
 REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 MAX_DEBRIEF_EVENTS = 250
+
+
+def create_redis_client() -> redis.Redis:
+    """Conecta via Sentinel (stack HA) ou direto no host, conforme o ambiente.
+
+    Sem isso o listener aponta sempre para um nó fixo e morre quando o
+    Sentinel promove outro master após uma falha.
+    """
+    sentinels = os.environ.get("REDIS_SENTINELS", "")
+    if sentinels:
+        from redis.sentinel import Sentinel
+
+        nodes = []
+        for item in sentinels.split(","):
+            host, port = item.strip().rsplit(":", 1)
+            nodes.append((host, int(port)))
+        master = os.environ.get("REDIS_SENTINEL_MASTER", "mymaster")
+        sentinel = Sentinel(nodes, socket_timeout=2, decode_responses=True)
+        return sentinel.master_for(
+            master, socket_timeout=2, socket_connect_timeout=2, decode_responses=True
+        )
+    return redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
 DEBRIEF_EVENT_TYPES = {
     "race_start", "race_end", "lap_completed", "pit_stop", "off_track",
     "on_track", "collision", "weather_changed", "tyre_worn", "race_control",
@@ -24,18 +46,27 @@ DEBRIEF_EVENT_TYPES = {
 }
 
 
+MAX_SILENCE_S = 60.0  # nunca ficar mudo por mais que isso (segundos de simulação)
+
+
 def _should_stay_silent(is_real_event: bool, new_command: str, new_text: str,
-                        last_command: str | None, last_text: str | None) -> bool:
+                        last_command: str | None, last_text: str | None,
+                        seconds_since_publish: float | None = None,
+                        max_silence_s: float = MAX_SILENCE_S) -> bool:
     """
     Decide se o engenheiro deve ficar em silêncio (não publicar sugestão).
 
     Regras anti-repetição:
-    - Evento real: fala se comando OU texto mudou (não engole mudança de plano).
-    - Gatilho periódico: só fala se comando E texto são novos (não repete nem um nem outro).
     - Primeira mensagem: sempre fala.
+    - Silêncio máximo: se passou tempo demais sem falar, fala mesmo repetindo.
+    - Evento real: fala se comando OU texto mudou (não engole mudança de plano).
+    - Gatilho periódico: só fala se comando E texto são novos.
     """
     if last_command is None or last_text is None:
         return False  # primeira mensagem sempre fala
+
+    if seconds_since_publish is not None and seconds_since_publish >= max_silence_s:
+        return False  # garante pelo menos uma mensagem por janela
 
     if is_real_event:
         # Evento real (ex.: rádio da equipe, saída de pista): não engole mudança de plano
@@ -72,6 +103,7 @@ Se houver evento de saída de pista, avise EXPLICITAMENTE no campo "aviso":
 
 Não dê instruções de pilotagem (direção, curvas, aceleração).
 Se nada exige ação, diga que está tudo sob controle e use urgência baixa.
+Varie a redação a cada resposta: nunca repita a mesma frase da mensagem anterior.
 
 === ESTADO ATUAL DA CORRIDA ===
 {context_text}
@@ -113,15 +145,7 @@ def _resolve_followed_driver(r, race_id: str, default: str) -> str | None:
 
 
 def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float = 10.0):
-    sentinels = os.environ.get("REDIS_SENTINELS", "")
-    if sentinels:
-        from redis.sentinel import Sentinel
-        addresses = [(host, int(port)) for host, port in
-                     (item.strip().rsplit(":", 1) for item in sentinels.split(","))]
-        r = Sentinel(addresses, socket_timeout=2).master_for(
-            os.environ.get("REDIS_SENTINEL_MASTER", "mymaster"), decode_responses=True)
-    else:
-        r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+    r = create_redis_client()
     pubsub = r.pubsub()
     if race_id:
         events_channel = f"race:{race_id}:events"
@@ -133,7 +157,16 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
         pubsub.psubscribe(pattern)
         print(f"[ai_listener] assinando padrão {pattern} (todas as corridas)...")
 
-    warm_up()
+    # Verifica se deve usar Ollama (pode ser desabilitado via env ou Redis, padrão false)
+    use_ollama_env = os.environ.get("USE_OLLAMA", "false").lower() == "true"
+    # Redis pode sobrescrever o env (toggle dinâmico via API/frontend)
+    use_ollama_redis = r.get("settings:use_ollama")
+    use_ollama = use_ollama_redis == "true" if use_ollama_redis is not None else use_ollama_env
+    if use_ollama:
+        warm_up()
+        print("[ai_listener] Ollama HABILITADO - modelo aquecido")
+    else:
+        print("[ai_listener] Ollama DESABILITADO - usando apenas fallback tático")
 
     # Inicia flush periódico de métricas no MLflow
     start_periodic_flush(interval_seconds=60)
@@ -144,6 +177,7 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
     # Estado anti-repetição por corrida
     last_command_by_race: dict[str, str | None] = {}
     last_text_by_race: dict[str, str | None] = {}
+    last_publish_sim_ts: dict[str, float] = {}
     # Histórico limitado para o debrief; ticks completos ficam de fora para
     # evitar crescimento de memória e prompts com milhares de posições.
     debrief_events: dict[str, list[dict]] = {}
@@ -167,6 +201,7 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
             last_periodic_sim_ts[current_race] = 0.0
             last_command_by_race[current_race] = None
             last_text_by_race[current_race] = None
+            last_publish_sim_ts[current_race] = 0.0
             debrief_events[current_race] = []
             debrief_ai_commands[current_race] = []
             followed_by_race[current_race] = _resolve_followed_driver(
@@ -243,29 +278,46 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
 
         print(f"[ai_listener] volta {state.lap}: eventos detectados, acionando agente...")
         context_text = format_live_context(state, followed, eventos)
-        prompt = build_live_prompt(context_text)
-        print(f"[DEBUG] contexto enviado ao modelo:\n{context_text}\n")
-
-        model_result = call_model(prompt)
-
+        
         # Constrói contexto tático para fallback inteligente
         tactical_ctx = build_race_context_from_state(state, followed)
 
-        if not model_result["ok"]:
-            # Fallback tático baseado na situação real da corrida
-            output = get_fallback_tactical(tactical_ctx)
-            output["fallback_motivo"] = model_result["error"]
-        else:
-            validated = validate_agent_output(model_result["response"])
-            if validated:
-                output = validated
-            else:
-                # JSON inválido → fallback tático
+        # Verifica flag Redis dinamicamente (permite toggle sem restart)
+        use_ollama_redis = r.get("settings:use_ollama")
+        if use_ollama_redis is not None:
+            use_ollama = use_ollama_redis == "true"
+
+        if use_ollama:
+            prompt = build_live_prompt(context_text)
+            print(f"[DEBUG] contexto enviado ao modelo:\n{context_text}\n")
+
+            model_result = call_model(prompt)
+
+            if not model_result["ok"]:
+                # Fallback tático baseado na situação real da corrida
                 output = get_fallback_tactical(tactical_ctx)
-                output["fallback_motivo"] = "resposta em formato inválido"
+                output["fallback_motivo"] = model_result["error"]
+            else:
+                validated = validate_agent_output(model_result["response"])
+                if validated:
+                    output = validated
+                else:
+                    # JSON inválido → fallback tático
+                    output = get_fallback_tactical(tactical_ctx)
+                    output["fallback_motivo"] = "resposta em formato inválido"
+        else:
+            # Ollama desabilitado: usa fallback direto
+            output = get_fallback_tactical(tactical_ctx)
+            output["fallback_motivo"] = "ollama_desabilitado"
+
+        # Resposta vazia não gera card no frontend (aviso é obrigatório)
+        if not (output.get("aviso") or "").strip():
+            output = get_fallback_tactical(tactical_ctx)
+            output["fallback_motivo"] = "resposta vazia"
 
         output["type"] = "ai_suggestion"
         output["volta"] = state.lap
+        # Campos exigidos pelo parser do frontend (sem eles o card é descartado)
         output["lap"] = state.lap
         output["driver_id"] = followed
         output["race_id"] = current_race
@@ -276,17 +328,25 @@ def run_listener(race_id: str | None, followed_driver_id: str, periodic_s: float
         new_text = output.get("aviso", "")
         last_cmd = last_command_by_race.get(current_race)
         last_txt = last_text_by_race.get(current_race)
+        last_ts = last_publish_sim_ts.get(current_race)
+        now_ts = event.get("sim_ts")
+        seconds_since = None
+        if last_ts is not None and isinstance(now_ts, (int, float)):
+            seconds_since = max(0.0, float(now_ts) - float(last_ts))
 
         # Determina se o gatilho foi evento real ou periódico
         is_real_event = any(e for e in eventos if not e.startswith("Atualização periódica"))
 
-        if _should_stay_silent(is_real_event, new_command, new_text, last_cmd, last_txt):
+        if _should_stay_silent(is_real_event, new_command, new_text, last_cmd, last_txt,
+                               seconds_since_publish=seconds_since):
             record_duplicate_suppressed()
             print(f"[ai_listener] sugestão suprimida (repetição): comando={new_command}, texto={new_text[:40]}...")
         else:
             # Atualiza estado anti-repetição
             last_command_by_race[current_race] = new_command
             last_text_by_race[current_race] = new_text
+            if isinstance(now_ts, (int, float)):
+                last_publish_sim_ts[current_race] = float(now_ts)
 
             # publica de volta no mesmo canal, para o #42 (WebSocket Gateway) repassar
             events_channel = f"race:{current_race}:events"

@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ChevronDown, ChevronUp, X, AlertCircle, CheckCircle, Loader2, Zap, Target } from "lucide-react"
+import { ChevronDown, ChevronUp, X, AlertCircle, CheckCircle, Loader2, Zap, Target, ThumbsDown, ThumbsUp, MessageSquare } from "lucide-react"
 import { useLiveRaceStore } from "@/stores/live-race-store"
-import type { AiSuggestion, AiCommand } from "@/types/race"
+import { api } from "@/services/api"
+import type { AiSuggestion, AiCommand, DriverRadio } from "@/types/race"
 import { speechSynthesis } from "@/services/speech-synthesis"
 import { SpeechControls } from "./speech-controls"
 
@@ -26,7 +27,7 @@ interface AiFloatingPanelProps {
   onToggleCollapse?: () => void
   
   // Config
-  position?: "top-right" | "top-left" | "bottom-right" | "bottom-left"
+  position?: "top-right" | "top-left" | "bottom-right" | "bottom-left" | "inline" | "viewer-right"
   initiallyCollapsed?: boolean
 }
 
@@ -59,9 +60,9 @@ const STATUS_CONFIG: Record<"idle" | "started" | "monitoring" | "stopped" | "err
   monitoring: {
     label: "MONITORANDO",
     iconType: "zap",
-    color: "text-green-400",
-    bg: "bg-green-500/10",
-    border: "border-green-500/30",
+    color: "text-green-50",
+    bg: "bg-green-700",
+    border: "border-green-400",
     pulse: true,
   },
   stopped: {
@@ -125,17 +126,48 @@ export function AiFloatingPanel({
 }: AiFloatingPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(initiallyCollapsed)
   const [showAllSuggestions, setShowAllSuggestions] = useState(false)
-  const lastSuggestion = useRef(suggestions.at(-1))
+  const [ollamaEnabled, setOllamaEnabled] = useState(false)
+  const [ollamaLoading, setOllamaLoading] = useState(false)
+  const lastSuggestion = useRef<AiSuggestion | undefined>(undefined)
 
+  // Piloto acompanhado (rádio) e piloto controlado pelo usuário (sugestões da IA)
+  const followedDriverId = useLiveRaceStore((s) => s.followedDriverId)
   const race = useLiveRaceStore((s) => s.race)
-  const userDriverId = race?.userDriverId
+  const driverRadios = useLiveRaceStore((s) => s.driverRadios)
+  const userDriverId = race?.userDriverId ?? null
 
   // Status config
   const statusCfg = STATUS_CONFIG[engineerStatus]
 
-  // Piloto vinculado ao engenheiro
+  // Carrega estado inicial do Ollama
+  useEffect(() => {
+    api.getOllamaSettings()
+      .then(data => setOllamaEnabled(data.enabled))
+      .catch(() => {})
+  }, [])
+
+  // Toggle Ollama via API
+  const toggleOllama = async () => {
+    setOllamaLoading(true)
+    try {
+      const data = await api.setOllamaEnabled(!ollamaEnabled)
+      setOllamaEnabled(data.enabled)
+    } catch (e) {
+      console.error('Falha ao toggle Ollama:', e)
+    } finally {
+      setOllamaLoading(false)
+    }
+  }
+
+  // Resolve followed driver name from race data
+  const followedDriverName = useMemo(() => {
+    if (!followedDriverId || !race) return "—"
+    return race.drivers.find(d => d.driverId === followedDriverId)?.name ?? followedDriverId
+  }, [followedDriverId, race])
+
+  // Resolve o nome do piloto do usuário
   const userDriverName = useMemo(() => {
-    if (!userDriverId || !race) return "—"
+    if (!userDriverId || !race) return "Piloto"
     return race.drivers.find(d => d.driverId === userDriverId)?.name ?? userDriverId
   }, [userDriverId, race])
 
@@ -155,6 +187,12 @@ export function AiFloatingPanel({
   const otherSuggestions = useMemo(() =>
     suggestions.filter(s => s.driverId !== userDriverId).slice(-5).reverse(),
     [suggestions, userDriverId]
+  )
+
+  // Rádios do piloto acompanhado (respostas à IA)
+  const followedRadios = useMemo(() =>
+    driverRadios.filter(r => r.driverId === followedDriverId).slice(-5).reverse(),
+    [driverRadios, followedDriverId]
   )
 
   // Stats formatadas
@@ -194,74 +232,89 @@ export function AiFloatingPanel({
     onClose?.()
   }
 
-  // Posicionamento fixo fora do canvas
-  const positionClass = POSITION_CLASSES[position]
+  // No acompanhamento, o painel fica ao centro-direita sem exceder o visualizador.
+  const isInline = position === "inline"
+  const isViewerRight = position === "viewer-right"
+  const positionClass = isInline || isViewerRight ? "" : POSITION_CLASSES[position]
 
   return (
     <div
       className={`
-        fixed ${positionClass} z-50 pointer-events-auto
-        transition-all duration-300 ease-out
-        ${isCollapsed ? "w-72" : "w-80"}
+        pointer-events-auto transition-all duration-300 ease-out
+        ${isViewerRight
+          ? "absolute right-6 top-1/2 z-10 flex max-h-[min(30rem,calc(100%_-_8rem))] w-80 max-w-[calc(100%_-_3rem)] -translate-y-1/2 flex-col overflow-hidden"
+          : isInline
+            ? "relative mt-3 w-full min-w-0 shrink-0"
+            : `fixed ${positionClass} z-50 ${isCollapsed ? "w-72" : "w-80"}`}
       `}
       role="region"
       aria-label="Painel do Engenheiro de IA"
     >
-      {/* Header - sempre visível */}
+      {/* Header em duas linhas: status/controles e, abaixo, os dados da corrida. */}
       <div className={`
-        flex items-center gap-2 p-3 rounded-t-lg border-b border-border/50
-        bg-background/95 backdrop-blur-sm
+        shrink-0 rounded-t-lg border-b p-3
         ${statusCfg.border} ${statusCfg.bg}
       `}>
-        {/* Status Badge */}
-        <div className={`flex items-center gap-1.5 ${statusCfg.color} ${statusCfg.pulse ? "animate-pulse" : ""}`}>
-          {renderStatusIcon(statusCfg.iconType)}
-          <span className="text-xs font-bold uppercase tracking-wider">{statusCfg.label}</span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className={`flex shrink-0 items-center gap-1.5 ${statusCfg.color} ${statusCfg.pulse ? "animate-pulse" : ""}`}>
+            {renderStatusIcon(statusCfg.iconType)}
+            <span className="text-xs font-bold uppercase tracking-wider">{statusCfg.label}</span>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              onClick={toggleOllama}
+              disabled={ollamaLoading}
+              className={`rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider transition-all ${
+                ollamaEnabled
+                  ? 'bg-green-500/20 text-green-400 border border-green-500/40 hover:bg-green-500/30'
+                  : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/30 hover:bg-zinc-500/20'
+              } ${ollamaLoading ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
+              title={ollamaEnabled ? 'Ollama LLM ativo (clique para desativar)' : 'Usando fallback tático (clique para ativar Ollama)'}
+            >
+              {ollamaLoading ? '...' : ollamaEnabled ? 'LLM ON' : 'LLM OFF'}
+            </button>
+            <SpeechControls />
+            <button
+              onClick={handleToggleCollapse}
+              className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              aria-label={isCollapsed ? "Expandir" : "Colapsar"}
+              aria-expanded={!isCollapsed}
+            >
+              {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            </button>
+            {onClose && (
+              <button
+                onClick={handleClose}
+                className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                aria-label="Fechar painel"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Race Info */}
-        <div className="flex-1 min-w-0 ml-2">
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-muted-foreground truncate">{raceName}</span>
-            <span className="px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 text-primary text-[10px] font-mono">
+        <div className="mt-2 min-w-0 border-t border-white/10 pt-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs">
+            <span className="min-w-0 break-words text-muted-foreground">{raceName}</span>
+            <span className="shrink-0 rounded border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary">
               #{shortRaceId}
             </span>
           </div>
-          {userDriverId && (
-            <div className="flex items-center gap-1.5 text-[11px] mt-0.5">
-              <Target className="w-3 h-3 text-green-400" />
-              <span className="text-muted-foreground">Engenheiro:</span>
-              <span className="text-foreground font-medium">{userDriverName}</span>
+          {followedDriverId && (
+            <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px]">
+              <Target className="h-3 w-3 shrink-0 text-green-300" />
+              <span className="shrink-0 text-muted-foreground">Engenheiro:</span>
+              <span className="min-w-0 truncate font-medium text-foreground">{followedDriverName}</span>
             </div>
           )}
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={handleToggleCollapse}
-            className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={isCollapsed ? "Expandir" : "Colapsar"}
-            aria-expanded={!isCollapsed}
-          >
-            {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-          </button>
-          {onClose && (
-            <button
-              onClick={handleClose}
-              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Fechar painel"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-          <SpeechControls />
         </div>
       </div>
 
       {/* Content - colapsável */}
       {!isCollapsed && (
-        <div className="bg-background/95 backdrop-blur-sm border border-border/50 rounded-b-lg max-h-[500px] overflow-hidden flex flex-col">
+        <div className={`flex min-h-0 flex-col overflow-hidden rounded-b-lg border border-border/50 bg-background/95 backdrop-blur-sm ${isViewerRight ? "flex-1" : "max-h-[500px]"}`}>
           {/* Error Banner */}
           {engineerError && (
             <div className="p-3 border-b border-red-500/20 bg-red-500/5">
@@ -320,6 +373,21 @@ export function AiFloatingPanel({
               </div>
             )}
 
+            {/* Driver Radio Responses (when AI talks nonsense) */}
+            {followedRadios.length > 0 && (
+              <div>
+                <div className="flex items-center gap-1.5 px-1 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-400">
+                  <MessageSquare className="w-3 h-3 text-orange-400" />
+                  {followedDriverName} (rádio)
+                </div>
+                <div className="space-y-1.5">
+                  {followedRadios.map((radio, index) => (
+                    <DriverRadioCard key={`${radio.simTs}-${index}`} radio={radio} />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Other Drivers Suggestions (Collapsible) */}
             {otherSuggestions.length > 0 && (
               <div>
@@ -370,6 +438,30 @@ export function AiFloatingPanel({
 function SuggestionCard({ suggestion, isOwn }: { suggestion: AiSuggestion; isOwn: boolean }) {
   const style = URGENCY_STYLE[suggestion.urgency]
   const hasCommand = suggestion.command && suggestion.command.type !== "neutral"
+  const [feedback, setFeedback] = useState<"good" | "bad" | null>(null)
+
+  const sendFeedback = async (rating: "good" | "bad") => {
+    setFeedback(rating)
+    try {
+      await fetch(`/api/races/${suggestion.raceId}/ai-feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          suggestionId: suggestion.id ?? `${suggestion.driverId}-${suggestion.simTs}`,
+          driverId: suggestion.driverId,
+          simTs: suggestion.simTs,
+          message: suggestion.message,
+          urgency: suggestion.urgency,
+          command: suggestion.command,
+          rating,
+          timestamp: Date.now(),
+        }),
+      })
+    } catch (e) {
+      console.warn("Falha ao enviar feedback:", e)
+      setFeedback(null) // Permite tentar novamente
+    }
+  }
 
   return (
     <div
@@ -394,8 +486,72 @@ function SuggestionCard({ suggestion, isOwn }: { suggestion: AiSuggestion; isOwn
             Conf: {(suggestion.command.confianca * 100).toFixed(0)}%
           </span>
         )}
+        {/* Feedback buttons */}
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            onClick={() => sendFeedback("good")}
+            disabled={feedback !== null}
+            className={`p-1 rounded transition-colors ${
+              feedback === "good"
+                ? "bg-green-500/20 text-green-400"
+                : "text-zinc-500 hover:text-green-400 hover:bg-green-500/10"
+            }`}
+            title="Essa mensagem fez sentido"
+            aria-label="Feedback positivo"
+          >
+            <ThumbsUp className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => sendFeedback("bad")}
+            disabled={feedback !== null}
+            className={`p-1 rounded transition-colors ${
+              feedback === "bad"
+                ? "bg-red-500/20 text-red-400"
+                : "text-zinc-500 hover:text-red-400 hover:bg-red-500/10"
+            }`}
+            title="Essa mensagem não fez sentido / sem nexo"
+            aria-label="Feedback negativo"
+          >
+            <ThumbsDown className="w-3 h-3" />
+          </button>
+          {feedback && (
+            <span className="text-[9px] text-green-400 font-medium">Obrigado!</span>
+          )}
+        </div>
       </div>
       <div className="text-foreground text-xs leading-relaxed">{suggestion.message}</div>
+    </div>
+  )
+}
+
+// Sub-componente para resposta do piloto (rádio)
+function DriverRadioCard({ radio }: { radio: DriverRadio }) {
+  const triggerLabels: Record<string, string> = {
+    "repetitive_context": "Repetitivo",
+    "defend_without_threat": "Defesa sem ameaça",
+    "overtake_too_far": "Ultrapassagem longe",
+    "push_on_critical_resources": "Push crítico",
+    "conserve_unnecessary": "Economia desnecessária",
+    "stale_message_context_changed": "Contexto velho",
+    "generic_low_confidence": "Genérico",
+    "low_confidence": "Baixa confiança",
+  }
+
+  return (
+    <div className="flex flex-col gap-1 p-2 rounded border-l-2 bg-orange-500/10 border-orange-500/40 bg-orange-500/5">
+      <div className="flex items-center gap-2 text-[10px]">
+        <span className="font-mono text-muted-foreground">{radio.simTs.toFixed(0)}s</span>
+        <span className="px-1.5 py-0.5 rounded bg-orange-500/20 border border-orange-500/30 text-orange-300 text-[9px] font-bold">
+          📻 RÁDIO
+        </span>
+        <span className="px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-orange-400 text-[9px]">
+          {triggerLabels[radio.trigger] ?? radio.trigger}
+        </span>
+        <span className="px-1.5 py-0.5 rounded bg-zinc-500/10 border border-zinc-500/20 text-zinc-400 text-[9px]">
+          IA: {(radio.confidence * 100).toFixed(0)}%
+        </span>
+      </div>
+      <div className="text-orange-300 text-xs leading-relaxed font-mono">"{radio.message}"</div>
     </div>
   )
 }

@@ -1,0 +1,31 @@
+Arquitetura - IA
+
+- Race Engine: produz eventos (tick, posição, clima, safety car, off-track, colisão) + estado da simulação
+- Redis Pub/Sub: desacopla produtor/consumidor, distribui em canais (race:<id>:events)
+- AI Engineer (Python): thread de eventos (tempo real) + thread de decisão (8s sim)
+- Cooldowns & Deduplicação: intervalo 20s real, cooldown por comando 30-40s, similaridade semântica por raízes
+- Auto-detecção de incoerência: defend sem ameaça, overtake longe, push crítico, conserve desnecessário, contexto stale
+- Resposta do piloto (fallback): rádio determinístico xingando IA quando confiança <50% ou incoerência (rate limit 20s)
+- Ollama / Llama 3.2: **somente para piloto de foco** (user driver) no loop ao vivo — prompt com contexto completo → linguagem natural variada; bots usam só rule-based
+- Backend/WebSocket/Frontend: entrega sugestões + rádios no HUD 2D e 3D
+
+
+Inferência - IA
+
+- Loop tático rule-based: decisão <5ms, determinística, explicável (sem LLM no caminho crítico)
+- Contexto rico por piloto: posição, gaps, pneu (composto, vida%), combustível, clima, grip, safety car, histórico eventos
+- Prioridades fixas: 1) Eventos reativos → 2) Safety Car → 3) Pit window → 4) Ataque/Defesa (gap ≤0.8s) → 5) Gestão pneu/combustível → 6) Clima/aderência → 7) Liderança → 8) Últimas voltas → 9) Meio pelotão → 10) Variação 2%
+- Templates expansivos: 7+ variações/comando (push, overtake, defend, conserve, careful, pace) × 3 categorias (tactical, event_reactive, routine)
+- Auto-correção: repetição 2+ em 60s → gera frase corrigida variando texto
+- Confiança calibrada: 0.95 (pit, SC) → 0.40 (ruído); cai 50% ao detectar incoerência
+- Ollama: **piloto de foco no loop ao vivo** (prompt rico → linguagem natural); debrief histórico assíncrono à parte
+
+
+Integração - IA
+
+- Eventos Redis: ai_suggestion (engenheiro — Ollama piloto foco, rule-based bots), driver_radio (piloto), ai_command (bots), ai_started/monitoring/stopped/error (ciclo vida)
+- Frontend HUD 2D/3D: WebSocket → Zustand store → painel flutuante (sugestões piloto seguido + rádios cards laranja 📻)
+- Feedback humano: 👍/👎 no card → Redis (race:<id>:ai_feedback) para futura fine-tuning/análise
+- HA/Recuperação: AI Engineer reinicia no failover, restaura cooldowns, últimas msgs, command bus sequence
+- Observabilidade: stats tempo real (cycles, recommendations, event_reactions, deduplicated, errors) no painel e logs
+- Testável: fallback_tactical.py cobre 100% cenários se Ollama falhar; thresholds/cooldowns configuráveis como constants

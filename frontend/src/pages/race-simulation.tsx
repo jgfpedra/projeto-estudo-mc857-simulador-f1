@@ -15,6 +15,7 @@ import { Track2D } from "@/components/race/track-2d"
 import { AiFloatingPanel } from "@/components/race/ai/ai-floating-panel"
 import { TRACK_STATUS_LABEL, currentLap, formatClock, weatherLabel } from "@/helpers/race-live"
 import type { RaceStartResponse } from "@/services/api"
+import { speechSynthesis } from "@/services/speech-synthesis"
 import { useLiveRaceStore, type LiveStatus } from "@/stores/live-race-store"
 
 const STATUS_BADGE: Record<LiveStatus, { label: string; className: string }> = {
@@ -64,6 +65,14 @@ export function RaceSimulation() {
   // Onde o 3D põe o seletor de cenário, ao lado da chave 2D/3D.
   const [toolbarSlot, setToolbarSlot] = useState<HTMLDivElement | null>(null)
 
+  const handleFollowDriver = (driverId: string) => {
+    // O clique no olho também libera o áudio no Zen/Firefox e fala a mensagem já exibida.
+    speechSynthesis.unlock()
+    followDriver(driverId)
+    const latest = [...aiSuggestions].reverse().find((suggestion) => suggestion.driverId === driverId)
+    if (latest) speechSynthesis.speak(latest.message, latest.urgency)
+  }
+
   useEffect(() => {
     if (raceId) void load(raceId)
     return () => disconnect()
@@ -103,6 +112,19 @@ export function RaceSimulation() {
     ? { label: "Corrida retomada", className: "bg-emerald-500 text-black" }
     : STATUS_BADGE[status]
   const mapReady = race.track.waypoints.length >= 2
+  const aiPanel = (
+    <AiFloatingPanel
+      engineerStatus={aiEngineerStatus}
+      engineerStats={aiEngineerStats}
+      engineerError={aiEngineerError}
+      raceId={race.raceId}
+      raceName={race.track.name}
+      suggestions={aiSuggestions}
+      commands={aiCommands}
+      position="viewer-right"
+      initiallyCollapsed={false}
+    />
+  )
 
   return (
     <main className="relative min-h-svh bg-background text-foreground lg:h-svh lg:overflow-hidden">
@@ -179,19 +201,6 @@ export function RaceSimulation() {
                 <RaceBanner items={feed} simTs={frame?.simTs ?? 0} />
               </div>
 
-              {/* Painel flutuante do engenheiro de IA (2D e 3D) - fora do canvas, posição fixa */}
-              <AiFloatingPanel
-                engineerStatus={aiEngineerStatus}
-                engineerStats={aiEngineerStats}
-                engineerError={aiEngineerError}
-                raceId={race.raceId}
-                raceName={race.track.name}
-                suggestions={aiSuggestions}
-                commands={aiCommands}
-                position="top-right"
-                initiallyCollapsed={false}
-              />
-
               <div className="absolute inset-0 p-6 pt-16">
                 {viewMode === "2d" ? (
                   mapReady ? (
@@ -215,16 +224,19 @@ export function RaceSimulation() {
                 )}
               </div>
 
-              {/* Painel de acompanhamento integrado à área do simulador */}
+              {/* Estatísticas à esquerda e engenheiro ao centro-direita, dentro do visualizador. */}
               {followedDriverId && (
-                <DriverFollowCard
-                  race={race}
-                  frame={frame}
-                  prevFrame={prevFrame}
-                  feed={feed}
-                  classification={classification}
-                  driverId={followedDriverId}
-                />
+                <>
+                  <DriverFollowCard
+                    race={race}
+                    frame={frame}
+                    prevFrame={prevFrame}
+                    feed={feed}
+                    classification={classification}
+                    driverId={followedDriverId}
+                  />
+                  {aiPanel}
+                </>
               )}
 
               {/* Botão "Visão geral" apenas quando há piloto selecionado visualmente mas não acompanhado */}
@@ -285,7 +297,7 @@ export function RaceSimulation() {
                 selectedDriverId={selectedDriverId}
                 followedDriverId={followedDriverId}
                 onSelect={selectDriver}
-                onFollow={followDriver}
+                onFollow={handleFollowDriver}
                 onUnfollow={unfollowDriver}
                 controlledDriverId={race.userDriverId}
               />

@@ -7,6 +7,7 @@ import { openRaceSocket } from "@/services/race-socket"
 import type {
   AiCommand,
   AiSuggestion,
+  DriverRadio,
   FeedItem,
   FinalEntry,
   Frame,
@@ -53,6 +54,8 @@ type LiveRaceState = {
   aiSuggestions: AiSuggestion[]
   /** Comando ativo do engenheiro de IA por driverId. */
   aiCommands: Map<string, AiCommand>
+  /** Respostas do piloto (rádio) - fallback quando IA fala bobagem. */
+  driverRadios: DriverRadio[]
   // Estado do ciclo de vida do AiEngineer
   aiEngineerStatus: "idle" | "started" | "monitoring" | "stopped" | "error"
   aiEngineerStats: Record<string, unknown> | null
@@ -107,6 +110,7 @@ function freshRaceState() {
     classification: null as FinalEntry[] | null,
     aiSuggestions: [] as AiSuggestion[],
     aiCommands: new Map<string, AiCommand>(),
+    driverRadios: [] as DriverRadio[],
     // Estado do ciclo de vida do AiEngineer
     aiEngineerStatus: "idle" as "idle" | "started" | "monitoring" | "stopped" | "error",
     aiEngineerStats: null as Record<string, unknown> | null,
@@ -337,6 +341,7 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
             simTs: msg.simTs,
             lap: msg.lap,
             driverId: msg.driverId,
+            raceId: msg.raceId,
             message: msg.message,
             urgency: msg.urgency,
             command: msg.command,
@@ -376,6 +381,29 @@ export const useLiveRaceStore = create<LiveRaceState>()((set, get) => {
           tone: "info",
           driverIds: [msg.driverId],
           message: `⚡ Comando IA (${nameOf(msg.driverId)}): ${msg.command.toUpperCase()} — ${msg.reason}`,
+        })
+        return
+      }
+
+      case "driver_radio": {
+        set((s) => ({
+          driverRadios: [...s.driverRadios, {
+            simTs: msg.simTs,
+            lap: msg.lap,
+            driverId: msg.driverId,
+            driverName: msg.driverName,
+            message: msg.message,
+            trigger: msg.trigger,
+            confidence: msg.confidence,
+          }].slice(-20), // mantém últimas 20
+        }))
+        pushFeed({
+          simTs: msg.simTs,
+          lap: msg.lap,
+          kind: "pit_request",
+          tone: "warn",
+          driverIds: [msg.driverId],
+          message: `📻 ${msg.driverName} (rádio): "${msg.message}"`,
         })
         return
       }

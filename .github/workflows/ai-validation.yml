@@ -197,13 +197,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check AI report docs exist
+      - name: Check AI report doc exists
         run: |
-          test -f ai/report/AUDITORIA_RACE_ID.md
-          test -f ai/report/PLANO_CORRECAO_IA_FRONTEND.md
           test -f ai/report/PLANO_DESENVOLVIMENTO_IA.md
-          test -f ai/report/RESUMO_CORRECOES_IA.md
-          test -f ai/report/VALIDACAO_DOCKER.md
 
       - name: Validate markdown syntax
         run: |

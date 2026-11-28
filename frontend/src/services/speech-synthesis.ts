@@ -37,6 +37,10 @@ const RADIO_START_TIMEOUT_MS = 6_000
 const AUDIO_STALL_TIMEOUT_MS = 8_000
 const NATURAL_VOICE = /natural|neural|premium|enhanced/i
 
+// WAV silencioso: libera a reprodução de áudio no Firefox/Zen após o clique.
+const SILENT_WAV =
+  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA='
+
 const normalizeLang = (lang: string) => lang.replace('_', '-').toLowerCase()
 
 function preferredVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
@@ -101,10 +105,25 @@ export class SpeechSynthesisManager {
     }
   }
 
+  /** Desbloqueia a síntese durante um gesto do usuário (Firefox/Zen e políticas de autoplay). */
+  unlock(): void {
+    if (!this.#enabled) return
+    this.#synth?.resume()
+    try {
+      const audio = new Audio(SILENT_WAV)
+      audio.volume = 0
+      void audio.play().then(() => audio.pause()).catch(() => {})
+    } catch {
+      // Sem áudio disponível neste contexto; a voz do servidor ainda pode funcionar.
+    }
+  }
+
   setEnabled(enabled: boolean): void {
     this.#enabled = enabled
-    if (enabled) this.#emit()
-    else this.stop()
+    if (enabled) {
+      this.unlock()
+      this.#emit()
+    } else this.stop()
   }
 
   setConfig(config: Partial<VoiceConfig>): void {
